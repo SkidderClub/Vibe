@@ -1,183 +1,115 @@
-@echo off
-setlocal EnableExtensions DisableDelayedExpansion
-title Vibe 1.8.9 Forge Builder
+# Vibe
 
-rem Set VIBE_NO_PAUSE=1 when this launcher is called by another script/CI job.
-rem With no arguments, build the release JAR. Otherwise forward Gradle tasks/options.
-set "SCRIPT_DIR=%~dp0"
-set "BUILD_EXIT=1"
-set "VIBE_JAVA="
-set "VIBE_SUBST_DRIVE="
-set "VIBE_RUN_CLIENT="
-if /i "%~1"=="runClient" set "VIBE_RUN_CLIENT=1"
-if defined VIBE_RUN_CLIENT title Vibe 1.8.9 Forge Client
+A client-side utility mod for **Minecraft Forge 1.8.9**, with combat and movement
+modules, ESP, a customizable HUD, cosmetics, an account manager and local Java scripts.
 
-echo.
-echo ============================================================
-if defined VIBE_RUN_CLIENT (
-    echo                    Vibe Client Launcher
-) else (
-    echo                    Vibe Client Builder
-)
-echo ============================================================
-echo.
+[Discord](https://dsc.gg/vibe-skidder-club) · [Changelog](docs/CHANGELOG.md)
 
-rem Prefer an explicitly configured JDK 21, then look in common JDK locations,
-rem and finally use a Java 21 installation exposed through PATH.  This is kept
-rem inline (rather than using CALLed labels) so the launcher always exits once.
-if defined JAVA_HOME (
-    if exist "%JAVA_HOME%\bin\java.exe" (
-        "%JAVA_HOME%\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
-        if not errorlevel 1 set "VIBE_JAVA=%JAVA_HOME%"
-    )
-)
+## Install
 
-if not defined VIBE_JAVA (
-    for /d %%D in ("C:\Program Files\Java\jdk-21*") do (
-        if not defined VIBE_JAVA if exist "%%~fD\bin\java.exe" (
-            "%%~fD\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
-            if not errorlevel 1 set "VIBE_JAVA=%%~fD"
-        )
-    )
-)
+1. Install **Java 8** and **Forge 1.8.9-11.15.1.2318**.
+2. Copy the built `Vibe-1.8.9-<version>.jar` into your game directory's `mods/` folder.
+3. Launch the Forge profile.
 
-if not defined VIBE_JAVA (
-    for /d %%D in ("C:\Program Files\BellSoft\LibericaJDK-21*") do (
-        if not defined VIBE_JAVA if exist "%%~fD\bin\java.exe" (
-            "%%~fD\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
-            if not errorlevel 1 set "VIBE_JAVA=%%~fD"
-        )
-    )
-)
+Use modules only where permitted by the server's rules. Vibe is client-only.
 
-if not defined VIBE_JAVA (
-    for /d %%D in ("C:\Program Files\Eclipse Adoptium\jdk-21*") do (
-        if not defined VIBE_JAVA if exist "%%~fD\bin\java.exe" (
-            "%%~fD\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
-            if not errorlevel 1 set "VIBE_JAVA=%%~fD"
-        )
-    )
-)
+## Quick start
 
-if not defined VIBE_JAVA (
-    for /d %%D in ("C:\Program Files\Microsoft\jdk-21*") do (
-        if not defined VIBE_JAVA if exist "%%~fD\bin\java.exe" (
-            "%%~fD\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
-            if not errorlevel 1 set "VIBE_JAVA=%%~fD"
-        )
-    )
-)
+- **Right Shift** opens ClickGUI; choose Skeet, Futuristic, NeverLose, Augustus or Xanax.
+- **H** opens the HUD editor. Both default keybinds can be changed.
+- **`.help`** lists chat commands; **Tab** completes them.
+- **Alt Manager** in the main menu or server list manages accounts.
 
-if not defined VIBE_JAVA (
-    for /d %%D in ("C:\Program Files\Zulu\zulu-21*") do (
-        if not defined VIBE_JAVA if exist "%%~fD\bin\java.exe" (
-            "%%~fD\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
-            if not errorlevel 1 set "VIBE_JAVA=%%~fD"
-        )
-    )
-)
+In **ESP → ESP Modes**, select **Chams** on its own or alongside 2D/3D.
+**Invisible** controls the parts of a model hidden behind geometry; **Visible**
+controls the exposed parts. Each has independent **Armor**, **Show Skin**,
+**Flat / Glow / Metallic**, and color settings. Show Skin retains the texture
+under the material tint. The color's alpha controls opacity in all three
+materials, including fully transparent at zero. Chams uses the Targets filters.
 
-if not defined VIBE_JAVA (
-    for /d %%D in ("%USERPROFILE%\.jdks\*") do (
-        if not defined VIBE_JAVA if exist "%%~fD\bin\javac.exe" (
-            "%%~fD\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
-            if not errorlevel 1 set "VIBE_JAVA=%%~fD"
-        )
-    )
-)
+NeverLose uses two columns of settings cards (one in small windows). Click a
+card title to collapse it, use its switch to enable the module, and click the
+three dots or middle-click the card header to assign a key. **Ctrl+F** searches
+modules and settings across categories. The top-left config selector loads a
+saved profile; dropdowns and the module area scroll independently.
+Drag the bottom-right corner to resize the window; its size is remembered when
+you close and reopen ClickGUI.
 
-if not defined VIBE_JAVA (
-    for /f "usebackq delims=" %%J in (`where.exe java 2^>nul`) do (
-        if not defined VIBE_JAVA for %%H in ("%%~dpJ..") do (
-            if exist "%%~fH\bin\java.exe" (
-                "%%~fH\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
-                if not errorlevel 1 set "VIBE_JAVA=%%~fH"
-            )
-        )
-    )
-)
+Xanax uses category tabs, a module list and a separate settings panel with red
+sliders. Left-click a module to toggle it, right-click to select its settings,
+and middle-click to assign a key. Both panels scroll independently; drag either
+window by its top border and resize it at the bottom-right corner. Both window
+sizes are remembered when you reopen ClickGUI. The config window loads, saves, creates and
+deletes local profiles (click Delete twice to confirm). Its Keybinds checkbox
+controls whether loading a profile replaces bindings. On narrow screens, use
+**Configs** at the bottom right to open that window.
 
-if not defined VIBE_JAVA (
-    echo [ERROR] A JDK 21 installation could not be found.
-    echo         Install JDK 21 or set JAVA_HOME to its installation directory.
-    echo         JAVA_HOME currently is: %JAVA_HOME%
-    goto :finish
-)
+See the [GTA7 guide](docs/GTA7.md) for the expanded map, controls, upgrades, skins and save backups.
+See [Music and visual effects](docs/MUSIC_AND_EFFECTS.md) for Fog, Torus, radio,
+the media HUD and audio-reactive waves. Fog and CustomCrosshair also work in GTA7.
 
-if not exist "%SCRIPT_DIR%gradlew.bat" (
-    echo [ERROR] Gradle wrapper not found: "%SCRIPT_DIR%gradlew.bat"
-    goto :finish
-)
+## Build and run
 
-set "JAVA_HOME=%VIBE_JAVA%"
-set "PATH=%JAVA_HOME%\bin;%PATH%"
+Use **JDK 21** to build. The mod targets Java 8; launching Minecraft also requires
+a Java 8 runtime.
 
-rem Unimined opens its transformed Forge JAR through Java's ZIP filesystem.
-rem The normal cache location under this project is longer than legacy Win32
-rem ZIP paths permit, so use a short-lived drive mapping for Gradle's cache.
-rem Keep the project path short for the remapper. Gradle's normal user cache
-rem is used below so its provisioned Java toolchains remain discoverable.
-for %%D in (V U T S R Q P O N M L K J I H G F E) do (
-    if not defined VIBE_SUBST_DRIVE if not exist "%%D:\" set "VIBE_SUBST_DRIVE=%%D:"
-)
-if defined VIBE_SUBST_DRIVE (
-    subst %VIBE_SUBST_DRIVE% "%SCRIPT_DIR:~0,-1%" >nul 2>&1
-    if errorlevel 1 set "VIBE_SUBST_DRIVE="
-)
-echo [Vibe] Using JDK: %JAVA_HOME%
-if defined VIBE_RUN_CLIENT (
-    echo [Vibe] Building and starting Minecraft with Vibe...
-) else (
-    echo [Vibe] Starting Gradle build...
-)
-echo.
+On Windows, the launchers in the project root find JDK 21 automatically.
+Run these commands from the project root, or double-click the scripts:
 
-rem Run Gradle from the short mapped drive while keeping its cache in the
-rem normal user location so auto-provisioned toolchains are available.
-rem On JDK 21, TinyRemapper opens the just-created development JAR with the
-rem ZIP filesystem; resolving the project through the original long Desktop
-rem path can make that open fail with AccessDeniedException on Windows.
-if defined VIBE_SUBST_DRIVE (
-    pushd %VIBE_SUBST_DRIVE%\
-) else (
-    pushd "%SCRIPT_DIR%"
-)
-set "GRADLE_USER_HOME=%USERPROFILE%\.gradle"
-if "%~1"=="" (
-    call "%SCRIPT_DIR%gradlew.bat" clean build --no-daemon
-) else (
-    call "%SCRIPT_DIR%gradlew.bat" %* --no-daemon
-)
-set "BUILD_EXIT=%ERRORLEVEL%"
-popd
+```powershell
+.\build.bat
+```
 
-if defined VIBE_SUBST_DRIVE subst %VIBE_SUBST_DRIVE% /D >nul 2>&1
+The installable JAR is written to `build/libs/Vibe-1.8.9-<version>.jar`.
 
-if not "%BUILD_EXIT%"=="0" (
-    echo.
-    echo [ERROR] Gradle failed with exit code %BUILD_EXIT%.
-    goto :finish
-)
+`./gradlew verifyNeverLoseRendering` checks NeverLose controls and clipping in an
+offscreen OpenGL context, writing screenshots to `build/neverlose-render-check/`.
+`./gradlew verifyXanaxRendering` checks Xanax rendering, controls, profiles and
+small-screen layouts, writing screenshots to `build/xanax-render-check/`.
+`./gradlew verifyChamsRendering` checks Chams materials, transparency, partial
+cover, armor/skin toggles and OpenGL state, with a preview in `build/chams-render-check/`.
 
-if defined VIBE_RUN_CLIENT (
-    echo.
-    echo [Vibe] Client task finished.
-    goto :finish
-)
+| Command | Purpose |
+| --- | --- |
+| `.\run.bat` | Build and launch with OptiFine; keep data in `run/client/`. |
+| `.\run-fresh.bat` | Launch with a new profile in `run/first-start/session-*/`. |
 
-echo.
-echo [Vibe] Build complete. Output files:
-set "FOUND_ARTIFACT="
-for %%F in ("%SCRIPT_DIR%build\libs\*.jar") do (
-    if exist "%%~fF" (
-        echo   %%~fF
-        set "FOUND_ARTIFACT=1"
-    )
-)
-if not defined FOUND_ARTIFACT echo   [WARNING] No JAR files were found in build\libs.
-goto :finish
+With `JAVA_HOME` set to JDK 21, use `./gradlew build` on Linux/macOS or
+`.\gradlew.bat build` on Windows. The first build or launch downloads dependencies.
 
-:finish
-echo.
-if not defined VIBE_NO_PAUSE pause
-endlocal & exit /b %BUILD_EXIT%
+## Project layout
+
+| Path | Contents |
+| --- | --- |
+| `src/main/java/` | Java source code. |
+| `src/main/resources/` | Mod metadata and bundled resources. |
+| `src/main/resources/assets/vibe/` | Vibe assets, including cosmetics, Girlfriend sounds, menu shaders and Waifu presets. |
+| `src/main/resources/assets/minecraft/` | Assets loaded through the Minecraft resource namespace. |
+| `src/test/` | Tests and test resources. |
+| `tools/` | Helper scripts and additional Gradle tasks. |
+| `docs/` | Changelog and feature guides. |
+| `LICENSES/` | License texts and attribution. |
+| `gradle/` | Gradle wrapper files. |
+| `build/`, `.gradle/`, `run/` | Generated build output, local caches and game data; ignored by Git. |
+
+The root contains the Windows launchers (`build.bat`, `run.bat`, `run-fresh.bat`),
+the README, Git ignore rules and standard Gradle build configuration
+and launchers (`build.gradle`, `settings.gradle`, `gradle.properties`, `gradlew`, `gradlew.bat`).
+
+Add bundled assets beneath `src/main/resources/assets/vibe/`. Gradle packages them
+automatically and generates preset lists for `shader/`, `waifu/` and the MP3 event
+folders in `girlfriend/`. The Cosmetica download helper writes to `cosmetica/` here too.
+
+## License and credits
+
+Vibe combines code under [GPLv3](LICENSES/GPL-3.0.txt) with Schizoid-derived Fog, Torus and
+media HUD components under AGPLv3. The [license and attribution guide](LICENSES/THIRD_PARTY_NOTICES.md)
+explains the component terms, source-distribution duties and open release issues.
+License texts and provenance are collected in `LICENSES/`; known gaps are listed
+directly in the guide. `build` checks local license-document links and preserves
+bundled libraries' embedded notices separately, with an inventory of the resolved
+JARs under `META-INF/vibe/dependencies/INDEX.md`.
+
+Open **Licenses & credits** in the main menu or pause menu to read the credits
+and license texts offline. `.source` identifies the matching source archive;
+distribute the build's `-sources.zip` alongside the JAR.
