@@ -20,30 +20,6 @@ Use modules only where permitted by the server's rules. Vibe is client-only.
 - **`.help`** lists chat commands; **Tab** completes them.
 - **Alt Manager** in the main menu or server list manages accounts.
 
-In **ESP → ESP Modes**, select **Chams** on its own or alongside 2D/3D.
-**Invisible** controls the parts of a model hidden behind geometry; **Visible**
-controls the exposed parts. Each has independent **Armor**, **Show Skin**,
-**Flat / Glow / Metallic**, and color settings. Show Skin retains the texture
-under the material tint. The color's alpha controls opacity in all three
-materials, including fully transparent at zero. Chams uses the Targets filters.
-
-NeverLose uses two columns of settings cards (one in small windows). Click a
-card title to collapse it, use its switch to enable the module, and click the
-three dots or middle-click the card header to assign a key. **Ctrl+F** searches
-modules and settings across categories. The top-left config selector loads a
-saved profile; dropdowns and the module area scroll independently.
-Drag the bottom-right corner to resize the window; its size is remembered when
-you close and reopen ClickGUI.
-
-Xanax uses category tabs, a module list and a separate settings panel with red
-sliders. Left-click a module to toggle it, right-click to select its settings,
-and middle-click to assign a key. Both panels scroll independently; drag either
-window by its top border and resize it at the bottom-right corner. Both window
-sizes are remembered when you reopen ClickGUI. The config window loads, saves, creates and
-deletes local profiles (click Delete twice to confirm). Its Keybinds checkbox
-controls whether loading a profile replaces bindings. On narrow screens, use
-**Configs** at the bottom right to open that window.
-
 See the [GTA7 guide](docs/GTA7.md) for the expanded map, controls, upgrades, skins and save backups.
 See [Music and visual effects](docs/MUSIC_AND_EFFECTS.md) for Fog, Torus, radio,
 the media HUD and audio-reactive waves. Fog and CustomCrosshair also work in GTA7.
