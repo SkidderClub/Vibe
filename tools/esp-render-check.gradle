@@ -1,0 +1,23 @@
+// Optional init script: gradle -I tools/esp-render-check.gradle verifyEspRendering
+gradle.projectsEvaluated {
+    def project = gradle.rootProject
+    project.tasks.register('verifyEspRendering', JavaExec) {
+        dependsOn project.tasks.named('testClasses')
+        javaLauncher = project.javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+        classpath = project.sourceSets.test.runtimeClasspath + project.sourceSets.main.runtimeClasspath
+        mainClass = 'dev.vibe.ui.EspRenderCheck'
+        workingDir project.projectDir
+        systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+        doFirst {
+            def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+            def platform = os.contains('win') ? 'windows' : os.contains('mac') ? 'osx' : 'linux'
+            def archive = project.sourceSets.main.runtimeClasspath.files.find {
+                it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar')
+            }
+            if (archive == null) throw new GradleException('LWJGL natives unavailable for ' + platform)
+            def nativeDir = project.layout.buildDirectory.dir('esp-render-check/natives').get().asFile
+            project.copy { from project.zipTree(archive); include '*.dll', '*.so', '*.dylib', '*.jnilib'; into nativeDir }
+            systemProperty 'org.lwjgl.librarypath', nativeDir.absolutePath
+        }
+    }
+}

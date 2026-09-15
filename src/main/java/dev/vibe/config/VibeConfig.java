@@ -414,6 +414,7 @@ public final class VibeConfig {
                 Vibe.getInstance().getHudManager().fromJson(root.getAsJsonObject("hud"));
             }
             JsonArray modules = getArray(root, "modules");
+            EspConfigMigration.migrate(modules);
             for (JsonElement element : modules) {
                 if (!element.isJsonObject()) continue;
                 JsonObject data = element.getAsJsonObject();

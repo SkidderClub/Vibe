@@ -27,7 +27,6 @@ import dev.vibe.module.impl.Gta7Module;
 import dev.vibe.module.impl.GirlfriendModule;
 import dev.vibe.module.impl.TargetsModule;
 import dev.vibe.module.impl.TargetEspModule;
-import dev.vibe.module.impl.SkeletalModule;
 import dev.vibe.module.impl.CosmeticsModule;
 import dev.vibe.module.impl.CosmeticsEditorModule;
 import dev.vibe.module.impl.VelocityModule;
@@ -80,7 +79,6 @@ public final class ModuleManager {
         register(new TargetEspModule());
         register(new ItemEspModule());
         register(new HitmarkerModule());
-        register(new SkeletalModule());
         register(new CosmeticsModule());
         register(new CosmeticsEditorModule());
         register(new ChestEspModule());

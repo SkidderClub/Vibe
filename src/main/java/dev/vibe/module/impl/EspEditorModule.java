@@ -9,10 +9,11 @@ import org.lwjgl.input.Keyboard;
 /** Opens the Counter-Strike-inspired interactive ESP layout editor. */
 public final class EspEditorModule extends Module {
     public EspEditorModule() {
-        super("ESP Editor", "Preview and arrange tactical ESP elements", Category.VISUAL, Keyboard.KEY_NONE);
+        super("ESP Editor", "Edit 2D, 3D, Skeletal and Chams appearance", Category.VISUAL, Keyboard.KEY_NONE);
     }
     @Override protected void onEnable() {
-        if (Minecraft.getMinecraft().thePlayer == null) { setEnabled(false); return; }
-        Minecraft.getMinecraft().displayGuiScreen(new EspEditorGui(this));
+        Minecraft mc=Minecraft.getMinecraft();
+        if(mc.currentScreen instanceof dev.vibe.ui.Gta7Gui) { ((dev.vibe.ui.Gta7Gui)mc.currentScreen).openEspEditor();return; }
+        mc.displayGuiScreen(new EspEditorGui(this,mc.currentScreen));
     }
 }

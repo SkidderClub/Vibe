@@ -1,5 +1,7 @@
 #version 120
 uniform sampler2D Skin;
+uniform int NativeMesh;
+varying vec4 SurfaceColor;
 uniform vec3 Tint;
 uniform float Opacity;
 uniform int ShowSkin;
@@ -9,7 +11,7 @@ varying vec3 EyePosition;
 varying vec3 EyeNormal;
 
 void main() {
-    vec4 skin = texture2D(Skin, SkinUv);
+    vec4 skin = NativeMesh != 0 ? SurfaceColor : texture2D(Skin, SkinUv);
     // Preserve transparent hat/jacket/armor cutouts even on an untextured material.
     if (skin.a < 0.1) discard;
     vec3 base = Tint * (ShowSkin != 0 ? skin.rgb : vec3(1.0));

@@ -27,7 +27,7 @@ public final class Gta7Gui extends GuiScreen {
     private Gta7Game game;
     private Gta7Renderer renderer;
     private EspModule esp;
-    private boolean paused, captured, attackReleased, previousDead, showHelp;
+    private boolean paused, captured, attackReleased, previousDead, showHelp, editingEsp;
     private long lastFrame;
     private BigInteger soundAmmo=BigInteger.valueOf(30);
     private int shopTab, shopPage;
@@ -45,6 +45,7 @@ public final class Gta7Gui extends GuiScreen {
             renderer=new Gta7Renderer(mc);
             esp=Vibe.getInstance().getModuleManager().getModule(EspModule.class);
         }
+        editingEsp=false;
         lastFrame=System.nanoTime();
         capture(!paused&&!game.dead&&Display.isActive());
     }
@@ -290,6 +291,7 @@ public final class Gta7Gui extends GuiScreen {
             button(left+14,top+81,left+14+bw,top+109,"RESUME",mouseX,mouseY,true);
             button(left+14,top+117,left+14+bw,top+145,"CONTROLS  "+(showHelp?"ON":"OFF"),mouseX,mouseY,false);
             button(left+14,top+153,left+14+bw,top+181,"SAVE & EXIT",mouseX,mouseY,false);
+            button(left+14,top+189,left+14+bw,Math.min(top+217,bottom-8),"ESP EDITOR",mouseX,mouseY,false);
             if(w>=450) {
                 if(showHelp)controls(left+230,top+85);
                 else {
@@ -303,7 +305,7 @@ public final class Gta7Gui extends GuiScreen {
                         text(names[index],tx+5,ty+th/2-5,WHITE);index++;
                     }
                 }
-            } else if(showHelp)text("F1: show controls when you resume",left+14,top+190,MUTED);
+            }
             if(menuHeight()>235)text("LOCAL PROGRESS SAVES AUTOMATICALLY",left+14,bottom-19,0xFF7C9AA6);
         }
     }
@@ -403,12 +405,23 @@ public final class Gta7Gui extends GuiScreen {
             if(inside(mx,my,left+14,top+81,left+14+bw,top+109)){paused=false;capture(true);lastFrame=System.nanoTime();}
             else if(inside(mx,my,left+14,top+117,left+14+bw,top+145))showHelp=!showHelp;
             else if(inside(mx,my,left+14,top+153,left+14+bw,top+181))exitGame();
+            else if(inside(mx,my,left+14,top+189,left+14+bw,Math.min(top+217,bottom-8)))openEspEditor();
         }
     }
+
+    /** Keep the current run and native meshes alive while its ESP settings are edited. */
+    public void openEspEditor(){
+        dev.vibe.module.impl.EspEditorModule editor=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.EspEditorModule.class);
+        if(editor==null)return;
+        editingEsp=true;paused=true;capture(false);
+        mc.displayGuiScreen(new EspEditorGui(editor,this));
+    }
+    public void closeFromEditor(){editingEsp=false;onGuiClosed();}
 
     private void exitGame(){mc.displayGuiScreen(null);mc.setIngameFocus();}
     @Override public void onGuiClosed(){
         capture(false);
+        if(editingEsp)return;
         if(game!=null)game.progress.save();
         if(renderer!=null)renderer.close();
         if(module.isEnabled())module.setEnabled(false);

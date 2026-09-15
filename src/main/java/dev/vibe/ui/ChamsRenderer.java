@@ -84,11 +84,19 @@ public final class ChamsRenderer {
 
     /** Shared with the offscreen driver check; geometry already has vanilla's transforms and pose. */
     static void draw(EspModule esp, boolean armor, float opacity, Runnable geometry) {
+        draw(esp, armor, opacity, geometry, false);
+    }
+
+    /** GTA7 meshes supply their surface colors as vertex colors instead of a skin texture. */
+    public static void drawNative(EspModule esp, Runnable geometry) { draw(esp, false, 1, geometry, true); }
+
+    private static void draw(EspModule esp, boolean armor, float opacity, Runnable geometry, boolean nativeMesh) {
         try (EffectState state = new EffectState()) {
             GL11.glEnable(GL11.GL_DEPTH_TEST);
             GL11.glDepthMask(false);
             GL11.glEnable(GL11.GL_CULL_FACE);
             GL11.glCullFace(GL11.GL_BACK);
+            if(nativeMesh) GL11.glDisable(GL11.GL_CULL_FACE);
             GL11.glDisable(GL11.GL_POLYGON_OFFSET_FILL);
             GL11.glEnable(GL11.GL_BLEND);
             GL20.glBlendEquationSeparate(GL14.GL_FUNC_ADD, GL14.GL_FUNC_ADD);
@@ -98,6 +106,7 @@ public final class ChamsRenderer {
             if (shader) {
                 material.bind();
                 material.integer("Skin", 0);
+                material.integer("NativeMesh", nativeMesh ? 1 : 0);
             } else {
                 GL20.glUseProgram(0);
                 // Full-bright fallback must not inherit lightmap or hurt-flash combiners.

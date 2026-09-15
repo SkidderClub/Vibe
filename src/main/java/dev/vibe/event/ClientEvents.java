@@ -688,7 +688,7 @@ public final class ClientEvents {
             return;
         }
         EspModule esp = Vibe.getInstance().getModuleManager().getModule(EspModule.class);
-        if (esp != null && esp.isEnabled() && esp.getModes().isSelected("2D") && esp.getStyleFor((EntityPlayer) event.entity).hasNames()) {
+        if (esp != null && esp.isEnabled() && esp.getModes().isSelected("2D") && esp.get2D().name.enabled.isEnabled()) {
             event.setCanceled(true);
         }
     }

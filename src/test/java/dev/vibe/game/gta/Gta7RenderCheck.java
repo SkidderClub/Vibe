@@ -81,6 +81,11 @@ public class Gta7RenderCheck {
             game.npcs.clear();game.npcs.add(new Gta7Game.Npc(72,64,true,0));game.npcs.add(new Gta7Game.Npc(74,58,true,1));game.npcs.get(0).health=63;
             esp.setEnabled(true);esp.getModes().setValue(new HashSet<String>(Arrays.asList("2D","3D")));
             frame("04-police-esp",false,false);
+            esp.getModes().setValue(new HashSet<String>(Arrays.asList("2D","3D","Skeletal","Chams")));
+            esp.get2D().itemIcon.enabled.setValue(true);esp.get2D().health.enabled.setValue(true);
+            esp.get2D().text.color.mode.setValue("Global Gradient");esp.get2D().box.color.mode.setValue("Global Gradient");
+            frame("04b-police-all-esp-modes",false,false);
+            esp.getModes().setValue(new HashSet<String>(Arrays.asList("2D","3D")));
             game.health=java.math.BigDecimal.ZERO;game.dead=true;game.progress.award(java.math.BigInteger.valueOf(325));
             frame("05-upgrades",true,false);
             mc.displayWidth=640;mc.displayHeight=480;
@@ -148,6 +153,11 @@ public class Gta7RenderCheck {
             game.progress.award(java.math.BigInteger.valueOf(500));game.progress.purchase(Gta7Progress.Upgrade.KNIFE);
             set(Gta7Gui.class,gui,"paused",true);gui.initGui();set(Gta7Gui.class,gui,"paused",false);
             if(game.x!=75.5||game.ammo.intValue()!=7||game.health.intValue()!=63)throw new AssertionError("Resize reset the run");
+            set(Gta7Gui.class,gui,"paused",true);set(Gta7Gui.class,gui,"editingEsp",true);gui.onGuiClosed();
+            Field nativeLists=Gta7Renderer.class.getDeclaredField("lists");nativeLists.setAccessible(true);
+            if(nativeLists.getInt(renderer)==0)throw new AssertionError("Opening the ESP editor released the active GTA7 scene");
+            gui.initGui();
+            if(game.x!=75.5||game.health.intValue()!=63)throw new AssertionError("Returning from ESP editor reset the run");
             int oldLevel=game.progress.level(Gta7Progress.Upgrade.KNIFE).intValue();
             game.hurt(1000);
             call("mouseClicked",new Class[]{int.class,int.class,int.class},gui.width/2-260,((gui.height-320)/2)+104,0);

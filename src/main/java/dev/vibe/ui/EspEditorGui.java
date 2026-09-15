@@ -2,138 +2,376 @@ package dev.vibe.ui;
 
 import com.mojang.authlib.GameProfile;
 import dev.vibe.Vibe;
-import dev.vibe.module.impl.BlurModule;
-import dev.vibe.module.impl.EspEditorModule;
-import dev.vibe.module.impl.EspModule;
-import dev.vibe.setting.BooleanSetting;
-import dev.vibe.setting.ColorSetting;
-import dev.vibe.setting.ModeSetting;
+import dev.vibe.module.impl.*;
+import dev.vibe.module.impl.Esp2DSettings.*;
+import dev.vibe.setting.*;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import net.minecraft.client.entity.EntityOtherPlayerMP;
-import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.gui.*;
+import net.minecraft.client.model.ModelPlayer;
+import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.entity.RenderManager;
-import net.minecraft.client.renderer.ThreadDownloadImageData;
 import net.minecraft.client.resources.DefaultPlayerSkin;
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.GL11;
 
-/** Counter-Strike-style ESP preview sharing the resolved in-game ESP profile. */
+/** Responsive editor: controls and preview operate directly on the persisted ESP settings. */
 public final class EspEditorGui extends GuiScreen {
-    private enum Kind { PLAYERS, FRIENDS, TARGETS }
-    private enum PickerPart { SATURATION, HUE, ALPHA }
+    private static final int W=920,H=560,LIST_X=384,LIST_Y=83,LIST_W=518,LIST_BOTTOM=536;
     private final EspEditorModule module;
-    private final ParticlesRenderer particles = new ParticlesRenderer();
-    private final List<ElementRect> elements = new ArrayList<ElementRect>();
+    private final GuiScreen parent;
+    private boolean returning;
+    private final Esp2DRenderer renderer=new Esp2DRenderer();
+    private final Set<String> collapsed=new HashSet<String>();
+    private final List<Row> rows=new ArrayList<Row>();
     private EspModule esp;
-    private Kind kind = Kind.PLAYERS;
-    private String dragged;
-    private boolean rotating;
-    private float previewYaw;
-    private int lastMouseX;
-    private int left, top, panelWidth;
+    private boolean initialized;
+    private float uiScale=1,scroll,maxScroll,previewYaw;
+    private int left,top,mouseX,mouseY,lastMouseX;
+    private Element selected,dragged;
+    private boolean resizing,rotating;
+    private float resizeStart,resizeDistance;
+    private NumberSetting slider;
+    private int sliderX,sliderWidth;
+    private Esp2DRenderer.Frame frame;
+    private EspLayout.Rect box;
     private EntityOtherPlayerMP preview;
-    private String previewName;
+    private String previewName="Steve";
     private ColorSetting activeColor;
-    private boolean pickerOpen;
-    private PickerPart pickerPart;
-    private float pickerHue, pickerSaturation, pickerBrightness;
+    private GuiTextField hex;
+    private float hue,saturation,brightness;
+    private int pickerPart=-1;
+    private static final int PICK_X=624,PICK_Y=144,PICK_W=268;
 
-    public EspEditorGui(EspEditorModule module) { this.module = module; }
-
+    public EspEditorGui(EspEditorModule module) { this(module,null); }
+    public EspEditorGui(EspEditorModule module,GuiScreen parent) { this.module=module;this.parent=parent; }
     @Override public void initGui() {
-        panelWidth = Math.max(700, Math.min(860, width - 18));
-        left = Math.max(9, (width - panelWidth) / 2);
-        top = Math.max(10, (height - 480) / 2);
-        esp = Vibe.getInstance().getModuleManager().getModule(EspModule.class);
-        setActiveColor(esp.getOutlineColor());
+        uiScale=Math.min(1,Math.min(width/(float)W,height/(float)H));
+        left=Math.round((width/uiScale-W)/2);top=Math.round((height/uiScale-H)/2);
+        esp=Vibe.getInstance().getModuleManager().getModule(EspModule.class);
+        if(!initialized){for(Element e:settings().elements)collapsed.add(e.title);collapsed.add("Default text");initialized=true;}
+        hex=new GuiTextField(0,fontRendererObj,left+PICK_X+14,top+PICK_Y+267,240,20);
+        hex.setMaxStringLength(9);
     }
-
-    private EspModule.ProfileSettings profile() { return kind == Kind.FRIENDS ? esp.getFriendsProfile() : esp.getTargetsProfile(); }
-    private EspModule.Style style() { return esp.getPreviewStyle(kind == Kind.PLAYERS ? 0 : kind == Kind.FRIENDS ? 1 : 2); }
-
-    @Override public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        SkeetEditorStyle.backdrop(this, BlurModule.ESP_EDITOR, partialTicks);
-        SkeetEditorStyle.window(left, top, left + panelWidth, top + 480, "Interactive ESP preview", "drag elements • drag model to rotate");
-        drawTabs();
-        drawPreview(mouseX, mouseY);
-        drawSettings(mouseX, mouseY);
-        if (dragged != null) drawDraggedElement(mouseX, mouseY);
-        if (pickerOpen) drawPicker();
-        super.drawScreen(mouseX, mouseY, partialTicks);
+    private Esp2DSettings settings() {return esp.get2D();}
+    private boolean hit(float x,float y,float w,float h,int mx,int my) {return mx>=left+x&&mx<left+x+w&&my>=top+y&&my<top+y+h;}
+    private void text(String value,float x,float y,int color) {fontRendererObj.drawString(value,left+x,top+y,color,false);}
+    private void rect(float x,float y,float w,float h,int color) {Gui.drawRect((int)(left+x),(int)(top+y),(int)(left+x+w),(int)(top+y+h),color);}
+    private void button(String label,int x,int y,int w,boolean on) {
+        RenderUtils.roundedRect(left+x,top+y,left+x+w,top+y+23,4,on?0xFF7261DF:0xFF25252E);
+        text(label,x+8,y+8,on?0xFFFFFFFF:0xFFB9B9C9);
     }
-
-    private void drawTabs() {
-        String[] labels = {"PLAYERS", "FRIENDS / TEAMS", "TARGETS"};
-        for (int i = 0; i < labels.length; i++) {
-            int x = left + 14 + i * 137;
-            SkeetEditorStyle.row(x, top + 42, x + 128, top + 64, kind.ordinal() == i, false);
-            fontRendererObj.drawStringWithShadow(labels[i], x + 8, top + 50, kind.ordinal() == i ? 0xFF101012 : SkeetEditorStyle.TEXT);
-        }
-    }
-
-    private void drawPreview(int mouseX, int mouseY) {
-        int previewLeft = left + 24, previewTop = top + 82, previewRight = left + 420, previewBottom = top + 462;
-        SkeetEditorStyle.panel(previewLeft, previewTop, previewRight, previewBottom, "Drag & drop elements");
-        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Release a component on a side of the box to reposition it"), previewLeft + 14, previewTop + 30, SkeetEditorStyle.MUTED);
-        int boxLeft = previewLeft + 142, boxTop = previewTop + 77, boxRight = boxLeft + 126, boxBottom = boxTop + 246;
-        EspModule.Style style = style();
-        drawAlphaRect(boxLeft, boxTop, boxRight, boxBottom, style.getFill());
-        int shortSide = Math.min(boxRight - boxLeft, boxBottom - boxTop);
-        int thickness = Math.max(1, Math.min(3, Math.round(shortSide * 0.018F)));
-        int corner = Math.max(thickness, Math.min((shortSide - thickness) / 2, Math.round(shortSide * 0.24F)));
-        RenderUtils.tacticalCorners(boxLeft, boxTop, boxRight, boxBottom, style.getOutline(), thickness, corner);
-        previewName = kind == Kind.FRIENDS ? "Yoshiii" : kind == Kind.TARGETS ? "xHeist_" : "Steve";
-        drawPreviewPlayer((boxLeft + boxRight) / 2, boxBottom - 10);
-        ModeSetting position = positionSetting(dragged);
-        String previous = position == null ? null : position.getValue();
-        BooleanSetting defaults = kind == Kind.PLAYERS ? null : profile().getUsePlayerDefaults();
-        boolean inherited = defaults != null && defaults.isEnabled();
+    @Override public void drawScreen(int mx,int my,float partialTicks) {
+        mouseX=(int)(mx/uiScale);mouseY=(int)(my/uiScale);
+        SkeetEditorStyle.backdrop(this,BlurModule.ESP_EDITOR,partialTicks);
+        GlStateManager.pushMatrix();GlStateManager.scale(uiScale,uiScale,1);
         try {
-            if (position != null) {
-                position.setValue(snapSide(dragged, mouseX, mouseY, boxLeft, boxTop, boxRight, boxBottom));
-                if (inherited) defaults.setValue(false);
-            }
-            drawLabels(boxLeft, boxTop, boxRight, boxBottom, style());
-            if (dragged != null) for (ElementRect element : elements) {
-                if (dragged.equals(element.name)) RenderUtils.tacticalCorners(element.x, element.y,
-                        element.x + element.w, element.y + element.h, SkeetEditorStyle.accent(0), 1, 4);
-            }
-        } finally {
-            if (position != null) position.setValue(previous);
-            if (inherited) defaults.setValue(true);
-        }
-        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.format("Click-drag model to rotate • %s", previewName), previewLeft + 14, previewBottom - 17, SkeetEditorStyle.MUTED);
+            rect(0,0,W,H,0xF514141C);text("ESP EDITOR",18,17,0xFFFFFFFF);
+            text("Drag to place / handle to resize / wheel to scale / middle-click to edit",145,18,0xFF9999AC);
+            button(esp.isEnabled()?"ESP ON":"ESP OFF",800,9,101,esp.isEnabled());
+            String[] modes={"2D","3D","Skeletal","Chams"};
+            for(int i=0;i<modes.length;i++)button(modes[i],18+i*91,45,82,esp.getModes().isSelected(modes[i]));
+            text("Enabled modes have their own settings section",401,53,0xFF9999AC);
+            drawPreview(partialTicks);
+            buildRows();drawRows();
+            if(activeColor!=null)drawPicker();
+        } finally {GlStateManager.popMatrix();}
+        super.drawScreen(mx,my,partialTicks);
     }
-
-    private void drawAlphaRect(int left, int top, int right, int bottom, int color) {
-        if ((color >>> 24) == 255) Gui.drawRect(left, top, right, bottom, color);
-        else {
-            org.lwjgl.opengl.GL11.glPushAttrib(org.lwjgl.opengl.GL11.GL_ENABLE_BIT
-                    | org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT | org.lwjgl.opengl.GL11.GL_CURRENT_BIT);
-            org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_TEXTURE_2D);
-            org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_BLEND);
-            org.lwjgl.opengl.GL11.glBlendFunc(org.lwjgl.opengl.GL11.GL_SRC_ALPHA, org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA);
-            org.lwjgl.opengl.GL11.glColor4f((color >> 16 & 255) / 255.0F, (color >> 8 & 255) / 255.0F, (color & 255) / 255.0F, (color >>> 24) / 255.0F);
-            org.lwjgl.opengl.GL11.glBegin(org.lwjgl.opengl.GL11.GL_QUADS);
-            org.lwjgl.opengl.GL11.glVertex2i(left, bottom); org.lwjgl.opengl.GL11.glVertex2i(right, bottom); org.lwjgl.opengl.GL11.glVertex2i(right, top); org.lwjgl.opengl.GL11.glVertex2i(left, top);
-            org.lwjgl.opengl.GL11.glEnd();
-            org.lwjgl.opengl.GL11.glPopAttrib();
-            // GL_COLOR_BUFFER_BIT does not restore the current tint. Never
-            // allow a translucent ESP fill to tint the model or the world.
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+    private void drawPreview(float partialTicks) {
+        rect(18,83,350,453,0xFF1B1B24);text("LIVE PREVIEW",32,97,0xFFB8B0F6);
+        if(esp.getModes().isSelected("2D")) {
+            int i=0;for(Element e:settings().elements){button(e.title,28+(i%3)*111,117+(i/3)*27,105,e.enabled.isEnabled());i++;}
+        }
+        box=new EspLayout.Rect(left+157,top+250,83,163);
+        scissor(18,207,350,265);
+        drawPreviewPlayer((int)(box.x+box.w/2),(int)box.bottom());
+        if(esp.getModes().isSelected("3D"))draw3DPreview();
+        if(esp.getModes().isSelected("Skeletal"))drawSkeletonPreview();
+        frame=null;
+        if(esp.getModes().isSelected("2D")) {
+            frame=renderer.draw(settings(),previewActor(),box,Math.round(width/uiScale),Math.round(height/uiScale),true);
+            if(selected!=null && selected.enabled.isEnabled()) {
+                EspLayout.Rect r=selected==settings().box?box:frame.elements.get(selected.title);
+                if(r!=null){RenderUtils.tacticalCorners((int)r.x-2,(int)r.y-2,(int)r.right()+2,(int)r.bottom()+2,0xFFA797FF,1,5);
+                    Gui.drawRect((int)r.right()-2,(int)r.bottom()-2,(int)r.right()+4,(int)r.bottom()+4,0xFFD7CDFF);}
+            }
+        }
+        GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        text(selected==null?"Select an element to see its resize handle":selected.title+"  /  "+String.format(Locale.ROOT,"%.2fx",selected.scale.getDouble()),32,478,0xFFDDDAF4);
+        text("Drop near an edge to stack. Position is saved.",32,496,0xFF9999AC);
+        text("Drag empty preview space to rotate the model.",32,514,0xFF9999AC);
+        if(dragged!=null)text(resizing?"Resizing "+dragged.title:"Place "+dragged.title,mouseX-left+9,mouseY-top+12,0xFFFFFFFF);
+    }
+    private Esp2DRenderer.Actor previewActor() {
+        return new Esp2DRenderer.Actor(previewName,15,20,16,12,"Diamond Sword",new ItemStack(Items.diamond_sword),
+                new ItemStack[]{new ItemStack(Items.diamond_helmet),new ItemStack(Items.diamond_chestplate),new ItemStack(Items.diamond_leggings),new ItemStack(Items.diamond_boots)},1);
+    }
+    private void draw3DPreview() {
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);GlStateManager.pushMatrix();
+        try {
+            GlStateManager.translate(box.x+box.w/2,box.bottom(),50);GlStateManager.scale(82,-82,82);GlStateManager.rotate(previewYaw,0,1,0);
+            WorldRenderUtils.begin(esp.getThroughWalls().isEnabled());
+            try {EspModule.Style style=esp.getPreviewStyle(0);WorldRenderUtils.box(new net.minecraft.util.AxisAlignedBB(-.5,0,-.3,.5,2,.3),style.getOutline(),style.getFill(),esp.getLineWidth().getFloat());}
+            finally {WorldRenderUtils.end(esp.getThroughWalls().isEnabled());}
+        } finally {GlStateManager.popMatrix();GL11.glPopAttrib();GuiRenderState.prepare(false);}
+    }
+    private void drawSkeletonPreview() {
+        EspModule.SkeletalSettings s=esp.getSkeletal();
+        int color=s.getRainbow().isEnabled()?java.awt.Color.HSBtoRGB((System.currentTimeMillis()%8000)/8000F,.75F,1):s.getColor().getArgb();
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);GL11.glPushMatrix();
+        try {GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glDisable(GL11.GL_DEPTH_TEST);GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(770,771);
+            GL11.glTranslated(box.x+box.w/2,box.bottom(),0);GL11.glScaled(82,-82,82);GL11.glRotated(previewYaw,0,1,0);
+            if(s.getDepthBackplate().isEnabled()){GL11.glLineWidth(s.getLineWidth().getFloat()+2);Esp2DRenderer.color(0xB8000000);skeletonLines();}
+            GL11.glLineWidth(s.getLineWidth().getFloat());Esp2DRenderer.color(color);skeletonLines();
+        } finally {GL11.glPopMatrix();GL11.glPopAttrib();GlStateManager.resetColor();}
+    }
+    private void skeletonLines() {
+        float[][] lines={{0,1.85F,0,1.5F},{-.35F,1.5F,.35F,1.5F},{0,1.5F,0,.85F},{-.15F,.85F,.15F,.85F},{-.15F,.85F,-.15F,0},{.15F,.85F,.15F,0},{-.35F,1.5F,-.35F,.8F},{.35F,1.5F,.35F,.8F}};
+        GL11.glBegin(GL11.GL_LINES);for(float[] l:lines){GL11.glVertex2f(l[0],l[1]);GL11.glVertex2f(l[2],l[3]);}GL11.glEnd();
+    }
+    private void buildRows() {
+        rows.clear();
+        if(esp.getModes().isSelected("2D")) {
+            header("2D / Layout",0);if(!collapsed.contains("2D / Layout")) {
+                setting(settings().distanceScaling,"Distance scaling");setting(settings().gap,"Element gap");
+                if(settings().usesGlobalGradient()){header("Global gradient",1);if(!collapsed.contains("Global gradient"))gradient(settings().global);}
+                if(settings().usesDefaultText()){header("Default text",1);if(!collapsed.contains("Default text"))textRows(settings().text);}
+                for(Element e:settings().elements)if(e.enabled.isEnabled()) {
+                    header(e.title,1);if(!collapsed.contains(e.title))elementRows(e);
+                }
+            }
+        }
+        if(esp.getModes().isSelected("3D")) {
+            header("3D / Boxes",0);if(!collapsed.contains("3D / Boxes")){
+                setting(esp.getOutlineColor(),"Color");setting(esp.getFillColor(),"Fill");setting(esp.getLineWidth(),"Line width");setting(esp.getThroughWalls(),"Through walls");
+                setting(esp.getPlayerColorMode(),"Player color mode");setting(esp.getColorFade(),"Color fade");
+                setting(esp.getFadeStart(),"Fade start");setting(esp.getFadeEnd(),"Fade end");setting(esp.getFadeSpeed(),"Fade speed");
+                profileRows("Friends / teams",esp.getFriendsProfile());profileRows("Targets",esp.getTargetsProfile());
+            }
+        }
+        if(esp.getModes().isSelected("Skeletal")){
+            header("Skeletal / Pose",0);if(!collapsed.contains("Skeletal / Pose"))for(Setting<?> s:esp.getSettings())if(s.getRawName().startsWith("Skeletal "))setting(s,s.getRawName().substring(9));
+        }
+        if(esp.getModes().isSelected("Chams")){
+            header("Chams / Materials",0);if(!collapsed.contains("Chams / Materials")){
+                chamsRows("Visible surfaces",esp.getVisibleChams());chamsRows("Occluded surfaces",esp.getInvisibleChams());
+            }
+        }
+        float y=0;for(Row r:rows){r.y=y;y+=r.height;}
+        maxScroll=Math.max(0,y-(LIST_BOTTOM-LIST_Y));scroll=Math.max(0,Math.min(scroll,maxScroll));
+    }
+    private void profileRows(String title,EspModule.ProfileSettings p) {
+        header(title,1);if(collapsed.contains(title))return;
+        setting(p.getUsePlayerDefaults(),"Use player defaults");setting(p.getColorMode(),"Color mode");setting(p.getOverrideColor(),"Override color");
+        setting(p.getOutline(),"Outline");setting(p.getFill(),"Fill");
+    }
+    private void chamsRows(String label,EspModule.ChamsSettings c) {
+        header(label,1);if(collapsed.contains(label))return;
+        setting(c.getArmor(),"Include armor");setting(c.getShowSkin(),"Show skin");setting(c.getMode(),"Material");setting(c.getColor(),"Color / opacity");
+    }
+    private void elementRows(Element e) {
+        setting(e.scale,"Scale");setting(e.position,"Position");setting(e.order,"Stack order");setting(e.offset,"Along edge");
+        setting(e.width,"Width");setting(e.background,"Background / opacity");setting(e.outline,"Outline");setting(e.outlineWidth,"Outline width");setting(e.outlineColor,"Outline color");
+        setting(e.corners,"Corners only");setting(e.cornerLength,"Corner length");setting(e.cornerDistance,"Corners beyond (m)");setting(e.rounding,"Edge rounding");
+        if(e.kind==Kind.TEXT){setting(e.useDefaultText,"Use default text");if(!e.useDefaultText.isEnabled())textRows(e.text);setting(e.metric,"Distance unit");}
+        else if(e.kind==Kind.BOX||e.kind==Kind.BAR)paintRows(e.color);
+    }
+    private void textRows(TextStyle t){setting(t.font,"Font");setting(t.size,"Size");setting(t.shadow,"Shadow");paintRows(t.color);}
+    private void paintRows(Paint p){setting(p.mode,"Color mode");setting(p.solid,"Color / opacity");if(p.mode.is("Custom Gradient"))gradient(p.gradient);setting(p.rainbowSpeed,"Rainbow speed");setting(p.rainbowSaturation,"Rainbow saturation");}
+    private void header(String title,int level){rows.add(new Row(title,null,null,level,31));}
+    private void setting(Setting<?> setting,String label){if(setting.isVisible())rows.add(new Row(label,setting,null,2,27));}
+    private void gradient(Gradient g){rows.add(new Row("",null,g,2,92));setting(g.direction,"Direction (degrees)");setting(g.speed,"Speed (cycles / sec)");}
+    private void drawRows() {
+        rect(LIST_X,LIST_Y,LIST_W,LIST_BOTTOM-LIST_Y,0xFF1B1B24);
+        scissor(LIST_X,LIST_Y,LIST_W,LIST_BOTTOM-LIST_Y);
+        try {for(Row r:rows){float y=LIST_Y+r.y-scroll;if(y+r.height<LIST_Y||y>LIST_BOTTOM)continue;
+            if(r.gradient!=null){drawGradient(r.gradient,y);continue;}
+            if(r.setting==null){rect(LIST_X+5,y+3,LIST_W-16,25,r.level==0?0xFF302941:0xFF252530);text((collapsed.contains(r.title)?"+  ":"-  ")+r.title,LIST_X+14,y+11,0xFFD4CEF1);continue;}
+            text(r.title,LIST_X+16,y+9,0xFFB9B9C9);int x=LIST_X+259,w=232;
+            Setting<?> s=r.setting;
+            if(s instanceof BooleanSetting){boolean on=((BooleanSetting)s).isEnabled();rect(x,y+6,w,17,on?0xFF7261DF:0xFF30303C);text(on?"Enabled":"Disabled",x+8,y+10,0xFFFFFFFF);}
+            else if(s instanceof ModeSetting){rect(x,y+5,w,19,0xFF30303C);text(((ModeSetting)s).getValue()+"  >",x+8,y+10,0xFFE4DEF8);}
+            else if(s instanceof ColorSetting){RenderUtils.transparencyGrid(left+x,top+(int)y+5,left+x+w,top+(int)y+23,4);rect(x,y+5,w,18,((ColorSetting)s).getArgb());}
+            else if(s instanceof NumberSetting){NumberSetting n=(NumberSetting)s;float f=(float)((n.getDouble()-n.getMinimum())/(n.getMaximum()-n.getMinimum()));
+                rect(x,y+21,w,2,0xFF363641);rect(x,y+21,w*f,2,0xFF9F8BFF);text(format(n.getDouble()),x+8,y+8,0xFFE4DEF8);}
+        }}finally{GL11.glDisable(GL11.GL_SCISSOR_TEST);}
+        if(maxScroll>0){float view=LIST_BOTTOM-LIST_Y,thumb=Math.max(25,view*view/(view+maxScroll));rect(LIST_X+LIST_W-5,LIST_Y+(view-thumb)*scroll/maxScroll,3,thumb,0xFF8D7ACF);}
+    }
+    private static String format(double value){return String.format(Locale.ROOT,"%.2f",value);}
+    private void drawGradient(Gradient g,float y) {
+        int x=LIST_X+16,w=475;EspGradient gradient=new EspGradient(g,0);
+        for(int i=0;i<w;i++)rect(x+i,y+9,1,16,gradient.at(i/(float)(w-1)));
+        for(int i=0;i<g.count.getInt();i++){
+            int sx=x+Math.round(g.positions.get(i).getFloat()*w);
+            rect(sx-5,y+29,10,13,activeColor==g.colors.get(i)?0xFFFFFFFF:0xFF555561);rect(sx-3,y+31,6,9,g.colors.get(i).getArgb());
+        }
+        text("Click a stop to edit color. Drag to position.",x,y+51,0xFF9999AC);
+        text(g.count.getInt()+" color stops",x,y+74,0xFFD4CEF1);
+        rect(x+w-60,y+66,25,20,0xFF30303C);text("-",x+w-51,y+72,0xFFFFFFFF);
+        rect(x+w-28,y+66,25,20,0xFF30303C);text("+",x+w-20,y+72,0xFFFFFFFF);
+    }
+    private void scissor(int x,int y,int w,int h){
+        float sx=mc.displayWidth/(float)width*uiScale,sy=mc.displayHeight/(float)height*uiScale;
+        GL11.glEnable(GL11.GL_SCISSOR_TEST);GL11.glScissor((int)((left+x)*sx),(int)(mc.displayHeight-(top+y+h)*sy),(int)Math.ceil(w*sx),(int)Math.ceil(h*sy));
+    }
+    private void select(Element e){
+        selected=e;collapsed.remove("2D / Layout");collapsed.remove(e.title);activeColor=null;buildRows();
+        for(Row r:rows)if(r.setting==null&&r.title.equals(e.title)){scroll=Math.min(maxScroll,r.y);break;}
+    }
+    private Element hovered(int mx,int my){
+        if(frame==null||!hit(18,207,350,265,mx,my))return null;
+        for(Element e:settings().elements){EspLayout.Rect r=frame.elements.get(e.title);if(r!=null&&r.expand(3).contains(mx,my))return e;}
+        if(settings().box.enabled.isEnabled()&&box.expand(4).contains(mx,my)&&!new EspLayout.Rect(box.x+6,box.y+6,box.w-12,box.h-12).contains(mx,my))return settings().box;
+        return null;
+    }
+    @Override protected void mouseClicked(int mx,int my,int button)throws IOException {
+        mx=(int)(mx/uiScale);my=(int)(my/uiScale);
+        if(activeColor!=null){pickerClick(mx,my,button);return;}
+        if(button==0&&hit(800,9,101,23,mx,my)){esp.toggle();return;}
+        String[] modes={"2D","3D","Skeletal","Chams"};
+        if(button==0)for(int i=0;i<4;i++)if(hit(18+i*91,45,82,23,mx,my)){esp.getModes().toggle(modes[i]);scroll=0;dragged=null;return;}
+        if(esp.getModes().isSelected("2D")){
+            int i=0;for(Element e:settings().elements){if(button==0&&hit(28+(i%3)*111,117+(i/3)*27,105,23,mx,my)){e.enabled.toggle();if(e.enabled.isEnabled())select(e);return;}i++;}
+            if(selected!=null&&frame!=null&&button==0){EspLayout.Rect r=selected==settings().box?box:frame.elements.get(selected.title);
+                if(r!=null&&new EspLayout.Rect(r.right()-5,r.bottom()-5,12,12).contains(mx,my)){
+                    dragged=selected;resizing=true;resizeStart=selected.scale.getFloat();resizeDistance=Math.max(8,(float)Math.hypot(mx-r.x,my-r.y));return;}}
+            Element e=hovered(mx,my);if(e!=null){select(e);if(button==0&&e!=settings().box){dragged=e;resizing=false;}return;}
+        }
+        if(hit(LIST_X,LIST_Y,LIST_W,LIST_BOTTOM-LIST_Y,mx,my)){
+            for(Row r:rows){float y=LIST_Y+r.y-scroll;if(my<top+y||my>=top+y+r.height)continue;
+                if(r.gradient!=null){gradientClick(r.gradient,y,mx,my,button);return;}
+                if(r.setting==null){if(!collapsed.add(r.title))collapsed.remove(r.title);return;}
+                if(mx<left+LIST_X+250)return;
+                Setting<?> s=r.setting;
+                if(s instanceof BooleanSetting)((BooleanSetting)s).toggle();
+                else if(s instanceof ModeSetting)((ModeSetting)s).cycle(button==1);
+                else if(s instanceof ColorSetting)openColor((ColorSetting)s);
+                else if(s instanceof NumberSetting){slider=(NumberSetting)s;sliderX=left+LIST_X+259;sliderWidth=232;updateSlider(mx);}
+                return;
+            }
+        }
+        if(button==0&&hit(18,207,350,265,mx,my)){rotating=true;lastMouseX=mx;}
+    }
+    private void gradientClick(Gradient g,float y,int mx,int my,int button){
+        int x=left+LIST_X+16,w=475;
+        if(my>=top+y+66){if(mx>=x+w-28){if(g.count.getInt()<8){
+                int i=g.count.getInt();EspGradient sorted=new EspGradient(g,0);float largest=-1,position=.5F;
+                for(int j=1;j<sorted.positions.length;j++){float gap=sorted.positions[j]-sorted.positions[j-1];if(gap>largest){largest=gap;position=(sorted.positions[j]+sorted.positions[j-1])/2;}}
+                g.positions.get(i).setValue((double)position);g.count.increase();
+            }}else if(mx>=x+w-60)g.count.decrease();return;}
+        if(my<top+y+7||my>top+y+44)return;
+        int closest=0;float distance=Float.MAX_VALUE;
+        for(int i=0;i<g.count.getInt();i++){float d=Math.abs(mx-(x+g.positions.get(i).getFloat()*w));if(d<distance){distance=d;closest=i;}}
+        if(button==1){openColor(g.colors.get(closest));return;}
+        activeStop=g;stopIndex=closest;stopMouseX=mx;slider=g.positions.get(closest);sliderX=x;sliderWidth=w;
+    }
+    private Gradient activeStop;private int stopIndex,stopMouseX;
+    private void updateSlider(int x){if(slider!=null)slider.setValue(slider.getMinimum()+Math.max(0,Math.min(1,(x-sliderX)/(double)sliderWidth))*(slider.getMaximum()-slider.getMinimum()));}
+    @Override protected void mouseClickMove(int mx,int my,int button,long elapsed){
+        mx=(int)(mx/uiScale);my=(int)(my/uiScale);
+        if(activeColor!=null&&pickerPart>=0){updatePicker(mx,my);return;}
+        if(slider!=null){updateSlider(mx);return;}
+        if(rotating){previewYaw+=mx-lastMouseX;lastMouseX=mx;}
+        if(dragged!=null){
+            if(resizing){EspLayout.Rect r=dragged==settings().box?box:frame.elements.get(dragged.title);if(r!=null)dragged.scale.setValue((double)(resizeStart*Math.max(8,Math.hypot(mx-r.x,my-r.y))/resizeDistance));}
+            else place(dragged,mx,my);
         }
     }
-
+    private void place(Element e,int mx,int my){
+        if(!hit(18,207,350,265,mx,my))return;
+        String side=EspLayout.snap(box,mx,my,e.kind==Kind.BAR||e.kind==Kind.ARMOR);e.position.setValue(side);
+        EspLayout.Rect current=frame.elements.get(e.title);
+        float elementHeight=current==null?0:current.h;
+        float offset=e.vertical()?my-box.y-elementHeight/2:mx-(box.x+box.w/2);
+        if(side.endsWith("Down"))offset=my-box.bottom()+elementHeight/2;
+        if(e.kind==Kind.BAR)offset=0;
+        e.offset.setValue((double)(offset/frame.scale));
+        List<Element> stack=new ArrayList<Element>();for(Element other:settings().elements)if(other!=e&&other.enabled.isEnabled()&&other.position.is(side)&&other.kind!=Kind.BOX)stack.add(other);
+        Collections.sort(stack,Comparator.comparingDouble(other -> other.order.getDouble()));
+        float outward=outward(side,mx,my);int at=0;
+        for(Element other:stack){EspLayout.Rect r=frame.elements.get(other.title);if(r!=null&&outward>outward(side,r.x+r.w/2,r.y+r.h/2))at++;}
+        stack.add(at,e);for(int i=0;i<stack.size();i++)stack.get(i).order.setValue((double)i);
+    }
+    private float outward(String side,float x,float y){if(side.endsWith("Up"))return y-box.y;if(side.endsWith("Down"))return box.bottom()-y;if(side.startsWith("Left"))return box.x-x;if(side.startsWith("Right"))return x-box.right();return side.equals("Top")?box.y-y:y-box.bottom();}
+    @Override protected void mouseReleased(int mx,int my,int state){
+        mx=(int)(mx/uiScale);my=(int)(my/uiScale);
+        if(dragged!=null&&!resizing)place(dragged,mx,my);
+        if(activeStop!=null&&Math.abs(mx-stopMouseX)<3)openColor(activeStop.colors.get(stopIndex));
+        activeStop=null;slider=null;dragged=null;rotating=false;resizing=false;pickerPart=-1;
+    }
+    @Override public void handleMouseInput()throws IOException {
+        super.handleMouseInput();int wheel=Mouse.getEventDWheel();if(wheel==0||activeColor!=null)return;
+        int mx=(int)(Mouse.getEventX()*width/(float)mc.displayWidth/uiScale),my=(int)((height-Mouse.getEventY()*height/(float)mc.displayHeight-1)/uiScale);
+        Element e=dragged!=null?dragged:hovered(mx,my);
+        if(e!=null){e.scale.setValue(e.scale.getDouble()+(wheel>0?.05:-.05));selected=e;return;}
+        if(hit(LIST_X,LIST_Y,LIST_W,LIST_BOTTOM-LIST_Y,mx,my)){
+            if(Keyboard.isKeyDown(Keyboard.KEY_LSHIFT)||Keyboard.isKeyDown(Keyboard.KEY_RSHIFT))for(Row r:rows)if(r.setting instanceof NumberSetting&&my>=top+LIST_Y+r.y-scroll&&my<top+LIST_Y+r.y-scroll+r.height){NumberSetting n=(NumberSetting)r.setting;n.setValue(n.getDouble()+(wheel>0?n.getIncrement():-n.getIncrement()));return;}
+            scroll=Math.max(0,Math.min(maxScroll,scroll+(wheel>0?-38:38)));
+        }
+    }
+    private void openColor(ColorSetting color){activeColor=color;float[] hsv=java.awt.Color.RGBtoHSB(color.getRed(),color.getGreen(),color.getBlue(),null);hue=hsv[0];saturation=hsv[1];brightness=hsv[2];hex.setText(color.getHex());hex.setFocused(false);}
+    private void drawPicker(){
+        int x=PICK_X,y=PICK_Y;rect(x-3,y-3,PICK_W+6,309,0xFF09090F);rect(x,y,PICK_W,303,0xFF22222C);
+        text("COLOR / OPACITY",x+14,y+12,0xFFE6E0FF);text("x",x+247,y+12,0xFFAAAAAA);
+        int hueColor=java.awt.Color.HSBtoRGB(hue,1,1)|0xFF000000;
+        gradientQuad(x+14,y+32,240,160,0xFFFFFFFF,hueColor,hueColor,0xFFFFFFFF);
+        gradientQuad(x+14,y+32,240,160,0,0,0xFF000000,0xFF000000);
+        RenderUtils.tacticalCorners(left+x+12+(int)(saturation*240),top+y+30+(int)((1-brightness)*160),left+x+18+(int)(saturation*240),top+y+36+(int)((1-brightness)*160),0xFFFFFFFF,1,3);
+        for(int i=0;i<6;i++){int a=java.awt.Color.HSBtoRGB(i/6F,1,1),b=java.awt.Color.HSBtoRGB((i+1)/6F,1,1);gradientQuad(x+14+i*40,y+205,40,10,a,b,b,a);}
+        rect(x+13+hue*240,y+203,2,14,0xFFFFFFFF);
+        RenderUtils.transparencyGrid(left+x+14,top+y+229,left+x+254,top+y+239,4);
+        int rgb=activeColor.getArgb()&0xFFFFFF;gradientQuad(x+14,y+229,240,10,rgb,rgb|0xFF000000,rgb|0xFF000000,rgb);
+        rect(x+13+activeColor.getAlpha()/255F*240,y+227,2,14,0xFFFFFFFF);
+        text("Alpha "+Math.round(activeColor.getAlpha()/255F*100)+"%",x+14,y+250,0xFFB9B9C9);hex.drawTextBox();
+    }
+    private void gradientQuad(float x,float y,float w,float h,int tl,int tr,int br,int bl){
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT|GL11.GL_COLOR_BUFFER_BIT|GL11.GL_CURRENT_BIT|GL11.GL_LIGHTING_BIT);
+        GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glDisable(GL11.GL_ALPHA_TEST);GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(770,771);GL11.glShadeModel(GL11.GL_SMOOTH);
+        GL11.glBegin(GL11.GL_QUADS);
+        Esp2DRenderer.color(tl);GL11.glVertex2f(left+x,top+y);Esp2DRenderer.color(tr);GL11.glVertex2f(left+x+w,top+y);
+        Esp2DRenderer.color(br);GL11.glVertex2f(left+x+w,top+y+h);Esp2DRenderer.color(bl);GL11.glVertex2f(left+x,top+y+h);
+        GL11.glEnd();GL11.glPopAttrib();
+    }
+    private void pickerClick(int mx,int my,int button){
+        if(button==1||!hit(PICK_X,PICK_Y,PICK_W,303,mx,my)||hit(PICK_X+240,PICK_Y,28,27,mx,my)){activeColor=null;return;}
+        hex.mouseClicked(mx,my,button);
+        if(hit(PICK_X+14,PICK_Y+32,240,160,mx,my))pickerPart=0;
+        else if(hit(PICK_X+14,PICK_Y+202,240,16,mx,my))pickerPart=1;
+        else if(hit(PICK_X+14,PICK_Y+225,240,18,mx,my))pickerPart=2;
+        if(pickerPart>=0)updatePicker(mx,my);
+    }
+    private void updatePicker(int mx,int my){
+        float x=Math.max(0,Math.min(1,(mx-left-PICK_X-14)/240F));
+        if(pickerPart==0){saturation=x;brightness=1-Math.max(0,Math.min(1,(my-top-PICK_Y-32)/160F));}
+        else if(pickerPart==1)hue=x;
+        int rgb=java.awt.Color.HSBtoRGB(hue,saturation,brightness);activeColor.setRgba(rgb>>16&255,rgb>>8&255,rgb&255,pickerPart==2?Math.round(x*255):activeColor.getAlpha());hex.setText(activeColor.getHex());
+    }
+    @Override protected void keyTyped(char ch,int key)throws IOException {
+        if(key==Keyboard.KEY_ESCAPE){if(activeColor!=null){activeColor=null;return;}returning=true;mc.displayGuiScreen(parent);return;}
+        if(activeColor!=null&&hex.textboxKeyTyped(ch,key)){if(activeColor.setHex(hex.getText())){float[] hsv=java.awt.Color.RGBtoHSB(activeColor.getRed(),activeColor.getGreen(),activeColor.getBlue(),null);hue=hsv[0];saturation=hsv[1];brightness=hsv[2];}return;}
+        super.keyTyped(ch,key);
+    }
+    @Override public void onGuiClosed(){
+        if(parent instanceof Gta7Gui && !returning)((Gta7Gui)parent).closeFromEditor();
+        if(module.isEnabled())module.setEnabled(false);
+        if(Vibe.getInstance().getConfig()!=null)Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
+        super.onGuiClosed();
+    }
+    @Override public boolean doesGuiPauseGame(){return false;}
+    private static final class Row {
+        final String title;final Setting<?> setting;final Gradient gradient;final int level,height;float y;
+        Row(String title,Setting<?> setting,Gradient gradient,int level,int height){this.title=title;this.setting=setting;this.gradient=gradient;this.level=level;this.height=height;}
+    }
     private void drawPreviewPlayer(int x, int y) {
         if (preview == null || !previewName.equals(preview.getName())) preview = createPreview(previewName);
-        if (preview == null) return;
+        if (preview == null) { drawOfflineModel(x,y); return; }
         GuiRenderState.prepare(true);
         float oldOffset = preview.renderYawOffset, oldYaw = preview.rotationYaw, oldPitch = preview.rotationPitch,
                 oldHead = preview.rotationYawHead, oldPrevOffset = preview.prevRenderYawOffset,
@@ -156,7 +394,7 @@ public final class EspEditorGui extends GuiScreen {
             GlStateManager.enableDepth();
             GlStateManager.depthMask(true);
             GlStateManager.translate(x, y, 50.0F);
-            GlStateManager.scale(-108.0F, 108.0F, 108.0F);
+            GlStateManager.scale(-82.0F, 82.0F, 82.0F);
             GlStateManager.rotate(180.0F, 0.0F, 0.0F, 1.0F);
             RenderHelper.enableStandardItemLighting();
             preview.renderYawOffset = previewYaw;
@@ -176,7 +414,12 @@ public final class EspEditorGui extends GuiScreen {
             manager.setRenderShadow(false);
             // The entity fields above are the sole yaw input. Passing a yaw
             // here as well is what caused skins to mirror at some angles.
-            manager.renderEntityWithPosYaw(preview, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F);
+            if(esp.getModes().isSelected("Chams")) {
+                mc.getTextureManager().bindTexture(preview.getLocationSkin());
+                GlStateManager.scale(-1,-1,1);GlStateManager.translate(0,-1.5F,0);
+                offlineModel.isChild=false;
+                ChamsRenderer.draw(esp,false,1,() -> offlineModel.render(preview,0,0,0,0,0,.0625F));
+            } else manager.renderEntityWithPosYaw(preview, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F);
         } finally {
             manager.setRenderShadow(oldShadow);
             mc.gameSettings.entityShadows = oldEntityShadows;
@@ -197,238 +440,26 @@ public final class EspEditorGui extends GuiScreen {
     }
 
     private EntityOtherPlayerMP createPreview(final String name) {
-        if (mc.theWorld == null) return null;
-        final ResourceLocation fallback = DefaultPlayerSkin.getDefaultSkinLegacy();
-        final ResourceLocation custom = new ResourceLocation("vibe", "esp_preview/" + name.toLowerCase(java.util.Locale.ROOT));
-        try { mc.getTextureManager().loadTexture(custom, new ThreadDownloadImageData(null, "https://minotar.net/skin/" + name, fallback, new net.minecraft.client.renderer.ImageBufferDownload())); } catch (Throwable ignored) { }
-        GameProfile profile = new GameProfile(UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)), name);
-        EntityOtherPlayerMP result = new EntityOtherPlayerMP(mc.theWorld, profile) {
-            @Override public ResourceLocation getLocationSkin() { return custom; }
-            @Override public boolean hasSkin() { return true; }
-            // Keep the friends/teams reference model on the standard Steve
-            // geometry even when a downloaded skin happens to advertise Alex.
-            @Override public String getSkinType() { return "default"; }
-        };
-        // Fresh preview entities default to no enabled outer skin-part flags.
-        // The normal player renderer therefore drew only the base layer. Set
-        // vanilla's complete player-model mask so hat/jacket/sleeves/pants
-        // render exactly like a live player skin.
-        result.getDataWatcher().updateObject(10, Byte.valueOf((byte) 0x7F));
-        return result;
+        if(mc.theWorld==null)return null;
+        EntityOtherPlayerMP player=new EntityOtherPlayerMP(mc.theWorld,new GameProfile(UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)),name));
+        player.getDataWatcher().updateObject(10,Byte.valueOf((byte)0x7F));return player;
     }
-
-    private void drawLabels(int left, int top, int right, int bottom, EspModule.Style style) {
-        elements.clear();
-        List<Label> labels = new ArrayList<Label>();
-        if (style.hasNames()) labels.add(new Label(previewName, style.getNamePosition(), RenderUtils.TEXT, "Name"));
-        if (style.hasDistance() && !"Name".equalsIgnoreCase(style.getDistancePosition())) labels.add(new Label("12m", style.getDistancePosition(), RenderUtils.MUTED, "Distance"));
-        if (style.hasHeld()) labels.add(new Label("Diamond Sword", style.getHeldPosition(), RenderUtils.MUTED, "Held item"));
-        int topCount = 0, bottomCount = 0, leftCount = 0, rightCount = 0;
-        int healthOffset = style.hasHealth() && "Left".equalsIgnoreCase(style.getHealthPosition()) ? style.getHealthWidth() + 5 : 0;
-        int rightOffset = style.hasHealth() && "Right".equalsIgnoreCase(style.getHealthPosition()) ? style.getHealthWidth() + 5 : 0;
-        for (Label label : labels) {
-            boolean joined = label.name.equals("Name") && style.hasDistance() && "Name".equalsIgnoreCase(style.getDistancePosition());
-            if (joined) label = new Label(label.text + "  12m", label.position, label.color, label.name);
-            int w = fontRendererObj.getStringWidth(label.text), x, y;
-            if ("Bottom".equalsIgnoreCase(label.position)) { x = (left + right - w) / 2; y = bottom + 3 + bottomCount++ * 12; }
-            else if ("Left".equalsIgnoreCase(label.position)) { x = left - healthOffset - w - 4; y = top + 5 + leftCount++ * 12; }
-            else if ("Right".equalsIgnoreCase(label.position)) { x = right + rightOffset + 4; y = top + 5 + rightCount++ * 12; }
-            else { x = (left + right - w) / 2; y = top - 10 - topCount++ * 12; }
-            if (joined) elements.add(new ElementRect("Distance", x + w - fontRendererObj.getStringWidth("12m") - 2, y - 3, fontRendererObj.getStringWidth("12m") + 5, 14));
-            if (label.name.equals("Name") || label.name.equals("Distance") || label.name.equals("Held item")) elements.add(new ElementRect(label.name, x - 3, y - 3, w + 6, 14));
-            fontRendererObj.drawStringWithShadow(label.text, x, y, label.color);
-        }
-        if (style.hasHealth()) {
-            int barWidth = style.getHealthWidth(), x = "Right".equalsIgnoreCase(style.getHealthPosition()) ? right + 5 : left - 5 - barWidth + 2;
-            if ("Right".equalsIgnoreCase(style.getHealthPosition())) x = right + 5;
-            Gui.drawRect(x, top, x + barWidth, bottom, 0xA0000000);
-            Gui.drawRect(x, top + Math.round((bottom - top) * 0.25F), x + barWidth, bottom, style.hasHealthFade() ? RenderUtils.blend(style.getHealthStart(), style.getHealthEnd(), 0.25F) : style.getHealthStart());
-            elements.add(new ElementRect("Health bar", x - 3, top - 3, barWidth + 6, bottom - top + 6));
-        }
+    private final net.minecraft.entity.Entity offlineEntity=new net.minecraft.entity.Entity(null) {
+        protected void entityInit() { }
+        protected void readEntityFromNBT(net.minecraft.nbt.NBTTagCompound tag) { }
+        protected void writeEntityToNBT(net.minecraft.nbt.NBTTagCompound tag) { }
+    };
+    private final ModelPlayer offlineModel=new ModelPlayer(0,false);
+    private void drawOfflineModel(int x,int y){
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);GlStateManager.pushMatrix();
+        try {
+            GuiRenderState.prepare(true);GlStateManager.translate(x,y,50);GlStateManager.scale(-82,82,82);
+            GlStateManager.rotate(180+previewYaw,0,1,0);
+            RenderHelper.enableGUIStandardItemLighting();mc.getTextureManager().bindTexture(DefaultPlayerSkin.getDefaultSkinLegacy());
+            GlStateManager.translate(0,-1.5F,0);offlineModel.isChild=false;
+            offlineModel.setRotationAngles(0,0,0,0,0,.0625F,offlineEntity);
+            if(esp.getModes().isSelected("Chams"))ChamsRenderer.draw(esp,false,1,() -> offlineModel.render(offlineEntity,0,0,0,0,0,.0625F));
+            else offlineModel.render(offlineEntity,0,0,0,0,0,.0625F);
+        } finally {RenderHelper.disableStandardItemLighting();GlStateManager.popMatrix();GL11.glPopAttrib();GuiRenderState.prepare(false);}
     }
-
-    private void drawSettings(int mouseX, int mouseY) {
-        int x = left + 438, right = left + panelWidth - 14, y = top + 43;
-        SkeetEditorStyle.panel(x, y, right, top + 462, "ESP settings");
-        int cursor = y + 34;
-        if (kind == Kind.PLAYERS) {
-            drawModeRow("Color mode", esp.getPlayerColorMode(), x + 14, cursor); cursor += 24;
-            cursor = drawColorRow("Outline", esp.getOutlineColor(), x + 14, cursor);
-            cursor = drawColorRow("Fill", esp.getFillColor(), x + 14, cursor);
-            cursor = drawColorRow("Health start", esp.getHealthStart(), x + 14, cursor);
-            cursor = drawColorRow("Health end", esp.getHealthEnd(), x + 14, cursor);
-            drawToggleRow("Color fade", esp.getColorFade(), x + 14, cursor); cursor += 22;
-            drawToggleRow("Names", esp.getNames(), x + 14, cursor);
-            drawToggleRow("Health bar", esp.getHealth(), x + 180, cursor); cursor += 22;
-            drawToggleRow("Held item", esp.getHeldItem(), x + 14, cursor);
-            drawToggleRow("Distance", esp.getDistance(), x + 180, cursor); cursor += 22;
-            drawToggleRow("Depth backplate", esp.getDepthBackplate(), x + 14, cursor); cursor += 22;
-            cursor = drawStepper("Health width", esp.getHealthBarWidth(), x + 14, cursor);
-        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Drag labels on the preview to change their side."), x + 14, cursor + 4, RenderUtils.MUTED);
-        } else {
-            EspModule.ProfileSettings p = profile();
-            drawToggleRow("Use player defaults", p.getUsePlayerDefaults(), x + 14, cursor); cursor += 24;
-            drawModeRow("Color mode", p.getColorMode(), x + 14, cursor); cursor += 24;
-            cursor = drawColorRow("Override color", p.getOverrideColor(), x + 14, cursor);
-            if (!p.getUsePlayerDefaults().isEnabled()) {
-                int colorY = cursor;
-                drawColorRow("Outline", p.getOutline(), x + 14, colorY);
-                drawColorRow("Fill", p.getFill(), x + 14, colorY + 26);
-                drawColorRow("Health start", p.getHealthStart(), x + 210, colorY);
-                drawColorRow("Health end", p.getHealthEnd(), x + 210, colorY + 26);
-                cursor += 52;
-                drawToggleRow("Names", p.getNames(), x + 14, cursor);
-                drawToggleRow("Health", p.getHealth(), x + 180, cursor); cursor += 22;
-                drawToggleRow("Distance", p.getDistance(), x + 14, cursor);
-                drawToggleRow("Held item", p.getHeld(), x + 180, cursor); cursor += 22;
-                drawToggleRow("Backplate", p.getDepth(), x + 14, cursor);
-                drawToggleRow("Health fade", p.getHealthFade(), x + 180, cursor); cursor += 22;
-                cursor = drawStepper("Health width", p.getHealthWidth(), x + 14, cursor);
-                cursor = drawModeRow("Name position", p.getNamePosition(), x + 14, cursor);
-                cursor = drawModeRow("Health position", p.getHealthPosition(), x + 14, cursor);
-                cursor = drawModeRow("Distance position", p.getDistancePosition(), x + 14, cursor);
-                cursor = drawModeRow("Held position", p.getHeldPosition(), x + 14, cursor);
-        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Drag labels on the preview to change their side."), x + 14, cursor + 4, RenderUtils.MUTED);
-            }
-        }
-        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Click a swatch to open the color picker."), x + 14, top + 440, RenderUtils.MUTED);
-    }
-
-    private int drawColorRow(String label, ColorSetting setting, int x, int y) { fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate(label), x, y + 6, SkeetEditorStyle.TEXT); SkeetEditorStyle.input(x + 150, y + 2, x + 194, y + 20); Gui.drawRect(x + 153, y + 5, x + 191, y + 17, setting.getArgb()); return y + 26; }
-    private int drawModeRow(String label, ModeSetting setting, int x, int y) { fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate(label), x, y + 6, SkeetEditorStyle.TEXT); SkeetEditorStyle.row(x + 145, y + 2, x + 254, y + 20, false, false); fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate(setting.getValue()), x + 152, y + 6, SkeetEditorStyle.accent(0.1F)); return y + 24; }
-    private void drawToggleRow(String label, BooleanSetting setting, int x, int y) { SkeetEditorStyle.row(x, y + 2, x + 130, y + 20, setting.isEnabled(), false); fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate(label), x + 7, y + 6, setting.isEnabled() ? 0xFF101012 : SkeetEditorStyle.MUTED); }
-    private int drawStepper(String label, dev.vibe.setting.NumberSetting setting, int x, int y) {
-        fontRendererObj.drawStringWithShadow(label, x, y + 6, RenderUtils.TEXT);
-        SkeetEditorStyle.row(x + 145, y + 2, x + 165, y + 20, false, false);
-        SkeetEditorStyle.input(x + 170, y + 2, x + 225, y + 20);
-        SkeetEditorStyle.row(x + 230, y + 2, x + 250, y + 20, false, false);
-        fontRendererObj.drawStringWithShadow("-", x + 152, y + 6, RenderUtils.TEXT);
-        String value = setting.getDouble() == Math.rint(setting.getDouble()) ? Integer.toString(setting.getInt()) : String.format(java.util.Locale.ROOT, "%.2f", setting.getDouble());
-        fontRendererObj.drawStringWithShadow(value, x + 178, y + 6, RenderUtils.TEXT);
-        fontRendererObj.drawStringWithShadow("+", x + 237, y + 6, RenderUtils.TEXT);
-        return y + 24;
-    }
-
-    private void drawPicker() {
-        int x = left + panelWidth - 194, y = top + 224, size = 90;
-        SkeetEditorStyle.panel(x - 4, y - 4, x + 132, y + 172, "Color");
-        for (int row = 0; row < 10; row++) for (int col = 0; col < 10; col++) { int rgb = java.awt.Color.HSBtoRGB(pickerHue, col / 9.0F, 1.0F - row / 9.0F) | 0xFF000000; Gui.drawRect(x + 7 + col * size / 10, y + 20 + row * size / 10, x + 7 + (col + 1) * size / 10, y + 20 + (row + 1) * size / 10, rgb); }
-        Gui.drawRect(x + 7 + Math.round(pickerSaturation * size) - 2, y + 20 + Math.round((1.0F - pickerBrightness) * size) - 2, x + 7 + Math.round(pickerSaturation * size) + 3, y + 20 + Math.round((1.0F - pickerBrightness) * size) + 3, 0xFFFFFFFF);
-        int hueY = y + 116; for (int i = 0; i < size; i++) Gui.drawRect(x + 7 + i, hueY, x + 8 + i, hueY + 8, java.awt.Color.HSBtoRGB(i / (float) size, 0.9F, 1.0F) | 0xFF000000);
-        Gui.drawRect(x + 7 + Math.round(pickerHue * size) - 1, hueY - 2, x + 9 + Math.round(pickerHue * size), hueY + 10, 0xFFFFFFFF);
-        int alphaY = y + 132; RenderUtils.transparencyGrid(x + 7, alphaY, x + 97, alphaY + 8, 3); for (int i = 0; i < size; i++) Gui.drawRect(x + 7 + i, alphaY, x + 8 + i, alphaY + 8, RenderUtils.alpha(activeColor.getArgb() | 0xFF000000, i * 255 / size));
-        Gui.drawRect(x + 7 + activeColor.getAlpha() * size / 255 - 1, alphaY - 2, x + 9 + activeColor.getAlpha() * size / 255, alphaY + 10, 0xFFFFFFFF);
-        RenderUtils.roundedRect(x + 104, y + 20, x + 120, y + 110, 2.0F, activeColor.getArgb());
-    }
-
-    private void setActiveColor(ColorSetting setting) { if (setting == null) return; activeColor = setting; float[] hsv = java.awt.Color.RGBtoHSB(setting.getRed(), setting.getGreen(), setting.getBlue(), null); pickerHue = hsv[0]; pickerSaturation = hsv[1]; pickerBrightness = hsv[2]; }
-    private void updatePicker(int mouseX, int mouseY) { int x = left + panelWidth - 194, y = top + 224, size = 90; if (pickerPart == PickerPart.SATURATION) { pickerSaturation = Math.max(0, Math.min(1, (mouseX - x - 7) / (float) size)); pickerBrightness = Math.max(0, Math.min(1, 1 - (mouseY - y - 20) / (float) size)); } else if (pickerPart == PickerPart.HUE) pickerHue = Math.max(0, Math.min(1, (mouseX - x - 7) / (float) size)); else activeColor.setRgba(activeColor.getRed(), activeColor.getGreen(), activeColor.getBlue(), Math.max(0, Math.min(255, (mouseX - x - 7) * 255 / size))); if (pickerPart != PickerPart.ALPHA) { int rgb = java.awt.Color.HSBtoRGB(pickerHue, pickerSaturation, pickerBrightness); activeColor.setRgba(rgb >> 16 & 255, rgb >> 8 & 255, rgb & 255, activeColor.getAlpha()); } }
-
-    @Override protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
-        if (mouseButton == 0) {
-            for (int i = 0; i < 3; i++) if (hit(left + 14 + i * 137, top + 42, 128, 22, mouseX, mouseY)) { kind = Kind.values()[i]; pickerOpen = false; return; }
-            int px = left + panelWidth - 194, py = top + 224;
-            if (pickerOpen && hit(px + 7, py + 20, 90, 90, mouseX, mouseY)) { pickerPart = PickerPart.SATURATION; updatePicker(mouseX, mouseY); return; }
-            if (pickerOpen && hit(px + 7, py + 114, 90, 11, mouseX, mouseY)) { pickerPart = PickerPart.HUE; updatePicker(mouseX, mouseY); return; }
-            if (pickerOpen && hit(px + 7, py + 130, 90, 12, mouseX, mouseY)) { pickerPart = PickerPart.ALPHA; updatePicker(mouseX, mouseY); return; }
-            if (pickerOpen) { pickerOpen = false; return; }
-            for (ElementRect e : elements) if (e.contains(mouseX, mouseY)) { dragged = e.name; return; }
-            int settingsX = left + 438, cursor = top + 77;
-            if (kind == Kind.PLAYERS) {
-                if (hit(settingsX + 14, cursor, 270, 22, mouseX, mouseY)) { esp.getPlayerColorMode().cycle(false); return; }
-                ColorSetting[] colors = {esp.getOutlineColor(), esp.getFillColor(), esp.getHealthStart(), esp.getHealthEnd()}; cursor += 24;
-                for (ColorSetting color : colors) { if (hit(settingsX + 140, cursor, 60, 22, mouseX, mouseY)) { setActiveColor(color); pickerOpen = true; return; } cursor += 26; }
-                if (hit(settingsX + 14, cursor, 130, 22, mouseX, mouseY)) { esp.getColorFade().toggle(); return; } cursor += 22;
-                if (hit(settingsX + 14, cursor, 130, 22, mouseX, mouseY)) { esp.getNames().toggle(); return; }
-                if (hit(settingsX + 180, cursor, 130, 22, mouseX, mouseY)) { esp.getHealth().toggle(); return; } cursor += 22;
-                if (hit(settingsX + 14, cursor, 130, 22, mouseX, mouseY)) { esp.getHeldItem().toggle(); return; }
-                if (hit(settingsX + 180, cursor, 130, 22, mouseX, mouseY)) { esp.getDistance().toggle(); return; } cursor += 22;
-                if (hit(settingsX + 14, cursor, 130, 22, mouseX, mouseY)) { esp.getDepthBackplate().toggle(); return; } cursor += 22;
-                if (step(settingsX + 14, cursor, esp.getHealthBarWidth(), mouseX, mouseY)) return;
-            } else {
-                EspModule.ProfileSettings p = profile();
-                if (hit(settingsX + 14, cursor, 150, 22, mouseX, mouseY)) { p.getUsePlayerDefaults().toggle(); return; } cursor += 24;
-                if (hit(settingsX + 14, cursor, 270, 22, mouseX, mouseY)) { p.getColorMode().cycle(false); return; } cursor += 24;
-                if (hit(settingsX + 140, cursor, 60, 22, mouseX, mouseY)) { setActiveColor(p.getOverrideColor()); pickerOpen = true; return; }
-                cursor += 26;
-                if (!p.getUsePlayerDefaults().isEnabled()) {
-                    ColorSetting[] colors = {p.getOutline(), p.getFill()};
-                    for (ColorSetting color : colors) { if (hit(settingsX + 140, cursor, 60, 22, mouseX, mouseY)) { setActiveColor(color); pickerOpen = true; return; } cursor += 26; }
-                    ColorSetting[] rightColors = {p.getHealthStart(), p.getHealthEnd()};
-                    int rightColorY = cursor - 52;
-                    for (ColorSetting color : rightColors) { if (hit(settingsX + 350, rightColorY, 60, 22, mouseX, mouseY)) { setActiveColor(color); pickerOpen = true; return; } rightColorY += 26; }
-                    cursor += 0;
-                    if (hit(settingsX + 14, cursor, 130, 22, mouseX, mouseY)) { p.getNames().toggle(); return; }
-                    if (hit(settingsX + 180, cursor, 130, 22, mouseX, mouseY)) { p.getHealth().toggle(); return; } cursor += 22;
-                    if (hit(settingsX + 14, cursor, 130, 22, mouseX, mouseY)) { p.getDistance().toggle(); return; }
-                    if (hit(settingsX + 180, cursor, 130, 22, mouseX, mouseY)) { p.getHeld().toggle(); return; } cursor += 22;
-                    if (hit(settingsX + 14, cursor, 130, 22, mouseX, mouseY)) { p.getDepth().toggle(); return; }
-                    if (hit(settingsX + 180, cursor, 130, 22, mouseX, mouseY)) { p.getHealthFade().toggle(); return; } cursor += 22;
-                    if (step(settingsX + 14, cursor, p.getHealthWidth(), mouseX, mouseY)) return;
-                    cursor += 24;
-                    ModeSetting[] modes = {p.getNamePosition(), p.getHealthPosition(), p.getDistancePosition(), p.getHeldPosition()};
-                    for (ModeSetting mode : modes) { if (hit(settingsX + 14, cursor, 280, 22, mouseX, mouseY)) { mode.cycle(false); return; } cursor += 24; }
-                }
-            }
-            int boxLeft = left + 24 + 142, boxTop = top + 82 + 77, boxRight = boxLeft + 126, boxBottom = boxTop + 246;
-            if (hit(boxLeft - 30, boxTop - 24, 190, 300, mouseX, mouseY)) { rotating = true; lastMouseX = mouseX; }
-        } else if (mouseButton == 1) pickerOpen = false;
-        super.mouseClicked(mouseX, mouseY, mouseButton);
-    }
-
-    @Override protected void mouseClickMove(int mouseX, int mouseY, int mouseButton, long timeSinceLastClick) { if (rotating && mouseButton == 0) { previewYaw += mouseX - lastMouseX; lastMouseX = mouseX; } if (pickerOpen && pickerPart != null) updatePicker(mouseX, mouseY); }
-    @Override protected void mouseReleased(int mouseX, int mouseY, int state) { if (rotating) rotating = false; if (dragged != null) { int boxLeft = left + 24 + 142, boxTop = top + 82 + 77, boxRight = boxLeft + 126, boxBottom = boxTop + 246; drop(dragged, mouseX, mouseY, boxLeft, boxTop, boxRight, boxBottom); dragged = null; } pickerPart = null; super.mouseReleased(mouseX, mouseY, state); }
-
-    private ModeSetting positionSetting(String element) {
-        if (element == null) return null;
-        EspModule.ProfileSettings p = kind == Kind.PLAYERS ? null : profile();
-        if ("Name".equals(element)) return p == null ? esp.getNamePosition() : p.getNamePosition();
-        if ("Health bar".equals(element)) return p == null ? esp.getHealthPosition() : p.getHealthPosition();
-        if ("Distance".equals(element)) return p == null ? esp.getDistancePosition() : p.getDistancePosition();
-        if ("Held item".equals(element)) return p == null ? esp.getHeldPosition() : p.getHeldPosition();
-        return null;
-    }
-
-    private String snapSide(String element, int mx, int my, int l, int t, int r, int b) {
-        if ("Health bar".equals(element)) return mx < (l + r) / 2 ? "Left" : "Right";
-        // Compare distance to each finite edge, including inside the box.
-        double dx = Math.max(l - mx, Math.max(0, mx - r));
-        double dy = Math.max(t - my, Math.max(0, my - b));
-        double[] distances = {Math.hypot(mx - l, dy), Math.hypot(mx - r, dy),
-                Math.hypot(dx, my - t), Math.hypot(dx, my - b)};
-        String[] sides = {"Left", "Right", "Top", "Bottom"};
-        int best = 0;
-        for (int i = 1; i < distances.length; i++) if (distances[i] < distances[best]) best = i;
-        if ("Distance".equals(element)) for (ElementRect rect : elements)
-            if ("Name".equals(rect.name) && rect.contains(mx, my)) return "Name";
-        return sides[best];
-    }
-
-    private void drawDraggedElement(int mouseX, int mouseY) {
-        String text = "Moving: " + dragged;
-        int x = Math.min(width - fontRendererObj.getStringWidth(text) - 12, mouseX + 8);
-        int y = Math.min(height - 20, mouseY + 14);
-        Gui.drawRect(x - 4, y - 4, x + fontRendererObj.getStringWidth(text) + 5, y + 13, 0xE818181C);
-        fontRendererObj.drawStringWithShadow(text, x, y, SkeetEditorStyle.accent(0));
-    }
-
-    private void drop(String element, int mx, int my, int l, int t, int r, int b) {
-        ModeSetting setting = positionSetting(element);
-        if (setting == null || !hit(left + 24, top + 82, 396, 380, mx, my)) return;
-        if (kind != Kind.PLAYERS) profile().getUsePlayerDefaults().setValue(false);
-        setting.setValue(snapSide(element, mx, my, l, t, r, b));
-    }
-    private boolean step(int x, int y, dev.vibe.setting.NumberSetting setting, int mouseX, int mouseY) {
-        if (!hit(x + 145, y + 2, 20, 18, mouseX, mouseY) && !hit(x + 230, y + 2, 20, 18, mouseX, mouseY)) return false;
-        double value = setting.getDouble() + (mouseX < x + 200 ? -setting.getIncrement() : setting.getIncrement());
-        setting.setValue(Math.max(setting.getMinimum(), Math.min(setting.getMaximum(), value)));
-        return true;
-    }
-    private boolean hit(int x, int y, int w, int h, int mx, int my) { return mx >= x && mx < x + w && my >= y && my < y + h; }
-    @Override protected void keyTyped(char typedChar, int keyCode) throws IOException { if (keyCode == Keyboard.KEY_ESCAPE) { mc.displayGuiScreen(null); return; } super.keyTyped(typedChar, keyCode); }
-    @Override public void onGuiClosed() { if (module.isEnabled()) module.setEnabled(false); super.onGuiClosed(); }
-    @Override public boolean doesGuiPauseGame() { return false; }
-
-    private static final class Label { private final String text, position, name; private final int color; private Label(String text, String position, int color, String name) { this.text = text; this.position = position; this.color = color; this.name = name; } }
-    private static final class ElementRect { private final String name; private final int x, y, w, h; private ElementRect(String name, int x, int y, int w, int h) { this.name = name; this.x = x; this.y = y; this.w = w; this.h = h; } private boolean contains(int mx, int my) { return mx >= x && mx < x + w && my >= y && my < y + h; } }
 }

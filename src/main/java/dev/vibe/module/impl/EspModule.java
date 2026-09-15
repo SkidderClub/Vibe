@@ -14,38 +14,41 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import org.lwjgl.input.Keyboard;
 
-/** Model Chams, 3D and tactical 2D ESP with independent appearance settings. */
+/** Shared 2D appearance, 3D boxes, original pose-based skeletons and model Chams. */
 public final class EspModule extends Module {
-    private final MultiSelectSetting modes = addSetting(new MultiSelectSetting("ESP Modes", Arrays.asList("3D", "2D", "Chams"), Arrays.asList("3D")));
+    private final MultiSelectSetting modes = addSetting(new MultiSelectSetting("ESP Modes", Arrays.asList("2D", "3D", "Skeletal", "Chams"), Arrays.asList("3D")));
+    private final Esp2DSettings twoD = new Esp2DSettings(setting -> addSetting(setting), () -> modes.isSelected("2D"));
+    private final SkeletalSettings skeletal = new SkeletalSettings();
     private final ChamsSettings invisibleChams = new ChamsSettings("Invisible", 0xBFFF5B6E);
     private final ChamsSettings visibleChams = new ChamsSettings("Visible", 0xBF2DE2C2);
-    private final ColorSetting outlineColor = addSetting(new ColorSetting("Outline Color", 0xFF2DE2C2));
-    private final ColorSetting fillColor = addSetting(new ColorSetting("Fill Color", 0x342DE2C2));
-    private final ModeSetting playerColorMode = addSetting(new ModeSetting("Player Color Mode", "Color", () -> true, "Color", "Team Color", "Rainbow"));
-    private final BooleanSetting colorFade = addSetting(new BooleanSetting("Color Fade", false, () -> true));
-    private final ColorSetting fadeStart = addSetting(new ColorSetting("Fade Start", 0xFF2DE2C2, () -> colorFade.isEnabled()));
-    private final ColorSetting fadeEnd = addSetting(new ColorSetting("Fade End", 0xFFA855F7, () -> colorFade.isEnabled()));
-    private final NumberSetting fadeSpeed = addSetting(new NumberSetting("Fade Speed", 1.0D, 0.1D, 4.0D, 0.1D, () -> colorFade.isEnabled()));
+    private final ColorSetting outlineColor = addSetting(new ColorSetting("Outline Color", 0xFF2DE2C2, () -> modes.isSelected("3D")));
+    private final ColorSetting fillColor = addSetting(new ColorSetting("Fill Color", 0x342DE2C2, () -> modes.isSelected("3D")));
+    private final ModeSetting playerColorMode = addSetting(new ModeSetting("Player Color Mode", "Color", () -> modes.isSelected("3D"), "Color", "Team Color", "Rainbow"));
+    private final BooleanSetting colorFade = addSetting(new BooleanSetting("Color Fade", false, () -> modes.isSelected("3D")));
+    private final ColorSetting fadeStart = addSetting(new ColorSetting("Fade Start", 0xFF2DE2C2, () -> modes.isSelected("3D") && colorFade.isEnabled()));
+    private final ColorSetting fadeEnd = addSetting(new ColorSetting("Fade End", 0xFFA855F7, () -> modes.isSelected("3D") && colorFade.isEnabled()));
+    private final NumberSetting fadeSpeed = addSetting(new NumberSetting("Fade Speed", 1.0D, 0.1D, 4.0D, 0.1D, () -> modes.isSelected("3D") && colorFade.isEnabled()));
     private final NumberSetting lineWidth = addSetting(new NumberSetting("Line Width", 1.5D, 1.0D, 5.0D, 0.5D, () -> modes.isSelected("3D")));
     private final BooleanSetting throughWalls = addSetting(new BooleanSetting("Through Walls", true, () -> modes.isSelected("3D")));
-    private final BooleanSetting names = addSetting(new BooleanSetting("Names", true, () -> modes.isSelected("2D")));
-    private final BooleanSetting health = addSetting(new BooleanSetting("Health Bar", true, () -> modes.isSelected("2D")));
-    private final NumberSetting healthBarWidth = addSetting(new NumberSetting("Health Bar Width", 1.0D, 1.0D, 5.0D, 1.0D, () -> modes.isSelected("2D") && health.isEnabled()));
-    private final BooleanSetting healthFade = addSetting(new BooleanSetting("Health Fade", true, () -> modes.isSelected("2D") && health.isEnabled()));
-    private final ColorSetting healthStart = addSetting(new ColorSetting("Health Start Color", 0xFF2DE2C2, () -> modes.isSelected("2D") && health.isEnabled()));
-    private final ColorSetting healthEnd = addSetting(new ColorSetting("Health End Color", 0xFFFF5B6E, () -> modes.isSelected("2D") && health.isEnabled()));
-    private final BooleanSetting depthBackplate = addSetting(new BooleanSetting("Depth Backplate", true, () -> modes.isSelected("2D")));
-    private final BooleanSetting heldItem = addSetting(new BooleanSetting("Held Item", true, () -> modes.isSelected("2D")));
-    private final BooleanSetting distance = addSetting(new BooleanSetting("Distance", true, () -> modes.isSelected("2D")));
-    private final ModeSetting namePosition = addSetting(position("Name Position", "Top", () -> modes.isSelected("2D")));
-    private final ModeSetting healthPosition = addSetting(new ModeSetting("Health Bar Position", "Left", () -> modes.isSelected("2D") && health.isEnabled(), "Left", "Right"));
-    private final ModeSetting distancePosition = addSetting(position("Distance Position", "Name", () -> modes.isSelected("2D") && distance.isEnabled(), "Name"));
-    private final ModeSetting heldPosition = addSetting(position("Held Item Position", "Bottom", () -> modes.isSelected("2D") && heldItem.isEnabled()));
+    // Retained legacy keys for profile/API compatibility; all 2D drawing reads get2D().
+    private final BooleanSetting names = addSetting(new BooleanSetting("Names", true, () -> false));
+    private final BooleanSetting health = addSetting(new BooleanSetting("Health Bar", true, () -> false));
+    private final NumberSetting healthBarWidth = addSetting(new NumberSetting("Health Bar Width", 1.0D, 1.0D, 5.0D, 1.0D, () -> false));
+    private final BooleanSetting healthFade = addSetting(new BooleanSetting("Health Fade", true, () -> false));
+    private final ColorSetting healthStart = addSetting(new ColorSetting("Health Start Color", 0xFF2DE2C2, () -> false));
+    private final ColorSetting healthEnd = addSetting(new ColorSetting("Health End Color", 0xFFFF5B6E, () -> false));
+    private final BooleanSetting depthBackplate = addSetting(new BooleanSetting("Depth Backplate", true, () -> false));
+    private final BooleanSetting heldItem = addSetting(new BooleanSetting("Held Item", true, () -> false));
+    private final BooleanSetting distance = addSetting(new BooleanSetting("Distance", true, () -> false));
+    private final ModeSetting namePosition = addSetting(position("Name Position", "Top", () -> false));
+    private final ModeSetting healthPosition = addSetting(new ModeSetting("Health Bar Position", "Left", () -> false, "Left", "Right"));
+    private final ModeSetting distancePosition = addSetting(position("Distance Position", "Name", () -> false, "Name"));
+    private final ModeSetting heldPosition = addSetting(position("Held Item Position", "Bottom", () -> false));
 
-    private final ProfileSettings friends = new ProfileSettings("Friends/Teams", 0xFF5BE8A6, () -> modes.isSelected("2D"));
-    private final ProfileSettings targets = new ProfileSettings("Targets", 0xFFFF5B6E, () -> modes.isSelected("2D"));
+    private final ProfileSettings friends = new ProfileSettings("Friends/Teams", 0xFF5BE8A6, () -> modes.isSelected("3D"));
+    private final ProfileSettings targets = new ProfileSettings("Targets", 0xFFFF5B6E, () -> modes.isSelected("3D"));
 
-    public EspModule() { super("ESP", "2D, 3D and customizable model Chams ESP", Category.VISUAL, Keyboard.KEY_P); }
+    public EspModule() { super("ESP", "2D, 3D, Skeletal and customizable model Chams ESP", Category.VISUAL, Keyboard.KEY_P); }
 
     private ModeSetting position(String name, String selected, java.util.function.BooleanSupplier visible, String... extra) {
         String[] values = new String[4 + extra.length]; values[0] = "Top"; values[1] = "Bottom"; values[2] = "Left"; values[3] = "Right";
@@ -53,6 +56,8 @@ public final class EspModule extends Module {
         return new ModeSetting(name, selected, visible, values);
     }
 
+    public Esp2DSettings get2D() { return twoD; }
+    public SkeletalSettings getSkeletal() { return skeletal; }
     public MultiSelectSetting getModes() { return modes; }
     public ChamsSettings getInvisibleChams() { return invisibleChams; }
     public ChamsSettings getVisibleChams() { return visibleChams; }
@@ -162,6 +167,24 @@ public final class EspModule extends Module {
     private static int recolor(int source, int rgb) { return (source & 0xFF000000) | (rgb & 0x00FFFFFF); }
     private static int rainbow() { return Color.HSBtoRGB((System.currentTimeMillis() % 4500L) / 4500.0F, 0.86F, 1.0F) | 0xFF000000; }
 
+    /** Original skeletal controls, owned and enabled by ESP. */
+    public final class SkeletalSettings {
+        private final java.util.function.BooleanSupplier visible = () -> modes.isSelected("Skeletal");
+        private final ColorSetting color = addSetting(new ColorSetting("Skeletal Color", 0xFF2DE2C2, visible));
+        private final BooleanSetting rainbow = addSetting(new BooleanSetting("Skeletal Rainbow", false, visible));
+        private final NumberSetting width = addSetting(new NumberSetting("Skeletal Line Width", 2, 1, 5, .5, visible));
+        private final BooleanSetting targets = addSetting(new BooleanSetting("Skeletal Only Targets", false, visible));
+        private final BooleanSetting walls = addSetting(new BooleanSetting("Skeletal Through Walls", true, visible));
+        private final BooleanSetting backplate = addSetting(new BooleanSetting("Skeletal Depth Backplate", true, visible));
+        public boolean isEnabled() { return EspModule.this.isEnabled() && modes.isSelected("Skeletal"); }
+        public ColorSetting getColor() { return color; }
+        public BooleanSetting getRainbow() { return rainbow; }
+        public NumberSetting getLineWidth() { return width; }
+        public BooleanSetting getOnlyTargets() { return targets; }
+        public BooleanSetting getThroughWalls() { return walls; }
+        public BooleanSetting getDepthBackplate() { return backplate; }
+    }
+
     /** Invisible means the portions occluded by world geometry, including partial cover. */
     public final class ChamsSettings {
         private final BooleanSetting armor;
@@ -210,19 +233,19 @@ public final class EspModule extends Module {
             java.util.function.BooleanSupplier custom = new java.util.function.BooleanSupplier() { public boolean getAsBoolean() { return baseVisible.getAsBoolean() && !usePlayerDefaults.isEnabled(); } };
             outline = addSetting(new ColorSetting(title + " Outline", color, custom));
             fill = addSetting(new ColorSetting(title + " Fill", (color & 0x00FFFFFF) | 0x34000000, custom));
-            healthStartColor = addSetting(new ColorSetting(title + " Health Start", color, custom));
-            healthEndColor = addSetting(new ColorSetting(title + " Health End", 0xFFFF5B6E, custom));
-            profileNames = addSetting(new BooleanSetting(title + " Names", true, custom));
-            profileHealth = addSetting(new BooleanSetting(title + " Health", true, custom));
-            profileHeld = addSetting(new BooleanSetting(title + " Held Item", true, custom));
-            profileDistance = addSetting(new BooleanSetting(title + " Distance", true, custom));
-            profileDepth = addSetting(new BooleanSetting(title + " Backplate", true, custom));
-            profileHealthFade = addSetting(new BooleanSetting(title + " Health Fade", true, custom));
-            profileHealthWidth = addSetting(new NumberSetting(title + " Health Width", 1.0D, 1.0D, 5.0D, 1.0D, custom));
-            profileNamePosition = addSetting(position(title + " Name Position", "Top", custom));
-            profileHealthPosition = addSetting(new ModeSetting(title + " Health Position", "Left", custom, "Left", "Right"));
-            profileDistancePosition = addSetting(position(title + " Distance Position", "Name", custom, "Name"));
-            profileHeldPosition = addSetting(position(title + " Held Position", "Bottom", custom));
+            healthStartColor = addSetting(new ColorSetting(title + " Health Start", color, () -> false));
+            healthEndColor = addSetting(new ColorSetting(title + " Health End", 0xFFFF5B6E, () -> false));
+            profileNames = addSetting(new BooleanSetting(title + " Names", true, () -> false));
+            profileHealth = addSetting(new BooleanSetting(title + " Health", true, () -> false));
+            profileHeld = addSetting(new BooleanSetting(title + " Held Item", true, () -> false));
+            profileDistance = addSetting(new BooleanSetting(title + " Distance", true, () -> false));
+            profileDepth = addSetting(new BooleanSetting(title + " Backplate", true, () -> false));
+            profileHealthFade = addSetting(new BooleanSetting(title + " Health Fade", true, () -> false));
+            profileHealthWidth = addSetting(new NumberSetting(title + " Health Width", 1.0D, 1.0D, 5.0D, 1.0D, () -> false));
+            profileNamePosition = addSetting(position(title + " Name Position", "Top", () -> false));
+            profileHealthPosition = addSetting(new ModeSetting(title + " Health Position", "Left", () -> false, "Left", "Right"));
+            profileDistancePosition = addSetting(position(title + " Distance Position", "Name", () -> false, "Name"));
+            profileHeldPosition = addSetting(position(title + " Held Position", "Bottom", () -> false));
         }
 
         public BooleanSetting getUsePlayerDefaults() { return usePlayerDefaults; }

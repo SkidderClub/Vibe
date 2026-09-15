@@ -1,7 +1,7 @@
 package dev.vibe.ui;
 
 import dev.vibe.Vibe;
-import dev.vibe.module.impl.SkeletalModule;
+import dev.vibe.module.impl.EspModule;
 import dev.vibe.module.impl.TargetsModule;
 import java.awt.Color;
 import java.util.HashMap;
@@ -29,7 +29,7 @@ public final class SkeletalRenderer {
             renderer.addLayer(new net.minecraft.client.renderer.entity.layers.LayerRenderer<net.minecraft.client.entity.AbstractClientPlayer>() {
                 @Override public void doRenderLayer(net.minecraft.client.entity.AbstractClientPlayer player, float swing,
                         float amount, float partial, float age, float yaw, float pitch, float scale) {
-                    SkeletalModule module = Vibe.getInstance().getModuleManager().getModule(SkeletalModule.class);
+                    EspModule.SkeletalSettings module = Vibe.getInstance().getModuleManager().getModule(EspModule.class).getSkeletal();
                     if (module == null || !module.isEnabled() || player.worldObj != minecraft.theWorld) return;
                     ModelPlayer model = renderer.getMainModel();
                     poses.put(player.getUniqueID(), new Pose(model.bipedHead,
@@ -46,7 +46,7 @@ public final class SkeletalRenderer {
     }
 
     public void render(RenderWorldLastEvent event) {
-        SkeletalModule module = Vibe.getInstance().getModuleManager().getModule(SkeletalModule.class);
+        EspModule.SkeletalSettings module = Vibe.getInstance().getModuleManager().getModule(EspModule.class).getSkeletal();
         if (module == null || !module.isEnabled() || minecraft.thePlayer == null || minecraft.theWorld == null) {
             poses.clear();
             return;
@@ -87,7 +87,7 @@ public final class SkeletalRenderer {
         }
     }
 
-    private void drawPlayer(EntityPlayer player, Pose pose, SkeletalModule module, boolean backplate) {
+    private void drawPlayer(EntityPlayer player, Pose pose, EspModule.SkeletalSettings module, boolean backplate) {
         WorldRenderUtils.color(backplate ? 0xB8000000 : color(module, player.getEntityId() * 0.11F));
         GL11.glPushMatrix();
         try {
@@ -137,7 +137,7 @@ public final class SkeletalRenderer {
         GL11.glEnd();
     }
 
-    private int color(SkeletalModule module, float phase) {
+    private int color(EspModule.SkeletalSettings module, float phase) {
         if (!module.getRainbow().isEnabled()) {
             return module.getColor().getArgb();
         }

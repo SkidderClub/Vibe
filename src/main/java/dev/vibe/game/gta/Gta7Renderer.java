@@ -126,7 +126,12 @@ public final class Gta7Renderer {
             GL11.glDisable(GL11.GL_LIGHTING);buildingShadows(game);GL11.glEnable(GL11.GL_LIGHTING);
             for (Gta7World.Prop prop : game.world.animatedProps) if (Math.abs(prop.x-game.x)<95&&Math.abs(prop.z-game.z)<95) dynamicProp(prop,game.time);
             for (Gta7Game.Car car : game.cars) if(actorVisible(car.x,1,car.z,3.2,game,130))car(car,game.time);
-            for (Gta7Game.Npc npc : game.npcs) if(actorVisible(npc.x,npc.y+1,npc.z,2.5,game,110))person(npc,npc.y);
+            for (Gta7Game.Npc npc : game.npcs) if(actorVisible(npc.x,npc.y+1,npc.z,2.5,game,110)) {
+                if(npc.cop && npc.health>0 && esp!=null && esp.isEnabled() && esp.getModes().isSelected("Chams")) {
+                    shadow(npc.x+.1,npc.z-.08,.42,.3,npc.y+.003);
+                    dev.vibe.ui.ChamsRenderer.drawNative(esp, () -> personModel(npc,npc.y));
+                } else person(npc,npc.y);
+            }
             drops(game);
             GL11.glDisable(GL11.GL_LIGHTING);
             tracers(game.tracers);
@@ -139,7 +144,9 @@ public final class Gta7Renderer {
                 Gta7Bounds b = npc.bounds();
                 double ground=npc.y;
                 policeEsp.captureLocalActor(new AxisAlignedBB(b.x0-.06,ground-.02,b.z0-.06,b.x1+.06,ground+1.92,b.z1+.06),
-                        "Police",(float)npc.health,(float)npc.maxHealth,(float)Math.hypot(npc.x-game.x,npc.z-game.z),"Service pistol",esp);
+                        npc.kind.name().replace('_',' '),(float)npc.health,(float)npc.maxHealth,
+                        (float)Math.sqrt(Math.pow(npc.x-game.x,2)+Math.pow(npc.y-game.y,2)+Math.pow(npc.z-game.z,2)),"Service pistol",esp);
+                if(esp.getModes().isSelected("Skeletal") && (!esp.getSkeletal().getOnlyTargets().isEnabled() || game.hostile(npc)))nativeSkeleton(npc,esp.getSkeletal());
             }
             fog.render(dev.vibe.ui.effect.FogRenderer.module(), .12f, 900, (float)game.yaw, (float)game.pitch);
             if (!game.dead) weapon(game,aim);
@@ -453,6 +460,9 @@ public final class Gta7Renderer {
 
     private void person(Gta7Game.Npc npc,double ground) {
         shadow(npc.x+.1,npc.z-.08,.42,.3,ground+.003);
+        personModel(npc,ground);
+    }
+    private void personModel(Gta7Game.Npc npc,double ground) {
         GL11.glPushMatrix(); GL11.glTranslated(npc.x,ground,npc.z); GL11.glRotated(-npc.yaw,0,1,0);
         if(npc.health<=0){GL11.glTranslated(0,.05,0);GL11.glRotated(Math.min(90,npc.death*240),1,0,0);}
         if(npc.hurt>0&&npc.health>0)GL11.glRotated(Math.sin(npc.hurt*40)*5,0,0,1);
@@ -474,6 +484,30 @@ public final class Gta7Renderer {
         }else personBody(npc,shirt,skin);
         GL11.glPopMatrix();
     }
+    private void nativeSkeleton(Gta7Game.Npc npc, EspModule.SkeletalSettings settings) {
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);GL11.glPushMatrix();
+        try {
+            GL11.glTranslated(npc.x,npc.y,npc.z);GL11.glRotated(-npc.yaw,0,1,0);
+            double scale=npc.kind.height/1.8;GL11.glScaled(scale,scale,scale);
+            GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glDisable(GL11.GL_LIGHTING);GL11.glDisable(GL11.GL_FOG);
+            GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(770,771);GL11.glDepthMask(false);
+            if(settings.getThroughWalls().isEnabled())GL11.glDisable(GL11.GL_DEPTH_TEST);
+            GL11.glEnable(GL11.GL_LINE_SMOOTH);
+            if(settings.getDepthBackplate().isEnabled()){GL11.glLineWidth(settings.getLineWidth().getFloat()+2);dev.vibe.ui.WorldRenderUtils.color(0xB8000000);nativeBones(npc);}
+            GL11.glLineWidth(settings.getLineWidth().getFloat());
+            int color=settings.getRainbow().isEnabled()?java.awt.Color.HSBtoRGB((System.currentTimeMillis()%8000)/8000F,.75F,1):settings.getColor().getArgb();
+            dev.vibe.ui.WorldRenderUtils.color(color);nativeBones(npc);
+        }finally{GL11.glPopMatrix();GL11.glPopAttrib();GlStateManager.resetColor();}
+    }
+    private void nativeBones(Gta7Game.Npc npc) {
+        GL11.glBegin(GL11.GL_LINES);
+        bone(0,.8,0,0,1.45,0);bone(-.32,1.4,0,.32,1.4,0);bone(-.14,.8,0,.14,.8,0);bone(0,1.45,0,0,1.8,0);
+        double swing=Math.toRadians(Math.sin(npc.walk)*24);
+        for(int side=-1;side<=1;side+=2){double angle=swing*side;bone(side*.14,.8,0,side*.14,.8-Math.cos(angle)*.8,-Math.sin(angle)*.8);}
+        bone(-.32,1.4,0,-.32,1.1,-.48);bone(.32,1.4,0,.25,1.18,-.48);
+        GL11.glEnd();
+    }
+    private void bone(double x,double y,double z,double a,double b,double c){GL11.glVertex3d(x,y,z);GL11.glVertex3d(a,b,c);}
     private void personBody(Gta7Game.Npc npc,int shirt,int skin){
         box(-.24,.79,-.15,.24,1.42,.15,shirt);
         box(-.23,.79,-.17,.23,.88,.17,0x2B363A);
