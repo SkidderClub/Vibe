@@ -1,0 +1,18 @@
+# Build output and caches
+.gradle-local/
+.gradle/
+build/
+out/
+
+# Local game data and credentials
+run/
+logs/
+*.vibeaccounts
+accounts.vault
+accounts.key
+vibe/cookies/
+
+# Local development files
+context/
+.idea/
+*.iml
