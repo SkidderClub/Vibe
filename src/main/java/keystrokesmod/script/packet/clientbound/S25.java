@@ -1,0 +1,3 @@
+package keystrokesmod.script.packet.clientbound;
+import keystrokesmod.script.model.Block; import keystrokesmod.script.model.Vec3; import net.minecraft.network.play.server.S25PacketBlockBreakAnim;
+public class S25 extends SPacket { public int entityId,progress; public Block block; public S25(S25PacketBlockBreakAnim value){super(value);entityId=value.getBreakerId();progress=value.getProgress();block=new Block(new Vec3(value.getPosition()));} public S25(int id,Block block,int progress){super(null);entityId=id;this.block=block;this.progress=progress;} public S25(int id,Vec3 position,int progress){this(id,new Block(position),progress);} }

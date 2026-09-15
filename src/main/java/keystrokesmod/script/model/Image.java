@@ -1,0 +1,4 @@
+package keystrokesmod.script.model;
+import java.awt.image.BufferedImage; import java.io.File; import java.net.URL; import java.util.HashMap; import javax.imageio.ImageIO;
+/** Lazily loaded image descriptor for render.image compatibility. */
+public class Image { private static final HashMap<String,Image> CACHE=new HashMap<String,Image>(); private final String url; private BufferedImage image; public Image(String url,boolean cached){this.url=url;if(cached)CACHE.put(url,this);load();} private void load(){try{image=url.startsWith("http")?ImageIO.read(new URL(url)):ImageIO.read(new File(url));}catch(Exception ignored){}} public float[] getDimensions(){return image==null?new float[]{0,0}:new float[]{image.getWidth(),image.getHeight()};} public boolean isLoaded(){return image!=null;} public static void clearCache(){CACHE.clear();} @Override public String toString(){return url;} }

@@ -1,0 +1,16 @@
+[
+  {
+    "modid": "clientcore",
+    "name": "Client Core",
+    "description": "A fresh tactical visual client for Minecraft 1.8.9.",
+    "version": "${version}",
+    "mcversion": "1.8.9",
+    "url": "",
+    "updateUrl": "",
+    "authorList": ["Vibe"],
+    "credits": "Built with Forge and Unimined.",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]

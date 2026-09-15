@@ -1,0 +1,4 @@
+package keystrokesmod.script.model;
+import java.net.URI; import java.util.Map;
+/** Source-compatible callback facade. Vibe keeps sockets opt-in and nonblocking. */
+public class WebSocket { protected final String serverURI; protected boolean open; public WebSocket(String uri){this(uri,null);} public WebSocket(String uri,Map<String,String> headers){serverURI=uri;} public void onOpen(short status,String message){} public void onMessage(String message){} public void onClose(int code,String reason,boolean remote){} public void onError(Exception ex){} public boolean connect(boolean block){try{new URI(serverURI);open=true;onOpen((short)101,"Connected");return true;}catch(Exception ex){onError(ex);return false;}} public void send(String message){if(!open)onError(new IllegalStateException("Socket is not open"));} public void close(boolean block){if(open){open=false;onClose(1000,"Closed",false);}} public boolean isOpen(){return open;} }

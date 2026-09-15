@@ -1,0 +1,3 @@
+package keystrokesmod.script.packet.serverbound;
+import keystrokesmod.script.model.ItemStack; import net.minecraft.network.play.client.C10PacketCreativeInventoryAction;
+public class C10 extends CPacket { public int slot; public ItemStack itemStack; public C10(int slot,ItemStack item){super(new C10PacketCreativeInventoryAction(slot,item==null?null:item.itemStack));this.slot=slot;itemStack=item;} public C10(C10PacketCreativeInventoryAction value){super(value);slot=value.getSlotId();itemStack=ItemStack.convert(value.getStack());} public C10PacketCreativeInventoryAction convert(){return (C10PacketCreativeInventoryAction)packet;} }

@@ -1,0 +1,3 @@
+package keystrokesmod.script.model;
+import java.util.Collections; import java.util.List;
+public class Response { private final int responseCode; private final String contents; private final List<String[]> headers; public Response(int code,String contents,List<String[]> headers){responseCode=code;this.contents=contents==null?"":contents;this.headers=headers==null?Collections.<String[]>emptyList():headers;} public Response(int code,String contents){this(code,contents,null);} public int code(){return responseCode;} public String string(){return contents;} public Json json(){return Json.parse(contents);} public List<String[]> headers(){return headers;} @Override public String toString(){return "Response("+responseCode+")";} }

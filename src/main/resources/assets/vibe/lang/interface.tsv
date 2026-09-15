@@ -1,0 +1,745 @@
+# English	Chinese	Russian	Japanese	Bavarian
+Licenses	许可证	Лицензии	ライセンス	Lizenzen
+Licenses & credits	许可证与鸣谢	Лицензии и авторы	ライセンスとクレジット	Lizenzen & Mitwirkende
+Credits	鸣谢	Авторы	クレジット	Mitwirkende
+Notices	法律声明	Уведомления	権利表記	Hinweise
+Source code	源代码	Исходный код	ソースコード	Quellcode
+Source	源码	Исходники	ソース	Quellcode
+Project source	项目源码	Код проекта	プロジェクトのソース	Projekt-Quellcode
+Copy source link	复制源码链接	Копировать ссылку	ソースのリンクをコピー	Quellcode-Link kopiern
+Source link copied	已复制源码链接	Ссылка скопирована	リンクをコピーしました	Quellcode-Link kopiert
+Could not copy source link.	无法复制源码链接。	Не удалось скопировать ссылку.	リンクをコピーできませんでした。	Quellcode-Link ned kopiert.
+Could not open the browser. Use Copy source link.	无法打开浏览器。请复制源码链接。	Браузер не открылся. Скопируйте ссылку.	ブラウザーを開けません。リンクをコピーしてください。	Browser geht ned auf. Kopier den Quellcode-Link.
+License document unavailable	许可证文档不可用	Документ лицензии недоступен	ライセンス文書を利用できません	Lizenzdokument ned verfügbar
+This document is missing. Obtain the complete build from its distributor.	缺少此文档。请向分发者获取完整版本。	Документ отсутствует. Получите полную сборку у распространителя.	文書がありません。配布元から完全なビルドを入手してください。	Des Dokument fehlt. Hol da den vollständigen Build vom Anbieter.
+Vibe combines GPLv3 code with AGPLv3 components. Each component keeps its license.	Vibe 结合 GPLv3 代码和 AGPLv3 组件。各组件保留原有许可证。	Vibe объединяет код GPLv3 с компонентами AGPLv3. Каждый сохраняет свою лицензию.	Vibe は GPLv3 のコードと AGPLv3 の構成要素を組み合わせています。各ライセンスは維持されます。	Vibe verbindet GPLv3-Code mit AGPLv3-Teilen. Jeder Teil behält sei Lizenz.
+Fog, Torus hit effects and the media HUD are adapted from Schizoid.	雾效、圆环命中特效和媒体 HUD 改编自 Schizoid。	Туман, эффекты попадания Torus и медиа-HUD адаптированы из Schizoid.	霧、Torus のヒット演出、メディア HUD は Schizoid を移植したものです。	Nebel, Torus-Treffereffekte und des Medien-HUD stammen aus Schizoid.
+Simplex noise used by the visual effects.	视觉特效使用的 Simplex 噪声。	Симплексный шум для визуальных эффектов.	視覚効果で使用するシンプレックスノイズ。	Simplex-Rauschen für d Bildeffekte.
+Device-login reference and OAuth application; no library bundled.	设备登录参考及 OAuth 应用；未捆绑其库。	Образец входа по коду и приложение OAuth; библиотека не включена.	デバイスログインの参考と OAuth アプリ。ライブラリは同梱していません。	Vorlag fürs Geräte-Login und OAuth-App; koa Bibliothek mitgliefert.
+Authentication protocol and application configuration reference; no library bundled.	身份验证协议与应用配置参考；未捆绑其库。	Образец протокола входа и настроек приложения; библиотека не включена.	認証プロトコルとアプリ設定の参考。ライブラリは同梱していません。	Vorlag fürs Anmeldeprotokoll und d App-Einstellung; koa Bibliothek mitgliefert.
+Login configuration reference. Shader provenance details are in Notices.	登录配置参考。着色器来源详情见法律声明。	Образец настроек входа. Происхождение шейдеров описано в уведомлениях.	ログイン設定の参考。シェーダーの出典は権利表記をご覧ください。	Vorlag für d Anmeldung. Shader-Herkunft steht in de Hinweise.
+Other libraries and assets keep their own terms. See Notices for the full inventory.	其他库和资源保留各自条款。完整清单见法律声明。	Другие библиотеки и ресурсы сохраняют свои условия. Полный список в уведомлениях.	他のライブラリや素材には固有の条件が適用されます。一覧は権利表記にあります。	Andere Bibliothekn und Inhalte behalten ihre Bedingungen. D ganze Listn steht in de Hinweise.
+You may use, modify and share covered code under its license terms. No warranty is provided; see the full licenses.	您可按许可证条款使用、修改和分享适用代码。不提供担保；请阅读完整许可证。	Использование, изменение и передача кода разрешены по его лицензии. Гарантий нет; см. полные тексты.	対象コードはライセンス条件に従い使用・変更・共有できます。保証はありません。全文をご確認ください。	Du derfst den Code nach seiner Lizenz nutzn, ändern und teilen. Koa Gewährleistung; lies de vollständigen Lizenzen.
+Matching source for this build	此版本对应的源代码	Исходники этой сборки	このビルドに対応するソース	Passender Quellcode für den Build
+Obtain this archive alongside the JAR from its distributor. A repository checkout may differ from your build.	请从分发者处获取与 JAR 配套的此归档。仓库代码可能与您的版本不同。	Получите этот архив вместе с JAR у распространителя. Код в репозитории может отличаться от сборки.	配布元から JAR と一緒にこのアーカイブを入手してください。リポジトリの内容はビルドと異なる場合があります。	Hol des Archiv zamm mit der JAR vom Anbieter. Des Repository kann von deim Build abweichen.
+Project repository	项目仓库	Репозиторий проекта	プロジェクトのリポジトリ	Projekt-Repository
+When sharing a build, provide its matching source and preserve the license and copyright notices.	分享版本时，请提供对应源码并保留许可证和版权声明。	При передаче сборки предоставьте соответствующий код и сохраните лицензии и сведения об авторских правах.	ビルドを共有する際は対応するソースを提供し、ライセンスと著作権表示を維持してください。	Beim Teilen vom Build gib den passenden Quellcode mit und behalt Lizenz- und Urheberhinweise.
+GPLv3 and AGPLv3 permit this combination. AGPL network-source duties apply when their conditions are met.	GPLv3 和 AGPLv3 允许这种组合。满足条件时，适用 AGPL 的网络源码提供义务。	GPLv3 и AGPLv3 допускают такое объединение. При выполнении условий действуют сетевые обязанности AGPL по предоставлению кода.	GPLv3 と AGPLv3 はこの組み合わせを認めています。条件を満たす場合は AGPL のネットワーク経由のソース提供義務が適用されます。	GPLv3 und AGPLv3 erlauben des zamm. De AGPL-Pflichten zum Netzwerk-Quellcode gelten, wenn ihre Bedingungen erfüllt san.
+The license texts and credits are available here without an internet connection.	许可证文本与鸣谢无需联网即可在此查看。	Тексты лицензий и сведения об авторах доступны здесь без интернета.	ライセンス全文とクレジットはインターネット接続なしで読めます。	De Lizenztexte und Mitwirkenden kannst hier a ohne Internet lesen.
+Choose which entities combat and ESP use	选择战斗和透视使用的实体类型	Выберите сущности для боя и ESP	戦闘と ESP の対象を選択	Such Ziele für Kampf und ESP aus
+Smoothly aims at the best Vibe target	平滑瞄准最佳目标	Плавно наводится на выбранную цель	最適なターゲットへ滑らかに照準	Zielt gschmeidig aufs beste Ziel
+Customize local time and weather	自定义本地时间和天气	Настроить локальное время и погоду	ローカルの時間と天候を設定	Zeit und Wetter eistelln
+Customize first-person sword blocking	自定义第一人称剑格挡	Настроить блок мечом от первого лица	一人称の剣ガードを設定	Schwertblock in erster Person eistelln
+Assist held left-click attacks	辅助按住左键时的攻击	Помогать атакам при удержании мыши	左クリック長押し中の攻撃を補助	Hilft beim ghaltnen Linksklick
+Select the best hotbar tool for the current vanilla action	为当前操作选择最佳快捷栏工具	Выбрать лучший инструмент для действия	現在の操作に最適なツールを選択	Wählt des beste Werkzeig für d Aktion
+Safely buffers target movement updates	缓冲目标移动更新	Буферизовать обновления движения цели	ターゲットの移動更新をバッファー	Speichert Zielbewegunga zwischen
+Automatically jump while moving	移动时自动跳跃	Автоматически прыгать в движении	移動中に自動ジャンプ	Beim Gehn automatisch hupfa
+Shows blocks you place or break for a short time	短暂显示放置或破坏的方块	Временно показывать поставленные и сломанные блоки	設置・破壊したブロックを一時表示	Zoagt gesetzte und abbaute Blöck kurz
+Customize the selected block outline and fill	自定义所选方块的轮廓和填充	Настроить контур и заливку выбранного блока	選択ブロックの輪郭と塗りつぶしを設定	Blockrand und Füllung eistelln
+Globally control Vibe blur surfaces	全局控制 Vibe 背景模糊	Управлять размытием интерфейса Vibe	Vibe のぼかし表示を一括設定	Vibe-Unschärfe überall eistelln
+Highlight normal, redstone, and ender chests	高亮普通箱、陷阱箱和末影箱	Подсветить обычные, красные и эндер-сундуки	通常・トラップ・エンダーチェストを強調	Normale, Redstone- und Endertruhn markiern
+Loot useful chest items with Default or cursor-based timing	按默认或光标时序取走有用物品	Забирать полезные предметы с выбранными задержками	指定した間隔で有用なチェスト内アイテムを取得	Nützliche Sachn aus Truhn nehman
+Create, preview and assign cosmetic presets	创建、预览和分配装饰预设	Создавать и назначать косметические пресеты	コスメのプリセットを作成・確認・割り当て	Kosmetik-Vorlagn erstelln und zuateiln
+Custom first-person crosshair	自定义第一人称准星	Свой прицел от первого лица	一人称のカスタム照準	Eigener Zielpunkt in erster Person
+Bed-break bursts and heart or dot trails	床破坏粒子和爱心或圆点轨迹	Частицы кроватей и следы сердец или точек	ベッド破壊時の粒子とハート・点の軌跡	Bett-Partikel und Herzlspurn
+Print selected module diagnostics in local chat	在本地聊天中显示模块诊断	Печатать диагностику модулей в локальном чате	モジュールの診断をローカルチャットに表示	Modul-Diagnose im lokalen Chat zoagn
+Sneak at unsupported block edges	在无支撑的方块边缘潜行	Приседать на краю блока	足場の端でスニーク	Am Blockrand schleichn
+Preview and arrange tactical ESP elements	预览和排列战术透视元素	Расположить элементы тактического ESP	戦術 ESP の要素を確認・配置	Taktische ESP-Elemente anordna
+3D and tactical Counter-Strike-style target ESP	三维和 Counter-Strike 风格目标透视	3D и тактический ESP в стиле Counter-Strike	3D と Counter-Strike 風のターゲット ESP	3D und taktisches Ziel-ESP
+Queues movement packets while preserving action order	按操作顺序缓存移动数据包	Буферизовать пакеты движения по порядку	操作順を保って移動パケットを保留	Bewegungspakete in da Reihenfolge puffern
+Tune the normal block-damage controller	调整原版方块破坏控制	Настроить обычное разрушение блоков	通常のブロック破壊を調整	Normalen Blockabbau eistelln
+Tune local block placement delay	调整本地方块放置延迟	Настроить задержку установки блоков	ブロック設置の遅延を調整	Verzögerung beim Blocksetzn eistelln
+Simple client flight	简单的客户端飞行	Простой клиентский полёт	シンプルなクライアント飛行	Oafachs Fliegn
+Set a custom client field of view	设置自定义视野	Настроить поле зрения клиента	クライアントの視野角を設定	Eigenes Sichtfeld eistelln
+Keep saved friends out of combat	避免攻击已保存的好友	Исключить сохранённых друзей из боя	登録したフレンドを戦闘対象から除外	Gspeicherte Freind ausm Kampf raushaltn
+Maximise local brightness	最大化本地亮度	Максимальная локальная яркость	ローカルの明るさを最大化	Helligkeit ganz aufdrahn
+Play local reactions to player actions	播放玩家操作的本地反馈	Локальные звуковые реакции на действия	プレイヤーの操作に応じた音声を再生	Lokale Reaktiona auf Aktionen abspuin
+A 3D first-person city with police, traffic and permanent upgrades	带有警察、交通和永久升级的三维城市	Город от первого лица с полицией и улучшениями	警察・交通・永続アップグレードのある 3D 都市	A 3D-Stadt mit Polizei und Verbesserunga
+Draw a hit confirmation in 2D or world space	在二维界面或世界中显示命中提示	Показать попадание в 2D или в мире	命中マーカーを 2D またはワールドに表示	Treffer in 2D oder in da Welt zoagn
+Move watermark and module list	移动水印和模块列表	Переместить водяной знак и список модулей	透かしとモジュール一覧を移動	Wossazeichn und Modullistn verschiebn
+Customizable Vibe HUD	可自定义的 Vibe 界面	Настраиваемый HUD Vibe	カスタマイズ可能な Vibe HUD	Eistellbare Vibe-Anzeige
+Arrange preferred inventory slots and the drop bin	排列物品栏槽位和丢弃区域	Настроить слоты инвентаря и выброс	インベントリの配置と破棄スロットを設定	Inventarplätze und Wegwerfbereich anordna
+Sort tools, armour and supplies into the Inventory Editor layout	按编辑器布局整理工具、护甲和物资	Сортировать предметы по схеме инвентаря	ツール・防具・物資を設定した配置に整理	Werkzeig und Rüstung ins Layout sortiern
+Highlight dropped items	高亮掉落物品	Подсветить выпавшие предметы	ドロップしたアイテムを強調	Rumliegende Sachn markiern
+Assign module keys using the current keyboard layout	使用当前键盘布局分配模块按键	Назначить клавиши в текущей раскладке	現在のキーボード配列でキーを割り当て	Modultastn mitm aktuellen Layout zuateiln
+Automatically aims, clicks and sword-blocks using vanilla input	使用原版输入自动瞄准、点击和格挡	Автоприцел, клики и блок через обычный ввод	通常の入力で自動照準・クリック・ガード	Automatisch zieln, klickn und blockn
+Corrects movement for fake server rotations	修正虚拟服务器旋转下的移动	Корректировать движение при серверных поворотах	サーバー向け回転に合わせて移動を補正	Bewegung bei Server-Drehunga korrigiern
+Show your Vibe gamertag instead of the account name	显示 Vibe 游戏名以代替账户名	Показать ник Vibe вместо имени аккаунта	アカウント名の代わりに Vibe 名を表示	Vibe-Nam statt Kontonam zoagn
+Play local .nes ROM files in a Vibe GUI	在 Vibe 界面中运行本地 .nes 游戏	Играть в локальные ROM .nes в Vibe	Vibe でローカル .nes ROM をプレイ	Lokale .nes-ROMs in Vibe spuin
+Removes the vanilla jump delay	移除原版跳跃延迟	Убрать обычную задержку прыжка	通常のジャンプ遅延を除去	Normale Hüpfpausn wegnehma
+Preserve movement while using selected items	使用所选物品时保持移动	Сохранять движение при использовании предметов	指定アイテムの使用中も移動を維持	Beim Sachn-Benutzn weidagehn
+Interactive ambient particles in selected GUIs	在所选界面中显示交互粒子	Интерактивные частицы в выбранных меню	指定 GUI に反応する粒子を表示	Interaktive Partikel in Menüs
+Client-side quality-of-life presentation	客户端便捷显示功能	Удобные визуальные функции клиента	クライアントの表示を便利に調整	Praktische Darstellungsfunktiona
+Adjust the client mouse-over reach for entities and blocks	调整实体和方块的光标检测距离	Настроить дальность наведения на сущности и блоки	エンティティとブロックの照準距離を調整	Maus-Reichweitn für Blöck und Ziele eistelln
+Create, load and manage Raven BS compatible scripts	创建、加载和管理 Raven BS 兼容脚本	Создавать и загружать скрипты Raven BS	Raven BS 互換スクリプトを作成・管理	Raven-BS-Skripts erstelln und verwaltn
+Render animated player skeletons	显示动态玩家骨骼	Показать анимированные скелеты игроков	プレイヤーの動く骨格を表示	Animierte Spuilaskelette zoagn
+Sprint while moving forward	前进时疾跑	Спринт при движении вперёд	前進中にダッシュ	Beim Vorwärtsgehn renna
+Highlight the active AimAssist target	高亮当前辅助瞄准目标	Подсветить текущую цель AimAssist	エイム補助の現在のターゲットを強調	Aktuelles Ziel von da Zielhilf markiern
+Tests MoveFix with a fake server rotation	使用虚拟服务器旋转测试移动修正	Проверить MoveFix с серверным поворотом	仮のサーバー回転で MoveFix をテスト	MoveFix mit Server-Drehung testn
+Predicts bow and throwable projectile paths	预测弓箭和投掷物轨迹	Предсказать траектории стрел и снарядов	矢と投げた物の軌道を予測	Flugbahna von Pfeiln und Würfn vorhersagn
+Reduce received knockback	减少受到的击退	Уменьшить получаемое отбрасывание	受けるノックバックを軽減	Rückstoß verringern
+Show a custom image in the ClickGUI	在点击界面显示自定义图片	Показать своё изображение в ClickGUI	ClickGUI にカスタム画像を表示	Eigenes Buid im Klick-GUI zoagn
+Release and re-press forward after a selected hit	在选定命中后松开并重新按下前进	Отпустить и нажать вперёд после удара	指定の命中後に前進キーを押し直す	Nachm Treffer Vorwärts neu druckn
+Singleplayer	单人游戏	Одиночная игра	シングルプレイ	Oanzelspui
+Multiplayer	多人游戏	Сетевая игра	マルチプレイ	Mehrspuila
+Options...	选项…	Настройки…	設定…	Eistellunga…
+Quit Game	退出游戏	Выйти из игры	ゲームを終了	Spui beendn
+Playing as	当前玩家	Вы играете как	使用中のプレイヤー	Du spuisd ois
+Bind	按键绑定	Привязка	キー割り当て	Tastnbindung
+Accessories	配饰	Аксессуары	アクセサリー	Zubehär
+Unequip	卸下	Снять	装備解除	Ablegn
+Skin	皮肤	Скин	スキン	Skin
+Only third person	仅第三人称	Только от третьего лица	三人称視点のみ	Bloß dritte Person
+Run	运行	Запустить	実行	Startn
+Stop	停止	Остановить	停止	Stop
+Hide with armor	穿护甲时隐藏	Скрыть под бронёй	防具着用時に非表示	Mit Rüstung ausblendn
+Open the Vibe module manager	打开 Vibe 模块管理器	Открыть менеджер модулей Vibe	Vibe モジュール管理を開く	Vibe-Modulverwaltung aufmacha
+Edit friends and view live equipment	编辑好友并查看装备	Редактировать друзей и смотреть снаряжение	フレンドと装備を確認・編集	Freind und Ausrüstung oschaun
+Create, load and manage Vibe JSON profiles	创建、加载和管理 Vibe 配置	Создание и загрузка профилей Vibe	Vibe 設定ファイルを作成・管理	Vibe-Profile erstelln und verwaltn
+Render the selected local and friend cosmetic presets	显示自己和好友的装饰	Показывать косметику игрока и друзей	自分とフレンドのコスメを表示	Eigene und Freind-Kosmetik zoagn
+Highlights beds and nearby defensive blocks	高亮床及周围防御方块	Подсветка кроватей и защитных блоков	ベッドと周辺の防御ブロックを強調	Bettn und Schutzblöck markiern
+Accounts	账户	Аккаунты	アカウント	Kontn
+Alt Manager	账户管理	Менеджер аккаунтов	アカウント管理	Kontnverwaltung
+Auto Login	自动登录	Автовход	自動ログイン	Automatisch omeldn
+Disable Auto Login	关闭自动登录	Отключить автовход	自動ログインを無効にする	Automatisch omeldn aus
+Active	当前使用	Активен	使用中	Aktiv
+Active account	当前账户	Активный аккаунт	使用中のアカウント	Aktivs Konto
+Use account	使用账户	Войти в аккаунт	アカウントを使用	Konto hernehma
+Sign in again	重新登录	Войти снова	再ログイン	No amoi omeldn
+Cookie login	Cookie 登录	Вход по cookies	Cookie でログイン	Mit Cookies omeldn
+Microsoft login	微软登录	Вход Microsoft	Microsoft ログイン	Microsoft-Omeldung
+Offline profile	离线档案	Офлайн-профиль	オフラインプロフィール	Offline-Profil
+Launcher account	启动器账户	Аккаунт лаунчера	ランチャーのアカウント	Launcher-Konto
+Restore original session	恢复原始会话	Вернуть исходный сеанс	元のセッションを復元	Ursprüngliche Sitzung
+More	更多	Ещё	その他	Mehra
+Cancel	取消	Отмена	キャンセル	Obbrecha
+Remove	移除	Удалить	削除	Entferna
+Keep account	保留账户	Оставить аккаунт	アカウントを保持	Konto bhaltn
+Import backup	导入备份	Импорт копии	バックアップをインポート	Sicherung eiladn
+Export backup	导出备份	Экспорт копии	バックアップをエクスポート	Sicherung ausspeichern
+Backup folder	备份文件夹	Папка копий	バックアップフォルダー	Sicherungsordner
+Cookie folder	Cookie 文件夹	Папка cookies	Cookie フォルダー	Cookie-Ordner
+Open browser	打开浏览器	Открыть браузер	ブラウザーを開く	Browser aufmacha
+Copy code	复制代码	Копировать код	コードをコピー	Code kopiern
+Copy path	复制路径	Копировать путь	パスをコピー	Pfad kopiern
+Search accounts...	搜索账户…	Поиск аккаунтов…	アカウントを検索…	Kontn suachn…
+Your accounts appear here	账户将显示在这里	Здесь появятся аккаунты	アカウントがここに表示されます	Do kemman deine Kontn hi
+No matching accounts	没有匹配的账户	Аккаунты не найдены	該当するアカウントなし	Koane passenden Kontn
+Choose a login method to get started.	选择登录方式以开始。	Выберите способ входа.	ログイン方法を選んでください。	Such da a Omedungsart aus.
+Try a different name.	请尝试其他名称。	Попробуйте другое имя.	別の名前を試してください。	Probiers mit am andern Nam.
+Add account	添加账户	Добавить аккаунт	アカウントを追加	Konto dazua
+Selected account	已选账户	Выбранный аккаунт	選択したアカウント	Ausgwuids Konto
+Select a saved account	选择已保存的账户	Выберите сохранённый аккаунт	保存したアカウントを選択	Gspeicherts Konto auswähln
+Currently playing	正在使用	Сейчас в игре	現在使用中	Grad im Spui
+Sign in	登录	Войти	ログイン	Omeldn
+Please wait	请稍候	Подождите	お待ちください	Bittschee wartn
+Account operation	账户操作	Операция с аккаунтом	アカウント操作	Konto-Aktion
+Automatic account import	自动导入账户	Автоимпорт аккаунтов	アカウントの自動インポート	Kontn automatisch eiladn
+Choose a .txt file	选择 .txt 文件	Выберите файл .txt	.txt ファイルを選択	A .txt-Datei auswähln
+Continue in your browser	在浏览器中继续	Продолжите в браузере	ブラウザーで続行	Im Browser weida
+Singleplayer & local servers	单人游戏和本地服务器	Одиночная игра и локальные серверы	シングルプレイとローカルサーバー	Oanzelspui und lokale Server
+Changelog	更新日志	История изменений	更新履歴	Änderunga
+Latest & previous updates	最新和以往更新	Новые и прошлые обновления	最新および過去の更新	Neie und oide Updates
+Scroll for more	滚动查看更多	Прокрутите дальше	スクロールして続きを表示	Für mehra scrolln
+Shaders	着色器	Шейдеры	シェーダー	Shader
+Active shader	当前着色器	Активный шейдер	使用中のシェーダー	Aktiver Shader
+Enable shader	启用着色器	Включить шейдер	シェーダーを有効化	Shader o
+Disable shader	禁用着色器	Выключить шейдер	シェーダーを無効化	Shader aus
+Scroll to browse shaders	滚动浏览着色器	Прокрутите список шейдеров	スクロールしてシェーダーを選択	Zum Shader-Suachn scrolln
+Shader unavailable on this OpenGL profile	当前 OpenGL 不支持此着色器	Шейдер недоступен в этом OpenGL	この OpenGL ではシェーダーを使用できません	Shader mit dem OpenGL ned verfügbar
+Themes	主题	Темы	テーマ	Designs
+Theme	主题	Тема	テーマ	Design
+Menu theme	菜单主题	Тема меню	メニューのテーマ	Menü-Design
+Friend editor	好友编辑器	Редактор друзей	フレンド編集	Freind-Editor
+Friends	好友	Друзья	フレンド	Freind
+Name	名称	Имя	名前	Nam
+Alias	别名	Псевдоним	別名	Spitznam
+Cosmetic profile	装饰档案	Профиль косметики	コスメプロフィール	Kosmetik-Profil
+Cosmetics	装饰	Косметика	コスメ	Kosmetik
+Cosmetics editor	装饰编辑器	Редактор косметики	コスメ編集	Kosmetik-Editor
+Live preview	实时预览	Предпросмотр	プレビュー	Vorschau
+Select a friend	选择好友	Выберите друга	フレンドを選択	An Freind auswähln
+Not in this world	不在此世界	Не в этом мире	このワールドにいません	Ned in dera Welt
+None	无	Нет	なし	Koans
+New preset	新建预设	Новый пресет	新しいプリセット	Neie Vorlag
+Config editor	配置编辑器	Редактор конфигураций	設定ファイル編集	Konfig-Editor
+Configs	配置	Конфигурации	設定ファイル	Konfigurationa
+Details	详情	Подробности	詳細	Details
+New	新建	Создать	新規	Nei
+Creator	创建者	Создатель	作成者	Ersteller
+Authors	作者	Авторы	作者	Autorn
+Created	创建时间	Создано	作成日時	Erstellt
+Latest save	最近保存	Последнее сохранение	最終保存	Zuletzt gspeichert
+Load with Keybinds	加载按键绑定	Загрузить привязки клавиш	キー割り当ても読み込む	Tastnbindunga mitladn
+Load with Visuals	加载视觉设置	Загрузить визуальные настройки	描画設定も読み込む	Optik mitladn
+Name (new / rename)	名称（新建 / 重命名）	Имя (создание / переименование)	名前（新規作成 / 名前変更）	Nam (nei / umbenenna)
+No matching configs	没有匹配的配置	Конфигурации не найдены	該当する設定ファイルなし	Koane passenden Konfigurationa
+Select a configuration to inspect it.	选择配置以查看详情。	Выберите конфигурацию для просмотра.	設定ファイルを選んで詳細を表示。	Wähl a Konfiguration zum Oschaun.
+Open	打开	Открыть	開く	Aufmacha
+Modules	模块	Модули	モジュール	Module
+Press key	按下按键	Нажмите клавишу	キーを押してください	Tastn druckn
+Primary Color	主颜色	Основной цвет	基本色	Hauptfarb
+Secondary Color	次颜色	Второй цвет	補助色	Zwoate Farb
+Outline Color	轮廓颜色	Цвет контура	輪郭の色	Randfarb
+Fill Color	填充颜色	Цвет заливки	塗りつぶしの色	Füllfarb
+Outline Mode	轮廓模式	Режим контура	輪郭モード	Randart
+Fill Mode	填充模式	Режим заливки	塗りつぶしモード	Füllart
+Outline Primary Color	轮廓主颜色	Основной цвет контура	輪郭の基本色	Rand-Hauptfarb
+Outline Secondary Color	轮廓次颜色	Второй цвет контура	輪郭の補助色	Zwoate Randfarb
+Fill Primary Color	填充主颜色	Основной цвет заливки	塗りつぶしの基本色	Füll-Hauptfarb
+Fill Secondary Color	填充次颜色	Второй цвет заливки	塗りつぶしの補助色	Zwoate Füllfarb
+Outline Width	轮廓宽度	Толщина контура	輪郭の太さ	Randbreitn
+Outline Size	轮廓大小	Размер контура	輪郭のサイズ	Randgröß
+Animation Speed	动画速度	Скорость анимации	アニメーション速度	Animationsgschwindigkeit
+Break Animation	破坏动画	Анимация разрушения	破壊アニメーション	Abbau-Animation
+Through Walls	穿墙显示	Сквозь стены	壁越しに表示	Durch Wänd
+View Distance	显示距离	Дальность отображения	表示距離	Sichtweitn
+Fade Alpha At Max	远处淡出	Затухание вдали	遠距離でフェードアウト	In da Fern ausblendn
+Wool Alpha	羊毛透明度	Непрозрачность шерсти	羊毛の不透明度	Woll-Deckkraft
+Bed Color Mode	床颜色模式	Режим цвета кровати	ベッドの色モード	Bett-Farbart
+Bed Fill	床填充	Заливка кровати	ベッドの塗りつぶし	Bett-Füllung
+Bed Outline	床轮廓	Контур кровати	ベッドの輪郭	Bettrand
+Highlight Near Beds	高亮床附近方块	Подсветка блоков у кроватей	ベッド周辺のブロックを強調	Blöck beim Bett markiern
+Wool	羊毛	Шерсть	羊毛	Woll
+Custom	自定义	Свой	カスタム	Eigene
+Obsidian	黑曜石	Обсидиан	黒曜石	Obsidian
+Wood	木头	Дерево	木材	Hoiz
+Glass	玻璃	Стекло	ガラス	Glas
+Endstone	末地石	Эндерняк	エンドストーン	Endstein
+Obsidian Fill	黑曜石填充	Заливка обсидиана	黒曜石の塗りつぶし	Obsidian-Füllung
+Obsidian Outline	黑曜石轮廓	Контур обсидиана	黒曜石の輪郭	Obsidian-Rand
+Wood Fill	木头填充	Заливка дерева	木材の塗りつぶし	Hoiz-Füllung
+Wood Outline	木头轮廓	Контур дерева	木材の輪郭	Hoizrand
+Glass Fill	玻璃填充	Заливка стекла	ガラスの塗りつぶし	Glas-Füllung
+Glass Outline	玻璃轮廓	Контур стекла	ガラスの輪郭	Glasrand
+Endstone Fill	末地石填充	Заливка эндерняка	エンドストーンの塗りつぶし	Endstein-Füllung
+Endstone Outline	末地石轮廓	Контур эндерняка	エンドストーンの輪郭	Endstein-Rand
+Players	玩家	Игроки	プレイヤー	Spuila
+Players Only	仅玩家	Только игроки	プレイヤーのみ	Bloß Spuila
+Animals	动物	Животные	動物	Viecher
+Mobs	生物	Мобы	モブ	Mobs
+Invisibles	隐身实体	Невидимые	透明なエンティティ	Unsichtbare
+Ignore Teammates	忽略队友	Игнорировать союзников	味方を除外	Teamkollegn ignoriern
+Teammate Detection	队友检测	Определение союзников	味方の判定	Teamkollegn erkenna
+Targets	目标	Цели	ターゲット	Ziele
+Target Mode	目标模式	Выбор цели	ターゲット選択	Zielart
+Target Area	目标区域	Область цели	狙う範囲	Zielbereich
+Only Targets	仅目标	Только цели	ターゲットのみ	Bloß Ziele
+Max Distance	最大距离	Макс. расстояние	最大距離	Größte Entfernung
+Clicking Range	点击距离	Дальность кликов	クリック距離	Klick-Reichweitn
+Clicking Mode	点击模式	Режим кликов	クリックモード	Klickart
+Blocking Range	格挡距离	Дальность блока	ガード距離	Block-Reichweitn
+Autoblock Mode	自动格挡模式	Режим автоблока	自動ガードモード	Automatische Blockart
+Rotation Mode	旋转模式	Режим поворота	回転モード	Drehart
+Rotation Speed	旋转速度	Скорость поворота	回転速度	Drehgschwindigkeit
+Rotation Acceleration	旋转加速度	Ускорение поворота	回転加速度	Drehbeschleunigung
+Yaw Aimpoint	水平瞄准点	Точка по горизонтали	水平方向の照準点	Waagrechts Ziel
+Pitch Aimpoint	垂直瞄准点	Точка по вертикали	垂直方向の照準点	Senkrechts Ziel
+Max Angle	最大角度	Макс. угол	最大角度	Größter Winkel
+Aim Through Walls	穿墙瞄准	Прицел сквозь стены	壁越しに照準	Durch Wänd zieln
+Aim Vertically	垂直瞄准	Прицел по вертикали	垂直方向に照準	Senkrecht zieln
+Not In Inv	物品栏打开时停用	Не в инвентаре	インベントリ表示中は停止	Ned im Inventar
+Not When BlockBreaking	挖掘时停用	Не при добыче блоков	採掘中は停止	Ned beim Abbaun
+Only When Rightclicking	仅右键时	Только при правом клике	右クリック中のみ	Bloß beim Rechtsklick
+Piercing	穿透	Пробивание	貫通	Durchstecha
+Center	中心	Центр	中心	Mittn
+Closest	最近点	Ближайшая точка	最も近い点	Nächster Punkt
+Acceleration	加速度	Ускорение	加速度	Beschleunigung
+CPS Range	点击速度范围	Диапазон CPS	CPS の範囲	Klickbereich
+Normal CPS	普通点击速度	Обычный CPS	通常の CPS	Normale Klicks
+Butterfly CPS	蝴蝶点击速度	CPS бабочкой	バタフライ CPS	Butterfly-Klicks
+Drag CPS	拖动点击速度	CPS драг-клика	ドラッグ CPS	Drag-Klicks
+Randomize CPS	随机点击速度	Случайный CPS	CPS をランダム化	Klicks zufällig
+Hold To Click	按住以点击	Кликать при удержании	押している間クリック	Zum Klickn haltn
+Require Mouse Down	需要按住鼠标	Требовать нажатие мыши	マウス長押しが必要	Mausdruck braucht
+Pause On Hurt	受伤时暂停	Пауза при уроне	ダメージ時に停止	Bei Schodn pausiern
+Held Item	手持物品	Предмет в руке	手持ちアイテム	Sach in da Hand
+Names	名称	Имена	名前	Nama
+Name Color	名称颜色	Цвет имени	名前の色	Namensfarb
+Health Bar	生命条	Полоса здоровья	体力バー	Lebnsbalkn
+Health Bar Position	生命条位置	Положение здоровья	体力バーの位置	Lebnsbalkn-Position
+Health Bar Width	生命条宽度	Ширина здоровья	体力バーの幅	Lebnsbalkn-Breitn
+Armor Display	护甲显示	Отображение брони	防具の表示	Rüstungsanzeige
+Hide Health When Full	满血时隐藏生命值	Скрыть полное здоровье	体力満タン時に非表示	Volles Lebn ausblendn
+Opacity	不透明度	Непрозрачность	不透明度	Deckkraft
+Scale	缩放	Масштаб	拡大率	Größ
+Strength	强度	Сила	強さ	Stärkn
+Thickness	粗细	Толщина	太さ	Dickn
+Horizontal Speed	水平速度	Горизонтальная скорость	水平速度	Waagrechte Gschwindigkeit
+Vertical Speed	垂直速度	Вертикальная скорость	垂直速度	Senkrechte Gschwindigkeit
+Only Moving	仅移动时	Только в движении	移動中のみ	Bloß beim Gehn
+Only While Moving	仅移动时	Только при движении	移動している間のみ	Bloß beim Gehn
+Only With Tools	仅使用工具时	Только с инструментом	ツール使用中のみ	Bloß mit Werkzeig
+Switch Back	切换回来	Вернуть слот	元のスロットに戻す	Zruckwechsln
+Require Sneak	需要潜行	Требовать приседание	スニークが必要	Schleichn braucht
+Holding Blocks	手持方块	С блоком в руке	ブロックを持っている時	Blöck in da Hand
+Randomize Delays	随机延迟	Случайные задержки	遅延をランダム化	Zufällige Pausn
+Delay (ms)	延迟（毫秒）	Задержка (мс)	遅延（ms）	Verzögerung (ms)
+Duration	持续时间	Длительность	継続時間	Dauer
+Chance	概率	Вероятность	確率	Chance
+Gravity	重力	Гравитация	重力	Schwerkraft
+Time	时间	Время	時間	Zeit
+Time Mode	时间模式	Режим времени	時間モード	Zeitart
+Time Speed	时间速度	Скорость времени	時間の速度	Zeitgschwindigkeit
+Weather Mode	天气模式	Режим погоды	天候モード	Wetterart
+Weather Strength	天气强度	Сила погоды	天候の強さ	Wetterstärkn
+Clear	晴朗	Ясно	晴れ	Klar
+Rain	雨	Дождь	雨	Regn
+Thunder	雷暴	Гроза	雷雨	Gwitter
+Day	白天	День	昼	Dog
+Night	夜晚	Ночь	夜	Nacht
+Sunset	日落	Закат	夕暮れ	Sunnuntergang
+HUD Elements	界面元素	Элементы HUD	HUD 要素	Anzeige-Elemente
+Blur Elements	模糊元素	Элементы размытия	ぼかす要素	Unschärfe-Elemente
+Features	功能	Функции	機能	Funktiona
+Selection	选择	Выбор	選択	Auswahl
+Types	类型	Типы	種類	Artn
+Near Color	近处颜色	Ближний цвет	近距離の色	Nahe Farb
+Far Color	远处颜色	Дальний цвет	遠距離の色	Ferne Farb
+Color Fade	颜色渐变	Переход цвета	色のグラデーション	Farbübergang
+Fade Speed	渐变速度	Скорость перехода	フェード速度	Übergangsgschwindigkeit
+Rainbow Speed	彩虹速度	Скорость радуги	虹の速度	Regenbogn-Gschwindigkeit
+Normal Chests	普通箱子	Обычные сундуки	通常のチェスト	Normale Truhn
+Ender Chests	末影箱	Эндер-сундуки	エンダーチェスト	Endertruhn
+Redstone Chests	陷阱箱	Сундуки-ловушки	トラップチェスト	Redstone-Truhn
+Center Dot	中心点	Центральная точка	中心点	Mittelpunkt
+Dot Size	点大小	Размер точки	点のサイズ	Punktgröß
+Gap	间距	Зазор	間隔	Abstand
+FOV	视野	Поле зрения	視野角	Sichtfeld
+BedESP	床透视	Кровати ESP	ベッド ESP	Bett-ESP
+ChestESP	箱子透视	Сундуки ESP	チェスト ESP	Truhn-ESP
+BlockOverlay	方块轮廓	Контур блока	ブロック輪郭	Blockrand
+AimAssist	辅助瞄准	Помощь прицеливания	エイム補助	Zielhilf
+FullBright	全亮	Полная яркость	明るさ最大	Vollhell
+AutoTool	自动工具	Автоинструмент	自動ツール	Automatischs Werkzeig
+FastBreak	快速挖掘	Быстрая добыча	高速採掘	Schnölla abbaun
+CustomCrosshair	自定义准星	Свой прицел	カスタム照準	Eigener Zielpunkt
+Sprint	疾跑	Спринт	ダッシュ	Renna
+Ambience	环境	Окружение	環境	Umgebung
+NameProtect	名称保护	Защита имени	名前を隠す	Namensschutz
+TargetESP	目标透视	Цель ESP	ターゲット ESP	Ziel-ESP
+No module is available in this category.	此分类没有模块。	В этой категории нет модулей.	このカテゴリにはモジュールがありません。	In dera Kategorie gibts koa Modul.
+# Module display names.  The raw names remain the profile identifiers.
+Backtrack	回溯	Бэктрек	バックトラック	Ruckspur
+BHop	连跳	Бхоп	バニーホップ	Hupf-Sprung
+BlockChangeESP	方块变化透视	ESP изменений блоков	ブロック変更 ESP	Blockwechsel-ESP
+Blur	模糊	Размытие	ぼかし	Unschärfe
+ChestStealer	箱子偷取	Автолут сундуков	チェスト回収	Truhnplünderer
+ClickGUI	点击界面	КликGUI	クリックGUI	Klick-GUI
+Cute Visuals	可爱视觉	Милые эффекты	かわいい表示	Nette Optik
+Debug	调试	Отладка	デバッグ	Fehlersuch
+Eagle	鹰眼	Орёл	イーグル	Adler
+ESP Editor	透视编辑器	Редактор ESP	ESP エディター	ESP-Editor
+FakeLag	假延迟	Фейковая задержка	フェイクラグ	Falscher Lag
+FastPlace	快速放置	Быстрая установка	高速設置	Schnölla setzn
+Fly	飞行	Полёт	飛行	Fliegn
+FOV Changer	视野修改	Изменение обзора	視野角変更	Sichtfeld-Wechsler
+Girlfriend	女友	Подруга	ガールフレンド	Freindin
+GTA7	GTA7	GTA7	GTA7	GTA7
+Hitmarker	命中标记	Маркер попадания	ヒットマーカー	Treffermarker
+HUD	界面	HUD	HUD	Anzeige
+HUD Editor	界面编辑器	Редактор HUD	HUD エディター	Anzeige-Editor
+Inventory Editor	物品栏编辑器	Редактор инвентаря	インベントリエディター	Inventar-Editor
+Inventory Manager	物品栏管理	Менеджер инвентаря	インベントリ管理	Inventarverwaltung
+ItemESP	物品透视	Предметы ESP	アイテムESP	Item-ESP
+Keybind Editor	按键编辑器	Редактор клавиш	キー割り当てエディター	Tastn-Editor
+Killaura	杀戮光环	Киллаура	キルオーラ	Kill-Aura
+LeftClicker	左键连点	Левый кликер	左クリック補助	Links-Klicker
+MoveFix	移动修正	Коррекция движения	移動補正	Geh-Fix
+NES Emulator	NES 模拟器	Эмулятор NES	NES エミュレータ	NES-Emulator
+NoJumpDelay	无跳跃延迟	Без задержки прыжка	ジャンプ遅延なし	Koa Hüpfpausn
+NoSlow	无减速	Без замедления	減速なし	Koa Verlangsama
+Particles	粒子	Частицы	パーティクル	Partikel
+QOL	便捷功能	Удобство	快適機能	Komfort
+Scripts	脚本	Скрипты	スクリプト	Skripts
+Skeletal	骨骼	Скелет	スケルトン	Skelett
+Test	测试	Тест	テスト	Test
+Trajectories	轨迹	Траектории	軌道	Flugbahna
+W-Tab	W-连按	W-тап	W タップ	W-Tapp
+# Shared setting and option vocabulary.  Full labels above and below take
+# precedence; these terms also translate newly composed labels safely.
+2D	二维	2D	2D	2D
+3D	三维	3D	3D	3D
+Absorption	伤害吸收	Поглощение	吸収	Absorption
+Accent	强调色	Акцент	アクセント	Akzent
+Add	添加	Добавить	追加	Dazua
+Adjust	调整	Настроить	調整	Eistelln
+Allowed	允许	Разрешённые	許可	Erlaubt
+Alpha	透明度	Альфа	アルファ	Alpha
+Animation	动画	Анимация	アニメーション	Animation
+Animations	动画	Анимации	アニメーション	Animationa
+Arm	手臂	Рука	腕	Arm
+Array	数组	Массив	配列	Liste
+At	在	При	で	bei
+Auto	自动	Авто	自動	Auto
+Back	返回	Назад	戻る	Zruck
+Background	背景	Фон	背景	Hintergrund
+Bed	床	Кровать	ベッド	Bett
+Block	方块	Блок	ブロック	Block
+Blocks	方块	Блоки	ブロック	Blöck
+Blocking	格挡	Блокирование	ガード	Blockn
+Blacklist	黑名单	Чёрный список	ブラックリスト	Sperrliste
+Burst	爆发	Вспышка	バースト	Ausbruch
+Centre	中心	Центр	中央	Mitte
+Check	检查	Проверять	確認	Prüfn
+Circle	圆环	Круг	円	Kreis
+Close	关闭	Закрыть	閉じる	Zuamacha
+Color	颜色	Цвет	色	Farb
+Coordinates	坐标	Координаты	座標	Koordinatn
+Correct	修正	Корректировать	補正	Korrigiern
+Count	数量	Количество	数	Anzahl
+CPS	点击速度	CPS	CPS	Klicks
+Cursor	光标	Курсор	カーソル	Cursor
+Data	数据	Данные	データ	Daten
+Deathmatch	死亡竞赛	Бой насмерть	デスマッチ	Todesspiel
+Default	默认	По умолчанию	標準	Standard
+Delay	延迟	Задержка	遅延	Verzögerung
+Depth	深度	Глубина	深度	Tiefe
+Distance	距离	Расстояние	距離	Entfernung
+Dot	点	Точка	点	Punkt
+Dots	点	Точки	点	Punkt
+Down	向下	Вниз	下	Owi
+Drag	拖拽	Перетаскивание	ドラッグ	Ziag
+Draw	绘制	Рисовать	描画	Zeichna
+Drop	丢弃	Выбросить	捨てる	Wegwerfn
+Duplicates	重复项	Дубликаты	重複	Dopplte
+Dynamic	动态	Динамический	動的	Dynamisch
+End	结束	Конец	終了	End
+Ender	末影	Эндер	エンダー	Ender
+Enemy	敌人	Враг	敵	Feind
+Entity	实体	Сущность	エンティティ	Wesen
+ESP	透视	ESP	ESP	ESP
+Fade	渐变	Переход	フェード	Übergang
+Fill	填充	Заливка	塗りつぶし	Füllung
+Finish	完成	Завершить	完了	Fertig
+First	第一	Первый	最初	Ersta
+Food	食物	Еда	食料	Essn
+Force	强制	Принудительно	強制	Erzwinga
+GodBridge	神桥	Годбридж	ゴッドブリッジ	Godbridge
+Ground	地面	Земля	地面	Bodn
+Hearts	爱心	Сердца	ハート	Herzn
+Hide	隐藏	Скрыть	隠す	Ausblendn
+Highlight	高亮	Подсветить	強調	Markiern
+Hit	命中	Попадание	ヒット	Treffer
+Horizontal	水平	Горизонтальный	水平	Waagrecht
+IDs	标识	ID	ID	IDs
+Ignore	忽略	Игнорировать	無視	Ignoriern
+Invisible	隐形	Невидимый	透明	Unsichtbar
+Item	物品	Предмет	アイテム	Sach
+Items	物品	Предметы	アイテム	Sachn
+Jitter	抖动	Дрожание	揺れ	Zittern
+Jump	跳跃	Прыжок	ジャンプ	Hupfa
+Landing	落点	Приземление	着地	Landung
+Language	语言	Язык	言語	Sproch
+Latency	延迟	Задержка	遅延	Latenz
+Layout	布局	Макет	レイアウト	Anordnung
+Lifetime	持续时间	Время жизни	寿命	Lebensdauer
+Limit	限制	Ограничить	制限	Begrenzn
+Line	线	Линия	線	Linie
+Look	看	Смотреть	見る	Schaua
+Mode	模式	Режим	モード	Art
+Modes	模式	Режимы	モード	Artn
+Mouse	鼠标	Мышь	マウス	Maus
+Movement	移动	Движение	移動	Bewegung
+Multiplier	倍率	Множитель	倍率	Multiplikator
+Normal	普通	Обычный	通常	Normal
+Not	不	Не	しない	Ned
+On	开启	Вкл	オン	O
+Only	仅	Только	のみ	Bloß
+Outline	轮廓	Контур	輪郭	Rand
+Out	出	Вне	外	Aussa
+Pause	暂停	Пауза	一時停止	Pause
+Person	人物	Человек	人物	Person
+Pitch	俯仰角	Тангаж	ピッチ	Nickwinkel
+Place	放置	Установить	設置	Setzn
+Player	玩家	Игрок	プレイヤー	Spuila
+Position	位置	Позиция	位置	Position
+Preset	预设	Пресет	プリセット	Vorlag
+Pulse	脉冲	Пульс	パルス	Puls
+Rainbow	彩虹	Радуга	虹	Regenbog'n
+Random	随机	Случайный	ランダム	Zufällig
+Randomization	随机化	Рандомизация	ランダム化	Zufall
+Raycast	射线检测	Рейкаст	レイキャスト	Strahltest
+Reach	范围	Дальность	到達距離	Reichweitn
+Re-press	重新按下	Повторно нажать	再入力	Nochmal druckn
+Region	区域	Регион	領域	Bereich
+Release	释放	Отпустить	離す	Loslassn
+Render	渲染	Рендерить	描画	Rendern
+Replace	替换	Заменить	置換	Ersetzn
+Rotate	旋转	Повернуть	回転	Drehn
+Rotation	旋转	Вращение	回転	Drehung
+Safe	安全	Безопасный	安全	Sicher
+SafeWalk	安全行走	Безопасная ходьба	安全歩行	Sichergehn
+Select	选择	Выбрать	選択	Auswähln
+Server	服务器	Сервер	サーバー	Server
+Show	显示	Показать	表示	Zoagn
+Silent	静默	Тихий	サイレント	Staad
+Size	大小	Размер	サイズ	Größ
+Slot	槽位	Слот	スロット	Platz
+Smart	智能	Умный	スマート	Gscheid
+Sort	整理	Сортировать	整理	Sortiern
+Sound	声音	Звук	音	Ton
+Spawn	生成	Появление	スポーン	Spawna
+Speed	速度	Скорость	速度	Gschwindigkeit
+Start	开始	Начало	開始	Start
+Steal	偷取	Украсть	奪う	Klaua
+Strafe	横移	Стрейф	ストレイフ	Seitwärtsgehn
+Style	样式	Стиль	スタイル	Stil
+Switch	切换	Переключить	切り替え	Wechsln
+Text	文本	Текст	テキスト	Text
+Through	穿过	Через	通して	Durch
+Ticks	游戏刻	Тики	ティック	Ticks
+To	到	К	へ	zu
+Tool	工具	Инструмент	ツール	Werkzeig
+Tracking	追踪	Отслеживание	追跡	Verfolgung
+Trigger	触发	Триггер	トリガー	Auslöser
+Unsneak	取消潜行	Отменить приседание	スニーク解除	Schleichn loslassn
+Velocity	速度	Скорость	速度	Gschwindigkeit
+Vertical	垂直	Вертикальный	垂直	Senkrecht
+View	视图	Вид	表示	Ansicht
+Waifu	二次元角色	Вайфу	ワイフ	Waifu
+Walking	行走	Ходьба	歩行	Gehen
+Wall	墙	Стена	壁	Wand
+When	当	Когда	時	Wann
+Whitelist	白名单	Белый список	ホワイトリスト	Erlaubnisliste
+Width	宽度	Ширина	幅	Breitn
+X	X	X	X	X
+Y	Y	Y	Y	Y
+Yaw	水平角	Рыскание	ヨー	Gierwinkel
+Z	Z	Z	Z	Z
+ms	毫秒	мс	ms	ms
+# Editor, HUD, and status text not assembled from setting labels.
+VIBE HUD LAYOUT	VIBE 界面布局	РАСКЛАДКА HUD VIBE	VIBE HUD レイアウト	VIBE-ANZEIGE LAYOUT
+Drag elements • ESC to save and return	拖动元素 • 按 ESC 保存并返回	Перетаскивайте элементы • ESC — сохранить и вернуться	要素をドラッグ • ESC で保存して戻る	Elemente ziang • ESC zum Speichern und Zruckgeh
+MOTION GRAPH	移动图表	ГРАФИК ДВИЖЕНИЯ	移動グラフ	BEWEGUNGSGRAPH
+CPS GRAPH	点击速度图表	ГРАФИК CPS	CPS グラフ	KLICK-GRAPH
+WATERMARK	水印	ВОДЯНОЙ ЗНАК	透かし	WOSSAZEICHN
+ARRAYLIST	模块列表	СПИСОК МОДУЛЕЙ	モジュール一覧	MODULLISTN
+Module One	模块一	Модуль один	モジュール 1	Modul oans
+Module Two	模块二	Модуль два	モジュール 2	Modul zwoa
+Session 00:12:34 | Kills 3	会话 00:12:34 | 击杀 3	Сеанс 00:12:34 | Убийства 3	セッション 00:12:34 | キル 3	Sitzung 00:12:34 | 3 Kills
+Stalker  Friend / Target	跟踪者  好友 / 目标	Сталкер  Друг / Цель	ストーカー  フレンド / ターゲット	Verfolger  Freind / Ziel
+Skin  ♥  Armor  Item  12m	皮肤  ♥  护甲  物品  12米	Скин  ♥  Броня  Предмет  12 м	スキン  ♥  防具  アイテム  12 m	Skin  ♥  Rüstung  Sach  12 m
+ARMOR  [ ][ ][ ][ ]	护甲  [ ][ ][ ][ ]	БРОНЯ  [ ][ ][ ][ ]	防具  [ ][ ][ ][ ]	RÜSTUNG  [ ][ ][ ][ ]
+INVENTORY	物品栏	ИНВЕНТАРЬ	インベントリ	INVENTAR
+SCOREBOARD	记分板	ТАБЛО	スコアボード	PUNKTETAFEL
+Player      12	玩家      12	Игрок      12	プレイヤー      12	Spuila      12
+%sm	%s米	%s м	%s m	%s m
+Skin: %s	皮肤：%s	Скин: %s	スキン: %s	Skin: %s
+%s Cosmetica accessory	%s 个 Cosmetica 配饰	%s аксессуар Cosmetica	Cosmetica アクセサリー %s 個	%s Cosmetica-Zubehör
+%s Cosmetica accessories	%s 个 Cosmetica 配饰	%s аксессуара Cosmetica	Cosmetica アクセサリー %s 個	%s Cosmetica-Zubehör
+CREATE PRESET	创建预设	СОЗДАТЬ ПРЕСЕТ	プリセットを作成	VORLAG ERSTELLN
+EDIT	编辑	ИЗМЕНИТЬ	編集	BEARBEITN
+EQUIPPED	已装备	НАДЕТО	装備中	OGLENGT
+EQUIP	装备	НАДЕТЬ	装備	OLEGN
+Preset: %s	预设：%s	Пресет: %s	プリセット: %s	Vorlag: %s
+Release a component on a side of the box to reposition it	在框体一侧松开组件以重新定位	Отпустите компонент у стороны рамки, чтобы изменить его положение	枠の側面でコンポーネントを離すと位置を変更できます	Lass a Teil an da Kastenseitn los zum Verschiebn
+Click-drag model to rotate • %s	点击并拖动模型以旋转 • %s	Нажмите и тяните модель для поворота • %s	モデルをクリックしてドラッグすると回転 • %s	Modell zum Drehn ziang • %s
+Drag labels on the preview to change their side.	拖动预览中的标签以改变其侧边。	Перетаскивайте метки на превью, чтобы сменить сторону.	プレビューのラベルをドラッグして表示側を変更します。	Zieh d Beschriftunga in da Vorschau auf d andere Seitn.
+Click a swatch to open the color picker.	点击色块以打开颜色选择器。	Нажмите образец, чтобы открыть выбор цвета.	色見本をクリックしてカラーピッカーを開きます。	Klick auf a Farbprob zum Farbwahln.
+Active shader: §b%s	当前着色器：§b%s	Активный шейдер: §b%s	有効なシェーダー：§b%s	Aktiver Shader: §b%s
+HOTBAR	快捷栏	ХОТБАР	ホットバー	SCHNELLLEISTE
+DROP BIN	丢弃区	КОРЗИНА	廃棄欄	WEGWERFBEREICH
+Drop-bin items	丢弃区物品	Предметы в корзине	廃棄欄のアイテム	Sachn im Wegwerfbereich
+are discarded.	会被丢弃。	будут выброшены.	は捨てられます。	werdn weggeworfn.
+Ignore protects its slot.	“忽略”会保护该槽位。	«Игнорировать» защищает этот слот.	「無視」はそのスロットを保護します。	„Ignoriern“ schützt den Platz.
+Add .nes files to the ROM folder,	将 .nes 文件放入 ROM 文件夹，	Добавьте файлы .nes в папку ROM,	.nes ファイルを ROM フォルダーへ追加し、	Leg .nes-Datein in den ROM-Ordner,
+then click the ROM row to select one.	然后点击 ROM 行选择一个。	затем нажмите строку ROM, чтобы выбрать игру.	ROM の行をクリックして選択します。	dann klick auf d ROM-Zeil zum Auswähln.
+CONTROLS	控制	УПРАВЛЕНИЕ	操作	STEUERUNG
+SELECT  Shift     START  Enter	选择  Shift     开始  Enter	ВЫБОР  Shift     СТАРТ  Enter	選択  Shift     開始  Enter	AUSWAHL  Shift     START  Enter
+D-Pad  Arrow keys	方向键  方向键	Крестовина  Стрелки	十字キー  矢印キー	Steuerkreiz  Pfeiltastn
+Enabled — receiving callbacks	已启用 — 正在接收回调	Включено — получает обратные вызовы	有効 — コールバックを受信中	O — empfängt Rückrufe
+DISABLE	禁用	ВЫКЛЮЧИТЬ	無効化	AUSSCHALTN
+ENABLE	启用	ВКЛЮЧИТЬ	有効化	EINSCHALTN
+DELETE	删除	УДАЛИТЬ	削除	LÖSCHN
+RENAME	重命名	ПЕРЕИМЕНОВАТЬ	名前を変更	UMBENENNA
+CREATE	创建	СОЗДАТЬ	作成	ERSTELLN
+RELOAD	重新加载	ПЕРЕЗАГРУЗИТЬ	再読み込み	NEI LADN
+OPEN FOLDER	打开文件夹	ОТКРЫТЬ ПАПКУ	フォルダーを開く	ORDNER AUFMACHA
+Unknown	未知	Неизвестно	不明	Unbekannt
+Tab  %s	Tab  %s	Tab  %s	Tab  %s	Tab  %s
+# Mode and multi-select values used throughout Vibe's controls.
+2D (Crosshair)	二维（准星）	2D (прицел)	2D（照準）	2D (Zielpunkt)
+3D (World)	三维（世界）	3D (мир)	3D（ワールド）	3D (Welt)
+Adaptive	自适应	Адаптивный	適応	Anpassbar
+Advanced	高级	Расширенный	詳細	Erweitert
+AntiInvisibility	反隐身	Антиневидимость	透明対策	Gegen Unsichtbarkeit
+Anvil	铁砧	Наковальня	金床	Amboss
+Armor	护甲	Броня	防具	Rüstung
+Augustus	Augustus	Augustus	Augustus	Augustus
+Axes	斧	Топоры	斧	Äxte
+Balls	球	Шары	ボール	Kugeln
+Basic	基础	Базовый	基本	Grund
+Bavaria	巴伐利亚	Бавария	バイエルン	Bayern
+Bavarian	巴伐利亚语	Баварский	バイエルン語	Boarisch
+Blue	蓝色	Синий	青	Blau
+Bow	弓	Лук	弓	Bogn
+Bows	弓	Луки	弓	Bögn
+Butterfly	蝴蝶	Баттерфляй	バタフライ	Schmetterling
+Cards	卡片	Карты	カード	Kartn
+Catton Candy	棉花糖	Сладкая вата	わたあめ	Zuckerwattn
+Chest	箱子	Сундук	チェスト	Truh
+Chestplate	胸甲	Нагрудник	チェストプレート	Brustplattn
+China	中国	Китай	中国	China
+Chinese	中文	Китайский	中国語	Chinesisch
+clock	时钟	Часы	時計	Uhr
+Compact	紧凑	Компактный	コンパクト	Kompakt
+Consumables	消耗品	Расходники	消耗品	Verbrauchssachn
+cpsgraph	点击速度图表	График CPS	CPS グラフ	Klick-Graph
+Cross	十字	Крест	十字	Kreiz
+Dawn	黎明	Рассвет	夜明け	Morgndämmerung
+Direct	直接	Прямой	直接	Direkt
+Dissolve	溶解	Растворение	溶解	Auflösn
+Dropper	投掷器	Выбрасыватель	ドロッパー	Werfer
+Dusk	黄昏	Сумерки	夕暮れ	Abenddämmerung
+English	英语	Английский	英語	Englisch
+ESC	ESC	ESC	ESC	ESC
+Escape	退出	Выход	戻る	Aussteigen
+Extra	额外	Дополнительно	追加	Extra
+Extra+	额外+	Дополнительно+	追加+	Extra+
+Fake	虚假	Фальшивый	フェイク	Falsch
+FinishFaster	更快完成	Быстрее закончить	高速完了	Schnölla fertig
+FirstHit	首次命中	Первый удар	最初のヒット	Erster Treffer
+FPS	帧率	FPS	FPS	FPS
+Futuristic	未来	Футуристичный	未来的	Futuristisch
+Gray	灰色	Серый	灰	Grau
+Green	绿色	Зелёный	緑	Grün
+GroundSpoof	地面伪造	Спуф земли	接地偽装	Bodn-Spoof
+GroundStrafe	地面横移	Стрейф по земле	地上ストレイフ	Bodn-Strafe
+Hoes	锄	Мотыги	クワ	Hackn
+Japanese	日语	Японский	日本語	Japanisch
+Left	左	Лево	左	Links
+Legacy	经典	Устаревший	旧式	Klassisch
+Legit	合法	Легит	正規	Legit
+LightBlue	浅蓝	Голубой	水色	Hellblau
+Love	爱心	Любовь	ラブ	Liebe
+Midnight	午夜	Полночь	真夜中	Mitternacht
+minecraft:anvil	铁砧	Наковальня	金床	Amboss
+minecraft:chest	箱子	Сундук	チェスト	Truh
+minecraft:crafting_table	工作台	Верстак	作業台	Werkbank
+minecraft:tnt	TNT	TNT	TNT	TNT
+Minimal	极简	Минимальный	ミニマル	Minimal
+Modern	现代	Современный	モダン	Modern
+motiongraph	移动图表	График движения	移動グラフ	Bewegungsgraph
+NeverLose	NeverLose	NeverLose	NeverLose	NeverLose
+Noon	正午	Полдень	正午	Mittag
+NTSC	NTSC	NTSC	NTSC	NTSC
+Off	关	Выкл	オフ	Aus
+OpenInv	打开物品栏	Открыть инвентарь	インベントリを開く	Inventar aufmacha
+Orbit	轨道	Орбита	軌道	Umlauf
+Other	其他	Другое	その他	Anders
+Other Vanilla GUIs	其他原版界面	Другие обычные GUI	他のバニラ GUI	Andere Vanilla-GUIs
+PAL	PAL	PAL	PAL	PAL
+Pickaxes	镐	Кирки	ツルハシ	Spitzhackn
+Potions	药水	Зелья	ポーション	Tränk
+Prevent Backwards Sprinting	阻止向后疾跑	Не спринтовать назад	後方ダッシュを防止	Rückwärtsrenna verhinder
+Purple	紫色	Фиолетовый	紫	Lila
+Red	红色	Красный	赤	Rot
+Repel	击退	Отталкивать	反発	Wegstoßn
+Reverse	反向	Обратный	逆	Umkehrn
+Reverse Spin	反向旋转	Обратное вращение	逆回転	Rückwärtsdrehung
+Right	右	Право	右	Rechts
+ROM	ROM	ROM	ROM	ROM
+Russian	俄语	Русский	ロシア語	Russisch
+sessioninfo	会话信息	Информация о сеансе	セッション情報	Sitzungsinfo
+Shovels	铲	Лопаты	シャベル	Schaufeln
+Simple	简单	Простой	シンプル	Oafach
+Skeet	Skeet	Skeet	Skeet	Skeet
+Slide	滑动	Скольжение	スライド	Rutschn
+Snowflake	雪花	Снежинка	雪の結晶	Schneeflockn
+Spin	旋转	Вращение	回転	Drehn
+stalker	跟踪者	Сталкер	ストーカー	Verfolger
+Stars	星星	Звёзды	星	Sterna
+Static	静态	Статичный	固定	Starr
+Stones	石头	Камни	石	Stoana
+Sun	太阳	Солнце	太陽	Sunn
+Swords	剑	Мечи	剣	Schwerta
+Threat	威胁	Угроза	脅威	Bedrohung
+Thrower	投掷器	Метатель	スローワー	Werfer
+Tools	工具	Инструменты	ツール	Werkzeig
+Username	用户名	Имя пользователя	ユーザー名	Benutzername
+Vanilla	原版	Обычный	バニラ	Vanilla
+Version	版本	Версия	バージョン	Version
+Vibe	Vibe	Vibe	Vibe	Vibe
+Weapon	武器	Оружие	武器	Waffn
+Woods	木材	Древесина	木材	Hoiz
+Wtap	W连按	W-тап	W タップ	W-Tapp
+Yellow	黄色	Жёлтый	黄	Gelb
+# GTA7's first-person HUD, pause screen, progression, notices, and landmarks.
+20.0 HP	20.0 生命值	20.0 HP	20.0 HP	20.0 HP
+%s SETTINGS	%s 设置	Настройки: %s	%s 設定	%s-Eistellung
+%s selected	已选择 %s 项	Выбрано: %s	%s 個を選択	%s ausg'wuids
+GTA 7 / RUN COMPLETE	GTA 7 / 本局结束	GTA 7 / ЗАБЕГ ЗАВЕРШЁН	GTA 7 / ラン完了	GTA 7 / RUNDE FERTIG
+GTA 7 / CITY ON HOLD	GTA 7 / 城市暂停	GTA 7 / ГОРОД НА ПАУЗЕ	GTA 7 / 都市を一時停止	GTA 7 / STADT PAUSIERT
+O P E N   W O R L D	开  放  世  界	О Т К Р Ы Т Ы Й   М И Р	オ ー プ ン   ワ ー ル ド	O F F E N E   W E L T
+POLICE SEARCH	警方搜捕	ПОИСК ПОЛИЦИИ	警察の捜索	POLIZEISUCHE
+LOW PROFILE	低调行事	НИЗКИЙ ПРОФИЛЬ	目立たない行動	UNAUFFÄLLIG
+WANTED	通缉	РОЗЫСК	指名手配	GESUCHT
+XP BANK	经验银行	БАНК XP	XP バンク	XP-BANK
+eliminations this life	本局击杀	устранений за эту жизнь	このライフのキル数	Kills in dem Lebn
+AK47	AK47	AK47	AK47	AK47
+MELEE	近战	БЛИЖНИЙ БОЙ	近接	NAHKAMPF
+RELOADING	装填中	ПЕРЕЗАРЯДКА	リロード中	NACHLADN
+ESC  Pause  /  F1  Controls	ESC  暂停  /  F1  控制	ESC  Пауза  /  F1  Управление	ESC  一時停止  /  F1  操作	ESC  Pause  /  F1  Steuerung
+E  Floor up / Shift+E  Down / Ctrl+E  Top	E  上楼 / Shift+E  下楼 / Ctrl+E  顶层	E  Этаж вверх / Shift+E  вниз / Ctrl+E  верх	E  上の階 / Shift+E  下 / Ctrl+E  最上階	E  Stock auffi / Shift+E obi / Ctrl+E ganz auffi
+SPACE  Climb / SHIFT  Descend	空格  攀爬 / SHIFT  下行	ПРОБЕЛ  Вверх / SHIFT  Вниз	SPACE  登る / SHIFT  降りる	LEERTASTE aufi / SHIFT obi
+CRITICAL HEALTH	生命值危急	КРИТИЧЕСКОЕ ЗДОРОВЬЕ	体力危険	LEBN KRITISCH
+JET	喷气背包	ДЖЕТ	ジェット	JET
+BOOST	加速	УСКОРЕНИЕ	ブースト	BOOST
+PAUSED	暂停	ПАУЗА	一時停止	PAUSE
+WASTED	已死亡	ПОТРАЧЕНО	死亡	ERLEDIGT
+UPGRADES	升级	УЛУЧШЕНИЯ	アップグレード	UPGRADES
+WEAPON SKINS	武器皮肤	СКИНЫ ОРУЖИЯ	武器スキン	WAFFN-SKINS
+LV	等级	УР	LV	STUFE
+MAX LEVEL 10	最高等级 10	МАКС. УРОВЕНЬ 10	最大レベル 10	MAX STUFE 10
+UNLIMITED LEVELS	无限等级	НЕОГРАНИЧЕННЫЕ УРОВНИ	無制限レベル	UNBEGRENZTE STUFEN
+MAX	最大	МАКС	最大	MAX
+CLICK TO EQUIP	点击装备	НАЖМИТЕ, ЧТОБЫ НАДЕТЬ	クリックして装備	KLICK ZUM ANLEGN
+UNLOCK & EQUIP	解锁并装备	РАЗБЛОКИРОВАТЬ И НАДЕТЬ	解除して装備	FREISCHALTN & ANLEGN
+RESPAWN	重生	ВОЗРОДИТЬСЯ	リスポーン	NEU SPAWNA
+SAVE & EXIT	保存并退出	СОХРАНИТЬ И ВЫЙТИ	保存して終了	SPEICHERN & RAUS
+PAGE	页	СТРАНИЦА	ページ	SEITE
+RESUME	继续	ПРОДОЛЖИТЬ	再開	WEIDA
+CONTROLS  ON	控制  开	УПРАВЛЕНИЕ  ВКЛ	操作  オン	STEUERUNG  O
+CONTROLS  OFF	控制  关	УПРАВЛЕНИЕ  ВЫКЛ	操作  オフ	STEUERUNG  AUS
+EXPLORE / N	探索 / 北	ИССЛЕДОВАТЬ / С	探索 / 北	ERKUNDEN / N
+F1: show controls when you resume	F1：恢复后显示控制	F1: показать управление после возобновления	F1：再開時に操作を表示	F1: Steuerung beim Weida zeigen
+LOCAL PROGRESS SAVES AUTOMATICALLY	本地进度会自动保存	ЛОКАЛЬНЫЙ ПРОГРЕСС СОХРАНЯЕТСЯ АВТОМАТИЧЕСКИ	ローカル進行状況は自動保存されます	LOKALER FORTSCHRITT WIRD AUTOMATISCH GSPEICHERT
+Explore Northside. Open doorways lead inside.	探索北区。敞开的门口可进入室内。	Исследуйте Нортсайд. Открытые двери ведут внутрь.	ノースサイドを探索。開いた扉から中へ入れます。	Erkund Northside. Durch offene Türn kommst nei.
+NORTHSIDE / Walk through open doorways to explore interiors.	北区 / 穿过敞开的门口探索室内。	НОРТСАЙД / Заходите через открытые двери, чтобы исследовать интерьеры.	ノースサイド / 開いた扉から建物内部を探索できます。	NORTHSIDE / Geh durch offene Türn und erkund d Häuser.
+Search called off. Keep a low profile.	搜捕已取消。请保持低调。	Поиск отменён. Не привлекайте внимания.	捜索は終了。目立たないように。	Suche abbrochn. Bleib unauffällig.
+Reloading AK47...	正在装填 AK47…	Перезарядка AK47…	AK47 をリロード中…	AK47 wird nachgladn…
+Glass shattered	玻璃破碎	Стекло разбито	ガラスが割れた	Glas zerbrochn
+WANTED / Police are responding. Break their line of sight.	通缉 / 警察正在响应。摆脱他们的视线。	РОЗЫСК / Полиция реагирует. Скройтесь из поля зрения.	指名手配 / 警察が反応中。視線を切ってください。	GESUCHT / Polizei reagiert. Brich ihre Sichtlinie.
+XP collected	已收集经验	XP получено	XP を獲得	XP gsammelt
+Knife	匕首	Нож	ナイフ	Messer
++15 damage	+15 伤害	+15 урона	ダメージ +15	+15 Schaden
++8 damage	+8 伤害	+8 урона	ダメージ +8	+8 Schaden
+Health	生命值	Здоровье	体力	Lebn
++25 max HP	+25 最大生命值	+25 макс. HP	最大 HP +25	+25 max HP
+Walk speed	行走速度	Скорость ходьбы	歩行速度	Gehgschwindigkeit
++0.27 m/s	+0.27 米/秒	+0,27 м/с	+0.27 m/秒	+0,27 m/s
+Fast shooting	快速射击	Быстрая стрельба	高速射撃	Schnöß Schießen
++10% fire rate	+10% 射速	+10% к скорострельности	連射速度 +10%	+10% Feuerrate
+Bullet penetration	子弹穿透	Пробитие пуль	弾丸貫通	Kugeldurchschlag
++5% wall penetration chance	+5% 墙体穿透概率	+5% шанс пробития стены	壁貫通率 +5%	+5% Wanddurchschlag
+Max ammo	最大弹药	Макс. патроны	最大弾薬	Max Munition
++5 rounds per magazine	每弹匣 +5 发	+5 патронов в магазин	マガジンごとに +5 発	+5 Schuss pro Magazin
+Jet pack	喷气背包	Реактивный ранец	ジェットパック	Jetpack
++1 second of flight	飞行时间 +1 秒	+1 секунда полёта	飛行時間 +1 秒	+1 Sekund Flug
+Original	原始	Оригинал	オリジナル	Original
+Gold rush	淘金热	Золотая лихорадка	ゴールドラッシュ	Goldrausch
+Arctic	极地	Арктика	北極	Arktisch
+Neon circuit	霓虹电路	Неоновая схема	ネオン回路	Neon-Schaltung
+Crimson	深红	Багровый	深紅	Karmesin
+Emoji Dome	表情穹顶	Купол эмодзи	絵文字ドーム	Emoji-Kuppel
+Arctic villages	极地村庄	Арктические деревни	北極の村	Arktische Dörfer
+Mirage	幻影	Мираж	ミラージュ	Mirage
+Enchanted forest	魔法森林	Зачарованный лес	魔法の森	Verzauberter Wald
+Northside	北区	Нортсайд	ノースサイド	Nordseitn
+Goblin Hollow	哥布林谷	Гоблинская лощина	ゴブリンの谷	Goblin-Mulde
+Candy land	糖果乐园	Сладкая страна	キャンディーランド	Süßigkeitenland
+Dustwater frontier	尘水边境	Пыльная граница	ダストウォーター辺境	Dustwater-Grenzland
+Imperial forest	帝国森林	Имперский лес	帝国の森	Imperialwald
+Rounded Corners	圆角	Скруглённые углы	角丸	Runde Eckn
+Background Alpha	背景不透明度	Непрозрачность фона	背景の不透明度	Hintergrund-Deckkraft

@@ -1,0 +1,30 @@
+// Used only by run-fresh.bat. Never deletes, copies or reuses a user's game data.
+allprojects {
+    afterEvaluate {
+        tasks.named('runClient', JavaExec).configure {
+            doFirst { clientTask ->
+                def originalDirectory = clientTask.workingDir
+                // RunConfig expands these placeholders only inside exec(). Keep
+                // the already prepared libraries/assets when changing workingDir.
+                ['natives_directory', 'library_directory', 'assets_root', 'game_assets'].each { name ->
+                    def provider = clientTask.getProperties().get(name)
+                    if (provider != null) {
+                        def originalPath = new File(provider.invoke())
+                        def resolved = (originalPath.isAbsolute() ? originalPath : new File(originalDirectory, originalPath.path)).absolutePath
+                        clientTask.setProperty(name, { resolved })
+                    }
+                }
+                def freshRoot = project.file('run/first-start').toPath().toAbsolutePath().normalize()
+                java.nio.file.Files.createDirectories(freshRoot)
+                def freshGame = java.nio.file.Files.createTempDirectory(freshRoot, 'session-').toFile()
+                def parameters = new ArrayList(clientTask.args)
+                int position = parameters.indexOf('--gameDir')
+                if (position >= 0) parameters[position + 1] = freshGame.absolutePath
+                else parameters.addAll(['--gameDir', freshGame.absolutePath])
+                clientTask.setArgs(parameters)
+                clientTask.workingDir freshGame
+                logger.lifecycle('[Vibe] Fresh first-start profile: ' + freshGame.absolutePath)
+            }
+        }
+    }
+}

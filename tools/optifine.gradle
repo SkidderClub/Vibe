@@ -1,0 +1,52 @@
+// OptiFine patches obfuscated Minecraft bytecode. Use the built mod and normal
+// Forge launch environment for run.bat, with Unimined still preparing assets/natives.
+if (providers.gradleProperty('vibeOptifine').isPresent()) {
+    def optifineName = 'preview_OptiFine_1.8.9_HD_U_M6_pre2.jar'
+    def optifineJar = layout.buildDirectory.file('optifine/' + optifineName)
+    def forgeRuntime = configurations.create('vibeForgeRuntime') { transitive = false }
+    dependencies.add(forgeRuntime.name, "net.minecraftforge:forge:${minecraft_version}-${forge_version}:universal")
+
+    def prepareOptifine = tasks.register('prepareOptifine') {
+        outputs.file(optifineJar)
+        doLast {
+            File target = optifineJar.get().asFile
+            target.parentFile.mkdirs()
+            File temporary = new File(target.parentFile, optifineName + '.part')
+            def connect = { String url ->
+                def connection = new URI(url).toURL().openConnection()
+                connection.connectTimeout = 20000
+                connection.readTimeout = 60000
+                connection.setRequestProperty('User-Agent', 'Vibe local launcher')
+                connection
+            }
+            try {
+                // Resolve the official page on every uncached download; its x token expires.
+                String page = connect('https://optifine.net/adloadx?f=' + optifineName).inputStream.withCloseable { it.getText('UTF-8') }
+                def link = page =~ /href=['"](downloadx\?[^'"]+)['"]/
+                if (!link.find()) throw new GradleException('OptiFine did not provide a download link. Retry later or save ' + optifineName + ' in ' + target.parentFile)
+                String url = 'https://optifine.net/' + link.group(1).replace('&amp;', '&')
+                connect(url).inputStream.withCloseable { input -> temporary.withOutputStream { it << input } }
+                new java.util.jar.JarFile(temporary).withCloseable { archive ->
+                    if (archive.getEntry('optifine/OptiFineTweaker.class') == null) throw new GradleException('The OptiFine download is not a valid OptiFine JAR.')
+                }
+                java.nio.file.Files.move(temporary.toPath(), target.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                logger.lifecycle('[Vibe] Downloaded OptiFine 1.8.9 HD U M6 pre2 from optifine.net')
+            } finally { java.nio.file.Files.deleteIfExists(temporary.toPath()) }
+        }
+    }
+    afterEvaluate {
+        tasks.named('runClient').configure { client ->
+            dependsOn prepareOptifine, tasks.named('remapJar')
+            // Unimined 1.4.1 downloads this original client while configuring Forge.
+            File vanilla = new File(gradle.gradleUserHomeDir, 'caches/unimined/net/minecraft/minecraft/1.8.9/minecraft-1.8.9-client.jar')
+            def libraries = client.classpath.filter { it.isFile() && !it.name.startsWith('forge-') && !it.name.startsWith('minecraft-') }
+            classpath = libraries + forgeRuntime + files(vanilla, optifineJar, tasks.named('remapJar').flatMap { it.archiveFile })
+            setJvmArgs(client.jvmArgs.findAll { !it.startsWith('-Dfml.deobfuscatedEnvironment=') && !it.startsWith('-Dnet.minecraftforge.gradle.GradleStart.') })
+            args '--tweakClass', 'optifine.OptiFineForgeTweaker'
+            doFirst {
+                if (!vanilla.isFile()) throw new GradleException('Unimined did not prepare the Minecraft 1.8.9 client: ' + vanilla)
+                logger.lifecycle('[Vibe] Starting Forge + Vibe + OptiFine 1.8.9 HD U M6 pre2')
+            }
+        }
+    }
+}

@@ -1,0 +1,3 @@
+package keystrokesmod.script.packet.clientbound;
+import net.minecraft.network.play.server.S45PacketTitle;
+public class S45 extends SPacket { public String type,message; public int fadeInTime,displayTime,fadeOutTime; public S45(S45PacketTitle value){super(value);type=value.getType().name();message=value.getMessage()==null?"":value.getMessage().getUnformattedText();fadeInTime=value.getFadeInTime();displayTime=value.getDisplayTime();fadeOutTime=value.getFadeOutTime();} public S45(String type,String message,int in,int display,int out){super(null);this.type=type;this.message=message;fadeInTime=in;displayTime=display;fadeOutTime=out;} }

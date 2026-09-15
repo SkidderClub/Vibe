@@ -1,0 +1,96 @@
+// Preserve legal files before the fat JAR's duplicate exclusion can discard them.
+def bundledLibraries = project.ext.vibeBundledLibraries
+def dependencyNotices = layout.buildDirectory.dir('generated/dependency-notices')
+def legalFile = { String path ->
+    def parts = path.toLowerCase(Locale.ROOT).split('/')
+    def name = parts[-1]
+    !name.endsWith('.class') && (parts.any { it in ['legal', 'licenses', 'licences'] }
+        || name ==~ /(?:licen[cs]e|notice|copying|copyright|authors|third[-_]?party[-_]?notices?)(?:[._-].*)?/)
+}
+
+tasks.register('collectDependencyNotices') {
+    group = 'build'
+    description = 'Preserves each bundled dependency\'s embedded legal documents and lists missing notices.'
+    inputs.files(bundledLibraries).withPropertyName('bundledLibraries')
+    outputs.dir(dependencyNotices)
+    doLast {
+        def libraries = bundledLibraries.get().sort(false) { it.name }
+        if (libraries*.name.toSet().size() != libraries.size()) {
+            throw new GradleException('Bundled dependency filenames must be unique for the legal inventory.')
+        }
+        def destination = dependencyNotices.get().asFile
+        // Sync also removes notices belonging to dependencies removed since the last build.
+        project.sync {
+            into destination
+            libraries.each { library ->
+                from(project.zipTree(library)) {
+                    include { entry -> legalFile(entry.path) }
+                    into library.name
+                    includeEmptyDirs = false
+                }
+            }
+        }
+        destination.mkdirs()
+        def index = new StringBuilder('# Bundled dependency notices\n\n')
+        index.append('Generated from the exact JARs embedded in this build. Files are retained verbatim.\n')
+        index.append('This inventory is not a license clearance. Embedded files may be incomplete;\n')
+        index.append('native component notices and source obligations require separate verification.\n\n')
+        libraries.each { library ->
+            def digest = java.security.MessageDigest.getInstance('SHA-256')
+            library.withInputStream { stream ->
+                byte[] buffer = new byte[8192]
+                int count
+                while ((count = stream.read(buffer)) != -1) digest.update(buffer, 0, count)
+            }
+            index.append('## ').append(library.name).append('\n\n')
+            index.append('SHA-256: `').append(digest.digest().encodeHex()).append('`\n\n')
+            def documents = fileTree(new File(destination, library.name)).files.sort { it.path }
+            if (documents.isEmpty()) {
+                index.append('**MISSING: no embedded legal documents found.** Obtain the applicable\n')
+                index.append('license texts and notices from the matching upstream release.\n\n')
+            } else {
+                documents.each { document ->
+                    def relative = destination.toPath().relativize(document.toPath()).toString().replace('\\', '/')
+                    def link = new java.net.URI(null, null, relative, null).toASCIIString()
+                    index.append('- [').append(relative).append('](').append(link).append(')\n')
+                }
+                index.append('\n')
+            }
+        }
+        new File(destination, 'INDEX.md').setText(index.toString(), 'UTF-8')
+    }
+}
+
+tasks.register('verifyLicenseDocuments') {
+    group = 'verification'
+    description = 'Checks local links in license documentation and the client\'s offline document paths.'
+    def documents = files('README.md', fileTree('LICENSES') { include '**/*.md' })
+    def clientDocuments = file('src/main/java/dev/vibe/ui/LicenseDocuments.java')
+    inputs.files(documents, fileTree('LICENSES'), clientDocuments)
+    doLast {
+        def failures = []
+        documents.each { document ->
+            // The legal guides use inline Markdown links; external URLs are not fetched at build time.
+            def links = document.getText('UTF-8') =~ /\[[^\]\r\n]*\]\(([^)\r\n]+)\)/
+            links.each { match ->
+                def target = match[1]
+                if (!(target ==~ /(?i)^[a-z][a-z0-9+.-]*:.*|^\/\/.*|^#.*/)) {
+                    def path = target.split('#', 2)[0]
+                    path = java.net.URLDecoder.decode(path.replace('+', '%2B'), 'UTF-8')
+                    def linked = new File(document.parentFile, path)
+                    if (!linked.exists()) failures.add("${project.relativePath(document)} -> ${target}")
+                }
+            }
+        }
+        def paths = clientDocuments.getText('UTF-8') =~ /"(LICENSES\/[^"\r\n]+)"/
+        paths.each { match ->
+            if (!file(match[1]).isFile()) failures.add("LicenseDocuments.java -> ${match[1]}")
+        }
+        if (!failures.isEmpty()) {
+            throw new GradleException('Missing license documentation:\n - ' + failures.join('\n - '))
+        }
+        logger.lifecycle('License documentation links and offline document paths are valid.')
+    }
+}
+
+tasks.named('check') { dependsOn tasks.named('verifyLicenseDocuments') }

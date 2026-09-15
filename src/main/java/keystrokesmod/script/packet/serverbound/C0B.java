@@ -1,0 +1,3 @@
+package keystrokesmod.script.packet.serverbound;
+import net.minecraft.client.Minecraft; import net.minecraft.network.play.client.C0BPacketEntityAction;
+public class C0B extends CPacket { public String action; public int horsePower; public C0B(String action,int power){super(new C0BPacketEntityAction(Minecraft.getMinecraft().thePlayer,C0BPacketEntityAction.Action.valueOf(action.toUpperCase(java.util.Locale.ROOT))));this.action=action;horsePower=power;} public C0B(C0BPacketEntityAction value){super(value);action=value.getAction().name();horsePower=value.getAuxData();} public C0BPacketEntityAction convert(){return (C0BPacketEntityAction)packet;} }

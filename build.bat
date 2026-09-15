@@ -1,0 +1,436 @@
+plugins {
+    id 'java'
+    id 'xyz.wagyourtail.unimined' version '1.4.1'
+}
+
+group = 'dev.vibe'
+version = '0.0.5'
+
+base {
+    archivesName = 'Vibe-1.8.9'
+}
+
+java {
+    // Gradle and compilation run on JDK 21; bytecode stays compatible with the 1.8.9 runtime.
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 8
+    options.encoding = 'UTF-8'
+}
+
+// Opt-in native rendering regression: no Minecraft window or user profile is opened.
+tasks.register('verifyGta7Rendering', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.game.gta.Gta7RenderCheck'
+    workingDir project.projectDir
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    doFirst {
+        def osName = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+        def platform = osName.contains('win') ? 'windows' : osName.contains('mac') ? 'osx' : 'linux'
+        def nativeJar = sourceSets.main.runtimeClasspath.files.find { it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar') }
+        if (nativeJar == null) throw new GradleException('LWJGL native library archive not found for ' + platform)
+        def nativeDir = project.layout.buildDirectory.dir('gta7-render-check/natives').get().asFile
+        project.copy { from project.zipTree(nativeJar); include '*.dll', '*.so', '*.dylib', '*.jnilib'; into nativeDir }
+        systemProperty 'org.lwjgl.librarypath', nativeDir.absolutePath
+        setArgs([project.layout.buildDirectory.dir('gta7-render-check').get().asFile.absolutePath])
+    }
+}
+
+// Offscreen regression checks for inventory and GUI rendering state.
+tasks.register('verifyVisualRendering', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.ui.VisualRenderCheck'
+    workingDir project.projectDir
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    doFirst {
+        def osName = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+        def platform = osName.contains('win') ? 'windows' : osName.contains('mac') ? 'osx' : 'linux'
+        def nativeJar = sourceSets.main.runtimeClasspath.files.find { it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar') }
+        if (nativeJar == null) throw new GradleException('LWJGL natives unavailable')
+        def nativeDir = layout.buildDirectory.dir('visual-render-check/natives').get().asFile
+        project.copy { from project.zipTree(nativeJar); include '*.dll', '*.so', '*.dylib', '*.jnilib'; into nativeDir }
+        systemProperty 'org.lwjgl.librarypath', nativeDir.absolutePath
+    }
+}
+
+tasks.register('verifyVisualEffects', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.ui.VisualEffectsRenderCheck'
+    workingDir project.projectDir
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    doFirst {
+        def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+        def platform = os.contains('win') ? 'windows' : os.contains('mac') ? 'osx' : 'linux'
+        def archive = sourceSets.main.runtimeClasspath.files.find { it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar') }
+        if (archive == null) throw new GradleException('LWJGL natives unavailable')
+        def nativeDir = layout.buildDirectory.dir('visual-effects-check/natives').get().asFile
+        project.copy { from project.zipTree(archive); include '*.dll', '*.so', '*.dylib', '*.jnilib'; into nativeDir }
+        systemProperty 'org.lwjgl.librarypath', nativeDir.absolutePath
+    }
+}
+
+// Real-driver checks for Chams materials, occlusion, opacity and state restoration.
+tasks.register('verifyChamsRendering', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.ui.ChamsRenderCheck'
+    workingDir project.projectDir
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    doFirst {
+        def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+        def platform = os.contains('win') ? 'windows' : os.contains('mac') ? 'osx' : 'linux'
+        def archive = sourceSets.main.runtimeClasspath.files.find { it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar') }
+        if (archive == null) throw new GradleException('LWJGL natives unavailable')
+        def nativeDir = layout.buildDirectory.dir('chams-render-check/natives').get().asFile
+        project.copy { from project.zipTree(archive); include '*.dll', '*.so', '*.dylib', '*.jnilib'; into nativeDir }
+        systemProperty 'org.lwjgl.librarypath', nativeDir.absolutePath
+    }
+}
+
+// Offscreen checks for offline license reading, scrolling and menu layout.
+tasks.register('verifyLicensesRendering', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.ui.LicensesRenderCheck'
+    workingDir project.projectDir
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    doFirst {
+        def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+        def platform = os.contains('win') ? 'windows' : os.contains('mac') ? 'osx' : 'linux'
+        def archive = sourceSets.main.runtimeClasspath.files.find { it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar') }
+        if (archive == null) throw new GradleException('LWJGL natives unavailable')
+        def nativeDir = layout.buildDirectory.dir('licenses-render-check/natives').get().asFile
+        project.copy { from project.zipTree(archive); include '*.dll', '*.so', '*.dylib', '*.jnilib'; into nativeDir }
+        systemProperty 'org.lwjgl.librarypath', nativeDir.absolutePath
+    }
+}
+
+// Opt-in live station smoke check, with decoded output muted.
+tasks.register('verifyMusicIntegration', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.media.MusicIntegrationCheck'
+    workingDir project.projectDir
+}
+
+tasks.register('verifyAugustusRendering', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.ui.AugustusRenderCheck'
+    workingDir project.projectDir
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    doFirst {
+        def osName = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+        def platform = osName.contains('win') ? 'windows' : osName.contains('mac') ? 'osx' : 'linux'
+        def nativeJar = sourceSets.main.runtimeClasspath.files.find { it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar') }
+        if (nativeJar == null) throw new GradleException('LWJGL natives unavailable')
+        def nativeDir = layout.buildDirectory.dir('augustus-render-check/natives').get().asFile
+        project.copy { from project.zipTree(nativeJar); include '*.dll', '*.so', '*.dylib', '*.jnilib'; into nativeDir }
+        systemProperty 'org.lwjgl.librarypath', nativeDir.absolutePath
+    }
+}
+
+// Optional compatibility check for an external Raven script folder. Example:
+// .\gradlew.bat verifyRavenScripts -PvibeScriptDir=C:\path\to\scripts
+tasks.register('verifyRavenScripts') {
+    dependsOn tasks.named('classes')
+    doLast {
+        if (!project.hasProperty('vibeScriptDir')) {
+            logger.lifecycle('Skipping Raven script verification (set -PvibeScriptDir=<folder>).')
+            return
+        }
+        File scriptDir = file(project.property('vibeScriptDir'))
+        if (!scriptDir.isDirectory()) throw new GradleException('Script directory not found: ' + scriptDir)
+        java.net.URL[] classpath = sourceSets.main.runtimeClasspath.files.collect { it.toURI().toURL() } as java.net.URL[]
+        java.net.URLClassLoader parent = new java.net.URLClassLoader(classpath, ClassLoader.systemClassLoader)
+        try {
+            List<String> failures = new ArrayList<>()
+            fileTree(scriptDir) { include '**/*.java' }.files.sort { a, b -> a.name <=> b.name }.eachWithIndex { File script, int index ->
+                String simpleName = 'vibe_script_verify_' + script.name.substring(0, script.name.length() - 5).toLowerCase(Locale.ROOT).replaceAll('[^a-z0-9]', '') + '_' + index
+                String source = String.format('''import java.awt.Color;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+import java.util.regex.*;
+import keystrokesmod.script.model.*;
+import keystrokesmod.script.packet.clientbound.*;
+import keystrokesmod.script.packet.serverbound.*;
+public class %s extends keystrokesmod.script.ScriptDefaults {
+public static final keystrokesmod.script.ScriptDefaults.modules modules = new keystrokesmod.script.ScriptDefaults.modules("%s");
+public static final String scriptName = "%s";
+'''.stripIndent(), simpleName, script.name.substring(0, script.name.length() - 5), script.name.substring(0, script.name.length() - 5)) + script.getText('UTF-8') + '\n}'
+                Object compiler = parent.loadClass('org.codehaus.janino.SimpleCompiler').newInstance()
+                compiler.getClass().getMethod('setParentClassLoader', ClassLoader).invoke(compiler, parent)
+                try {
+                    compiler.getClass().getMethod('cook', String).invoke(compiler, source)
+                    logger.lifecycle('Raven script API OK: ' + script.name)
+                } catch (Throwable failure) {
+                    // Janino on the legacy client erases the type of a small
+                    // number of otherwise-valid javac generic expressions.
+                    // Mirror ScriptRuntime's compatibility retry so this task
+                    // verifies what actually runs inside the game.
+                    String compatible = source
+                            .replaceAll(/(?m)(ItemStack\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*)([A-Za-z_][A-Za-z0-9_]*)\.get\(([^;]+)\);/, '$1(ItemStack) $2.get($3);')
+                            .replaceAll(/(?m)(Map<String,\s*Object>\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*)([A-Za-z_][A-Za-z0-9_]*)\.(get|remove)\(([^;]+)\);/, '$1(Map<String,Object>) $2.$3($4);')
+                            .replaceAll(/([A-Za-z_][A-Za-z0-9_]*\.get\([^;\n]+\))\.get\(/, '((Map)$1).get(')
+                            .replaceAll(/for\s*\(\s*Map<String,\s*Object>\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*\{/, 'for (Object __ravenEntry : $2) { Map<String,Object> $1 = (Map<String,Object>) __ravenEntry;')
+                            .replace('for (Map<String, Object> entry : packets) {', 'for (Object __ravenEntry : packets) { Map<String,Object> entry = (Map<String,Object>) __ravenEntry;')
+                    Object retry = parent.loadClass('org.codehaus.janino.SimpleCompiler').newInstance()
+                    retry.getClass().getMethod('setParentClassLoader', ClassLoader).invoke(retry, parent)
+                    try {
+                        retry.getClass().getMethod('cook', String).invoke(retry, compatible)
+                        logger.lifecycle('Raven script API OK (legacy compiler compatibility): ' + script.name)
+                    } catch (Throwable retryFailure) {
+                        Throwable root = retryFailure
+                        while (root.cause != null) root = root.cause
+                        String detail = root.message == null ? root.class.name : root.message
+                        failures.add(script.name + ': ' + detail)
+                        logger.error('Raven script API failed for ' + script.name + ': ' + detail)
+                    }
+                }
+            }
+            if (!failures.isEmpty()) throw new GradleException('Raven script API failures (' + failures.size() + '):\n - ' + failures.join('\n - '))
+        } finally {
+            parent.close()
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.wagyourtail.xyz/releases' }
+    maven { url = 'https://maven.minecraftforge.net/' }
+    maven { url = 'https://jitpack.io' }
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    // Combat hook tests inspect the actual Forge bytecode without launching GL.
+    testImplementation files(provider { sourceSets.main.compileClasspath })
+    // Match Minecraft 1.8.9's Gson; Unimined adds game libraries only to main.
+    testImplementation 'com.google.code.gson:gson:2.2.4'
+    // Cookie login uses the isolated HTTP client already shipped by Minecraft 1.8.9.
+    testImplementation 'org.apache.httpcomponents:httpclient:4.3.3'
+    // Minecraft is often launched with a JRE image that does not contain
+    // javac. Janino produces Java 8 compatible bytecode that remains safe for
+    // Forge 1.8.9's legacy ASM transformer.
+    implementation 'org.codehaus.janino:janino:3.1.12'
+    implementation 'org.sejda.imageio:webp-imageio:0.1.6'
+    // JDK 21 no longer ships a JavaScript engine. The NES core supplied with
+    // Vibe is classic ES5, so Nashorn Core is a compact, Java-8-compatible
+    // embedded runtime for it.
+    implementation 'org.openjdk.nashorn:nashorn-core:15.4'
+    // Rhino is a second ES5 runtime bundled beside Nashorn. Some legacy
+    // Forge LaunchClassLoader configurations hide org.openjdk packages even
+    // when they live in the mod archive; Rhino keeps the NES feature usable.
+    implementation 'org.mozilla:rhino:1.7.15'
+    implementation 'org.mozilla:rhino-engine:1.7.15'
+    // 1.86.11 keeps the binding compatible with the Java 8 bytecode target
+    // used by Forge 1.8.9 while still exposing the complete ImGui controls.
+    implementation 'io.github.spair:imgui-java-binding:1.86.11'
+    implementation 'io.github.spair:imgui-java-natives-windows:1.86.11'
+    implementation 'io.github.spair:imgui-java-natives-linux:1.86.11'
+    implementation 'io.github.spair:imgui-java-natives-macos:1.86.11'
+    implementation 'javazoom:jlayer:1.0.1'
+}
+
+unimined.minecraft {
+    version = minecraft_version
+
+    mappings {
+        // Source code uses MCP names; searge supplies the runtime remapping.
+        searge()
+        mcp('stable', '22-1.8.9')
+    }
+
+    minecraftForge {
+        loader forge_version
+        // The Forge 1.8.9 access transformer is compatible with the running
+        // JDK 21; do not make Gradle search for an unavailable JDK 8.
+        useToolchains = false
+    }
+    defaultRemapJar = true
+
+    runs {
+        config('client') {
+            javaVersion = JavaVersion.VERSION_1_8
+            // Forge 1.8.9's event transformer requires its legacy ASM first;
+            // Nashorn's newer transitive ASM breaks event dispatch at startup.
+            classpath = classpath.filter { it.name.startsWith('asm-all-') } + classpath
+            // Development runs use class directories, so the JAR manifest
+            // cannot register Vibe's core plugin for us.
+            jvmArgs '-Dfml.coreMods.load=dev.vibe.core.MoveFixLoadingPlugin'
+        }
+    }
+}
+
+// run.bat opts into one stable game directory.  The builder temporarily maps
+// the project onto a short drive for remapping, so relying on Gradle's inferred
+// working directory can otherwise create an empty second client profile.
+if (providers.gradleProperty('vibePersistentRun').isPresent()) {
+    tasks.named('runClient').configure { client ->
+        doFirst {
+            File gameDirectory = project.file('run/client').canonicalFile
+            if (!gameDirectory.isDirectory() && !gameDirectory.mkdirs()) {
+                throw new GradleException('Could not create Vibe client directory: ' + gameDirectory)
+            }
+            List<String> launchArguments = new ArrayList<String>()
+            client.args.each { launchArguments.add(String.valueOf(it)) }
+            int gameDirectoryIndex = launchArguments.indexOf('--gameDir')
+            if (gameDirectoryIndex >= 0 && gameDirectoryIndex + 1 < launchArguments.size()) {
+                launchArguments.set(gameDirectoryIndex + 1, gameDirectory.absolutePath)
+            } else {
+                launchArguments.add('--gameDir')
+                launchArguments.add(gameDirectory.absolutePath)
+            }
+            client.setArgs(launchArguments)
+            client.workingDir = gameDirectory
+            logger.lifecycle('[Vibe] Using persistent client settings: ' + gameDirectory)
+        }
+    }
+}
+
+// Keep the JAR contents and the generated legal inventory on the same selection.
+def bundledLibraries = providers.provider {
+    def runtimeLibraries = configurations.runtimeClasspath.files
+    // Preserve the existing shading order: it also decides which duplicate classes win.
+    runtimeLibraries.findAll { it.name.startsWith('webp-imageio') } +
+        runtimeLibraries.findAll { it.name.toLowerCase(Locale.ROOT).contains('imgui') } +
+        runtimeLibraries.findAll {
+            def name = it.name.toLowerCase(Locale.ROOT)
+            name.contains('nashorn') || name.startsWith('rhino') || name.startsWith('asm-') || name.startsWith('asm_')
+                || name.contains('janino') || name.contains('commons-compiler') || name.contains('jlayer')
+        }
+}
+
+// NeverLose screenshots and interaction checks in an isolated offscreen context.
+tasks.register('verifyNeverLoseRendering', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.ui.NeverLoseRenderCheck'
+    workingDir project.projectDir
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    doFirst {
+        def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+        def platform = os.contains('win') ? 'windows' : os.contains('mac') ? 'osx' : 'linux'
+        def archive = sourceSets.main.runtimeClasspath.files.find { it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar') }
+        if (archive == null) throw new GradleException('LWJGL natives unavailable')
+        def nativeDir = layout.buildDirectory.dir('neverlose-render-check/natives').get().asFile
+        project.copy { from project.zipTree(archive); include '*.dll', '*.so', '*.dylib', '*.jnilib'; into nativeDir }
+        systemProperty 'org.lwjgl.librarypath', nativeDir.absolutePath
+    }
+}
+ext.vibeBundledLibraries = bundledLibraries
+
+// Render and exercise Xanax without opening a game window or touching user profiles.
+tasks.register('verifyXanaxRendering', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.ui.XanaxRenderCheck'
+    workingDir project.projectDir
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    doFirst {
+        def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+        def platform = os.contains('win') ? 'windows' : os.contains('mac') ? 'osx' : 'linux'
+        def archive = sourceSets.main.runtimeClasspath.files.find { it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar') }
+        if (archive == null) throw new GradleException('LWJGL natives unavailable')
+        def nativeDir = layout.buildDirectory.dir('xanax-render-check/natives').get().asFile
+        project.copy { from project.zipTree(archive); include '*.dll', '*.so', '*.dylib', '*.jnilib'; into nativeDir }
+        systemProperty 'org.lwjgl.librarypath', nativeDir.absolutePath
+    }
+}
+apply from: 'tools/licenses.gradle'
+
+processResources {
+    dependsOn tasks.named('verifyLicenseDocuments')
+    inputs.property 'version', project.version
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // One copy of the legal documents, available in both development and the JAR.
+    from('LICENSES') { into 'META-INF/vibe/LICENSES' }
+    from(tasks.named('collectDependencyNotices')) { into 'META-INF/vibe/dependencies' }
+    // Bundled assets are copied automatically from src/main/resources.
+    // Keep the preset manifests for runtime extraction and sound selection.
+    filesMatching('mcmod.info') {
+        expand version: project.version
+    }
+    doLast {
+        def presets = fileTree('src/main/resources/assets/vibe/shader') {
+            include '**/*.frag'
+        }.files.collect { it.name }.sort()
+        def manifest = file("${destinationDir}/assets/vibe/shader/presets.txt")
+        manifest.parentFile.mkdirs()
+        manifest.setText(presets.join('\n') + '\n', 'UTF-8')
+        def waifuPresets = fileTree('src/main/resources/assets/vibe/waifu') {
+            include '**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.webp'
+        }.files.collect { it.name }.sort()
+        def waifuManifest = file("${destinationDir}/assets/vibe/waifu/presets.txt")
+        waifuManifest.parentFile.mkdirs()
+        waifuManifest.setText(waifuPresets.join('\n') + '\n', 'UTF-8')
+        def girlfriendSounds = fileTree('src/main/resources/assets/vibe/girlfriend') { include '**/*.mp3' }.files.collect {
+            project.file('src/main/resources/assets/vibe/girlfriend').toPath().relativize(it.toPath()).toString().replace('\\', '/')
+        }.sort()
+        def girlfriendManifest = file("${destinationDir}/assets/vibe/girlfriend/presets.txt")
+        girlfriendManifest.parentFile.mkdirs()
+        girlfriendManifest.setText(girlfriendSounds.join('\n') + '\n', 'UTF-8')
+    }
+}
+
+jar {
+    // WebP ImageIO ships a native decoder inside its own JAR. Bundle that
+    // dependency (including native/) with Vibe so Waifu works in a normal
+    // Forge installation rather than only from the development classpath.
+    from { bundledLibraries.get().collect { zipTree(it) } }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // The embedded compiler/render dependencies are signed upstream. Their
+    // signature files refer to the original standalone manifests and become
+    // invalid after shading into Vibe's jar, which makes Forge reject the mod
+    // before it can load. Vibe supplies its own manifest below.
+    exclude 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', 'META-INF/*.EC'
+    exclude 'META-INF/MANIFEST.MF'
+    manifest {
+        attributes(
+            'Implementation-Title': 'Vibe',
+            'Implementation-Version': project.version,
+            'Built-JDK': JavaVersion.current().toString(),
+            'FMLCorePlugin': 'dev.vibe.core.MoveFixLoadingPlugin',
+            'FMLCorePluginContainsFMLMod': 'true'
+        )
+    }
+}
+
+// Matching source for the GPLv3/AGPLv3 combination, including uncommitted local changes.
+tasks.register('sourceDistribution', Zip) {
+    dependsOn tasks.named('verifyLicenseDocuments')
+    archiveFileName = "${base.archivesName.get()}-${project.version}-sources.zip"
+    destinationDirectory = layout.buildDirectory.dir('libs')
+    includeEmptyDirs = false
+    from(tasks.named('collectDependencyNotices')) { into 'LICENSES/dependencies' }
+    from(project.projectDir) {
+        include 'src/**', 'tools/**', 'docs/**', 'gradle/**', 'LICENSES/**', '.github/**'
+        include '*.gradle', 'gradle.properties', 'gradlew', 'gradlew.bat', '*.bat', '*.md', '.gitignore', '.gitattributes'
+        exclude '**/__pycache__/**', '**/*.pyc', '.gradle/**', '.git/**', 'run/**', 'build/**', 'logs/**'
+    }
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+tasks.named('build') { dependsOn tasks.named('sourceDistribution') }
+
+apply from: 'tools/optifine.gradle'

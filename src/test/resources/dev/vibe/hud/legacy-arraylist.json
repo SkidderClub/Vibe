@@ -1,0 +1,24 @@
+{
+  "format": 2,
+  "modules": [
+    {"id": "targets", "enabled": true},
+    {"id": "movefix", "enabled": true},
+    {"id": "language", "enabled": true},
+    {"id": "friends", "enabled": true},
+    {"id": "nameprotect", "enabled": false},
+    {
+      "id": "hud",
+      "enabled": true,
+      "settings": {
+        "HUD Elements": ["watermark", "coordinates", "scoreboard", "arraylist"],
+        "Array Style": "Minimal",
+        "ArrayList Modules": [
+          "ESP", "TargetESP", "Hitmarker", "Skeletal", "Cosmetics", "ChestESP",
+          "FullBright", "FOV Changer", "CustomCrosshair", "Animations", "AimAssist",
+          "Velocity", "BHop", "Fly", "LeftClicker", "Sprint", "NoJumpDelay", "NoSlow",
+          "Eagle", "FastPlace", "HUD Editor", "NameProtect", "ClickGUI"
+        ]
+      }
+    }
+  ]
+}
