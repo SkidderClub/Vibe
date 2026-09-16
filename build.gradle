@@ -45,6 +45,25 @@ tasks.register('verifyGta7Rendering', JavaExec) {
 }
 
 // Offscreen regression checks for inventory and GUI rendering state.
+tasks.register('verifyBattlefrontRendering', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.game.battlefront.BattlefrontRenderCheck'
+    workingDir project.projectDir
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    doFirst {
+        def osName = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+        def platform = osName.contains('win') ? 'windows' : osName.contains('mac') ? 'osx' : 'linux'
+        def nativeJar = sourceSets.main.runtimeClasspath.files.find { it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar') }
+        if (nativeJar == null) throw new GradleException('LWJGL natives unavailable for ' + platform)
+        def nativeDir = project.layout.buildDirectory.dir('battlefront-render-check/natives').get().asFile
+        project.copy { from project.zipTree(nativeJar); include '*.dll', '*.so', '*.dylib', '*.jnilib'; into nativeDir }
+        systemProperty 'org.lwjgl.librarypath', nativeDir.absolutePath
+        setArgs([project.layout.buildDirectory.dir('battlefront-render-check').get().asFile.absolutePath])
+    }
+}
+
 tasks.register('verifyVisualRendering', JavaExec) {
     dependsOn tasks.named('testClasses')
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }

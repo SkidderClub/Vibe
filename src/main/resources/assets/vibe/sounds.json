@@ -1,0 +1,6 @@
+{
+  "battlefront.fire": { "category": "player", "sounds": [{ "name": "vibe:battlefront/fire", "volume": 0.45 }] },
+  "battlefront.distant": { "category": "player", "sounds": [{ "name": "vibe:battlefront/fire", "volume": 0.10 }] },
+  "battlefront.blast": { "category": "player", "sounds": [{ "name": "vibe:battlefront/blast", "volume": 0.65 }] },
+  "battlefront.confirm": { "category": "player", "sounds": [{ "name": "vibe:battlefront/confirm", "volume": 0.35 }] }
+}

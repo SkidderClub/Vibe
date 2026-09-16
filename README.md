@@ -21,6 +21,7 @@ Use modules only where permitted by the server's rules. Vibe is client-only.
 - **Alt Manager** in the main menu or server list manages accounts.
 
 See the [GTA7 guide](docs/GTA7.md) for the expanded map, controls, upgrades, skins and save backups.
+See the [Battlefront 3 guide](docs/BATTLEFRONT3.md) for Star Wars battles, faction armies, credits and upgrades in the Meme category.
 See [Music and visual effects](docs/MUSIC_AND_EFFECTS.md) for Fog, Torus, radio,
 the media HUD and audio-reactive waves. Fog and CustomCrosshair also work in GTA7.
 

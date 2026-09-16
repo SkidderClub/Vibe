@@ -28,7 +28,11 @@ final class NeverLoseFont {
     }
 
     NeverLoseFont(int style, int rasterSize) {
-        font = new Font(Font.SANS_SERIF, style, rasterSize);
+        this(Font.SANS_SERIF, style, rasterSize);
+    }
+
+    NeverLoseFont(String family, int style, int rasterSize) {
+        font = new Font(family, style, rasterSize);
         BufferedImage sample = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = sample.createGraphics();
         g.setFont(font); metrics = g.getFontMetrics(); g.dispose();
@@ -39,6 +43,7 @@ final class NeverLoseFont {
         for (int i = 0; i < text.length(); i++) width += advance(text.charAt(i));
         return width;
     }
+    void close(){for(Page page:pages.values())page.texture.deleteGlTexture();pages.clear();}
 
     String fit(String text, float available) {
         if (width(text) <= available) return text;
