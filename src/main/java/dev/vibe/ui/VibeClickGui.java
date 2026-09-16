@@ -66,6 +66,7 @@ public final class VibeClickGui extends GuiScreen {
     private String editBuffer = "";
     private Panel dragging;
     private Target draggingSlider;
+    private RangeSetting.Drag rangeDrag;
     private ColorPopup colorPopup;
     private ColorPopupPart draggingColor;
     private Module bindingModule;
@@ -732,6 +733,8 @@ public final class VibeClickGui extends GuiScreen {
             updateSlider(target, mouseX);
         } else if (target.type == TargetType.RANGE) {
             draggingSlider = target;
+            RangeSetting range=(RangeSetting)setting;
+            rangeDrag=range.beginDrag(range.getMinimum()+(range.getMaximum()-range.getMinimum())*(mouseX-target.left)/(double)Math.max(1,target.right-target.left));
             updateSlider(target, mouseX);
         } else if (target.type == TargetType.MODE) {
             ((ModeSetting) setting).cycle(mouseButton == 1);
@@ -1125,11 +1128,7 @@ public final class VibeClickGui extends GuiScreen {
         } else if (target.type == TargetType.RANGE) {
             RangeSetting range = (RangeSetting) target.setting;
             double value = range.getMinimum() + (range.getMaximum() - range.getMinimum()) * ratio;
-            if (Math.abs(value - range.getMin()) <= Math.abs(value - range.getMax())) {
-                range.setMin(Math.min(value, range.getMax()));
-            } else {
-                range.setMax(Math.max(value, range.getMin()));
-            }
+            if(rangeDrag!=null)rangeDrag.move(value);
         }
     }
 

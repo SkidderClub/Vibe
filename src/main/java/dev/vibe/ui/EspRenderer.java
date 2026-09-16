@@ -110,10 +110,12 @@ public final class EspRenderer {
                 AxisAlignedBB box = renderBox(player, event.partialTicks);
                 EspModule.Style style = esp.getStyleFor(player);
                 if (draw3d) {
+                    int profile=esp.resolvedProfile(esp.profileFor(player));
+                    if(esp.getThroughWalls(profile).isEnabled())net.minecraft.client.renderer.GlStateManager.disableDepth();else net.minecraft.client.renderer.GlStateManager.enableDepth();
                     int outline = applyVisibilityAlpha(style.getOutline(), antiInvisible, qol);
                     int fill = applyVisibilityAlpha(style.getFill(), antiInvisible, qol);
                     WorldRenderUtils.box(box, outline, fill,
-                            esp.getLineWidth().getFloat());
+                            esp.getLineWidth(profile).getFloat());
                 }
                 if (capture2d) {
                     ProjectedBounds bounds = bounds(box);
@@ -125,17 +127,19 @@ public final class EspRenderer {
                         if (protect != null && protect.isEnabled()) displayName = protect.protectText(displayName);
                         ItemStack[] armor = new ItemStack[4];
                         for (int slot = 0; slot < 4; slot++) armor[3-slot] = player.getEquipmentInSlot(slot + 1);
-                        screenBoxes.add(new ScreenBox(bounds, new Esp2DRenderer.Actor(displayName,
+                        Esp2DRenderer.Actor actor=new Esp2DRenderer.Actor(displayName,
                                 player.getHealth() + player.getAbsorptionAmount(), player.getMaxHealth() + player.getAbsorptionAmount(),
                                 player.getTotalArmorValue(), minecraft.thePlayer.getDistanceToEntity(player),
                                 held == null ? "" : held.getDisplayName(), held, armor,
-                                antiInvisible ? qol.getInvisibleAlpha().getFloat() / 255F : 1)));
+                                antiInvisible ? qol.getInvisibleAlpha().getFloat() / 255F : 1);
+                        actor.profile=esp.resolvedProfile(esp.profileFor(player));actor.teamColor=esp.teamColor(player);actor.hurt=player.hurtTime>0;
+                        screenBoxes.add(new ScreenBox(bounds,actor));
                     }
                 }
             }
         } finally {
             if (draw3d) {
-                WorldRenderUtils.end(esp.getThroughWalls().isEnabled());
+                WorldRenderUtils.end(true);
             }
         }
     }
@@ -147,7 +151,7 @@ public final class EspRenderer {
         }
         ScaledResolution resolution = new ScaledResolution(minecraft);
         for (ScreenBox box : screenBoxes) {
-            overlay.draw(esp.get2D(), box.actor, new EspLayout.Rect(box.bounds.left, box.bounds.top,
+            overlay.draw(esp.get2D(box.actor.profile), box.actor, new EspLayout.Rect(box.bounds.left, box.bounds.top,
                     box.bounds.width(), box.bounds.height()), resolution.getScaledWidth(), resolution.getScaledHeight(), false);
         }
     }

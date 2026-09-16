@@ -86,12 +86,29 @@ public final class ChamsRenderCheck {
             rgb(pixels(), W * 3 / 4, 0, 0, 0, "Transparent textured cutout");
 
             texture(255, 255, 255, 255);
+            halo(esp);
             restoreState(esp, false); restoreState(esp, true);
             preview(esp, output.resolve("materials.png"));
             int error = GL11.glGetError();
             if (error != GL11.GL_NO_ERROR) throw new AssertionError("OpenGL error " + error);
             System.out.println("Chams OK: Flat/Glow/Metallic alpha 0/1/64/128/255, partial cover, armor, skin, cutouts, depth and exception state restoration.");
         } finally { buffer.destroy(); }
+    }
+
+    private static void halo(EspModule esp) {
+        esp.getInvisibleChams().getColor().setValue(0xFFFF0000);esp.getVisibleChams().getColor().setValue(0xFF00FF00);
+        esp.getVisibleChams().getShowSkin().setValue(false);esp.getInvisibleChams().getShowSkin().setValue(false);
+        Runnable small=()->{GL11.glPushMatrix();GL11.glScalef(.5F,.5F,1);quad();GL11.glPopMatrix();};
+        for(String mode:new String[]{"Flat","Glow"}){
+            esp.getInvisibleChams().getMode().setValue(mode);esp.getVisibleChams().getMode().setValue(mode);
+            scene();ChamsRenderer.beginWorld();try{ChamsRenderer.draw(esp,false,1,small);}finally{ChamsRenderer.endWorld();}
+            byte[] data=pixels();int left=(H/2*W+W/4-3)*4,right=(H/2*W+W*3/4+2)*4;
+            if(mode.equals("Glow")){
+                if((data[left]&255)<10||(data[right+1]&255)<10)throw new AssertionError("Glow has no silhouette halo");
+                near(0,data[left+1]&255,1,"Occluded halo wrong color");near(0,data[right]&255,1,"Visible halo wrong color");
+            }else if((data[left]&255)!=0||(data[right+1]&255)!=0)throw new AssertionError("Flat material unexpectedly glows");
+        }
+        esp.getInvisibleChams().getMode().setValue("Flat");esp.getVisibleChams().getMode().setValue("Flat");
     }
 
     private static void restoreState(EspModule esp, boolean failure) throws Exception {

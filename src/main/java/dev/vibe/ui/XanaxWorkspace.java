@@ -381,7 +381,7 @@ final class XanaxWorkspace {
             NumberSetting n = (NumberSetting) slider.value; n.setValue(n.getMinimum() + progress * (n.getMaximum() - n.getMinimum()));
         } else {
             RangeSetting r = (RangeSetting) slider.value; double value = r.getMinimum() + progress * (r.getMaximum() - r.getMinimum());
-            if (slider.index == 0) r.setMin(Math.min(r.getMax(), value)); else r.setMax(Math.max(r.getMin(), value));
+            if (slider.index == 0) r.setMin(value); else r.setMax(value);
         }
     }
 
@@ -390,8 +390,8 @@ final class XanaxWorkspace {
         if (hit.value instanceof NumberSetting) { NumberSetting n = (NumberSetting) hit.value; n.setValue(n.getDouble() + direction * n.getIncrement()); }
         else {
             RangeSetting r = (RangeSetting) hit.value;
-            if (hit.index / 2 == 0) r.setMin(Math.min(r.getMax(), r.getMin() + direction * r.getIncrement()));
-            else r.setMax(Math.max(r.getMin(), r.getMax() + direction * r.getIncrement()));
+            if (hit.index / 2 == 0) r.setMin(r.getMin() + direction * r.getIncrement());
+            else r.setMax(r.getMax() + direction * r.getIncrement());
         }
     }
 

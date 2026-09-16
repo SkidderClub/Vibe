@@ -160,6 +160,9 @@ public final class XanaxRenderCheck {
             check(theme.getTheme().is("NeverLose"), "Host failed to switch away from Xanax"); host.drawScreen(0, 0, 0);
             NeverLoseWorkspace nl = (NeverLoseWorkspace) get(host, "neverLose");
             tab = hit(nl, "CATEGORY", Category.CLIENT); host.mouseClicked(num(tab, "x") + 5, num(tab, "y") + 5, 0); host.drawScreen(0, 0, 0);
+            if (!hasHit(nl, "DROPDOWN", theme.getTheme())) {
+                Object fold = hit(nl, "FOLD", theme); host.mouseClicked(num(fold, "x") + 5, num(fold, "y") + 5, 0); host.drawScreen(0, 0, 0);
+            }
             dropdown = hit(nl, "DROPDOWN", theme.getTheme()); host.mouseClicked(num(dropdown, "x") + 5, num(dropdown, "y") + 5, 0); popup = get(nl, "popup");
             host.mouseClicked(num(popup, "x") + 10, num(popup, "y") + 4 + theme.getTheme().getModes().indexOf("Xanax") * 22 + 5, 0);
             check(theme.getTheme().is("Xanax"), "Host failed to switch into Xanax"); host.drawScreen(0, 0, 0);

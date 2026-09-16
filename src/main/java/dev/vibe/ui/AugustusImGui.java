@@ -374,10 +374,10 @@ public final class AugustusImGui {
         } else if (setting instanceof RangeSetting) {
             RangeSetting value = (RangeSetting) setting;
             label(setting.getName() + " min:");
-            value.setMin(Math.min(value.getMax(), slider("min", value.getMin(), value.getMinimum(), value.getMaximum(), value.getIncrement())));
+            value.setMin(slider("min", value.getMin(), value.getMinimum(), value.getMaximum(), value.getIncrement()));
             ImGui.setCursorPosX(left);
             label(setting.getName() + " max:");
-            value.setMax(Math.max(value.getMin(), slider("max", value.getMax(), value.getMinimum(), value.getMaximum(), value.getIncrement())));
+            value.setMax(slider("max", value.getMax(), value.getMinimum(), value.getMaximum(), value.getIncrement()));
         } else if (setting instanceof ColorSetting) {
             ColorSetting value = (ColorSetting) setting;
             label(setting.getName() + ":");

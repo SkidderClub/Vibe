@@ -6,6 +6,7 @@ uniform vec3 Tint;
 uniform float Opacity;
 uniform int ShowSkin;
 uniform int Material;
+uniform int MaskPass;
 varying vec2 SkinUv;
 varying vec3 EyePosition;
 varying vec3 EyeNormal;
@@ -14,6 +15,7 @@ void main() {
     vec4 skin = NativeMesh != 0 ? SurfaceColor : texture2D(Skin, SkinUv);
     // Preserve transparent hat/jacket/armor cutouts even on an untextured material.
     if (skin.a < 0.1) discard;
+    if (MaskPass != 0) { gl_FragColor=vec4(Tint*Opacity*skin.a,1.0); return; }
     vec3 base = Tint * (ShowSkin != 0 ? skin.rgb : vec3(1.0));
     vec3 normal = normalize(EyeNormal);
     vec3 view = normalize(-EyePosition + vec3(0.0, 0.0, 0.0001));
@@ -22,7 +24,7 @@ void main() {
     if (Material == 1) {
         // Emissive center and a bright Fresnel rim, independent of world lighting.
         float rim = pow(1.0 - facing, 2.0);
-        rgb = base * (0.62 + 0.65 * rim) + vec3(0.32) * rim;
+        rgb = base * (1.0 + 0.35 * rim) + vec3(0.12) * rim;
     } else if (Material == 2) {
         // Procedural studio reflections remain stable while the model/camera rotates.
         vec3 reflected = reflect(-view, normal);

@@ -18,6 +18,7 @@ public final class Esp2DRenderer {
         public final float health, maxHealth, armor, distance, opacity;
         public final ItemStack item;
         public String nativeItem = "";
+        public int teamColor,profile;public boolean hurt;
         public final ItemStack[] equipment;
         public Actor(String name,float health,float maxHealth,float armor,float distance,String itemName,
                      ItemStack item,ItemStack[] equipment,float opacity) {
@@ -40,11 +41,12 @@ public final class Esp2DRenderer {
             if(!e.enabled.isEnabled() || e.kind==Kind.BOX || !available(e,settings,actor))continue;
             float s=scale*e.scale.getFloat(),w,h;
             if(e.kind==Kind.BAR){w=e.vertical()?e.width.getFloat()*s:box.w;h=e.vertical()?box.h:e.width.getFloat()*s;}
-            else if(e.kind==Kind.TEXT){TextStyle t=e.resolvedText();float size=t.size.getFloat()/9*s;w=textWidth(t,label(e,settings,actor))*size;h=textHeight(t)*size;}
+            else if(e.kind==Kind.TEXT){TextStyle t=e.resolvedText();float size=t.size.getFloat()/9*s;String text=label(e,settings,actor);w=textWidth(t,text)*size;h=textHeight(t,text)*size;}
             else {int count=e.kind==Kind.ARMOR?equipmentCount(actor):1;w=16*s*(e.kind==Kind.ARMOR&&!e.vertical()?count:1);h=16*s*(e.kind==Kind.ARMOR&&e.vertical()?count:1);}
             float pad=e.outline.isEnabled()?e.outlineWidth.getFloat()*s:0;
             if(e.kind==Kind.TEXT && e.resolvedText().shadow.isEnabled())pad=Math.max(pad,s*e.resolvedText().size.getFloat()/9);
-            requests.add(new EspLayout.Request(e.title,e.position.getValue(),w,h,e.order.getFloat(),e.offset.getFloat()*scale,pad));
+            if(e.backgroundEnabled.isEnabled())pad=Math.max(pad,2*s);
+            requests.add(new EspLayout.Request(e.title,e.position.getValue(),w,h,e.order.getFloat(),e.offset.getFloat()*box.h/180f,pad));
         }
         float boxPad=settings.box.enabled.isEnabled()?(settings.box.width.getFloat()+ (settings.box.outline.isEnabled()?settings.box.outlineWidth.getFloat():0))*scale*settings.box.scale.getFloat():0;
         Map<String,EspLayout.Rect> result=EspLayout.arrange(box.expand(boxPad),requests,settings.gap.getFloat()*scale);
@@ -62,7 +64,7 @@ public final class Esp2DRenderer {
     }
     private NeverLoseFont font(TextStyle t) {return t.font.is("Sans Bold")?NeverLoseFont.BOLD:NeverLoseFont.REGULAR;}
     private float textWidth(TextStyle t,String value) {return t.font.is("Minecraft")?mc.fontRendererObj.getStringWidth(value):font(t).width(value);}
-    private float textHeight(TextStyle t) {return t.font.is("Minecraft")?mc.fontRendererObj.FONT_HEIGHT:12;}
+    private float textHeight(TextStyle t,String text) {return t.font.is("Minecraft")?8:font(t).inkHeight(text);}
 
     public Frame draw(Esp2DSettings settings,Actor actor,EspLayout.Rect box,int screenWidth,int screenHeight,boolean editor) {
         Frame frame=measure(settings,actor,box);
@@ -79,15 +81,16 @@ public final class Esp2DRenderer {
                 float s=frame.scale*e.scale.getFloat();
                 if(e.kind==Kind.BAR){
                     float outline=e.outline.isEnabled()?e.outlineWidth.getFloat()*s:0;
-                    if(outline>0)border(r,outline,alpha(e.outlineColor.getArgb(),actor.opacity));
-                    solid(r,alpha(e.background.getArgb(),actor.opacity));
+                    if(outline>0)border(r,outline,alpha(e.outlineColor.resolve(actor.teamColor,actor.hurt),actor.opacity));
+                    if(e.backgroundEnabled.isEnabled())solid(r,alpha(e.background.resolve(actor.teamColor,actor.hurt),actor.opacity));
                     float ratio=e==settings.healthBar?actor.health/Math.max(.001F,actor.maxHealth):actor.armor/20;
                     ratio=Math.max(0,Math.min(1,ratio));
                     EspLayout.Rect fill=e.vertical()?new EspLayout.Rect(r.x,r.bottom()-r.h*ratio,r.w,r.h*ratio):new EspLayout.Rect(r.x,r.y,r.w*ratio,r.h);
-                    paint(settings,e.color,r,screenWidth,screenHeight,false,actor.opacity,seconds);quad(fill);GL20.glUseProgram(0);
-                }else if(e.kind==Kind.TEXT){drawText(settings,e,label(e,settings,actor),r,s,actor.opacity,screenWidth,screenHeight,seconds);}
+                    paint(settings,e.color,r,screenWidth,screenHeight,false,actor,seconds);quad(fill);GL20.glUseProgram(0);
+                }else if(e.kind==Kind.TEXT){drawText(settings,e,label(e,settings,actor),r,s,actor,screenWidth,screenHeight,seconds);}
                 else {
-                    if(e.outline.isEnabled())border(r,e.outlineWidth.getFloat()*s,alpha(e.outlineColor.getArgb(),actor.opacity));
+                    if(e.backgroundEnabled.isEnabled())solid(r.expand(2*s),alpha(e.background.resolve(actor.teamColor,actor.hurt),actor.opacity));
+                    if(e.outline.isEnabled())border(r,e.outlineWidth.getFloat()*s,alpha(e.outlineColor.resolve(actor.teamColor,actor.hurt),actor.opacity));
                     if(e.kind==Kind.ICON){if(actor.item!=null)drawItem(actor.item,r.x,r.y,s,actor.opacity);else drawNativeItem(actor.nativeItem,r,s,actor.opacity);}
                     else {int i=0;for(ItemStack item:actor.equipment)if(item!=null){drawItem(item,r.x+(e.vertical()?0:i*16*s),r.y+(e.vertical()?i*16*s:0),s,actor.opacity);i++;}}
                 }
@@ -106,40 +109,45 @@ public final class Esp2DRenderer {
         float radius=Math.min(Math.min(r.w,r.h)/2,e.rounding.getFloat()*s);
         boolean corners=e.corners.isEnabled()&&a.distance>=e.cornerDistance.getFloat();
         float length=Math.min(r.w,r.h)*e.cornerLength.getFloat();
-        solidRounded(r,radius,alpha(e.background.getArgb(),a.opacity));
+        if(e.backgroundEnabled.isEnabled())solidRounded(r,radius,alpha(e.background.resolve(a.teamColor,a.hurt),a.opacity));
         if(e.outline.isEnabled()) {
             GlStateManager.disableTexture2D();
-            color(alpha(e.outlineColor.getArgb(),a.opacity));
-            stroke(r,radius,line+2*e.outlineWidth.getFloat()*s,corners,length);
+            color(alpha(e.outlineColor.resolve(a.teamColor,a.hurt),a.opacity));
+            stroke(r,radius,line+2*e.outlineWidth.getFloat()*s,corners,length+e.outlineWidth.getFloat()*s);
         }
-        paint(settings,e.color,r,w,h,false,a.opacity,seconds);stroke(r,radius,line,corners,length);GL20.glUseProgram(0);
+        paint(settings,e.color,r,w,h,false,a,seconds);stroke(r,radius,line,corners,length);GL20.glUseProgram(0);
     }
-    private void drawText(Esp2DSettings settings,Element e,String value,EspLayout.Rect r,float scale,float opacity,int w,int h,double seconds) {
-        TextStyle t=e.resolvedText();float size=t.size.getFloat()/9*scale;
-        GlStateManager.pushMatrix();GlStateManager.translate(r.x,r.y,0);GlStateManager.scale(size,size,1);
+    private void drawText(Esp2DSettings settings,Element e,String value,EspLayout.Rect r,float scale,Actor actor,int w,int h,double seconds) {
+        TextStyle t=e.resolvedText();float size=t.size.getFloat()/9*scale,opacity=actor.opacity;
+        if(e.backgroundEnabled.isEnabled())solid(r.expand(2*scale),alpha(e.background.resolve(actor.teamColor,actor.hurt),opacity));
+        GlStateManager.pushMatrix();GlStateManager.translate(r.x,r.y-(t.font.is("Minecraft")?0:font(t).inkTop(value)*size),0);GlStateManager.scale(size,size,1);
         try {
             if(e.outline.isEnabled()) {
                 float d=e.outlineWidth.getFloat()*scale/size;
-                for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)if(x!=0||y!=0)text(t,value,x*d,y*d,alpha(e.outlineColor.getArgb(),opacity));
+                for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)if(x!=0||y!=0)text(t,value,x*d,y*d,alpha(e.outlineColor.resolve(actor.teamColor,actor.hurt),opacity));
             }
             if(t.shadow.isEnabled())text(t,value,1,1,alpha(0xB0000000,opacity));
-            boolean shader=paint(settings,t.color,r,w,h,true,opacity,seconds);
-            text(t,value,0,0,shader?0xFFFFFFFF:alpha(t.color.solid.getArgb(),opacity));
+            boolean shader=paint(settings,t.color,r,w,h,true,actor,seconds);
+            text(t,value,0,0,shader?0xFFFFFFFF:alpha(fallback(settings,t.color,r,w,h,seconds,actor),opacity));
         } finally {GL20.glUseProgram(0);GlStateManager.popMatrix();}
     }
     private void text(TextStyle t,String value,float x,float y,int color) {
         if((color>>>24)==0)return;
         if(t.font.is("Minecraft"))mc.fontRendererObj.drawString(value,x,y,color,false);else font(t).draw(value,x,y,color);
     }
-    private boolean paint(Esp2DSettings settings,Paint paint,EspLayout.Rect rect,int w,int h,boolean texture,float opacity,double seconds) {
+    private boolean paint(Esp2DSettings settings,Paint paint,EspLayout.Rect rect,int w,int h,boolean texture,Actor actor,double seconds) {
         GL11.glDisable(GL11.GL_ALPHA_TEST);GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(770,771);
         if(!texture)GlStateManager.disableTexture2D();
-        boolean shader=EspPaintShader.bind(settings,paint,rect,w,h,texture,opacity,seconds);
-        if(!shader) {GL20.glUseProgram(0);int c=paint.solid.getArgb();
-            if(paint.mode.is("Rainbow"))c=java.awt.Color.HSBtoRGB((float)((seconds*paint.rainbowSpeed.getDouble())%1),paint.rainbowSaturation.getFloat(),1);
-            else if(!paint.mode.is("Static")){boolean global=paint.mode.is("Global Gradient");EspGradient g=new EspGradient(global?settings.global:paint.gradient,seconds);c=g.sample(global?rect.x+rect.w/2:rect.w/2,global?rect.y+rect.h/2:rect.h/2,global?w:rect.w,global?h:rect.h);}
-            color(alpha(c,opacity));}
+        boolean shader=EspPaintShader.bind(settings,paint,rect,w,h,texture,actor.opacity,seconds,actor.teamColor,actor.hurt);
+        if(!shader) {GL20.glUseProgram(0);color(alpha(fallback(settings,paint,rect,w,h,seconds,actor),actor.opacity));}
         return shader;
+    }
+    private int fallback(Esp2DSettings settings,Paint paint,EspLayout.Rect rect,int w,int h,double seconds,Actor actor){
+        int c=paint.solid.resolve(actor.teamColor,actor.hurt);if(paint.solid.isHurtOverride(actor.hurt))return c;
+        if(paint.mode.is("Team"))return actor.teamColor==0?c:(c&0xFF000000)|(actor.teamColor&0xFFFFFF);
+        if(paint.mode.is("Rainbow"))return java.awt.Color.HSBtoRGB((float)((seconds*paint.rainbowSpeed.getDouble())%1),paint.rainbowSaturation.getFloat(),1);
+        if(!paint.mode.is("Static")){boolean global=paint.mode.is("Global Gradient");EspGradient g=new EspGradient(global?settings.global:paint.gradient,seconds,actor.teamColor,actor.hurt);return g.sample(global?rect.x+rect.w/2:rect.w/2,global?rect.y+rect.h/2:rect.h/2,global?w:rect.w,global?h:rect.h);}
+        return c;
     }
     private void drawNativeItem(String kind,EspLayout.Rect r,float scale,float opacity) {
         GlStateManager.pushMatrix();GlStateManager.translate(r.x,r.y,0);GlStateManager.scale(scale,scale,1);

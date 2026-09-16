@@ -7,6 +7,24 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class EspAppearanceTest {
+    @Test public void profilesAreIndependentAndAllColorsSupportContext(){
+        EspModule esp=new EspModule();esp.getModes().toggle("2D");esp.getModes().toggle("Chams");
+        assertEquals(0,esp.resolvedProfile(1));
+        esp.getFriendsProfile().getUsePlayerDefaults().setValue(false);
+        esp.getEditProfile().setValue("Friends");
+        assertEquals(1,esp.resolvedProfile(1));assertTrue(esp.get2D(1).name.scale.isVisible());assertFalse(esp.get2D().name.scale.isVisible());
+        esp.get2D(1).name.scale.setValue(2D);assertEquals(1,esp.get2D().name.scale.getDouble(),0);
+        esp.getChams(1,true).getColor().getEntityMode().setValue("Team");
+        dev.vibe.setting.ColorSetting color=esp.getChams(1,true).getColor();
+        color.setValue(0x80112233);assertEquals(0x8055AAFF,color.resolve(0xFF55AAFF,false));
+        assertEquals(0x80112233,color.resolve(0,false));
+        color.getHurtColor().setValue(0xCCFF0000);color.getHurtOverride().setValue(true);
+        assertEquals(0xCCFF0000,color.resolve(0xFF55AAFF,true));
+        assertNotEquals(color,esp.getChams(2,true).getColor());
+        for(int p=0;p<3;p++)for(Esp2DSettings.Element e:esp.get2D(p).elements)assertFalse(e.backgroundEnabled.isEnabled());
+        assertTrue(EspLayout.scale(2,1)<EspLayout.scale(10,1));
+        assertEquals(EspLayout.scale(10,1)*2,EspLayout.scale(20,1),.00001);
+    }
     @Test public void disabledModesElementsAndInheritedTextHideDetails() {
         EspModule esp=new EspModule();Esp2DSettings s=esp.get2D();
         assertFalse(s.name.scale.isVisible());esp.getModes().toggle("2D");assertTrue(s.name.scale.isVisible());

@@ -67,6 +67,9 @@ public final class SkeletalRenderer {
                 if (player == minecraft.thePlayer) {
                     continue;
                 }
+                EspModule esp=Vibe.getInstance().getModuleManager().getModule(EspModule.class);
+                module=esp.getSkeletal(esp.resolvedProfile(esp.profileFor(player)));
+                if(module.getThroughWalls().isEnabled()) net.minecraft.client.renderer.GlStateManager.disableDepth(); else net.minecraft.client.renderer.GlStateManager.enableDepth();
                 if (module.getOnlyTargets().isEnabled()) {
                     TargetsModule targets = Vibe.getInstance().getModuleManager().getModule(TargetsModule.class);
                     if (targets == null || !targets.canTarget(player)) {
@@ -82,13 +85,16 @@ public final class SkeletalRenderer {
             }
         } finally {
             GL11.glDisable(GL11.GL_LINE_SMOOTH);
-            WorldRenderUtils.end(module.getThroughWalls().isEnabled());
+            WorldRenderUtils.end(true);
             poses.clear();
         }
     }
 
     private void drawPlayer(EntityPlayer player, Pose pose, EspModule.SkeletalSettings module, boolean backplate) {
-        WorldRenderUtils.color(backplate ? 0xB8000000 : color(module, player.getEntityId() * 0.11F));
+        WorldRenderUtils.color(backplate ? 0xB8000000 : module.getColor().resolve(color(module, player.getEntityId() * 0.11F), Vibe.getInstance().getModuleManager().getModule(EspModule.class).teamColor(player),player.hurtTime>0));
+        drawPose(pose);
+    }
+    private static void drawPose(Pose pose) {
         GL11.glPushMatrix();
         try {
             // Includes the renderer's scale, body yaw, riding/death rotations,
@@ -108,10 +114,10 @@ public final class SkeletalRenderer {
         } finally { GL11.glPopMatrix(); }
     }
 
-    private double[] pivot(Angle part) {
+    private static double[] pivot(Angle part) {
         return point(part, 0);
     }
-    private double[] point(Angle part, double length) {
+    private static double[] point(Angle part, double length) {
         // Trace the center of both standard and slim arms, rather than the
         // inner-edge pivot of their asymmetrical boxes.
         double x = part.cx / 16.0, y = length / 16.0, z = part.cz / 16.0;
@@ -123,14 +129,14 @@ public final class SkeletalRenderer {
         y = x * Math.sin(part.z) + y * Math.cos(part.z); x = nextX;
         return new double[] {part.px / 16.0 + part.ox + x, part.py / 16.0 + part.oy + y, part.pz / 16.0 + part.oz + z};
     }
-    private double[] midpoint(double[] a, double[] b) {
+    private static double[] midpoint(double[] a, double[] b) {
         return new double[] {(a[0]+b[0])*.5, (a[1]+b[1])*.5, (a[2]+b[2])*.5};
     }
-    private void line(double[] a, double[] b) { line(a[0], a[1], a[2], b[0], b[1], b[2]); }
-    private void limb(Angle part, double pixels) {
+    private static void line(double[] a, double[] b) { line(a[0], a[1], a[2], b[0], b[1], b[2]); }
+    private static void limb(Angle part, double pixels) {
         line(point(part, 0), point(part, pixels));
     }
-    private void line(double x1, double y1, double z1, double x2, double y2, double z2) {
+    private static void line(double x1, double y1, double z1, double x2, double y2, double z2) {
         GL11.glBegin(GL11.GL_LINES);
         GL11.glVertex3d(x1, y1, z1);
         GL11.glVertex3d(x2, y2, z2);
@@ -145,6 +151,18 @@ public final class SkeletalRenderer {
         return Color.HSBtoRGB(hue, 0.75F, 1.0F) | 0xFF000000;
     }
 
+    static void preview(ModelPlayer model,EspModule.SkeletalSettings settings,int team,boolean hurt) {
+        Pose pose=new Pose(model.bipedHead,model.bipedRightArm,model.bipedLeftArm,model.bipedRightLeg,model.bipedLeftLeg);
+        GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX,pose.matrix);
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        try {
+            GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glDisable(GL11.GL_LIGHTING);GL11.glDisable(GL11.GL_DEPTH_TEST);
+            GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);
+            if(settings.getDepthBackplate().isEnabled()){GL11.glLineWidth(settings.getLineWidth().getFloat()+2);WorldRenderUtils.color(0xB8000000);drawPose(pose);}
+            int base=settings.getRainbow().isEnabled()?Color.HSBtoRGB((System.currentTimeMillis()%8000)/8000F,.75F,1):settings.getColor().getArgb();
+            WorldRenderUtils.color(settings.getColor().resolve(base,team,hurt));GL11.glLineWidth(settings.getLineWidth().getFloat());drawPose(pose);
+        } finally {GL11.glPopAttrib();net.minecraft.client.renderer.GlStateManager.resetColor();}
+    }
     private static final class Pose {
         private final java.nio.FloatBuffer matrix = org.lwjgl.BufferUtils.createFloatBuffer(16);
         private final Angle head;

@@ -90,7 +90,7 @@ public final class TargetsModule extends Module {
         }
     }
 
-    private boolean isTeammate(EntityPlayer other) {
+    public boolean isTeammate(EntityPlayer other) {
         net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getMinecraft();
         if (minecraft.thePlayer == null) return false;
         if (teammateDetection.is("Scoreboard")) {
@@ -107,6 +107,19 @@ public final class TargetsModule extends Module {
         }
         return nameColor(minecraft.thePlayer.getDisplayName().getFormattedText()) != 0
                 && nameColor(minecraft.thePlayer.getDisplayName().getFormattedText()) == nameColor(other.getDisplayName().getFormattedText());
+    }
+
+    /** Uses the same source as teammate detection, including leather chestplate colors. */
+    public int teamColor(EntityPlayer player){
+        if(player==null)return 0;
+        if(teammateDetection.is("Chestplate")){
+            ItemStack stack=player.getCurrentArmor(2);if(stack==null||!(stack.getItem() instanceof ItemArmor))return 0;
+            ItemArmor armor=(ItemArmor)stack.getItem();return armor.getArmorMaterial()==ItemArmor.ArmorMaterial.LEATHER?0xFF000000|armor.getColor(stack):0;
+        }
+        String text=teammateDetection.is("Name Color")?player.getDisplayName().getFormattedText():player.getTeam() instanceof net.minecraft.scoreboard.ScorePlayerTeam?((net.minecraft.scoreboard.ScorePlayerTeam)player.getTeam()).getColorPrefix():null;
+        char code=nameColor(text);int index="0123456789abcdef".indexOf(code);
+        int[] colors={0x000000,0x0000AA,0x00AA00,0x00AAAA,0xAA0000,0xAA00AA,0xFFAA00,0xAAAAAA,0x555555,0x5555FF,0x55FF55,0x55FFFF,0xFF5555,0xFF55FF,0xFFFF55,0xFFFFFF};
+        return index<0?0:0xFF000000|colors[index];
     }
 
     private char nameColor(String value) {

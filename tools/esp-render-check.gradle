@@ -1,6 +1,7 @@
 // Optional init script: gradle -I tools/esp-render-check.gradle verifyEspRendering
 gradle.projectsEvaluated {
     def project = gradle.rootProject
+    if (project.tasks.findByName('verifyEspRendering') != null) return
     project.tasks.register('verifyEspRendering', JavaExec) {
         dependsOn project.tasks.named('testClasses')
         javaLauncher = project.javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }

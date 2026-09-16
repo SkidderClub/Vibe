@@ -39,7 +39,7 @@ final class NeverLoseWorkspace {
     private boolean searching, dragging, scrollbarDragging, selectAll;
     private int dragX, dragY, scrollbarOffset;
     private Hit slider;
-    private boolean upperHandle;
+    private RangeSetting.Drag rangeDrag;
     private Module binding;
     private Setting<?> editing;
     private Popup popup;
@@ -338,7 +338,7 @@ final class NeverLoseWorkspace {
                         slider = hit;
                         if (hit.value instanceof RangeSetting) {
                             RangeSetting range = (RangeSetting) hit.value; float pos = (mx - hit.x) / (float) hit.w;
-                            upperHandle = Math.abs(pos - fraction(range.getMax(), range.getMinimum(), range.getMaximum())) <= Math.abs(pos - fraction(range.getMin(), range.getMinimum(), range.getMaximum()));
+                            rangeDrag=range.beginDrag(range.getMinimum()+pos*(range.getMaximum()-range.getMinimum()));
                         }
                         updateSlider(mx);
                     } return;
@@ -486,7 +486,7 @@ final class NeverLoseWorkspace {
         } else {
             RangeSetting range = (RangeSetting) slider.value;
             double value = range.getMinimum() + fraction * (range.getMaximum() - range.getMinimum());
-            if (upperHandle) range.setMax(Math.max(range.getMin(), value)); else range.setMin(Math.min(range.getMax(), value));
+            if(rangeDrag!=null)rangeDrag.move(value);
         }
     }
 

@@ -5,6 +5,28 @@ import java.util.function.BooleanSupplier;
 
 /** Stores a color as ARGB and accepts readable #RRGGBB / #RRGGBBAA input. */
 public final class ColorSetting extends Setting<Integer> {
+    private ModeSetting entityMode;
+    private BooleanSetting hurtOverride;
+    private ColorSetting hurtColor;
+
+    /** Opt-in entity colors; other modules retain their ordinary color controls. */
+    public void enableEntityOptions(java.util.function.Consumer<Setting<?>> register){
+        if(entityMode!=null)return;
+        entityMode=new ModeSetting(getRawName()+" Source","Static",()->isVisible(),"Static","Team");
+        hurtOverride=new BooleanSetting(getRawName()+" Hurt Override",false,()->isVisible());
+        hurtColor=new ColorSetting(getRawName()+" Hurt Color",0xFFFF5656,()->isVisible()&&hurtOverride.isEnabled());
+        hurtColor.entityMode=new ModeSetting(getRawName()+" Hurt Color Source","Static",()->hurtColor.isVisible(),"Static","Team");
+        register.accept(entityMode);register.accept(hurtOverride);register.accept(hurtColor);register.accept(hurtColor.entityMode);
+    }
+    public ModeSetting getEntityMode(){return entityMode;}
+    public BooleanSetting getHurtOverride(){return hurtOverride;}
+    public ColorSetting getHurtColor(){return hurtColor;}
+    public boolean isHurtOverride(boolean hurt){return hurt&&hurtOverride!=null&&hurtOverride.isEnabled();}
+    public int resolve(int teamColor,boolean hurt){return resolve(getArgb(),teamColor,hurt);}
+    public int resolve(int base,int teamColor,boolean hurt){
+        if(isHurtOverride(hurt))return hurtColor.resolve(teamColor,false);
+        return entityMode!=null&&entityMode.is("Team")&&teamColor!=0?(base&0xFF000000)|(teamColor&0xFFFFFF):base;
+    }
 
     public ColorSetting(String name, int argb) {
         super(name, argb);

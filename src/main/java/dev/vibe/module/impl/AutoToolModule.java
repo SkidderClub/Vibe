@@ -54,6 +54,7 @@ public final class AutoToolModule extends Module {
 
     /** Runs at tick start before Minecraft consumes a held attack input. */
     public void tick() {
+        if(PickenSwitchModule.ownsSlot())return;
         if (owner != minecraft.thePlayer) {
             originalSlot = spoofedSlot = wantedSlot = -1;
             wantedSince = 0;
@@ -227,9 +228,10 @@ public final class AutoToolModule extends Module {
     }
     public static int serverSlotHook(int vanilla) {
         AutoToolModule module = active();
-        return module != null && module.hasSilentSlot() ? module.spoofedSlot : vanilla;
+        return PickenSwitchModule.serverSlotHook(module != null && module.hasSilentSlot() ? module.spoofedSlot : vanilla);
     }
     public static int beginActionHook() {
+        int picken=PickenSwitchModule.beginActionHook();if(picken>=0)return picken;
         AutoToolModule module = active();
         if (module == null || !module.hasSilentSlot() || module.minecraft.thePlayer == null) return -1;
         int visible = module.minecraft.thePlayer.inventory.currentItem;

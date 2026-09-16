@@ -21,6 +21,7 @@ final class NeverLoseFont {
     private final Font font;
     private final FontMetrics metrics;
     private final Map<Integer, Page> pages = new HashMap<Integer, Page>();
+    private final Map<Character,float[]> inkMetrics=new HashMap<Character,float[]>();
     private Font fallback;
 
     private NeverLoseFont(int style) {
@@ -42,6 +43,22 @@ final class NeverLoseFont {
         float width = 0;
         for (int i = 0; i < text.length(); i++) width += advance(text.charAt(i));
         return width;
+    }
+    float inkTop(String text){return inkBounds(text)[0];}
+    float inkHeight(String text){float[] bounds=inkBounds(text);return Math.max(1,bounds[1]-bounds[0]);}
+    private float[] inkBounds(String text){
+        float top=Float.POSITIVE_INFINITY,bottom=Float.NEGATIVE_INFINITY;
+        for(int i=0;i<text.length();i++){
+            char ch=text.charAt(i);if(Character.isWhitespace(ch)||Character.isISOControl(ch))continue;
+            float[] bounds=inkMetrics.get(ch);
+            if(bounds==null){
+                Font selected=font.canDisplay(ch)?font:fallback();
+                java.awt.geom.Rectangle2D ink=selected.createGlyphVector(new java.awt.font.FontRenderContext(null,true,false),new char[]{ch}).getVisualBounds();
+                bounds=new float[]{(metrics.getAscent()+(float)ink.getMinY())*.5F,(metrics.getAscent()+(float)ink.getMaxY())*.5F};inkMetrics.put(ch,bounds);
+            }
+            top=Math.min(top,bounds[0]);bottom=Math.max(bottom,bounds[1]);
+        }
+        return top==Float.POSITIVE_INFINITY?new float[]{0,1}:new float[]{top,bottom};
     }
     void close(){for(Page page:pages.values())page.texture.deleteGlTexture();pages.clear();}
 

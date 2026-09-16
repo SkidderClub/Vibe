@@ -70,17 +70,28 @@ public final class RangeSetting extends Setting<RangeSetting.Range> {
     }
 
     public void setMin(double value) {
-        setRange(value, getMax());
+        double next=snap(value);setRange(next, Math.max(next,getMax()));
     }
 
     public void setMax(double value) {
-        setRange(getMin(), value);
+        double next=snap(value);setRange(Math.min(getMin(),next), next);
+    }
+
+    /** Captures the selected handle for the complete gesture, including crossing. */
+    public Drag beginDrag(double value){return new Drag(this,value);}
+    public static final class Drag {
+        private final RangeSetting range;private int handle;
+        private Drag(RangeSetting range,double value){this.range=range;handle=range.getMin()==range.getMax()&&Math.abs(value-range.getMin())<range.increment*.5?-1:value>(range.getMin()+range.getMax())*.5?1:0;}
+        public void move(double value){
+            if(handle<0){if(Math.abs(value-range.getMin())<range.increment*.5)return;handle=value>range.getMin()?1:0;}
+            if(handle==0)range.setMin(value);else range.setMax(value);
+        }
     }
 
     private double snap(double value) {
         double clamped = Math.max(minimum, Math.min(maximum, value));
         double snapped = Math.round((clamped - minimum) / increment) * increment + minimum;
-        return Math.round(snapped * 1000000.0D) / 1000000.0D;
+        return Math.max(minimum,Math.min(maximum,Math.round(snapped * 1000000.0D) / 1000000.0D));
     }
 
     public static final class Range {

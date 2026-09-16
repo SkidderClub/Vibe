@@ -10,6 +10,7 @@ public final class Esp2DSettings {
     public final List<Setting<?>> settings = new ArrayList<Setting<?>>();
     private final Consumer<Setting<?>> register;
     private final BooleanSupplier visible;
+    private final String keyPrefix;
     public final NumberSetting distanceScaling;
     public final NumberSetting gap;
     public final Gradient global;
@@ -18,12 +19,16 @@ public final class Esp2DSettings {
     public final Element box, healthBar, armorBar, name, distance, itemName, itemIcon, health, armor;
 
     public Esp2DSettings(Consumer<Setting<?>> register, BooleanSupplier visible) {
+        this(register,visible,"");
+    }
+    public Esp2DSettings(Consumer<Setting<?>> register, BooleanSupplier visible,String keyPrefix) {
         this.register = register;
         this.visible = visible;
-        distanceScaling = add(new NumberSetting("2D Distance Scaling", .6, 0, 1, .05, visible));
-        gap = add(new NumberSetting("2D Element Gap", 3, 1, 12, .5, visible));
-        global = new Gradient("2D Global Gradient", () -> visible.getAsBoolean() && usesGlobalGradient());
-        text = new TextStyle("2D Default Text", () -> visible.getAsBoolean() && usesDefaultText());
+        this.keyPrefix=keyPrefix;
+        distanceScaling = add(new NumberSetting(keyPrefix+"2D Distance Scaling", 1, 0, 1, .05, visible));
+        gap = add(new NumberSetting(keyPrefix+"2D Element Gap", 3, 1, 12, .5, visible));
+        global = new Gradient(keyPrefix+"2D Global Gradient", () -> visible.getAsBoolean() && usesGlobalGradient());
+        text = new TextStyle(keyPrefix+"2D Default Text", () -> visible.getAsBoolean() && usesDefaultText());
         box = element("Box", Kind.BOX, "Top", true);
         healthBar = element("Health Bar", Kind.BAR, "Left", true);
         armorBar = element("Armor Bar", Kind.BAR, "Right", false);
@@ -55,7 +60,7 @@ public final class Esp2DSettings {
     public final class Element {
         public final String title, prefix;
         public final Kind kind;
-        public final BooleanSetting enabled, outline, useDefaultText, corners;
+        public final BooleanSetting enabled, outline, useDefaultText, corners, backgroundEnabled;
         public final NumberSetting scale, width, outlineWidth, rounding, cornerLength, cornerDistance, order, offset;
         public final ModeSetting position, metric;
         public final ColorSetting background, outlineColor;
@@ -64,7 +69,7 @@ public final class Esp2DSettings {
         public final List<Setting<?>> settings;
 
         private Element(String title, Kind kind, String side, boolean on, int index) {
-            this.title = title; this.kind = kind; prefix = "2D " + title + " ";
+            this.title = title; this.kind = kind; prefix = keyPrefix+"2D " + title + " ";
             int start = Esp2DSettings.this.settings.size();
             enabled = add(new BooleanSetting(prefix + "Enabled", on, visible));
             BooleanSupplier shown = () -> visible.getAsBoolean() && enabled.isEnabled();
@@ -79,8 +84,9 @@ public final class Esp2DSettings {
             outline = add(new BooleanSetting(prefix + "Outline", kind == Kind.BAR || kind == Kind.BOX, shown));
             outlineWidth = add(new NumberSetting(prefix + "Outline Width", 1, .25, 4, .25, () -> shown.getAsBoolean() && outline.isEnabled()));
             outlineColor = add(new ColorSetting(prefix + "Outline Color", 0xCF000000, () -> shown.getAsBoolean() && outline.isEnabled()));
-            background = add(new ColorSetting(prefix + "Background", kind == Kind.BOX ? 0x00000000 : 0x80000000,
-                    () -> shown.getAsBoolean() && (kind == Kind.BAR || kind == Kind.BOX)));
+            backgroundEnabled=add(new BooleanSetting(prefix+"Background Enabled",false,shown));
+            background = add(new ColorSetting(prefix + "Background", 0x80000000,
+                    () -> shown.getAsBoolean() && backgroundEnabled.isEnabled()));
             corners = add(new BooleanSetting(prefix + "Corners Only", true, () -> shown.getAsBoolean() && kind == Kind.BOX));
             cornerLength = add(new NumberSetting(prefix + "Corner Length", .25, .05, .5, .01, () -> shown.getAsBoolean() && kind == Kind.BOX && corners.isEnabled()));
             cornerDistance = add(new NumberSetting(prefix + "Corner Distance", 0, 0, 100, 1, () -> shown.getAsBoolean() && kind == Kind.BOX && corners.isEnabled()));
@@ -114,8 +120,8 @@ public final class Esp2DSettings {
         public final Gradient gradient;
         public final NumberSetting rainbowSpeed, rainbowSaturation;
         private Paint(String prefix, BooleanSupplier visible) {
-            mode = add(new ModeSetting(prefix + " Mode", "Static", visible, "Static", "Global Gradient", "Custom Gradient", "Rainbow"));
-            solid = add(new ColorSetting(prefix + " Static", 0xFFFFFFFF, () -> visible.getAsBoolean() && mode.is("Static")));
+            mode = add(new ModeSetting(prefix + " Mode", "Static", visible, "Static", "Team", "Global Gradient", "Custom Gradient", "Rainbow"));
+            solid = add(new ColorSetting(prefix + " Static", 0xFFFFFFFF, visible));
             gradient = new Gradient(prefix + " Gradient", () -> visible.getAsBoolean() && mode.is("Custom Gradient"));
             rainbowSpeed = add(new NumberSetting(prefix + " Rainbow Speed", .2, 0, 3, .01, () -> visible.getAsBoolean() && mode.is("Rainbow")));
             rainbowSaturation = add(new NumberSetting(prefix + " Rainbow Saturation", .8, 0, 1, .01, () -> visible.getAsBoolean() && mode.is("Rainbow")));

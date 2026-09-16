@@ -70,6 +70,11 @@ public final class NeverLoseRenderCheck {
             NeverLoseWorkspace workspace = new NeverLoseWorkspace();
             render(workspace, 800, 540, 1, "neverlose-desktop.png");
             assertContentHitsClipped(workspace);
+            // Settings cards intentionally start collapsed. Open the fixture
+            // through the same fold affordance a player uses before checking
+            // the controls inside it.
+            click(workspace, hit(workspace, "FOLD", main), 0);
+            render(workspace, 800, 540, 1, null);
             Object toggle = hit(workspace, "BOOLEAN", main.enabled);
             click(workspace, toggle, 0); check(!main.enabled.isEnabled(), "Boolean control did not toggle");
             render(workspace, 800, 540, 1, null);
@@ -133,6 +138,10 @@ public final class NeverLoseRenderCheck {
                 click(workspace, hit(workspace, "CATEGORY", Category.CLIENT), 0);
                 render(workspace, size[0], size[1], size[2], null);
                 check(get(workspace, "category") == Category.CLIENT, "Small window category cannot be selected");
+                if (find(workspace, "DROPDOWN", clickGui.getTheme()) == null) {
+                    click(workspace, hit(workspace, "FOLD", clickGui), 0);
+                    render(workspace, size[0], size[1], size[2], null);
+                }
                 click(workspace, hit(workspace, "DROPDOWN", clickGui.getTheme()), 0);
                 popup = get(workspace, "popup");
                 check(num(popup, "x") >= 0 && num(popup, "x") + num(popup, "w") <= size[0], "Popup outside small window");
@@ -140,6 +149,10 @@ public final class NeverLoseRenderCheck {
             }
             // An open menu must not survive with obsolete coordinates after resizing.
             render(workspace, 800, 540, 1, null);
+            if (find(workspace, "DROPDOWN", clickGui.getTheme()) == null) {
+                click(workspace, hit(workspace, "FOLD", clickGui), 0);
+                render(workspace, 800, 540, 1, null);
+            }
             click(workspace, hit(workspace, "DROPDOWN", clickGui.getTheme()), 0);
             render(workspace, 320, 240, 1, null);
             check(get(workspace, "popup") == null, "Resize kept popup at obsolete coordinates");
@@ -238,8 +251,13 @@ public final class NeverLoseRenderCheck {
         }
     }
     private static Object hit(NeverLoseWorkspace workspace, String kind, Object value) throws Exception {
-        for (Object hit : (List<?>) get(workspace, "hits")) if (get(hit, "kind").toString().equals(kind) && get(hit, "value") == value) return hit;
+        Object result = find(workspace, kind, value);
+        if (result != null) return result;
         throw new AssertionError("Missing control: " + kind + " / " + value);
+    }
+    private static Object find(NeverLoseWorkspace workspace, String kind, Object value) throws Exception {
+        for (Object hit : (List<?>) get(workspace, "hits")) if (get(hit, "kind").toString().equals(kind) && get(hit, "value") == value) return hit;
+        return null;
     }
     private static void click(NeverLoseWorkspace workspace, Object hit, int button) throws Exception { workspace.click(num(hit, "x") + num(hit, "w") / 2, num(hit, "y") + num(hit, "h") / 2, button); }
     private static int num(Object object, String name) throws Exception { return ((Number) get(object, name)).intValue(); }

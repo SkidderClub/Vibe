@@ -22,7 +22,7 @@ public final class EspLayout {
         }
     }
     public static float scale(float projectedHeight, float strength) {
-        return (float)Math.max(.3, Math.min(1.75, Math.pow(Math.max(.01,projectedHeight)/180.0, strength)));
+        return (float)Math.min(2.5, Math.pow(Math.max(.01,projectedHeight)/180.0, strength));
     }
 
     public static Map<String, Rect> arrange(Rect box, List<Request> input, float gap) {

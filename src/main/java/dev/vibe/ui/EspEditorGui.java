@@ -43,6 +43,9 @@ public final class EspEditorGui extends GuiScreen {
     private EspLayout.Rect box;
     private EntityOtherPlayerMP preview;
     private String previewName="Steve";
+    private boolean previewOccluded,previewHurt,previewArmor;
+    private EspPreviewRenderer previewRenderer;
+    private static final int PREVIEW_TEAM=0xFF55AAFF;
     private ColorSetting activeColor;
     private GuiTextField hex;
     private float hue,saturation,brightness;
@@ -59,25 +62,26 @@ public final class EspEditorGui extends GuiScreen {
         hex=new GuiTextField(0,fontRendererObj,left+PICK_X+14,top+PICK_Y+267,240,20);
         hex.setMaxStringLength(9);
     }
-    private Esp2DSettings settings() {return esp.get2D();}
+    private Esp2DSettings settings() {return esp.get2D(esp.editingProfile());}
+    private boolean inherited(){return esp.profileDefaults(esp.editingProfile());}
     private boolean hit(float x,float y,float w,float h,int mx,int my) {return mx>=left+x&&mx<left+x+w&&my>=top+y&&my<top+y+h;}
     private void text(String value,float x,float y,int color) {fontRendererObj.drawString(value,left+x,top+y,color,false);}
     private void rect(float x,float y,float w,float h,int color) {Gui.drawRect((int)(left+x),(int)(top+y),(int)(left+x+w),(int)(top+y+h),color);}
     private void button(String label,int x,int y,int w,boolean on) {
-        RenderUtils.roundedRect(left+x,top+y,left+x+w,top+y+23,4,on?0xFF7261DF:0xFF25252E);
-        text(label,x+8,y+8,on?0xFFFFFFFF:0xFFB9B9C9);
+        SkeetEditorStyle.button(left+x,top+y,left+x+w,top+y+23,label,on);
     }
     @Override public void drawScreen(int mx,int my,float partialTicks) {
         mouseX=(int)(mx/uiScale);mouseY=(int)(my/uiScale);
         SkeetEditorStyle.backdrop(this,BlurModule.ESP_EDITOR,partialTicks);
         GlStateManager.pushMatrix();GlStateManager.scale(uiScale,uiScale,1);
         try {
-            rect(0,0,W,H,0xF514141C);text("ESP EDITOR",18,17,0xFFFFFFFF);
-            text("Drag to place / handle to resize / wheel to scale / middle-click to edit",145,18,0xFF9999AC);
-            button(esp.isEnabled()?"ESP ON":"ESP OFF",800,9,101,esp.isEnabled());
+            SkeetEditorStyle.window(left,top+6,left+W,top+H,"VIBE / ESP EDITOR","Drag / resize / wheel to scale / middle-click to edit");
+
+            button(esp.isEnabled()?"ESP ON":"ESP OFF",800,45,101,esp.isEnabled());
             String[] modes={"2D","3D","Skeletal","Chams"};
             for(int i=0;i<modes.length;i++)button(modes[i],18+i*91,45,82,esp.getModes().isSelected(modes[i]));
-            text("Enabled modes have their own settings section",401,53,0xFF9999AC);
+            String[] profiles={"Players","Friends","Targets"};
+            for(int i=0;i<3;i++)button(profiles[i],400+i*128,45,119,esp.editingProfile()==i);
             drawPreview(partialTicks);
             buildRows();drawRows();
             if(activeColor!=null)drawPicker();
@@ -85,59 +89,50 @@ public final class EspEditorGui extends GuiScreen {
         super.drawScreen(mx,my,partialTicks);
     }
     private void drawPreview(float partialTicks) {
-        rect(18,83,350,453,0xFF1B1B24);text("LIVE PREVIEW",32,97,0xFFB8B0F6);
-        if(esp.getModes().isSelected("2D")) {
+        SkeetEditorStyle.panel(left+18,top+83,left+368,top+536,"LIVE PREVIEW / "+esp.getEditProfile().getValue());
+        if(esp.getModes().isSelected("2D")&&!inherited()) {
             int i=0;for(Element e:settings().elements){button(e.title,28+(i%3)*111,117+(i/3)*27,105,e.enabled.isEnabled());i++;}
         }
+        if(inherited()){text("Using Players appearance",32,125,SkeetEditorStyle.TEXT);text("Disable 'Use player defaults' to customize.",32,145,SkeetEditorStyle.MUTED);}
         box=new EspLayout.Rect(left+157,top+250,83,163);
         scissor(18,207,350,265);
         drawPreviewPlayer((int)(box.x+box.w/2),(int)box.bottom());
         if(esp.getModes().isSelected("3D"))draw3DPreview();
-        if(esp.getModes().isSelected("Skeletal"))drawSkeletonPreview();
+
         frame=null;
         if(esp.getModes().isSelected("2D")) {
-            frame=renderer.draw(settings(),previewActor(),box,Math.round(width/uiScale),Math.round(height/uiScale),true);
+            frame=renderer.draw(esp.get2D(esp.resolvedProfile(esp.editingProfile())),previewActor(),box,Math.round(width/uiScale),Math.round(height/uiScale),true);
             if(selected!=null && selected.enabled.isEnabled()) {
                 EspLayout.Rect r=selected==settings().box?box:frame.elements.get(selected.title);
-                if(r!=null){RenderUtils.tacticalCorners((int)r.x-2,(int)r.y-2,(int)r.right()+2,(int)r.bottom()+2,0xFFA797FF,1,5);
-                    Gui.drawRect((int)r.right()-2,(int)r.bottom()-2,(int)r.right()+4,(int)r.bottom()+4,0xFFD7CDFF);}
+                if(r!=null){RenderUtils.tacticalCorners((int)r.x-2,(int)r.y-2,(int)r.right()+2,(int)r.bottom()+2,SkeetEditorStyle.accent(0),1,5);
+                    Gui.drawRect((int)r.right()-2,(int)r.bottom()-2,(int)r.right()+4,(int)r.bottom()+4,SkeetEditorStyle.TEXT);}
             }
         }
         GL11.glDisable(GL11.GL_SCISSOR_TEST);
-        text(selected==null?"Select an element to see its resize handle":selected.title+"  /  "+String.format(Locale.ROOT,"%.2fx",selected.scale.getDouble()),32,478,0xFFDDDAF4);
-        text("Drop near an edge to stack. Position is saved.",32,496,0xFF9999AC);
-        text("Drag empty preview space to rotate the model.",32,514,0xFF9999AC);
+        text(selected==null?"Select an element to see its resize handle":selected.title+"  /  "+String.format(Locale.ROOT,"%.2fx",selected.scale.getDouble()),32,478,SkeetEditorStyle.TEXT);
+        button(previewOccluded?"Occluded":"Visible",28,504,105,previewOccluded);
+        button(previewHurt?"Hurt":"Healthy",139,504,105,previewHurt);
+        button("Armor",250,504,105,previewArmor);
         if(dragged!=null)text(resizing?"Resizing "+dragged.title:"Place "+dragged.title,mouseX-left+9,mouseY-top+12,0xFFFFFFFF);
     }
     private Esp2DRenderer.Actor previewActor() {
-        return new Esp2DRenderer.Actor(previewName,15,20,16,12,"Diamond Sword",new ItemStack(Items.diamond_sword),
+        Esp2DRenderer.Actor actor=new Esp2DRenderer.Actor(previewName,15,20,16,12,"Diamond Sword",new ItemStack(Items.diamond_sword),
                 new ItemStack[]{new ItemStack(Items.diamond_helmet),new ItemStack(Items.diamond_chestplate),new ItemStack(Items.diamond_leggings),new ItemStack(Items.diamond_boots)},1);
+        actor.teamColor=PREVIEW_TEAM;actor.hurt=previewHurt;actor.profile=esp.resolvedProfile(esp.editingProfile());return actor;
     }
     private void draw3DPreview() {
+        int profile=esp.resolvedProfile(esp.editingProfile());boolean walls=esp.getThroughWalls(profile).isEnabled();
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);GlStateManager.pushMatrix();
         try {
             GlStateManager.translate(box.x+box.w/2,box.bottom(),50);GlStateManager.scale(82,-82,82);GlStateManager.rotate(previewYaw,0,1,0);
-            WorldRenderUtils.begin(esp.getThroughWalls().isEnabled());
-            try {EspModule.Style style=esp.getPreviewStyle(0);WorldRenderUtils.box(new net.minecraft.util.AxisAlignedBB(-.5,0,-.3,.5,2,.3),style.getOutline(),style.getFill(),esp.getLineWidth().getFloat());}
-            finally {WorldRenderUtils.end(esp.getThroughWalls().isEnabled());}
+            WorldRenderUtils.begin(walls);
+            try {EspModule.Style style=esp.getPreviewStyle(esp.editingProfile(),PREVIEW_TEAM,previewHurt);WorldRenderUtils.box(new net.minecraft.util.AxisAlignedBB(-.36,-.1,-.36,.36,1.9,.36),style.getOutline(),style.getFill(),esp.getLineWidth(profile).getFloat());}
+            finally {WorldRenderUtils.end(walls);}
         } finally {GlStateManager.popMatrix();GL11.glPopAttrib();GuiRenderState.prepare(false);}
-    }
-    private void drawSkeletonPreview() {
-        EspModule.SkeletalSettings s=esp.getSkeletal();
-        int color=s.getRainbow().isEnabled()?java.awt.Color.HSBtoRGB((System.currentTimeMillis()%8000)/8000F,.75F,1):s.getColor().getArgb();
-        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);GL11.glPushMatrix();
-        try {GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glDisable(GL11.GL_DEPTH_TEST);GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(770,771);
-            GL11.glTranslated(box.x+box.w/2,box.bottom(),0);GL11.glScaled(82,-82,82);GL11.glRotated(previewYaw,0,1,0);
-            if(s.getDepthBackplate().isEnabled()){GL11.glLineWidth(s.getLineWidth().getFloat()+2);Esp2DRenderer.color(0xB8000000);skeletonLines();}
-            GL11.glLineWidth(s.getLineWidth().getFloat());Esp2DRenderer.color(color);skeletonLines();
-        } finally {GL11.glPopMatrix();GL11.glPopAttrib();GlStateManager.resetColor();}
-    }
-    private void skeletonLines() {
-        float[][] lines={{0,1.85F,0,1.5F},{-.35F,1.5F,.35F,1.5F},{0,1.5F,0,.85F},{-.15F,.85F,.15F,.85F},{-.15F,.85F,-.15F,0},{.15F,.85F,.15F,0},{-.35F,1.5F,-.35F,.8F},{.35F,1.5F,.35F,.8F}};
-        GL11.glBegin(GL11.GL_LINES);for(float[] l:lines){GL11.glVertex2f(l[0],l[1]);GL11.glVertex2f(l[2],l[3]);}GL11.glEnd();
     }
     private void buildRows() {
         rows.clear();
+        if(esp.editingProfile()!=0)setting(esp.editingProfile()==1?esp.getFriendsProfile().getUsePlayerDefaults():esp.getTargetsProfile().getUsePlayerDefaults(),"Use player defaults");
         if(esp.getModes().isSelected("2D")) {
             header("2D / Layout",0);if(!collapsed.contains("2D / Layout")) {
                 setting(settings().distanceScaling,"Distance scaling");setting(settings().gap,"Element gap");
@@ -150,18 +145,20 @@ public final class EspEditorGui extends GuiScreen {
         }
         if(esp.getModes().isSelected("3D")) {
             header("3D / Boxes",0);if(!collapsed.contains("3D / Boxes")){
-                setting(esp.getOutlineColor(),"Color");setting(esp.getFillColor(),"Fill");setting(esp.getLineWidth(),"Line width");setting(esp.getThroughWalls(),"Through walls");
+                setting(esp.getOutlineColor(),"Color");setting(esp.getFillColor(),"Fill");setting(esp.getLineWidth(esp.editingProfile()),"Line width");setting(esp.getThroughWalls(esp.editingProfile()),"Through walls");
                 setting(esp.getPlayerColorMode(),"Player color mode");setting(esp.getColorFade(),"Color fade");
                 setting(esp.getFadeStart(),"Fade start");setting(esp.getFadeEnd(),"Fade end");setting(esp.getFadeSpeed(),"Fade speed");
-                profileRows("Friends / teams",esp.getFriendsProfile());profileRows("Targets",esp.getTargetsProfile());
+                if(esp.editingProfile()==1)profileRows("Friends / teams",esp.getFriendsProfile());
+                if(esp.editingProfile()==2)profileRows("Targets",esp.getTargetsProfile());
             }
         }
         if(esp.getModes().isSelected("Skeletal")){
-            header("Skeletal / Pose",0);if(!collapsed.contains("Skeletal / Pose"))for(Setting<?> s:esp.getSettings())if(s.getRawName().startsWith("Skeletal "))setting(s,s.getRawName().substring(9));
+            header("Skeletal / Pose",0);if(!collapsed.contains("Skeletal / Pose")){ EspModule.SkeletalSettings s=esp.getSkeletal(esp.editingProfile());
+                setting(s.getColor(),"Color");setting(s.getRainbow(),"Rainbow");setting(s.getLineWidth(),"Line width");setting(s.getOnlyTargets(),"Only targets");setting(s.getThroughWalls(),"Through walls");setting(s.getDepthBackplate(),"Depth backplate"); }
         }
         if(esp.getModes().isSelected("Chams")){
             header("Chams / Materials",0);if(!collapsed.contains("Chams / Materials")){
-                chamsRows("Visible surfaces",esp.getVisibleChams());chamsRows("Occluded surfaces",esp.getInvisibleChams());
+                chamsRows("Visible surfaces",esp.getChams(esp.editingProfile(),true));chamsRows("Occluded surfaces",esp.getChams(esp.editingProfile(),false));
             }
         }
         float y=0;for(Row r:rows){r.y=y;y+=r.height;}
@@ -178,7 +175,7 @@ public final class EspEditorGui extends GuiScreen {
     }
     private void elementRows(Element e) {
         setting(e.scale,"Scale");setting(e.position,"Position");setting(e.order,"Stack order");setting(e.offset,"Along edge");
-        setting(e.width,"Width");setting(e.background,"Background / opacity");setting(e.outline,"Outline");setting(e.outlineWidth,"Outline width");setting(e.outlineColor,"Outline color");
+        setting(e.width,"Width");setting(e.backgroundEnabled,"Background");setting(e.background,"Background / opacity");setting(e.outline,"Outline");setting(e.outlineWidth,"Outline width");setting(e.outlineColor,"Outline color");
         setting(e.corners,"Corners only");setting(e.cornerLength,"Corner length");setting(e.cornerDistance,"Corners beyond (m)");setting(e.rounding,"Edge rounding");
         if(e.kind==Kind.TEXT){setting(e.useDefaultText,"Use default text");if(!e.useDefaultText.isEnabled())textRows(e.text);setting(e.metric,"Distance unit");}
         else if(e.kind==Kind.BOX||e.kind==Kind.BAR)paintRows(e.color);
@@ -186,23 +183,27 @@ public final class EspEditorGui extends GuiScreen {
     private void textRows(TextStyle t){setting(t.font,"Font");setting(t.size,"Size");setting(t.shadow,"Shadow");paintRows(t.color);}
     private void paintRows(Paint p){setting(p.mode,"Color mode");setting(p.solid,"Color / opacity");if(p.mode.is("Custom Gradient"))gradient(p.gradient);setting(p.rainbowSpeed,"Rainbow speed");setting(p.rainbowSaturation,"Rainbow saturation");}
     private void header(String title,int level){rows.add(new Row(title,null,null,level,31));}
-    private void setting(Setting<?> setting,String label){if(setting.isVisible())rows.add(new Row(label,setting,null,2,27));}
-    private void gradient(Gradient g){rows.add(new Row("",null,g,2,92));setting(g.direction,"Direction (degrees)");setting(g.speed,"Speed (cycles / sec)");}
+    private void setting(Setting<?> setting,String label){
+        if(!setting.isVisible())return;rows.add(new Row(label,setting,null,2,27));
+        if(setting instanceof ColorSetting){ColorSetting c=(ColorSetting)setting;if(c.getEntityMode()!=null){
+            setting(c.getEntityMode(),label+" source");if(c.getHurtOverride()!=null){setting(c.getHurtOverride(),label+" on damage");setting(c.getHurtColor(),"Damage color");}}}
+    }
+    private void gradient(Gradient g){rows.add(new Row("",null,g,2,92));for(int i=0;i<g.count.getInt();i++)setting(g.colors.get(i),"Stop "+(i+1)+" color");setting(g.direction,"Direction (degrees)");setting(g.speed,"Speed (cycles / sec)");}
     private void drawRows() {
-        rect(LIST_X,LIST_Y,LIST_W,LIST_BOTTOM-LIST_Y,0xFF1B1B24);
+        SkeetEditorStyle.panel(left+LIST_X,top+LIST_Y,left+LIST_X+LIST_W,top+LIST_BOTTOM,null);
         scissor(LIST_X,LIST_Y,LIST_W,LIST_BOTTOM-LIST_Y);
         try {for(Row r:rows){float y=LIST_Y+r.y-scroll;if(y+r.height<LIST_Y||y>LIST_BOTTOM)continue;
             if(r.gradient!=null){drawGradient(r.gradient,y);continue;}
-            if(r.setting==null){rect(LIST_X+5,y+3,LIST_W-16,25,r.level==0?0xFF302941:0xFF252530);text((collapsed.contains(r.title)?"+  ":"-  ")+r.title,LIST_X+14,y+11,0xFFD4CEF1);continue;}
-            text(r.title,LIST_X+16,y+9,0xFFB9B9C9);int x=LIST_X+259,w=232;
+            if(r.setting==null){rect(LIST_X+5,y+3,LIST_W-16,25,r.level==0?0xFF202023:0xFF171719);text((collapsed.contains(r.title)?"+  ":"-  ")+r.title,LIST_X+14,y+11,SkeetEditorStyle.TEXT);continue;}
+            text(r.title,LIST_X+16,y+9,SkeetEditorStyle.TEXT);int x=LIST_X+259,w=232;
             Setting<?> s=r.setting;
-            if(s instanceof BooleanSetting){boolean on=((BooleanSetting)s).isEnabled();rect(x,y+6,w,17,on?0xFF7261DF:0xFF30303C);text(on?"Enabled":"Disabled",x+8,y+10,0xFFFFFFFF);}
-            else if(s instanceof ModeSetting){rect(x,y+5,w,19,0xFF30303C);text(((ModeSetting)s).getValue()+"  >",x+8,y+10,0xFFE4DEF8);}
+            if(s instanceof BooleanSetting){boolean on=((BooleanSetting)s).isEnabled();rect(x,y+6,w,17,on?SkeetEditorStyle.accent(0):SkeetEditorStyle.FIELD);text(on?"Enabled":"Disabled",x+8,y+10,0xFFFFFFFF);}
+            else if(s instanceof ModeSetting){rect(x,y+5,w,19,SkeetEditorStyle.FIELD);text(((ModeSetting)s).getValue()+"  >",x+8,y+10,SkeetEditorStyle.TEXT);}
             else if(s instanceof ColorSetting){RenderUtils.transparencyGrid(left+x,top+(int)y+5,left+x+w,top+(int)y+23,4);rect(x,y+5,w,18,((ColorSetting)s).getArgb());}
             else if(s instanceof NumberSetting){NumberSetting n=(NumberSetting)s;float f=(float)((n.getDouble()-n.getMinimum())/(n.getMaximum()-n.getMinimum()));
-                rect(x,y+21,w,2,0xFF363641);rect(x,y+21,w*f,2,0xFF9F8BFF);text(format(n.getDouble()),x+8,y+8,0xFFE4DEF8);}
+                rect(x,y+21,w,2,SkeetEditorStyle.BORDER);rect(x,y+21,w*f,2,SkeetEditorStyle.accent(0));text(format(n.getDouble()),x+8,y+8,SkeetEditorStyle.TEXT);}
         }}finally{GL11.glDisable(GL11.GL_SCISSOR_TEST);}
-        if(maxScroll>0){float view=LIST_BOTTOM-LIST_Y,thumb=Math.max(25,view*view/(view+maxScroll));rect(LIST_X+LIST_W-5,LIST_Y+(view-thumb)*scroll/maxScroll,3,thumb,0xFF8D7ACF);}
+        if(maxScroll>0){float view=LIST_BOTTOM-LIST_Y,thumb=Math.max(25,view*view/(view+maxScroll));rect(LIST_X+LIST_W-5,LIST_Y+(view-thumb)*scroll/maxScroll,3,thumb,SkeetEditorStyle.accent(0));}
     }
     private static String format(double value){return String.format(Locale.ROOT,"%.2f",value);}
     private void drawGradient(Gradient g,float y) {
@@ -210,12 +211,12 @@ public final class EspEditorGui extends GuiScreen {
         for(int i=0;i<w;i++)rect(x+i,y+9,1,16,gradient.at(i/(float)(w-1)));
         for(int i=0;i<g.count.getInt();i++){
             int sx=x+Math.round(g.positions.get(i).getFloat()*w);
-            rect(sx-5,y+29,10,13,activeColor==g.colors.get(i)?0xFFFFFFFF:0xFF555561);rect(sx-3,y+31,6,9,g.colors.get(i).getArgb());
+            rect(sx-5,y+29,10,13,activeColor==g.colors.get(i)?0xFFFFFFFF:SkeetEditorStyle.BORDER);rect(sx-3,y+31,6,9,g.colors.get(i).getArgb());
         }
-        text("Click a stop to edit color. Drag to position.",x,y+51,0xFF9999AC);
-        text(g.count.getInt()+" color stops",x,y+74,0xFFD4CEF1);
-        rect(x+w-60,y+66,25,20,0xFF30303C);text("-",x+w-51,y+72,0xFFFFFFFF);
-        rect(x+w-28,y+66,25,20,0xFF30303C);text("+",x+w-20,y+72,0xFFFFFFFF);
+        text("Click a stop to edit color. Drag to position.",x,y+51,SkeetEditorStyle.MUTED);
+        text(g.count.getInt()+" color stops",x,y+74,SkeetEditorStyle.TEXT);
+        rect(x+w-60,y+66,25,20,SkeetEditorStyle.FIELD);text("-",x+w-51,y+72,0xFFFFFFFF);
+        rect(x+w-28,y+66,25,20,SkeetEditorStyle.FIELD);text("+",x+w-20,y+72,0xFFFFFFFF);
     }
     private void scissor(int x,int y,int w,int h){
         float sx=mc.displayWidth/(float)width*uiScale,sy=mc.displayHeight/(float)height*uiScale;
@@ -226,7 +227,7 @@ public final class EspEditorGui extends GuiScreen {
         for(Row r:rows)if(r.setting==null&&r.title.equals(e.title)){scroll=Math.min(maxScroll,r.y);break;}
     }
     private Element hovered(int mx,int my){
-        if(frame==null||!hit(18,207,350,265,mx,my))return null;
+        if(inherited()||frame==null||!hit(18,207,350,265,mx,my))return null;
         for(Element e:settings().elements){EspLayout.Rect r=frame.elements.get(e.title);if(r!=null&&r.expand(3).contains(mx,my))return e;}
         if(settings().box.enabled.isEnabled()&&box.expand(4).contains(mx,my)&&!new EspLayout.Rect(box.x+6,box.y+6,box.w-12,box.h-12).contains(mx,my))return settings().box;
         return null;
@@ -234,10 +235,17 @@ public final class EspEditorGui extends GuiScreen {
     @Override protected void mouseClicked(int mx,int my,int button)throws IOException {
         mx=(int)(mx/uiScale);my=(int)(my/uiScale);
         if(activeColor!=null){pickerClick(mx,my,button);return;}
-        if(button==0&&hit(800,9,101,23,mx,my)){esp.toggle();return;}
+        if(button==0&&hit(800,45,101,23,mx,my)){esp.toggle();return;}
+        if(button==0){
+            String[] profiles={"Players","Friends","Targets"};
+            for(int i=0;i<3;i++)if(hit(400+i*128,45,119,23,mx,my)){esp.getEditProfile().setValue(profiles[i]);scroll=0;selected=dragged=null;frame=null;return;}
+            if(hit(28,504,105,23,mx,my)){previewOccluded=!previewOccluded;return;}
+            if(hit(139,504,105,23,mx,my)){previewHurt=!previewHurt;return;}
+            if(hit(250,504,105,23,mx,my)){previewArmor=!previewArmor;return;}
+        }
         String[] modes={"2D","3D","Skeletal","Chams"};
         if(button==0)for(int i=0;i<4;i++)if(hit(18+i*91,45,82,23,mx,my)){esp.getModes().toggle(modes[i]);scroll=0;dragged=null;return;}
-        if(esp.getModes().isSelected("2D")){
+        if(esp.getModes().isSelected("2D")&&!inherited()){
             int i=0;for(Element e:settings().elements){if(button==0&&hit(28+(i%3)*111,117+(i/3)*27,105,23,mx,my)){e.enabled.toggle();if(e.enabled.isEnabled())select(e);return;}i++;}
             if(selected!=null&&frame!=null&&button==0){EspLayout.Rect r=selected==settings().box?box:frame.elements.get(selected.title);
                 if(r!=null&&new EspLayout.Rect(r.right()-5,r.bottom()-5,12,12).contains(mx,my)){
@@ -292,7 +300,7 @@ public final class EspEditorGui extends GuiScreen {
         float offset=e.vertical()?my-box.y-elementHeight/2:mx-(box.x+box.w/2);
         if(side.endsWith("Down"))offset=my-box.bottom()+elementHeight/2;
         if(e.kind==Kind.BAR)offset=0;
-        e.offset.setValue((double)(offset/frame.scale));
+        e.offset.setValue((double)(offset/(box.h/180f)));
         List<Element> stack=new ArrayList<Element>();for(Element other:settings().elements)if(other!=e&&other.enabled.isEnabled()&&other.position.is(side)&&other.kind!=Kind.BOX)stack.add(other);
         Collections.sort(stack,Comparator.comparingDouble(other -> other.order.getDouble()));
         float outward=outward(side,mx,my);int at=0;
@@ -318,8 +326,8 @@ public final class EspEditorGui extends GuiScreen {
     }
     private void openColor(ColorSetting color){activeColor=color;float[] hsv=java.awt.Color.RGBtoHSB(color.getRed(),color.getGreen(),color.getBlue(),null);hue=hsv[0];saturation=hsv[1];brightness=hsv[2];hex.setText(color.getHex());hex.setFocused(false);}
     private void drawPicker(){
-        int x=PICK_X,y=PICK_Y;rect(x-3,y-3,PICK_W+6,309,0xFF09090F);rect(x,y,PICK_W,303,0xFF22222C);
-        text("COLOR / OPACITY",x+14,y+12,0xFFE6E0FF);text("x",x+247,y+12,0xFFAAAAAA);
+        int x=PICK_X,y=PICK_Y;rect(x-3,y-3,PICK_W+6,309,0xFF09090F);rect(x,y,PICK_W,303,SkeetEditorStyle.WINDOW);
+        text("COLOR / OPACITY",x+14,y+12,SkeetEditorStyle.TEXT);text("x",x+247,y+12,0xFFAAAAAA);
         int hueColor=java.awt.Color.HSBtoRGB(hue,1,1)|0xFF000000;
         gradientQuad(x+14,y+32,240,160,0xFFFFFFFF,hueColor,hueColor,0xFFFFFFFF);
         gradientQuad(x+14,y+32,240,160,0,0,0xFF000000,0xFF000000);
@@ -329,7 +337,7 @@ public final class EspEditorGui extends GuiScreen {
         RenderUtils.transparencyGrid(left+x+14,top+y+229,left+x+254,top+y+239,4);
         int rgb=activeColor.getArgb()&0xFFFFFF;gradientQuad(x+14,y+229,240,10,rgb,rgb|0xFF000000,rgb|0xFF000000,rgb);
         rect(x+13+activeColor.getAlpha()/255F*240,y+227,2,14,0xFFFFFFFF);
-        text("Alpha "+Math.round(activeColor.getAlpha()/255F*100)+"%",x+14,y+250,0xFFB9B9C9);hex.drawTextBox();
+        text("Alpha "+Math.round(activeColor.getAlpha()/255F*100)+"%",x+14,y+250,SkeetEditorStyle.TEXT);hex.drawTextBox();
     }
     private void gradientQuad(float x,float y,float w,float h,int tl,int tr,int br,int bl){
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT|GL11.GL_COLOR_BUFFER_BIT|GL11.GL_CURRENT_BIT|GL11.GL_LIGHTING_BIT);
@@ -371,7 +379,10 @@ public final class EspEditorGui extends GuiScreen {
     }
     private void drawPreviewPlayer(int x, int y) {
         if (preview == null || !previewName.equals(preview.getName())) preview = createPreview(previewName);
-        if (preview == null) { drawOfflineModel(x,y); return; }
+        if(previewRenderer==null)previewRenderer=new EspPreviewRenderer(mc.getRenderManager(),"slim".equals(preview.getSkinType()));
+        previewRenderer.esp=esp;previewRenderer.profile=esp.editingProfile();previewRenderer.team=PREVIEW_TEAM;previewRenderer.hurt=previewHurt;previewRenderer.occluded=previewOccluded;
+        ItemStack[] armor={new ItemStack(Items.diamond_boots),new ItemStack(Items.diamond_leggings),new ItemStack(Items.diamond_chestplate),new ItemStack(Items.diamond_helmet)};
+        for(int i=0;i<4;i++)preview.inventory.armorInventory[i]=previewArmor?armor[i]:null;
         GuiRenderState.prepare(true);
         float oldOffset = preview.renderYawOffset, oldYaw = preview.rotationYaw, oldPitch = preview.rotationPitch,
                 oldHead = preview.rotationYawHead, oldPrevOffset = preview.prevRenderYawOffset,
@@ -414,12 +425,8 @@ public final class EspEditorGui extends GuiScreen {
             manager.setRenderShadow(false);
             // The entity fields above are the sole yaw input. Passing a yaw
             // here as well is what caused skins to mirror at some angles.
-            if(esp.getModes().isSelected("Chams")) {
-                mc.getTextureManager().bindTexture(preview.getLocationSkin());
-                GlStateManager.scale(-1,-1,1);GlStateManager.translate(0,-1.5F,0);
-                offlineModel.isChild=false;
-                ChamsRenderer.draw(esp,false,1,() -> offlineModel.render(preview,0,0,0,0,0,.0625F));
-            } else manager.renderEntityWithPosYaw(preview, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F);
+            ChamsRenderer.beginPreview();
+            try {previewRenderer.doRender(preview,0,0,0,0,1);}finally{ChamsRenderer.endPreview();}
         } finally {
             manager.setRenderShadow(oldShadow);
             mc.gameSettings.entityShadows = oldEntityShadows;
@@ -440,26 +447,15 @@ public final class EspEditorGui extends GuiScreen {
     }
 
     private EntityOtherPlayerMP createPreview(final String name) {
-        if(mc.theWorld==null)return null;
-        EntityOtherPlayerMP player=new EntityOtherPlayerMP(mc.theWorld,new GameProfile(UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)),name));
-        player.getDataWatcher().updateObject(10,Byte.valueOf((byte)0x7F));return player;
-    }
-    private final net.minecraft.entity.Entity offlineEntity=new net.minecraft.entity.Entity(null) {
-        protected void entityInit() { }
-        protected void readEntityFromNBT(net.minecraft.nbt.NBTTagCompound tag) { }
-        protected void writeEntityToNBT(net.minecraft.nbt.NBTTagCompound tag) { }
-    };
-    private final ModelPlayer offlineModel=new ModelPlayer(0,false);
-    private void drawOfflineModel(int x,int y){
-        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);GlStateManager.pushMatrix();
-        try {
-            GuiRenderState.prepare(true);GlStateManager.translate(x,y,50);GlStateManager.scale(-82,82,82);
-            GlStateManager.rotate(180+previewYaw,0,1,0);
-            RenderHelper.enableGUIStandardItemLighting();mc.getTextureManager().bindTexture(DefaultPlayerSkin.getDefaultSkinLegacy());
-            GlStateManager.translate(0,-1.5F,0);offlineModel.isChild=false;
-            offlineModel.setRotationAngles(0,0,0,0,0,.0625F,offlineEntity);
-            if(esp.getModes().isSelected("Chams"))ChamsRenderer.draw(esp,false,1,() -> offlineModel.render(offlineEntity,0,0,0,0,0,.0625F));
-            else offlineModel.render(offlineEntity,0,0,0,0,0,.0625F);
-        } finally {RenderHelper.disableStandardItemLighting();GlStateManager.popMatrix();GL11.glPopAttrib();GuiRenderState.prepare(false);}
+        EntityOtherPlayerMP player=new EntityOtherPlayerMP(mc.theWorld==null?new EspPreviewWorld():mc.theWorld,new GameProfile(UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)),name)) {
+            @Override public boolean isSpectator(){return false;}
+            @Override protected net.minecraft.client.network.NetworkPlayerInfo getPlayerInfo(){return null;}
+            @Override public ResourceLocation getLocationSkin(){return mc.thePlayer==null?DefaultPlayerSkin.getDefaultSkinLegacy():mc.thePlayer.getLocationSkin();}
+            @Override public String getSkinType(){return mc.thePlayer==null?"default":mc.thePlayer.getSkinType();}
+            @Override public ResourceLocation getLocationCape(){return null;}
+        };
+        player.getDataWatcher().updateObject(10,Byte.valueOf((byte)0x7F));
+        player.inventory.mainInventory[0]=new ItemStack(Items.diamond_sword);
+        return player;
     }
 }

@@ -130,6 +130,7 @@ public final class ModuleManager {
         register(new InventoryManagerModule());
         register(new ChestStealerModule());
         register(new AutoToolModule());
+        register(new dev.vibe.module.impl.PickenSwitchModule());
         register(new BedAuraModule());
         register(new ScaffoldModule());
         register(new FastBreakModule());

@@ -23,7 +23,7 @@ final class EspPaintShader {
             +"float mask=textured==1?texture2D(image,gl_TexCoord[0].xy).a:1.;gl_FragColor=vec4(c.rgb,c.a*mask*opacity);}";
 
     static boolean bind(Esp2DSettings settings, Esp2DSettings.Paint paint, EspLayout.Rect rect,
-                        int screenWidth,int screenHeight,boolean texture,float opacity,double seconds) {
+                        int screenWidth,int screenHeight,boolean texture,float opacity,double seconds,int team,boolean hurt) {
         if (failed) return false;
         if(program==0) {
             int vertex=0,fragment=0,linked=0;
@@ -37,17 +37,20 @@ final class EspPaintShader {
                 System.err.println("[Vibe] ESP gradient shader unavailable: "+error.getMessage()); return false;
             } finally { if(vertex!=0)GL20.glDeleteShader(vertex);if(fragment!=0)GL20.glDeleteShader(fragment); }
         }
-        EspGradient gradient=new EspGradient(paint.mode.is("Global Gradient")?settings.global:paint.gradient,seconds);
+        EspGradient gradient=new EspGradient(paint.mode.is("Global Gradient")?settings.global:paint.gradient,seconds,team,hurt);
+        boolean solid=paint.mode.is("Static")||paint.mode.is("Team")||paint.solid.isHurtOverride(hurt);
+        int solidColor=paint.solid.resolve(team,hurt);
+        if(paint.mode.is("Team")&&team!=0&&!paint.solid.isHurtOverride(hurt))solidColor=(solidColor&0xFF000000)|(team&0xFFFFFF);
         GL20.glUseProgram(program);
         GL20.glUniform1i(location("image"),0);GL20.glUniform1i(location("textured"),texture?1:0);
-        GL20.glUniform1i(location("count"),paint.mode.is("Static")?1:gradient.colors.length);
+        GL20.glUniform1i(location("count"),solid?1:gradient.colors.length);
         for(int i=0;i<gradient.colors.length;i++) {
-            int c=paint.mode.is("Static")?paint.solid.getArgb():gradient.colors[i];GL20.glUniform4f(location("colors["+i+"]"),(c>>16&255)/255F,(c>>8&255)/255F,(c&255)/255F,(c>>>24)/255F);
+            int c=solid?solidColor:gradient.colors[i];GL20.glUniform4f(location("colors["+i+"]"),(c>>16&255)/255F,(c>>8&255)/255F,(c&255)/255F,(c>>>24)/255F);
             GL20.glUniform1f(location("stops["+i+"]"),gradient.positions[i]);
         }
         GL20.glUniform2f(location("direction"),gradient.dx,gradient.dy);
         GL20.glUniform1f(location("phase"),paint.mode.is("Rainbow")?(float)((seconds*paint.rainbowSpeed.getDouble())%1):gradient.phase);
-        GL20.glUniform1i(location("rainbow"),paint.mode.is("Rainbow")?1:0);
+        GL20.glUniform1i(location("rainbow"),!solid&&paint.mode.is("Rainbow")?1:0);
         GL20.glUniform1f(location("saturation"),paint.rainbowSaturation.getFloat());
         GL20.glUniform1f(location("opacity"),opacity);
         VIEWPORT.clear();GL11.glGetInteger(GL11.GL_VIEWPORT,VIEWPORT);

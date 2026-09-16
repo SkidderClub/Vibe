@@ -192,6 +192,8 @@ public final class ClientEvents {
             // attack key, not at the end of the tick after a break action has
             // already begun.
             AutoToolModule autoTool = Vibe.getInstance().getModuleManager().getModule(AutoToolModule.class);
+            dev.vibe.module.impl.PickenSwitchModule picken=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.PickenSwitchModule.class);
+            if(picken!=null)picken.tick();
             if (autoTool != null) autoTool.tick();
             BedAuraModule bedAura = Vibe.getInstance().getModuleManager().getModule(BedAuraModule.class);
             if (bedAura != null) bedAura.tick();
@@ -486,6 +488,11 @@ public final class ClientEvents {
         ScaledResolution resolution = new ScaledResolution(minecraft);
         int left = resolution.getScaledWidth() / 2 - 91;
         int top = resolution.getScaledHeight() - 22;
+        dev.vibe.module.impl.PickenSwitchModule picken=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.PickenSwitchModule.class);
+        if(picken!=null&&picken.hasSilentSlot()){
+            int x=left+picken.getSpoofedSlot()*20;
+            RenderUtils.roundedOutline(x,top,x+22,top+22,2F,1.5F,picken.getSilentColor().getArgb());
+        }
         AutoToolModule autoTool = Vibe.getInstance().getModuleManager().getModule(AutoToolModule.class);
         if (autoTool != null && autoTool.hasSilentSlot()) {
             int x = left + autoTool.getSpoofedSlot() * 20;
@@ -689,7 +696,7 @@ public final class ClientEvents {
             return;
         }
         EspModule esp = Vibe.getInstance().getModuleManager().getModule(EspModule.class);
-        if (esp != null && esp.isEnabled() && esp.getModes().isSelected("2D") && esp.get2D().name.enabled.isEnabled()) {
+        if (esp != null && esp.isEnabled() && esp.getModes().isSelected("2D") && esp.get2D(esp.resolvedProfile(esp.profileFor(event.entity))).name.enabled.isEnabled()) {
             event.setCanceled(true);
         }
     }

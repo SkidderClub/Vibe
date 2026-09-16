@@ -47,7 +47,7 @@ public final class EspRenderCheck {
             ModuleManager modules=(ModuleManager)u.getMethod("allocateInstance",Class.class).invoke(unsafe,ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<dev.vibe.module.Module>(Arrays.asList(esp,editorModule)));set(Vibe.class,vibe,"moduleManager",modules);
             esp.getModes().setValue(new LinkedHashSet<String>(Arrays.asList("2D")));renderer=new Esp2DRenderer();
-            healthAndState();check("bars");gradientMask();check("gradient");textFonts();check("fonts");editor(editorModule);check("editor");
+            cornersAndContext();textBackgrounds();distanceAnchors();healthAndState();check("bars");gradientMask();check("gradient");textFonts();check("fonts");editor(editorModule);check("editor");
             if(GL11.glGetError()!=0)throw new AssertionError("OpenGL error after ESP checks");
             System.out.println("ESP native checks passed: bars, global gradient masks, fonts, editor selection/resizing and settings visibility.");
         } finally {buffer.destroy();}
@@ -67,12 +67,46 @@ public final class EspRenderCheck {
             if((filled&0x00FF00)==0||(empty&0x00FF00)!=0)throw new AssertionError("GTA7 health ratio/orientation "+side);
         }
         s.healthBar.position.setValue("Left");s.healthBar.outline.setValue(true);s.healthBar.outlineColor.setValue(0xFFFF0000);s.healthBar.outlineWidth.setValue(2D);
-        s.healthBar.background.setValue(0x800000FF);frame();EspLayout.Rect bar=renderer.draw(s,actor(0,150),new EspLayout.Rect(300,180,100,180),W,H,true).elements.get("Health Bar");
+        s.healthBar.backgroundEnabled.setValue(true);s.healthBar.background.setValue(0x800000FF);frame();EspLayout.Rect bar=renderer.draw(s,actor(0,150),new EspLayout.Rect(300,180,100,180),W,H,true).elements.get("Health Bar");
         int bg=pixel((int)(bar.x+bar.w/2),(int)(bar.y+bar.h/2));if((bg>>16&255)!=0||Math.abs((bg&255)-128)>2)throw new AssertionError("Outline contaminated translucent bar background");
         s.healthBar.outline.setValue(false);s.healthBar.background.setValue(0);
         frame();GL11.glEnable(GL11.GL_DEPTH_TEST);GL11.glDepthMask(true);GL11.glDisable(GL11.GL_BLEND);
         renderer.draw(s,actor(75,150),new EspLayout.Rect(300,180,100,180),W,H,true);
         if(!GL11.glIsEnabled(GL11.GL_DEPTH_TEST)||GL11.glIsEnabled(GL11.GL_BLEND)||!GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK))throw new AssertionError("ESP changed caller GL state");
+    }
+    private static void cornersAndContext()throws Exception {
+        Esp2DSettings s=new EspModule().get2D();for(Esp2DSettings.Element e:s.elements)e.enabled.setValue(false);
+        s.distanceScaling.setValue(0D);s.box.enabled.setValue(true);s.box.width.setValue(2D);s.box.outline.setValue(true);s.box.outlineWidth.setValue(2D);
+        s.box.outlineColor.setValue(0xFFFF0000);s.box.color.solid.setValue(0xFF00FFFF);s.box.corners.setValue(true);s.box.cornerDistance.setValue(0D);s.box.cornerLength.setValue(.25);s.box.rounding.setValue(0D);
+        frame();renderer.draw(s,actor(20,20),new EspLayout.Rect(300,180,100,180),W,H,true);
+        for(int[] point:new int[][]{{325,180},{374,180},{325,360},{374,360},{300,205},{400,205},{300,334},{400,334}})
+            if((pixel(point[0],point[1])&0xFFFFFF)!=0xFF0000)throw new AssertionError("Corner outline missing end cap at "+Arrays.toString(point));
+        save("corner-caps.png");
+        s.box.color.mode.setValue("Team");s.box.color.solid.getHurtOverride().setValue(true);s.box.color.solid.getHurtColor().setValue(0xFFFF00FF);
+        Esp2DRenderer.Actor a=actor(20,20);a.teamColor=0xFF55AAFF;
+        frame();renderer.draw(s,a,new EspLayout.Rect(300,180,100,180),W,H,true);if((pixel(310,180)&0xFFFFFF)!=0x55AAFF)throw new AssertionError("Team color shader");
+        a.hurt=true;frame();renderer.draw(s,a,new EspLayout.Rect(300,180,100,180),W,H,true);if((pixel(310,180)&0xFFFFFF)!=0xFF00FF)throw new AssertionError("Hurt color shader precedence");
+    }
+    private static void distanceAnchors(){
+        Esp2DSettings s=new EspModule().get2D();s.distanceScaling.setValue(1D);s.name.offset.setValue(30D);s.name.position.setValue("Right Down");
+        Esp2DRenderer.Frame near=renderer.measure(s,actor(20,20),new EspLayout.Rect(300,180,100,180));
+        Esp2DRenderer.Frame far=renderer.measure(s,actor(20,20),new EspLayout.Rect(300,180,10,18));
+        for(String id:near.elements.keySet()){
+            EspLayout.Rect n=near.elements.get(id),f=far.elements.get(id);
+            if(Math.abs((n.x-300)*.1-(f.x-300))>.01||Math.abs((n.y-180)*.1-(f.y-180))>.01)throw new AssertionError("Distance moved anchor "+id);
+        }
+    }
+    private static void textBackgrounds()throws Exception {
+        Esp2DSettings s=new EspModule().get2D();for(Esp2DSettings.Element e:s.elements)e.enabled.setValue(false);
+        s.distanceScaling.setValue(0D);s.name.enabled.setValue(true);s.name.outline.setValue(false);s.name.backgroundEnabled.setValue(true);s.name.background.setValue(0xFF400000);s.text.shadow.setValue(false);s.text.color.solid.setValue(0xFF00FFFF);
+        frame();int col=0;
+        for(String font:new String[]{"Minecraft","Sans","Sans Bold"}){
+            s.text.font.setValue(font);EspLayout.Rect r=renderer.draw(s,actor(20,20),new EspLayout.Rect(140+col++*270,250,80,180),W,H,true).elements.get("Name");
+            int minY=H,maxY=0;
+            for(int y=(int)r.y-2;y<=r.bottom()+2;y++)for(int x=(int)r.x-2;x<=r.right()+2;x++)if((pixel(x,y)&0xFF00)>0x1000){minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
+            if(minY>maxY||Math.abs((minY-r.y)-(r.bottom()-1-maxY))>2)throw new AssertionError("Text background off-center: "+font);
+        }
+        save("text-background-centering.png");
     }
     private static void gradientMask()throws Exception {
         Esp2DSettings s=esp.get2D();s.healthBar.enabled.setValue(false);s.box.enabled.setValue(true);s.box.corners.setValue(false);s.box.width.setValue(6D);s.box.outline.setValue(false);s.box.color.mode.setValue("Global Gradient");
@@ -94,6 +128,10 @@ public final class EspRenderCheck {
         set(net.minecraft.init.Bootstrap.class,null,"alreadyRegistered",true);
         net.minecraft.block.Block.registerBlocks();net.minecraft.item.Item.registerItems();
         installItemRenderer();
+        set(Minecraft.class,mc,"renderManager",new net.minecraft.client.renderer.entity.RenderManager(mc.renderEngine,mc.getRenderItem()));
+        mc.getRenderManager().options=mc.gameSettings;
+        mc.entityRenderer=null;
+        set(Minecraft.class,mc,"itemRenderer",new ItemRenderer(mc));
         armorLayout();
         esp.get2D().itemIcon.enabled.setValue(true);esp.get2D().armor.enabled.setValue(true);
         GuiScreen parent=new GuiScreen() { };EspEditorGui gui=new EspEditorGui(module,parent);gui.mc=mc;gui.width=W;gui.height=H;set(GuiScreen.class,gui,"fontRendererObj",mc.fontRendererObj);gui.initGui();
@@ -112,10 +150,27 @@ public final class EspRenderCheck {
         float[] hsv=java.awt.Color.RGBtoHSB(esp.get2D().global.colors.get(1).getRed(),esp.get2D().global.colors.get(1).getGreen(),esp.get2D().global.colors.get(1).getBlue(),null);
         if(Math.abs(hsv[1]-.5)>.02||Math.abs(hsv[2]-.5)>.02)throw new AssertionError("Picker saturation/brightness interaction");
         gui.keyTyped((char)0,org.lwjgl.input.Keyboard.KEY_ESCAPE);
+        profilePreviews(gui);
         gui.width=460;gui.height=280;gui.initGui();GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GL11.glOrtho(0,460,280,0,1000,3000);GL11.glMatrixMode(GL11.GL_MODELVIEW);
         gui.drawScreen(0,0,0);save("editor-small.png");
         gui.keyTyped((char)0,org.lwjgl.input.Keyboard.KEY_ESCAPE);
         if(((PreviewMinecraft)mc).destination!=parent)throw new AssertionError("Editor did not return to its parent screen");
+    }
+    private static void profilePreviews(EspEditorGui gui)throws Exception {
+        esp.getModes().setValue(new LinkedHashSet<String>(Arrays.asList("Chams")));
+        gui.mouseClicked(540,55,0);if(esp.editingProfile()!=1)throw new AssertionError("Friend profile tab");
+        esp.getFriendsProfile().getUsePlayerDefaults().setValue(false);
+        EspModule.ChamsSettings visible=esp.getChams(1,true),hidden=esp.getChams(1,false);
+        visible.getMode().setValue("Glow");visible.getColor().setValue(0xFF00FF80);hidden.getMode().setValue("Glow");hidden.getColor().setValue(0xFFFF3232);
+        frame();gui.drawScreen(0,0,0);int green=pixel(198,320);if((green>>8&255)<200||(green>>16&255)>40)throw new AssertionError("Real player visible material: "+Integer.toHexString(green));save("editor-friends-visible-glow.png");
+        gui.mouseClicked(40,515,0);frame();gui.drawScreen(0,0,0);int red=pixel(198,320);if((red>>16&255)<200||(red>>8&255)>90)throw new AssertionError("Occluded preview did not select hidden material");save("editor-friends-occluded-glow.png");
+        hidden.getColor().getHurtOverride().setValue(true);hidden.getColor().getHurtColor().setValue(0xFFAA88FF);
+        gui.mouseClicked(150,515,0);frame();gui.drawScreen(0,0,0);int hurt=pixel(198,320);if((hurt&255)<200||(hurt>>8&255)<100)throw new AssertionError("Damage preview color");
+        gui.mouseClicked(260,515,0);frame();gui.drawScreen(0,0,0);save("editor-armor-hurt.png");check("armor preview");
+        Field p=EspEditorGui.class.getDeclaredField("preview");p.setAccessible(true);net.minecraft.client.entity.EntityOtherPlayerMP player=(net.minecraft.client.entity.EntityOtherPlayerMP)p.get(gui);
+        if(player.getCurrentArmor(3)==null||player.getHeldItem()==null)throw new AssertionError("Preview has no actual equipment");
+        gui.mouseClicked(670,55,0);if(esp.editingProfile()!=2||esp.getChams(2,true).getMode().is("Glow"))throw new AssertionError("Profile edits leaked to Targets");
+        frame();gui.drawScreen(0,0,0);save("editor-targets-inherited.png");
     }
     private static void installItemRenderer()throws Exception {
         // A simple baked quad runs the real RenderItem path without Forge's resource-loader bootstrap.

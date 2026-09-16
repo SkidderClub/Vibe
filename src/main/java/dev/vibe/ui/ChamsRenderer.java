@@ -23,14 +23,18 @@ public final class ChamsRenderer {
     private static int worldDepth;
     private static EffectProgram material;
     private static boolean shaderFailed;
+    private static boolean directPreview;
+    private static int previewDepth;
+    static void beginPreview(){previewDepth++;}
+    static void endPreview(){previewDepth=Math.max(0,previewDepth-1);if(previewDepth==0)ChamsGlow.finish();}
 
     private ChamsRenderer() { }
 
     public static void beginWorld() { worldDepth++; }
-    public static void endWorld() { worldDepth = Math.max(0, worldDepth - 1); }
+    public static void endWorld() { worldDepth = Math.max(0, worldDepth - 1); if(worldDepth==0)ChamsGlow.finish(); }
 
     private static EspModule module(Object candidate) {
-        if (worldDepth == 0 || !(candidate instanceof EntityLivingBase)) return null;
+        if (directPreview || worldDepth == 0 || !(candidate instanceof EntityLivingBase)) return null;
         Vibe vibe = Vibe.getInstance();
         Minecraft mc = Minecraft.getMinecraft();
         if (vibe == null || vibe.getModuleManager() == null || mc == null
@@ -79,7 +83,9 @@ public final class ChamsRenderer {
         }
         QolModule qol = antiInvisible((EntityLivingBase) entity);
         float opacity = qol == null ? 1 : qol.getInvisibleAlpha().getFloat() / 255.0F;
-        draw(esp, armor, opacity, () -> model.render(entity, swing, amount, age, yaw, pitch, scale));
+        EntityLivingBase living=(EntityLivingBase)entity;
+        draw(esp,armor,opacity,()->model.render(entity,swing,amount,age,yaw,pitch,scale),false,
+                esp.resolvedProfile(esp.profileFor(living)),esp.teamColor(living),living.hurtTime>0,-1);
     }
 
     /** Shared with the offscreen driver check; geometry already has vanilla's transforms and pose. */
@@ -91,6 +97,17 @@ public final class ChamsRenderer {
     public static void drawNative(EspModule esp, Runnable geometry) { draw(esp, false, 1, geometry, true); }
 
     private static void draw(EspModule esp, boolean armor, float opacity, Runnable geometry, boolean nativeMesh) {
+        draw(esp,armor,opacity,geometry,nativeMesh,0,0,false,-1);
+    }
+
+    static void preview(EspModule esp,int profile,boolean occluded,int team,boolean hurt,boolean armor,Runnable geometry) {
+        boolean previous=directPreview;directPreview=true;
+        try { draw(esp,armor,1,geometry,false,esp.resolvedProfile(profile),team,hurt,occluded?0:1); }
+        finally {directPreview=previous;}
+    }
+
+    private static void draw(EspModule esp, boolean armor, float opacity, Runnable geometry, boolean nativeMesh,
+                             int profile,int team,boolean hurt,int previewSide) {
         try (EffectState state = new EffectState()) {
             GL11.glEnable(GL11.GL_DEPTH_TEST);
             GL11.glDepthMask(false);
@@ -107,6 +124,7 @@ public final class ChamsRenderer {
                 material.bind();
                 material.integer("Skin", 0);
                 material.integer("NativeMesh", nativeMesh ? 1 : 0);
+                material.integer("MaskPass",0);
             } else {
                 GL20.glUseProgram(0);
                 // Full-bright fallback must not inherit lightmap or hurt-flash combiners.
@@ -117,8 +135,20 @@ public final class ChamsRenderer {
                 GL13.glActiveTexture(GL13.GL_TEXTURE0);
                 GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL11.GL_TEXTURE_ENV_MODE, GL11.GL_MODULATE);
             }
-            pass(esp.getInvisibleChams(), armor, opacity, GL11.GL_GREATER, shader, geometry);
-            pass(esp.getVisibleChams(), armor, opacity, GL11.GL_LEQUAL, shader, geometry);
+            EspModule.ChamsSettings hidden=esp.getChams(profile,false),visible=esp.getChams(profile,true);
+            if(previewSide!=1)pass(hidden,armor,opacity,previewSide==0?GL11.GL_ALWAYS:GL11.GL_GREATER,shader,geometry,team,hurt);
+            if(previewSide!=0)pass(visible,armor,opacity,previewSide==1?GL11.GL_ALWAYS:GL11.GL_LEQUAL,shader,geometry,team,hurt);
+            if(shader&&((previewSide!=1&&hidden.getMode().is("Glow"))||(previewSide!=0&&visible.getMode().is("Glow")))) {
+                ChamsGlow.capture(()->{
+                    if(nativeMesh)GL11.glDisable(GL11.GL_CULL_FACE);
+                    material.integer("MaskPass",1);
+                    try {
+                        if(previewSide!=1&&hidden.getMode().is("Glow"))pass(hidden,armor,opacity,previewSide==0?GL11.GL_ALWAYS:GL11.GL_GREATER,true,geometry,team,hurt);
+                        if(previewSide!=0&&visible.getMode().is("Glow"))pass(visible,armor,opacity,previewSide==1?GL11.GL_ALWAYS:GL11.GL_LEQUAL,true,geometry,team,hurt);
+                    } finally {material.integer("MaskPass",0);}
+                });
+            }
+            if(worldDepth==0&&previewDepth==0)ChamsGlow.finish();
         } finally {
             // Models may use GlStateManager.color internally; force its next caller to resync.
             GlStateManager.resetColor();
@@ -126,20 +156,21 @@ public final class ChamsRenderer {
     }
 
     private static void pass(EspModule.ChamsSettings settings, boolean armor, float opacity,
-                             int depth, boolean shader, Runnable geometry) {
-        ColorSetting color = settings.getColor();
-        float alpha = color.getAlpha() / 255.0F * Math.max(0, Math.min(1, opacity));
+                             int depth, boolean shader, Runnable geometry,int team,boolean hurt) {
+        int color=settings.getColor().resolve(team,hurt);
+        float r=(color>>16&255)/255F,g=(color>>8&255)/255F,b=(color&255)/255F;
+        float alpha = (color>>>24) / 255.0F * Math.max(0, Math.min(1, opacity));
         if (alpha <= 0 || (armor && !settings.getArmor().isEnabled())) return;
         GL11.glDepthFunc(depth);
         if (shader) {
-            material.vec3("Tint", color.getRed() / 255.0F, color.getGreen() / 255.0F, color.getBlue() / 255.0F);
+            material.vec3("Tint",r,g,b);
             material.scalar("Opacity", alpha);
             material.integer("ShowSkin", settings.getShowSkin().isEnabled() ? 1 : 0);
             material.integer("Material", settings.getMode().is("Glow") ? 1 : settings.getMode().is("Metallic") ? 2 : 0);
         } else {
             if (settings.getShowSkin().isEnabled()) GL11.glEnable(GL11.GL_TEXTURE_2D);
             else GL11.glDisable(GL11.GL_TEXTURE_2D);
-            GL11.glColor4f(color.getRed() / 255.0F, color.getGreen() / 255.0F, color.getBlue() / 255.0F, alpha);
+            GL11.glColor4f(r,g,b,alpha);
         }
         geometry.run();
     }

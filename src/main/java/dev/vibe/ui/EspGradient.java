@@ -9,11 +9,14 @@ public final class EspGradient {
     public final int[] colors;
     public final float dx, dy, phase;
     public EspGradient(Gradient gradient, double seconds) {
+        this(gradient,seconds,0,false);
+    }
+    public EspGradient(Gradient gradient, double seconds,int team,boolean hurt) {
         int n=gradient.count.getInt();
         List<Integer> indices=new ArrayList<Integer>(); for(int i=0;i<n;i++) indices.add(i);
         Collections.sort(indices,Comparator.comparingDouble(i -> gradient.positions.get(i).getDouble()));
         positions=new float[n]; colors=new int[n];
-        for(int i=0;i<n;i++) { positions[i]=gradient.positions.get(indices.get(i)).getFloat(); colors[i]=gradient.colors.get(indices.get(i)).getArgb(); }
+        for(int i=0;i<n;i++) { positions[i]=gradient.positions.get(indices.get(i)).getFloat(); colors[i]=gradient.colors.get(indices.get(i)).resolve(team,hurt); }
         double angle=Math.toRadians(gradient.direction.getDouble()); dx=(float)Math.cos(angle); dy=(float)Math.sin(angle);
         phase=(float)((seconds*gradient.speed.getDouble())%2);
     }
