@@ -1,6 +1,7 @@
 package dev.vibe.module.impl;
 
 import dev.vibe.game.meme.GameType;
+import dev.vibe.game.meme.GameMoveHistory;
 import dev.vibe.game.meme.MemeGameState;
 import dev.vibe.game.meme.MemeGamePreferences;
 import dev.vibe.module.Category;
@@ -21,6 +22,7 @@ public abstract class MemeGameModule extends Module {
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final GameType type;
     private final MemeGameState game;
+    private final GameMoveHistory history;
     private final MemeGamePreferences preferences = MemeGamePreferences.get();
     private final Random random = new Random();
     private String opponent;
@@ -34,11 +36,13 @@ public abstract class MemeGameModule extends Module {
     private String pendingEcho;
     private String notice = "Choose a player or robot to begin";
     private int celebrationTicks;
+    private long lastMoveRequest;
 
     protected MemeGameModule(String name, String description, GameType type, MemeGameState game) {
         super(name, description, Category.MEME, Keyboard.KEY_NONE);
         this.type = type;
         this.game = game;
+        this.history = new GameMoveHistory(game);
     }
 
     @Override protected void onEnable() {
@@ -58,11 +62,22 @@ public abstract class MemeGameModule extends Module {
     public final boolean isMyTurn() { return opponent != null && !game.isFinished() && game.getTurn() == localSide; }
     public final int getLocalSide() { return localSide; }
 
+    public final boolean canRequestMove() {
+        return opponent != null && !robot && !game.isFinished() && game.getTurn() != localSide;
+    }
+
+    public final boolean requestMove() {
+        if (!canRequestMove() || !canChat()) return false;
+        send("@" + opponent + " please make your next move");
+        notice = "Move requested from " + opponent;
+        return true;
+    }
+
     /** Sends the specified first-player request; acceptance creates the board. */
     public final boolean request(String player) {
-        if (!validPlayer(player)) { notice = "Select a player first"; return false; }
+        if (!validPlayer(player) || (minecraft.thePlayer != null && minecraft.thePlayer.getName().equalsIgnoreCase(player))) { notice = "Select another player first"; return false; }
         if (!canChat()) return false;
-        requestedOpponent = player; pendingOpponent = null; opponent = null; robot = false; game.reset(); localSide = 0;
+        requestedOpponent = player; pendingOpponent = null; opponent = null; robot = false; history.reset(); lastMoveRequest = 0; localSide = 0;
         send("@" + player + ", wanna play a game of " + type.getDisplayName() + "?");
         notice = "Request sent to " + player + " — you will start when they accept";
         return true;
@@ -71,14 +86,14 @@ public abstract class MemeGameModule extends Module {
     public final boolean accept() {
         if (!validPlayer(pendingOpponent)) { notice = "No pending request"; return false; }
         if (!canChat()) return false;
-        opponent = pendingOpponent; pendingOpponent = null; requestedOpponent = null; robot = false; localSide = 1; game.reset();
+        opponent = pendingOpponent; pendingOpponent = null; requestedOpponent = null; robot = false; localSide = 1; history.reset(); lastMoveRequest = 0;
         send("@" + opponent + " yes lets play a game of " + type.getDisplayName() + "!");
         notice = opponent + " starts as " + sideName(0);
         return true;
     }
 
     public final void startRobot(boolean playerStarts) {
-        requestedOpponent = pendingOpponent = null; opponent = "Robot"; robot = true; localSide = playerStarts ? 0 : 1; game.reset();
+        requestedOpponent = pendingOpponent = null; opponent = "Robot"; robot = true; localSide = playerStarts ? 0 : 1; history.reset(); lastMoveRequest = 0;
         notice = "Playing Robot • strength " + preferences.getRobotStrength() + " • you are " + sideName(localSide);
         if (!playerStarts) robotMoveAt = System.currentTimeMillis() + robotThinkingDelay();
     }
@@ -87,7 +102,7 @@ public abstract class MemeGameModule extends Module {
     public final boolean play(String move) {
         if (!isMyTurn()) { notice = "Wait for " + (robot ? "Robot" : opponent) + " to move"; return false; }
         if (!robot && !canChat()) return false;
-        if (!game.move(move)) { notice = "That move is not legal"; return false; }
+        if (!history.move(move)) { notice = "That move is not legal"; return false; }
         if (!robot) send(type.getWireName() + ": " + move);
         notice = game.getStatus();
         finishCompletedMatch();
@@ -96,7 +111,7 @@ public abstract class MemeGameModule extends Module {
     }
 
     public final void cancel() {
-        if (opponent != null && !robot) send("@" + opponent + " I will cancel the match of " + type.getDisplayName() + " with you, because i don't want to play anymore");
+        if (opponent != null && !robot && !game.isFinished()) send("@" + opponent + " I will cancel the match of " + type.getDisplayName() + " with you, because i don't want to play anymore");
         clear("Match ended");
     }
 
@@ -108,7 +123,7 @@ public abstract class MemeGameModule extends Module {
         if (robot && opponent != null && robotMoveAt > 0L && now >= robotMoveAt && !game.isFinished() && game.getTurn() != localSide) {
             robotMoveAt = 0L;
             String move = game.chooseRobotMove(preferences.getRobotStrength(), random);
-            if (move != null && game.move(move)) {
+            if (move != null && history.move(move)) {
                 playOpponentMoveSound();
                 notice = "Robot played " + move + " • " + game.getStatus();
                 finishCompletedMatch();
@@ -121,9 +136,20 @@ public abstract class MemeGameModule extends Module {
         if (raw == null || minecraft.thePlayer == null) return;
         ChatLine line = ChatLine.parse(raw);
         String content = line.content;
-        if (pendingEcho != null && content.contains(pendingEcho)) { pendingEcho = null; notice = "Message sent • " + game.getStatus(); return; }
+        if (pendingEcho != null && minecraft.thePlayer.getName().equalsIgnoreCase(line.sender) && content.contains(pendingEcho)) { pendingEcho = null; notice = "Message sent • " + game.getStatus(); return; }
         String self = minecraft.thePlayer.getName();
         if (line.sender != null && line.sender.equalsIgnoreCase(self)) return;
+        Matcher reminder = Pattern.compile("@" + Pattern.quote(self) + "\\s+please\\s+make\\s+your\\s+next\\s+move(?:\\s|$)", Pattern.CASE_INSENSITIVE).matcher(content);
+        if (!robot && matchesOpponent(line.sender) && reminder.find()) {
+            long now = System.currentTimeMillis();
+            if (now - lastMoveRequest < 1000) return;
+            lastMoveRequest = now;
+            boolean restored = history.restoreRequestedTurn(localSide);
+            if (restored) { pendingEcho = null; celebrationTicks = 0; }
+            playOpponentMoveSound();
+            notice = restored ? "Last move restored - please play it again" : opponent + " requested your next move";
+            return;
+        }
         Matcher request = invitationPattern().matcher(content);
         if (request.find() && request.group(1).equalsIgnoreCase(self) && validPlayer(line.sender)) {
             pendingOpponent = line.sender; notice = line.sender + " invited you to " + type.getDisplayName(); return;
@@ -131,7 +157,7 @@ public abstract class MemeGameModule extends Module {
         Matcher acceptance = acceptancePattern().matcher(content);
         if (acceptance.find() && acceptance.group(1).equalsIgnoreCase(self) && requestedOpponent != null
                 && requestedOpponent.equalsIgnoreCase(line.sender)) {
-            opponent = requestedOpponent; requestedOpponent = pendingOpponent = null; robot = false; localSide = 0; game.reset();
+            opponent = requestedOpponent; requestedOpponent = pendingOpponent = null; robot = false; localSide = 0; history.reset(); lastMoveRequest = 0;
             notice = opponent + " accepted — you start as " + sideName(0); return;
         }
         Matcher cancelled = cancellationPattern().matcher(content);
@@ -140,7 +166,7 @@ public abstract class MemeGameModule extends Module {
             Matcher move = movePattern().matcher(content);
             if (move.find()) {
                 String value = move.group(1).trim();
-                if (!game.move(value)) {
+                if (!history.move(value)) {
                     String cheater = opponent; send("@" + cheater + " I will cancel the match of " + type.getDisplayName() + " with you, because you cheated");
                     clear("Illegal move received — match cancelled");
                 } else {
@@ -183,7 +209,8 @@ public abstract class MemeGameModule extends Module {
         if (!game.isFinished()) return;
         String result = game.getStatus();
         if (result.toLowerCase(Locale.ROOT).contains(sideName(localSide).toLowerCase(Locale.ROOT))) celebrateWin();
-        clear("Match complete — " + result);
+        // Keep the final position and history so a lost winning move can also be recovered.
+        notice = "Match complete — " + result;
     }
 
     private void playOpponentMoveSound() {
@@ -214,7 +241,8 @@ public abstract class MemeGameModule extends Module {
         robot = false;
         robotMoveAt = 0L;
         pendingEcho = null;
-        game.reset();
+        history.reset();
+        lastMoveRequest = 0;
         notice = message;
     }
     private Pattern invitationPattern() { return Pattern.compile("@([A-Za-z0-9_]{1,16}),?\\s+wanna\\s+play\\s+a\\s+game\\s+of\\s+" + Pattern.quote(type.getDisplayName()) + "\\?", Pattern.CASE_INSENSITIVE); }
@@ -228,6 +256,7 @@ public abstract class MemeGameModule extends Module {
         final String sender, content;
         private ChatLine(String sender, String content) { this.sender = sender; this.content = content; }
         static ChatLine parse(String raw) {
+            raw = raw.replaceAll("\u00a7[0-9A-FK-ORa-fk-or]", "");
             Matcher angled = ANGLED.matcher(raw); if (angled.matches()) return new ChatLine(angled.group(1), angled.group(2));
             Matcher colon = COLON.matcher(raw); if (colon.matches()) return new ChatLine(colon.group(1), colon.group(2));
             return new ChatLine(null, raw);

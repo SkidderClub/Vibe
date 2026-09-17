@@ -38,7 +38,7 @@ public final class WindowsMediaBridge implements AutoCloseable {
             try(BufferedReader reader=new BufferedReader(new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8))) {
                 String line;
                 while(!closed&&(line=reader.readLine())!=null) {
-                    if(line.length()>3_000_000)continue;
+                    if(line.length()>12_000_000)continue;
                     if(audio && line.startsWith("PCM:")) {
                         int separator=line.indexOf(':',4);if(separator<0)continue;
                         int rate=Integer.parseInt(line.substring(4,separator));
@@ -69,7 +69,7 @@ public final class WindowsMediaBridge implements AutoCloseable {
         }
     }
     private static BufferedImage decodeArtwork(byte[] bytes) throws IOException {
-        if(bytes.length>2_000_000)return null;
+        if(bytes.length>8_000_000)return null;
         try(javax.imageio.stream.ImageInputStream stream=ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
             Iterator<javax.imageio.ImageReader> readers=ImageIO.getImageReaders(stream);if(!readers.hasNext())return null;
             javax.imageio.ImageReader reader=readers.next();

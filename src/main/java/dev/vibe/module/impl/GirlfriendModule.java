@@ -12,6 +12,9 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javazoom.jl.player.Player;
+import javazoom.jl.player.JavaSoundAudioDevice;
+import javazoom.jl.decoder.JavaLayerException;
+import dev.vibe.setting.NumberSetting;
 import net.minecraft.block.BlockBed;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.EntityLivingBase;
@@ -24,6 +27,8 @@ import org.lwjgl.input.Keyboard;
 
 /** Plays one non-overlapping local MP3 reaction for selected player events. */
 public final class GirlfriendModule extends Module {
+    public final NumberSetting volume = addSetting(new NumberSetting("Volume", 100, 0, 100, 1));
+    private volatile float playbackVolume = 1.0F;
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final Random random = new Random();
     private final List<String> sounds = new ArrayList<String>();
@@ -41,6 +46,7 @@ public final class GirlfriendModule extends Module {
     }
 
     public void tick() {
+        playbackVolume = isEnabled() ? volume.getFloat() / 100.0F : 0;
         if (!isEnabled() || minecraft.thePlayer == null) {
             previousHealth = -1.0F; wasDead = false; wasEating = false;
             digging.clear(); breakingBed = null; breakingOther = false;
@@ -99,6 +105,8 @@ public final class GirlfriendModule extends Module {
     }
 
     private void play(String prefix) {
+        playbackVolume = volume.getFloat() / 100.0F;
+        if (playbackVolume <= 0) return;
         if (playing.get()) return;
         List<String> pool = new ArrayList<String>();
         for (String sound : sounds) if (sound.startsWith(prefix)) pool.add(sound);
@@ -106,7 +114,13 @@ public final class GirlfriendModule extends Module {
         final String selected = pool.get(random.nextInt(pool.size()));
         if (!playing.compareAndSet(false, true)) return;
         Thread thread = new Thread(new Runnable() { @Override public void run() {
-            try { InputStream input = GirlfriendModule.class.getResourceAsStream("/assets/vibe/girlfriend/" + selected); if (input != null) try { new Player(input).play(); } finally { input.close(); } }
+            try { InputStream input = GirlfriendModule.class.getResourceAsStream("/assets/vibe/girlfriend/" + selected); if (input != null) try { new Player(input, new JavaSoundAudioDevice() {
+                @Override protected void writeImpl(short[] samples, int offset, int length) throws JavaLayerException {
+                    float gain = playbackVolume;
+                    for (int i = offset; i < offset + length; i++) samples[i] = (short) Math.round(samples[i] * gain);
+                    super.writeImpl(samples, offset, length);
+                }
+            }).play(); } finally { input.close(); } }
             catch (Throwable ignored) { } finally { playing.set(false); }
         }}, "Vibe-Girlfriend-Audio");
         thread.setDaemon(true); thread.start();

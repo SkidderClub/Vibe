@@ -243,3 +243,8 @@ or development tools rather than bundled Vibe features.
 
 Minecraft and Microsoft are their respective owners' products. Vibe is an
 independent client mod.
+
+## Lichess chess pieces
+
+Vibe bundles Colin M. L. Burnett's cburnett pieces from Lichess under GPL-2.0-or-later;
+see [source and conversion details](LICHESS-PIECES.md).

@@ -15,6 +15,17 @@ final class ToolActionTransformer implements Opcodes {
         new ClassReader(bytes).accept(node, 0);
         for (Object object : new ArrayList<Object>(node.methods)) {
             MethodNode original = (MethodNode) object;
+            if (original.desc.equals("()V") && (original.name.equals("resetBlockRemoving")
+                    || original.name.equals("func_78767_c") || original.name.equals("c"))) {
+                InsnList guard = new InsnList();
+                LabelNode resume = new LabelNode();
+                guard.add(new MethodInsnNode(INVOKESTATIC, "dev/vibe/module/impl/BedAuraModule", "keepBreakingHook", "()Z", false));
+                guard.add(new JumpInsnNode(IFEQ, resume));
+                guard.add(new InsnNode(RETURN));
+                guard.add(resume);
+                guard.add(new FrameNode(F_SAME, 0, null, 0, null));
+                original.instructions.insert(guard);
+            }
             if (!action(original.name, original.desc)) continue;
             String name = original.name;
             original.name = "vibe$tool$" + name;

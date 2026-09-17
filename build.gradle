@@ -157,6 +157,24 @@ tasks.register('verifyLicensesRendering', JavaExec) {
 }
 
 // Opt-in live station smoke check, with decoded output muted.
+tasks.register('verifyClientChanges', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.ui.ClientChangesRenderCheck'
+    workingDir project.projectDir
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    doFirst {
+        def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+        def platform = os.contains('win') ? 'windows' : os.contains('mac') ? 'osx' : 'linux'
+        def archive = sourceSets.main.runtimeClasspath.files.find { it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar') }
+        if (archive == null) throw new GradleException('LWJGL natives unavailable')
+        def nativeDir = layout.buildDirectory.dir('client-changes-check/natives').get().asFile
+        project.copy { from project.zipTree(archive); include '*.dll', '*.so', '*.dylib', '*.jnilib'; into nativeDir }
+        systemProperty 'org.lwjgl.librarypath', nativeDir.absolutePath
+    }
+}
+
 tasks.register('verifyMusicIntegration', JavaExec) {
     dependsOn tasks.named('testClasses')
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }

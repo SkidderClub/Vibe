@@ -123,11 +123,15 @@ public final class KawaseBlur {
             }
             restoreGuiProjection(minecraft);
             drawRoundedTexture(roundedFramebuffer, left, top, right, bottom, radius);
-        } catch (Exception ignored) {
+        } catch (Exception failure) {
             // A missing reflective pass list only disables the rounded HUD
             // composite. The full-screen GUI backdrop remains valid.
             roundedCompositeUnavailable = true;
+            org.apache.logging.log4j.LogManager.getLogger("Vibe").warn("Rounded HUD blur unavailable", failure);
         } finally {
+            // Shader initialization can fail after binding an intermediate FBO.
+            // Always return to the HUD target so the fallback surface stays visible.
+            restoreGuiProjection(minecraft);
             GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
             GlStateManager.enableTexture2D();
         }
@@ -166,6 +170,9 @@ public final class KawaseBlur {
     /** Copies the current rendered frame into the private post-process input. */
     private static void copyFramebuffer(Framebuffer source, Framebuffer destination) {
         GL11.glColorMask(true, true, true, true);
+        // Vanilla's framebuffer blit deliberately masks alpha writes. An alpha-zero
+        // clear makes the blurred copy invisible when composited back into the HUD.
+        destination.setFramebufferColor(0, 0, 0, 1);
         destination.framebufferClear();
         // framebufferClear unbinds its FBO in 1.8.9. Rebind it before the
         // fullscreen copy; otherwise the copy lands on Minecraft's live
@@ -216,9 +223,9 @@ public final class KawaseBlur {
                 // Framebuffer textures use an inverted V axis relative to a
                 // scaled GUI coordinate system.
                 float u = start * scale;
-                float v = source.framebufferTextureHeight - (y + 1) * scale;
-                Gui.drawModalRectWithCustomSizedTexture(start, y, u, v, end - start, 1,
-                        source.framebufferTextureWidth, source.framebufferTextureHeight);
+                float v = source.framebufferTextureHeight - y * scale;
+                Gui.drawScaledCustomSizeModalRect(start, y, u, v, (end - start) * scale, -scale,
+                        end - start, 1, source.framebufferTextureWidth, source.framebufferTextureHeight);
             }
             source.unbindFramebufferTexture();
         } finally {

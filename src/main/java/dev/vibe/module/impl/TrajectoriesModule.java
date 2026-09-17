@@ -5,6 +5,8 @@ import dev.vibe.module.Module;
 import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ColorSetting;
 import dev.vibe.setting.NumberSetting;
+import dev.vibe.setting.ModeSetting;
+import net.minecraft.util.EnumFacing;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
@@ -35,8 +37,15 @@ public final class TrajectoriesModule extends Module {
     private final ColorSetting enemyColor = addSetting(new ColorSetting("Enemy Hit", 0xFFFF3232));
     private final ColorSetting wallColor = addSetting(new ColorSetting("Wall Hit", 0xFF32FF32));
     private final ColorSetting groundColor = addSetting(new ColorSetting("Ground Hit", 0xFF55FFFF));
-    private final BooleanSetting landingBox = addSetting(new BooleanSetting("Show Landing Box", true));
-    private final BooleanSetting landingCross = addSetting(new BooleanSetting("Show Landing Cross", true));
+    private final ModeSetting impactMode = addSetting(new ModeSetting("Impact", "Basic", "Basic", "Square", "Cube", "Circle", "Dot", "Cross"));
+    private final BooleanSetting impactOutline = addSetting(new BooleanSetting("Impact Outline", true));
+    private final ColorSetting impactOutlineColor = addSetting(new ColorSetting("Impact Outline Color", 0xFF55FFFF, () -> impactOutline.isEnabled()));
+    private final NumberSetting impactOutlineWidth = addSetting(new NumberSetting("Impact Outline Width", 1.5, 1, 5, .1, () -> impactOutline.isEnabled()));
+    private final BooleanSetting impactFill = addSetting(new BooleanSetting("Impact Fill", true));
+    private final ColorSetting impactFillColor = addSetting(new ColorSetting("Impact Fill Color", 0x4055FFFF, () -> impactFill.isEnabled()));
+    private final NumberSetting impactSize = addSetting(new NumberSetting("Impact Size", .3, .05, 1, .01));
+    private final BooleanSetting landingBox = addSetting(new BooleanSetting("Show Landing Box", true, () -> impactMode.is("Basic")));
+    private final BooleanSetting landingCross = addSetting(new BooleanSetting("Show Landing Cross", true, () -> impactMode.is("Basic")));
     private final BooleanSetting landingBlock = addSetting(new BooleanSetting("Show Landing Block", true));
     private final BooleanSetting highlightEntities = addSetting(new BooleanSetting("Highlight Entities", true));
     private final BooleanSetting entityTrail = addSetting(new BooleanSetting("Entity Trail", true));
@@ -63,6 +72,11 @@ public final class TrajectoriesModule extends Module {
     public BooleanSetting getFadeOut() { return fadeOut; }
     public BooleanSetting getAddPlayerVelocity() { return addPlayerVelocity; }
     public BooleanSetting getRainbow() { return rainbow; }
+    public ModeSetting getImpactMode() { return impactMode; }
+    public int getImpactOutlineColor() { return impactOutline.isEnabled() ? impactOutlineColor.getArgb() : 0; }
+    public int getImpactFillColor() { return impactFill.isEnabled() ? impactFillColor.getArgb() : 0; }
+    public float getImpactOutlineWidth() { return impactOutlineWidth.getFloat(); }
+    public double getImpactSize() { return impactSize.getDouble(); }
     public Trajectory getLast() { return last; }
     public Map<Integer, Deque<Vec3>> getTrails() { return trails; }
 
@@ -96,20 +110,22 @@ public final class TrajectoriesModule extends Module {
         double vx = -Math.sin(yaw) * Math.cos(pitch) * velocity, vy = -Math.sin(pitch) * velocity, vz = Math.cos(yaw) * Math.cos(pitch) * velocity;
         if (addPlayerVelocity.isEnabled()) { vx += minecraft.thePlayer.motionX; vy += minecraft.thePlayer.motionY; vz += minecraft.thePlayer.motionZ; }
         ListBuilder path = new ListBuilder(); path.add(x, y, z);
-        int hitType = 0; Vec3 hit = null;
+        int hitType = 0; Vec3 hit = null; EnumFacing hitFace = EnumFacing.UP;
         for (int tick = 0; tick < maxTicks.getInt(); tick++) {
             double nx = x + vx, ny = y + vy, nz = z + vz;
             net.minecraft.util.MovingObjectPosition block = minecraft.theWorld.rayTraceBlocks(new Vec3(x, y, z), new Vec3(nx, ny, nz), false, true, false);
             Vec3 blockHit = block == null ? null : block.hitVec;
             Entity entityHit = nearestEntity(new Vec3(x, y, z), new Vec3(nx, ny, nz), .25D);
+            net.minecraft.util.MovingObjectPosition entityIntercept = entityHit == null ? null
+                    : entityHit.getEntityBoundingBox().expand(.25D, .25D, .25D).calculateIntercept(new Vec3(x, y, z), new Vec3(nx, ny, nz));
             double blockDistance = blockHit == null ? Double.MAX_VALUE : blockHit.squareDistanceTo(new Vec3(x, y, z));
-            double entityDistance = entityHit == null ? Double.MAX_VALUE : entityHit.getEntityBoundingBox().calculateIntercept(new Vec3(x, y, z), new Vec3(nx, ny, nz)) == null ? Double.MAX_VALUE : entityHit.getEntityBoundingBox().calculateIntercept(new Vec3(x, y, z), new Vec3(nx, ny, nz)).hitVec.squareDistanceTo(new Vec3(x, y, z));
-            if (entityHit != null && entityDistance < blockDistance) { hit = entityHit.getEntityBoundingBox().calculateIntercept(new Vec3(x, y, z), new Vec3(nx, ny, nz)).hitVec; hitType = 1; path.add(hit.xCoord, hit.yCoord, hit.zCoord); break; }
-            if (blockHit != null) { hit = blockHit; hitType = block.sideHit == net.minecraft.util.EnumFacing.UP || block.sideHit == net.minecraft.util.EnumFacing.DOWN ? 3 : 2; path.add(hit.xCoord, hit.yCoord, hit.zCoord); break; }
+            double entityDistance = entityIntercept == null ? Double.MAX_VALUE : entityIntercept.hitVec.squareDistanceTo(new Vec3(x, y, z));
+            if (entityIntercept != null && entityDistance < blockDistance) { hit = entityIntercept.hitVec; hitFace = entityIntercept.sideHit; hitType = 1; path.add(hit.xCoord, hit.yCoord, hit.zCoord); break; }
+            if (blockHit != null) { hit = blockHit; hitFace = block.sideHit; hitType = block.sideHit == net.minecraft.util.EnumFacing.UP || block.sideHit == net.minecraft.util.EnumFacing.DOWN ? 3 : 2; path.add(hit.xCoord, hit.yCoord, hit.zCoord); break; }
             path.add(nx, ny, nz); x = nx; y = ny; z = nz; vx *= drag; vy = vy * drag - gravity; vz *= drag;
             if (y < -64.0D) break;
         }
-        lastTrajectoryTime = System.currentTimeMillis(); last = new Trajectory(path.values, hit, hitType, lastTrajectoryTime); return last;
+        lastTrajectoryTime = System.currentTimeMillis(); last = new Trajectory(path.values, hit, hitType, hitFace, lastTrajectoryTime); return last;
     }
 
     private Entity nearestEntity(Vec3 from, Vec3 to, double radius) {
@@ -138,7 +154,8 @@ public final class TrajectoriesModule extends Module {
 
     public static final class Trajectory {
         public final java.util.List<Vec3> points; public final Vec3 hit; public final int hitType; public final long created;
-        private Trajectory(java.util.List<Vec3> points, Vec3 hit, int hitType, long created) { this.points=points; this.hit=hit; this.hitType=hitType; this.created=created; }
+        public final EnumFacing hitFace;
+        private Trajectory(java.util.List<Vec3> points, Vec3 hit, int hitType, EnumFacing hitFace, long created) { this.points=points; this.hit=hit; this.hitType=hitType; this.hitFace=hitFace; this.created=created; }
     }
     private static final class ListBuilder {
         private final java.util.List<Vec3> values = new java.util.ArrayList<Vec3>();

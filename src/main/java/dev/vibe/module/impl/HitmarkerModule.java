@@ -25,6 +25,7 @@ public final class HitmarkerModule extends Module {
     private final MultiSelectSetting modes = addSetting(new MultiSelectSetting("Modes",
             Arrays.asList("2D (Crosshair)", "3D (World)", "Torus"), Arrays.asList("2D (Crosshair)")));
     public final NumberSetting torusLifetime = addSetting(new NumberSetting("Torus Lifetime", 1000, 100, 5000, 50, () -> modes.isSelected("Torus")));
+    public final NumberSetting torusDelay = addSetting(new NumberSetting("Torus Delay (ms)", 100, 0, 1000, 1, () -> modes.isSelected("Torus")));
     public final NumberSetting torusNoise = addSetting(new NumberSetting("Torus Noise", 50, 0, 100, 1, () -> modes.isSelected("Torus")));
     public final NumberSetting torusScale = addSetting(new NumberSetting("Torus Scale", 1, .1, 3, .05, () -> modes.isSelected("Torus")));
     public final BooleanSetting torusDepth = addSetting(new BooleanSetting("Torus Depth", false, () -> modes.isSelected("Torus")));
@@ -53,6 +54,7 @@ public final class HitmarkerModule extends Module {
             () -> modes.isSelected("3D (World)")));
 
     private long lastHit;
+    private long lastTorus;
     private EntityLivingBase hitTarget;
     private double lastX;
     private double lastY;
@@ -61,6 +63,7 @@ public final class HitmarkerModule extends Module {
     private double lastLookY;
     private double lastLookZ = 1.0D;
     private final List<Marker> markers = new ArrayList<Marker>();
+    private final List<Marker> torusMarkers = new ArrayList<Marker>();
 
     public HitmarkerModule() {
         super("Hitmarker", "2D, 3D and expanding reflective torus hit confirmations", Category.VISUAL, Keyboard.KEY_NONE);
@@ -73,7 +76,14 @@ public final class HitmarkerModule extends Module {
         lastHit = System.currentTimeMillis();
         hitTarget = target;
         captureHitPoint(target);
-        markers.add(new Marker(lastX, lastY, lastZ, lastLookX, lastLookY, lastLookZ, lastHit));
+        boolean spawnTorus = modes.isSelected("Torus") && (lastTorus == 0 || lastHit - lastTorus >= torusDelay.getInt());
+        if (spawnTorus) lastTorus = lastHit;
+        Marker marker = new Marker(lastX, lastY, lastZ, lastLookX, lastLookY, lastLookZ, lastHit, spawnTorus);
+        markers.add(marker);
+        if (spawnTorus) {
+            torusMarkers.add(marker);
+            while (torusMarkers.size() > 18) torusMarkers.remove(0);
+        }
         while (markers.size() > 18) markers.remove(0);
     }
 
@@ -109,9 +119,17 @@ public final class HitmarkerModule extends Module {
     public List<Marker> getMarkers() {
         long now = System.currentTimeMillis();
         Iterator<Marker> iterator = markers.iterator();
-        long lifetime = modes.isSelected("Torus") ? Math.max(duration.getInt(), torusLifetime.getInt()) : duration.getInt();
+        long lifetime = duration.getInt();
         while (iterator.hasNext()) if (now - iterator.next().created >= lifetime) iterator.remove();
         return Collections.unmodifiableList(new ArrayList<Marker>(markers));
+    }
+
+    /** Ordinary hitmarkers must not evict a longer-lived torus during its delay. */
+    public List<Marker> getTorusMarkers() {
+        long now = System.currentTimeMillis();
+        Iterator<Marker> iterator = torusMarkers.iterator();
+        while (iterator.hasNext()) if (now - iterator.next().created >= torusLifetime.getInt()) iterator.remove();
+        return Collections.unmodifiableList(new ArrayList<Marker>(torusMarkers));
     }
 
     public float progress(Marker marker) {
@@ -124,13 +142,15 @@ public final class HitmarkerModule extends Module {
     public static final class Marker {
         public final double x, y, z, lookX, lookY, lookZ;
         public final long created;
-        private Marker(double x, double y, double z, double lookX, double lookY, double lookZ, long created) {
+        public final boolean torus;
+        private Marker(double x, double y, double z, double lookX, double lookY, double lookZ, long created, boolean torus) {
+            this.torus = torus;
             this.x = x; this.y = y; this.z = z; this.lookX = lookX; this.lookY = lookY; this.lookZ = lookZ; this.created = created;
         }
     }
 
     @Override protected void onDisable() { clear(); }
-    public void clear() { markers.clear(); lastHit = 0; hitTarget = null; }
+    public void clear() { markers.clear(); torusMarkers.clear(); lastHit = lastTorus = 0; hitTarget = null; }
 
     /** Store the actual attack-ray contact and the camera direction at impact. */
     private void captureHitPoint(EntityLivingBase target) {

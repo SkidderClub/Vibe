@@ -80,6 +80,35 @@ public class AutoToolHooksTest implements Opcodes {
         if (fail) throw new IllegalStateException("Simulated controller failure");
         return true;
     }
+
+    @Test public void bedAuraSuppressesOnlyItsOwnIdleMiningReset() throws Exception {
+        dev.vibe.module.impl.BedAuraModule bed = new dev.vibe.module.impl.BedAuraModule();
+        set(Module.class, bed, "enabled", true);
+        set(bed.getClass(), bed, "owner", minecraft.thePlayer);
+        set(bed.getClass(), bed, "ready", true);
+        ModuleManager modules = Vibe.getInstance().getModuleManager();
+        set(ModuleManager.class, modules, "modules", new ArrayList<Module>(Arrays.asList(bed)));
+        String name = "dev/vibe/combat/BedResetFixture";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(V1_8, ACC_PUBLIC, name, null, "java/lang/Object", null);
+        writer.visitField(ACC_PUBLIC, "resets", "I", null, null).visitEnd();
+        MethodVisitor reset = writer.visitMethod(ACC_PUBLIC, "resetBlockRemoving", "()V", null, null);
+        reset.visitCode(); reset.visitVarInsn(ALOAD,0); reset.visitInsn(DUP);
+        reset.visitFieldInsn(GETFIELD,name,"resets","I"); reset.visitInsn(ICONST_1); reset.visitInsn(IADD);
+        reset.visitFieldInsn(PUTFIELD,name,"resets","I"); reset.visitInsn(RETURN); reset.visitMaxs(0,0); reset.visitEnd(); writer.visitEnd();
+        byte[] transformed = new MoveFixTransformer().transform(name,"net.minecraft.client.multiplayer.PlayerControllerMP",writer.toByteArray());
+        Class<?> type = new ClassLoader(getClass().getClassLoader()) {
+            Class<?> define() { return defineClass(name.replace('/','.'),transformed,0,transformed.length); }
+        }.define();
+        Object fixture = allocate(type);
+        Method method = type.getMethod("resetBlockRemoving");
+        method.invoke(fixture);
+        assertEquals(0,type.getField("resets").getInt(fixture));
+        set(bed.getClass(), bed, "resetting", true); method.invoke(fixture);
+        assertEquals("Explicit target cancellation must reach vanilla",1,type.getField("resets").getInt(fixture));
+        set(bed.getClass(), bed, "resetting", false); set(Module.class,bed,"enabled",false); method.invoke(fixture);
+        assertEquals("Disabled BedAura must not alter ordinary mining",2,type.getField("resets").getInt(fixture));
+    }
     private static void set(Class<?> type,Object object,String name,Object value) throws Exception {
         Field field=type.getDeclaredField(name); field.setAccessible(true); field.set(object,value);
     }

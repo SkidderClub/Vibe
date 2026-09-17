@@ -452,6 +452,8 @@ public final class MoveFixModule extends Module {
         MoveFixModule module = module();
         if (module != null) {
             module.endPacketRotation(entity);
+            BedAuraModule bedAura = Vibe.getInstance().getModuleManager().getModule(BedAuraModule.class);
+            if (bedAura != null) bedAura.afterWalkingUpdate(entity);
         }
     }
 

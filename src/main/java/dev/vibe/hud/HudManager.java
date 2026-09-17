@@ -256,7 +256,8 @@ public final class HudManager {
                 KawaseBlur.drawRegion(moduleLeft, y, moduleRight, y + rowHeight, 3, 0.0F);
             }
             if (!hud.getArrayStyle().is("Minimal")) {
-                Gui.drawRect(moduleLeft, y, moduleRight, y + rowHeight, hud.getBackground().getArgb());
+                if (hud.getMode().is("LiquidGlass")) drawHudSurface(hud, moduleLeft, y, moduleRight, y + rowHeight);
+                else Gui.drawRect(moduleLeft, y, moduleRight, y + rowHeight, hud.getBackground().getArgb());
             }
             if (!hud.getArrayStyle().is("Minimal")) {
                 if (rightAligned) {
@@ -271,7 +272,7 @@ public final class HudManager {
             y += rowHeight;
             row++;
         }
-        if (hud.getArrayOutline().isEnabled()) {
+        if (hud.getArrayOutline().isEnabled() && !hud.getMode().is("LiquidGlass")) {
             drawArrayOutline(rows, rightAligned, hud);
         }
         arrayList.setBounds(left, startY, width, y - startY);
@@ -284,7 +285,12 @@ public final class HudManager {
     }
 
     private boolean blurEnabled(String element) {
-        if (isSkeet()) return false;
+        // Only widgets with an opaque Skeet surface suppress their blur.
+        boolean unthemed = BlurModule.ARRAY_LIST.equals(element) || STALKER.equals(element) || SCOREBOARD.equals(element);
+        if (isSkeet() && !unthemed) return false;
+        HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        // Glass surfaces composite their own rounded blur.
+        if (hud != null && hud.getMode().is("LiquidGlass") && !SCOREBOARD.equals(element)) return false;
         BlurModule blur = Vibe.getInstance().getModuleManager().getModule(BlurModule.class);
         return blur != null && blur.isEnabled() && blur.getElements().isSelected(element);
     }
@@ -296,6 +302,15 @@ public final class HudManager {
 
     /** Skeet HUDs deliberately omit Vibe glow, blur and coloured outlines. */
     private void drawHudSurface(HudModule hud, int left, int top, int right, int bottom) {
+        if (hud.getMode().is("LiquidGlass")) {
+            float radius = Math.min(8, (bottom - top) / 2.0F);
+            KawaseBlur.drawRoundedRegion(left, top, right, bottom, radius, 4, 0);
+            RenderUtils.roundedRect(left, top, right, bottom, radius, 0x483B5067);
+            RenderUtils.roundedOutline(left, top, right, bottom, radius, 1, 0x70E7F6FF);
+            RenderUtils.roundedRect(left + 3, top + 2, right - 3, top + 4, 1, 0x55FFFFFF);
+            RenderUtils.roundedRect(left + 5, bottom - 3, right - 5, bottom - 2, .5F, 0x308BCCFF);
+            return;
+        }
         if (!hud.getMode().is("Skeet")) {
             Gui.drawRect(left, top, right, bottom, RenderUtils.alpha(hud.getBackground().getArgb(), 92));
             return;
@@ -349,6 +364,8 @@ public final class HudManager {
 
     private void drawHudOutline(int left, int top, int right, int bottom, int color) {
         if (isSkeet()) return;
+        HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        if (hud != null && hud.getMode().is("LiquidGlass")) return;
         Gui.drawRect(left - 1, top - 1, right + 1, top, color);
         Gui.drawRect(left - 1, bottom, right + 1, bottom + 1, color);
         Gui.drawRect(left - 1, top, left, bottom, color);
@@ -481,7 +498,8 @@ public final class HudManager {
             FriendManager.Friend friend = friends == null ? null : friends.find(player.getName());
             boolean isTarget = targets != null && targets.isTarget(player);
             int accent = isTarget ? 0xFFFF5B6E : (friend != null ? 0xFF5BE8A6 : 0xFF8FA5C4);
-            Gui.drawRect(left, rowTop, left + width, rowTop + 48, RenderUtils.alpha(hud.getBackground().getArgb(), 188));
+            if (hud.getMode().is("LiquidGlass")) drawHudSurface(hud, left, rowTop, left + width, rowTop + 48);
+            else Gui.drawRect(left, rowTop, left + width, rowTop + 48, RenderUtils.alpha(hud.getBackground().getArgb(), 188));
             drawHudOutline(left, rowTop, left + width, rowTop + 48, accent);
             drawPlayerFace(player, left + 4, rowTop + 4);
             NameProtectModule protect = Vibe.getInstance().getModuleManager().getModule(NameProtectModule.class);

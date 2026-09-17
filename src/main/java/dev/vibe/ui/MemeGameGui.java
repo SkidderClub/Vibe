@@ -33,6 +33,9 @@ public final class MemeGameGui extends GuiScreen {
     private boolean robotStarts = true;
     private int selectedRow = -1, selectedColumn = -1;
     private int playerScroll;
+    private int matchScroll;
+    private float uiScale = 1;
+    private boolean draggingPlayers, draggingMatch;
     private char promotion = 'Q';
 
     public MemeGameGui(MemeGameModule module) { this.module = module; }
@@ -43,33 +46,38 @@ public final class MemeGameGui extends GuiScreen {
     }
 
     private void layout() {
-        panelWidth = Math.min(Math.max(680, width - 28), 1050);
-        panelHeight = Math.min(Math.max(430, height - 34), 650);
-        left = (width - panelWidth) / 2;
-        top = Math.max(16, (height - panelHeight) / 2);
+        uiScale = Math.max(.1F, Math.min(1, Math.min((width - 16) / 680.0F, (height - 16) / 430.0F)));
+        int logicalWidth = Math.round(width / uiScale), logicalHeight = Math.round(height / uiScale);
+        panelWidth = Math.min(Math.max(680, logicalWidth - 28), 1050);
+        panelHeight = Math.min(Math.max(430, logicalHeight - 34), 650);
+        left = (logicalWidth - panelWidth) / 2;
+        top = (logicalHeight - panelHeight) / 2;
         listLeft = left + 16;
         listRight = left + Math.max(406, panelWidth * 58 / 100);
         sideLeft = listRight + 14;
         contentRight = left + panelWidth - 16;
         listTop = top + 64;
         listBottom = top + panelHeight - 18;
+        matchScroll = Math.max(0, Math.min(matchMaximumScroll(), matchScroll));
     }
 
     @Override public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         layout();
         SkeetEditorStyle.backdrop(this, BlurModule.MEME_GAMES, partialTicks);
-        String detail = module.hasActiveGame() ? opponentDetail() : "Chat invitations • local robot • saved match";
-        SkeetEditorStyle.window(left, top, left + panelWidth, top + panelHeight, module.getType().getDisplayName(), detail);
-        if (module.hasActiveGame()) drawGame(mouseX, mouseY); else drawLobby(mouseX, mouseY);
-        super.drawScreen(mouseX, mouseY, partialTicks);
+        mouseX = (int) (mouseX / uiScale); mouseY = (int) (mouseY / uiScale);
+        GL11.glPushMatrix();
+        GL11.glScalef(uiScale, uiScale, 1);
+        try {
+            String detail = module.hasActiveGame() ? opponentDetail() : "Chat invitations • local robot • saved match";
+            SkeetEditorStyle.window(left, top, left + panelWidth, top + panelHeight, module.getType().getDisplayName(), detail);
+            if (module.hasActiveGame()) drawGame(mouseX, mouseY); else drawLobby(mouseX, mouseY);
+        } finally { GL11.glPopMatrix(); }
     }
 
     private void drawLobby(int mouseX, int mouseY) {
         SkeetEditorStyle.panel(listLeft, top + 38, listRight, listBottom, "Players in your game");
         List<NetworkPlayerInfo> players = players();
-        int cardWidth = Math.max(150, (listRight - listLeft - 28) / 2);
-        int columns = cardWidth >= 150 ? 2 : 1;
-        if (columns == 1) cardWidth = listRight - listLeft - 20;
+        int columns = playerColumns(), cardWidth = playerCardWidth();
         int rowHeight = 40;
         int rows = (players.size() + columns - 1) / columns;
         int contentHeight = rows * rowHeight;
@@ -81,7 +89,7 @@ public final class MemeGameGui extends GuiScreen {
             fontRendererObj.drawStringWithShadow("No other players are visible in this game.", listLeft + 11, listTop + 7, SkeetEditorStyle.MUTED);
             fontRendererObj.drawStringWithShadow("A local robot match is always available.", listLeft + 11, listTop + 21, SkeetEditorStyle.MUTED);
         } else {
-            try (GuiClip clip = new GuiClip(listLeft + 2, listTop, listRight - listLeft - 4, viewportHeight)) {
+            try (GuiClip clip = clip(listLeft + 2, listTop, listRight - 8, listBottom - 4)) {
                 for (int index = 0; index < players.size(); index++) {
                     int column = index % columns, row = index / columns;
                     int x = listLeft + 10 + column * (cardWidth + 6);
@@ -94,7 +102,7 @@ public final class MemeGameGui extends GuiScreen {
                     SkeetEditorStyle.row(x, y, x + cardWidth, y + 34, selected, hit(x, y, x + cardWidth, y + 34, mouseX, mouseY));
                     SkinHeads.draw(profile.getId(), name, x + 6, y + 6, 22);
                     fontRendererObj.drawStringWithShadow(trim(name, cardWidth - 41), x + 35, y + 8, selected ? SkeetEditorStyle.accent(.15F) : SkeetEditorStyle.TEXT);
-                    fontRendererObj.drawStringWithShadow(selected ? "Selected" : "Click to select", x + 35, y + 21, SkeetEditorStyle.MUTED);
+                    fontRendererObj.drawStringWithShadow(isSelf(name) ? "You" : selected ? "Selected" : "Click to select", x + 35, y + 21, SkeetEditorStyle.MUTED);
                 }
             }
             if (maxScroll > 0) drawScrollBar(listRight - 6, listTop, listBottom - 4, playerScroll, maxScroll, viewportHeight);
@@ -103,6 +111,7 @@ public final class MemeGameGui extends GuiScreen {
         int matchBottom = matchBottom();
         SkeetEditorStyle.panel(sideLeft, top + 38, contentRight, matchBottom, "Start a match");
         int x = sideLeft + 12, right = contentRight - 12;
+        try (GuiClip clip = clip(sideLeft + 2, top + 60, contentRight - 8, listBottom - 36)) {
         int multiplayerTop = multiplayerTop(), multiplayerBottom = multiplayerBottom();
         SkeetEditorStyle.panel(x, multiplayerTop, right, multiplayerBottom, "Multiplayer");
         drawSharedChatControls(x + 9, multiplayerTop + 23, right - 9, mouseX, mouseY);
@@ -115,13 +124,13 @@ public final class MemeGameGui extends GuiScreen {
             button(x + 9, playerTop + 96, right - 9, "Accept and play second", true);
         }
 
-        int singleTop = singleplayerTop(), singleBottom = singleTop + 90;
+        int singleTop = singleplayerTop(), singleBottom = singleTop + 105;
         SkeetEditorStyle.panel(x, singleTop, right, singleBottom, "Singleplayer");
-        drawRobotControls(x + 9, singleTop + 14, right - 9, mouseX, mouseY);
+        drawRobotControls(x + 9, singleTop + 23, right - 9, mouseX, mouseY);
         int noticeY = singleBottom + 8;
-        if (noticeY + 10 < matchBottom - 24) {
-            fontRendererObj.drawStringWithShadow(trim(module.getNotice(), right - x), x, noticeY, SkeetEditorStyle.accent(.08F));
+        fontRendererObj.drawStringWithShadow(trim(module.getNotice(), right - x), x, noticeY, SkeetEditorStyle.accent(.08F));
         }
+        if (matchMaximumScroll() > 0) drawScrollBar(contentRight - 6, top + 60, listBottom - 36, matchScroll, matchMaximumScroll(), listBottom - 36 - (top + 60));
         button(right - 84, matchBottom - 24, right, "Close", false);
     }
 
@@ -138,11 +147,22 @@ public final class MemeGameGui extends GuiScreen {
         if (selectedPlayer != null) fontRendererObj.drawStringWithShadow("You start as first player", x + 38, y + 21, SkeetEditorStyle.MUTED);
     }
 
-    private int multiplayerTop() { return top + 60; }
+    private int playerColumns() { return listRight - listLeft >= 334 ? 2 : 1; }
+    private int playerCardWidth() { return (listRight - listLeft - 28 - (playerColumns() - 1) * 6) / playerColumns(); }
+    private boolean isSelf(String name) { return mc.thePlayer != null && mc.thePlayer.getName().equalsIgnoreCase(name); }
+    private GuiClip clip(int x, int y, int right, int bottom) {
+        int sx = (int) Math.ceil(x * uiScale), sy = (int) Math.ceil(y * uiScale);
+        return new GuiClip(sx, sy, Math.max(0, (int) (right * uiScale) - sx), Math.max(0, (int) (bottom * uiScale) - sy));
+    }
+    private int multiplayerTop() { return top + 60 - matchScroll; }
     private int multiplayerBottom() { return multiplayerTop() + (module.getPendingOpponent() == null ? 187 : 228); }
     private int singleplayerTop() { return multiplayerBottom() + 9; }
-    /** Keep the match card sized to its controls instead of stretching it to the player list. */
-    private int matchBottom() { return Math.min(listBottom, singleplayerTop() + 146); }
+    /** The fixed footer stays accessible while the controls scroll within the card. */
+    private int matchBottom() { return listBottom; }
+    private int matchMaximumScroll() {
+        int content = (module.getPendingOpponent() == null ? 187 : 228) + 9 + 105 + 24;
+        return Math.max(0, content - (listBottom - 36 - (top + 60)));
+    }
 
     private void drawRobotControls(int x, int y, int right, int mouseX, int mouseY) {
         MemeGamePreferences preferences = module.getPreferences();
@@ -179,9 +199,10 @@ public final class MemeGameGui extends GuiScreen {
         fontRendererObj.drawStringWithShadow(trim(module.getNotice(), right - x - 12), x, y + 55, SkeetEditorStyle.MUTED);
         SkeetEditorStyle.panel(x - 3, y + 80, right - 10, y + 132, "Chat moves");
         fontRendererObj.drawStringWithShadow(module.getType().getWireName() + ": " + exampleMove(), x + 5, y + 101, SkeetEditorStyle.accent(.1F));
-        fontRendererObj.drawStringWithShadow(module.isRobotGame() ? "No chat is used against Robot." : "Each legal move is sent to your opponent.", x + 5, y + 117, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(trim(module.isRobotGame() ? "No chat is used against Robot." : "Each legal move is sent to your opponent.", right - x - 22), x + 5, y + 117, SkeetEditorStyle.MUTED);
         if (module.getType() == GameType.CHESS && hasPromotionSelection()) drawPromotionPicker(x, y + 151);
-        button(x, top + panelHeight - 47, right - 12, "Cancel match", false);
+        button(x, top + panelHeight - 76, right - 12, "Request Move", module.canRequestMove());
+        button(x, top + panelHeight - 47, right - 12, module.getGame().isFinished() ? "Back to lobby" : "Cancel match", false);
     }
 
     private int boardSize() {
@@ -217,112 +238,15 @@ public final class MemeGameGui extends GuiScreen {
         }
     }
 
-    /**
-     * Original smooth Staunton-style sprites.  Drawing from a normalized
-     * canvas keeps every silhouette centred at every board scale, rather than
-     * relying on the baseline and glyph metrics of a font.
-     */
+    /** Lichess cburnett pieces, bundled locally so the board also works offline. */
     private void drawChessPiece(char piece, int x, int y, int square) {
-        boolean white = Character.isUpperCase(piece);
-        float unit = Math.max(0.22F, (square - 7.0F) / 100.0F);
-        float pieceHeight = 91.0F * unit;
-        float centreX = x + square / 2.0F;
-        float pieceTop = y + (square - pieceHeight) / 2.0F;
-        int body = white ? 0xFFF8F4E8 : 0xFF242722;
-        int shadow = white ? 0xFFAAA595 : 0xFF0D0E0C;
-
-        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_CURRENT_BIT
-                | GL11.GL_TEXTURE_BIT | GL11.GL_LINE_BIT);
-        try {
-            GlStateManager.disableTexture2D();
-            GlStateManager.disableLighting();
-            GlStateManager.enableBlend();
-            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            // The one-pixel offset supplies the crisp depth edge normally
-            // baked into classic chess piece sprites.
-            drawChessSilhouette(Character.toUpperCase(piece), centreX + 1.35F, pieceTop + 1.35F, unit, shadow);
-            drawChessSilhouette(Character.toUpperCase(piece), centreX, pieceTop, unit, body);
-            if (white) drawChessHighlight(Character.toUpperCase(piece), centreX, pieceTop, unit);
-        } finally {
-            GlStateManager.enableTexture2D();
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-            GL11.glPopAttrib();
-        }
-    }
-
-    private void drawChessSilhouette(char piece, float cx, float top, float unit, int color) {
-        // Broad, balanced base shared by the Staunton pieces.
-        chessPolygon(color, cx, top, unit, -39, 91, 39, 91, 33, 83, -33, 83);
-        chessPolygon(color, cx, top, unit, -33, 83, 33, 83, 27, 76, -27, 76);
-        chessPolygon(color, cx, top, unit, -27, 76, 27, 76, 20, 45, -20, 45);
-
-        switch (piece) {
-            case 'K':
-                chessPolygon(color, cx, top, unit, -10, 45, 10, 45, 14, 36, -14, 36);
-                chessCircle(color, cx, top + 29 * unit, 12 * unit, 18);
-                chessPolygon(color, cx, top, unit, -4, 23, 4, 23, 4, 6, -4, 6);
-                chessPolygon(color, cx, top, unit, -11, 11, 11, 11, 11, 16, -11, 16);
-                break;
-            case 'Q':
-                chessPolygon(color, cx, top, unit, -22, 44, 22, 44, 20, 32, -20, 32);
-                chessPolygon(color, cx, top, unit, -24, 33, -8, 33, -16, 15);
-                chessPolygon(color, cx, top, unit, -9, 33, 9, 33, 0, 7);
-                chessPolygon(color, cx, top, unit, 8, 33, 24, 33, 16, 15);
-                chessCircle(color, cx - 16 * unit, top + 14 * unit, 4 * unit, 12);
-                chessCircle(color, cx, top + 8 * unit, 4 * unit, 12);
-                chessCircle(color, cx + 16 * unit, top + 14 * unit, 4 * unit, 12);
-                break;
-            case 'R':
-                chessPolygon(color, cx, top, unit, -24, 45, 24, 45, 20, 32, -20, 32);
-                chessPolygon(color, cx, top, unit, -24, 32, 24, 32, 24, 22, -24, 22);
-                chessPolygon(color, cx, top, unit, -24, 22, -15, 22, -15, 14, -24, 14);
-                chessPolygon(color, cx, top, unit, -5, 22, 5, 22, 5, 14, -5, 14);
-                chessPolygon(color, cx, top, unit, 15, 22, 24, 22, 24, 14, 15, 14);
-                chessPolygon(color, cx, top, unit, -24, 34, 24, 34, 19, 43, -19, 43);
-                break;
-            case 'B':
-                chessPolygon(color, cx, top, unit, -15, 45, 15, 45, 18, 36, -18, 36);
-                chessCircle(color, cx, top + 25 * unit, 13 * unit, 18);
-                chessPolygon(color, cx, top, unit, 0, 7, 9, 19, -9, 19);
-                // The diagonal cut is a classic bishop cue, kept subtle so
-                // the piece still reads cleanly at Minecraft GUI scale.
-                chessPolygon(0x6635352E, cx, top, unit, -10, 30, -6, 34, 11, 18, 7, 15);
-                break;
-            case 'N':
-                chessPolygon(color, cx, top, unit, -22, 46, 20, 46, 25, 38, 13, 27, -13, 39);
-                chessPolygon(color, cx, top, unit, -13, 39, 13, 39, 20, 26, 10, 12, -5, 10, -18, 25);
-                chessPolygon(color, cx, top, unit, -5, 10, 5, 7, 15, 13, 20, 26, 5, 23);
-                chessCircle(0xFF11120F, cx + 6 * unit, top + 17 * unit, Math.max(1.2F, 2.4F * unit), 10);
-                break;
-            default: // Pawn
-                chessPolygon(color, cx, top, unit, -13, 45, 13, 45, 16, 37, -16, 37);
-                chessCircle(color, cx, top + 22 * unit, 14 * unit, 20);
-                break;
-        }
-    }
-
-    private void drawChessHighlight(char piece, float cx, float top, float unit) {
-        int highlight = 0x55FFFFFF;
-        if (piece == 'P' || piece == 'B') chessCircle(highlight, cx - 5 * unit, top + 18 * unit, Math.max(1.4F, 3 * unit), 10);
-        else if (piece == 'K' || piece == 'Q') chessCircle(highlight, cx - 5 * unit, top + 28 * unit, Math.max(1.2F, 2.4F * unit), 10);
-    }
-
-    private void chessPolygon(int color, float cx, float top, float unit, float... coordinates) {
-        setPrimitiveColor(color);
-        GL11.glBegin(GL11.GL_POLYGON);
-        for (int index = 0; index < coordinates.length; index += 2) GL11.glVertex2f(cx + coordinates[index] * unit, top + coordinates[index + 1] * unit);
-        GL11.glEnd();
-    }
-
-    private void chessCircle(int color, float centreX, float centreY, float radius, int segments) {
-        setPrimitiveColor(color);
-        GL11.glBegin(GL11.GL_TRIANGLE_FAN);
-        GL11.glVertex2f(centreX, centreY);
-        for (int index = 0; index <= segments; index++) {
-            double angle = Math.PI * 2.0D * index / segments;
-            GL11.glVertex2f(centreX + (float) Math.cos(angle) * radius, centreY + (float) Math.sin(angle) * radius);
-        }
-        GL11.glEnd();
+        String name = (Character.isUpperCase(piece) ? "w" : "b") + Character.toUpperCase(piece);
+        mc.getTextureManager().bindTexture(new net.minecraft.util.ResourceLocation("vibe", "chess/" + name + ".png"));
+        GlStateManager.enableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
+        GlStateManager.color(1, 1, 1, 1);
+        Gui.drawScaledCustomSizeModalRect(x + 2, y + 2, 0, 0, 128, 128, square - 4, square - 4, 128, 128);
     }
 
     private void drawTicTacToe(int x, int y, int size, int mouseX, int mouseY) {
@@ -375,11 +299,13 @@ public final class MemeGameGui extends GuiScreen {
 
     private void ticRing(int color, float centreX, float centreY, float radius, float width) {
         setPrimitiveColor(color);
-        GL11.glLineWidth(width);
-        GL11.glBegin(GL11.GL_LINE_LOOP);
-        for (int index = 0; index < 40; index++) {
-            double angle = Math.PI * 2.0D * index / 40.0D;
-            GL11.glVertex2f(centreX + (float) Math.cos(angle) * radius, centreY + (float) Math.sin(angle) * radius);
+        // An annulus keeps an even stroke regardless of driver line-width limits.
+        GL11.glBegin(GL11.GL_QUAD_STRIP);
+        for (int index = 0; index <= 96; index++) {
+            double angle = Math.PI * 2.0D * index / 96.0D;
+            float dx = (float) Math.cos(angle), dy = (float) Math.sin(angle);
+            GL11.glVertex2f(centreX + dx * (radius + width / 2), centreY + dy * (radius + width / 2));
+            GL11.glVertex2f(centreX + dx * (radius - width / 2), centreY + dy * (radius - width / 2));
         }
         GL11.glEnd();
     }
@@ -394,7 +320,7 @@ public final class MemeGameGui extends GuiScreen {
         int cell = Math.max(28, Math.min(size / 7, (panelHeight - 100) / 6)), actualWidth = cell * 7, actualHeight = cell * 6;
         SkeetEditorStyle.panel(x - 5, y - 25, x + actualWidth + 5, y + actualHeight + 5, null);
         for (int col = 0; col < 7; col++) {
-            boolean hover = hit(x + col * cell, y - 21, x + (col + 1) * cell, y, mouseX, mouseY);
+            boolean hover = hit(x + col * cell, y - 21, x + (col + 1) * cell, y + actualHeight, mouseX, mouseY);
             Gui.drawRect(x + col * cell, y - 21, x + (col + 1) * cell, y, hover && module.isMyTurn() ? SkeetEditorStyle.accent(.3F) : 0xFF1D2446);
             fontRendererObj.drawStringWithShadow(String.valueOf(col + 1), x + col * cell + cell / 2 - 3, y - 15, SkeetEditorStyle.TEXT);
         }
@@ -447,20 +373,24 @@ public final class MemeGameGui extends GuiScreen {
     @Override protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
         if (mouseButton != 0) { super.mouseClicked(mouseX, mouseY, mouseButton); return; }
         layout();
+        mouseX = (int) (mouseX / uiScale); mouseY = (int) (mouseY / uiScale);
         if (module.hasActiveGame()) clickGame(mouseX, mouseY); else clickLobby(mouseX, mouseY);
     }
 
     private void clickLobby(int mouseX, int mouseY) {
         List<NetworkPlayerInfo> players = players();
-        int cardWidth = Math.max(150, (listRight - listLeft - 28) / 2), columns = cardWidth >= 150 ? 2 : 1;
-        if (columns == 1) cardWidth = listRight - listLeft - 20;
+        int columns = playerColumns(), cardWidth = playerCardWidth();
+        if (hit(listRight - 9, listTop, listRight, listBottom - 4, mouseX, mouseY)) { draggingPlayers = true; dragScroll(mouseY); return; }
+        if (hit(contentRight - 9, top + 60, contentRight, listBottom - 36, mouseX, mouseY)) { draggingMatch = true; dragScroll(mouseY); return; }
         for (int index = 0; index < players.size(); index++) {
             int x = listLeft + 10 + (index % columns) * (cardWidth + 6), y = listTop + (index / columns) * 40 - playerScroll;
-            if (hit(x, y, x + cardWidth, y + 34, mouseX, mouseY) && hit(listLeft, listTop, listRight, listBottom, mouseX, mouseY)) {
+            if (!isSelf(players.get(index).getGameProfile().getName()) && hit(x, y, x + cardWidth, y + 34, mouseX, mouseY) && hit(listLeft, listTop, listRight - 8, listBottom - 4, mouseX, mouseY)) {
                 selectedPlayer = players.get(index).getGameProfile().getName(); return;
             }
         }
         int x = sideLeft + 12, right = contentRight - 12;
+        if (hit(right - 84, matchBottom() - 24, right, matchBottom() - 2, mouseX, mouseY)) { mc.displayGuiScreen(null); return; }
+        if (!hit(sideLeft + 2, top + 60, contentRight - 8, listBottom - 36, mouseX, mouseY)) return;
         int multiplayerTop = multiplayerTop();
         int controlsX = x + 9, controlsRight = right - 9, controlsY = multiplayerTop + 23;
         MemeGamePreferences preferences = module.getPreferences();
@@ -475,23 +405,22 @@ public final class MemeGameGui extends GuiScreen {
         if (module.getPendingOpponent() != null) {
             if (hit(controlsX, playerTop + 96, controlsRight, playerTop + 118, mouseX, mouseY)) { module.accept(); return; }
         }
-        int robotTop = singleplayerTop() + 14;
+        int robotTop = singleplayerTop() + 23;
         String strength = preferences.getRobotStrength() + "/10";
         if (hit(controlsX + 70, robotTop, controlsRight, robotTop + 24, mouseX, mouseY)) {
             preferences.setRobotStrength(Math.round(sliderValue(controlsX + 70, sliderTrackRight(controlsX + 70, controlsRight, strength), mouseX, 1, 10))); return;
         }
         if (hit(controlsX, robotTop + 25, controlsRight, robotTop + 48, mouseX, mouseY)) { robotStarts = !robotStarts; return; }
         if (hit(controlsX, robotTop + 53, controlsRight, robotTop + 75, mouseX, mouseY)) { module.startRobot(robotStarts); return; }
-        int matchBottom = matchBottom();
-        if (hit(right - 84, matchBottom - 24, right, matchBottom - 2, mouseX, mouseY)) mc.displayGuiScreen(null);
     }
 
     private void clickGame(int mouseX, int mouseY) {
         int boardSize = boardSize(), x = left + 20, y = top + 45, side = x + boardSize + 20;
+        if (hit(side + 12, top + panelHeight - 76, contentRight - 12, top + panelHeight - 54, mouseX, mouseY)) { module.requestMove(); return; }
         if (hit(side + 12, top + panelHeight - 47, contentRight - 12, top + panelHeight - 25, mouseX, mouseY)) { module.cancel(); return; }
         if (module.getType() == GameType.CHESS) {
             int square = Math.max(24, boardSize / 8), visualColumn = (mouseX - x) / square, visualRow = (mouseY - y) / square;
-            if (visualRow >= 0 && visualRow < 8 && visualColumn >= 0 && visualColumn < 8) {
+            if (mouseX >= x && mouseY >= y && visualRow >= 0 && visualRow < 8 && visualColumn >= 0 && visualColumn < 8) {
                 boolean flipped = module.getLocalSide() == 1;
                 clickChess(flipped ? 7 - visualRow : visualRow, flipped ? 7 - visualColumn : visualColumn);
             }
@@ -501,10 +430,10 @@ public final class MemeGameGui extends GuiScreen {
             }
         } else if (module.getType() == GameType.TIC_TAC_TOE) {
             int cell = Math.max(56, boardSize / 3), col = (mouseX - x) / cell, row = (mouseY - y) / cell;
-            if (row >= 0 && row < 3 && col >= 0 && col < 3) module.play("" + (char) ('a' + col) + (char) ('1' + (2 - row)));
+            if (mouseX >= x && mouseY >= y && row >= 0 && row < 3 && col >= 0 && col < 3) module.play("" + (char) ('a' + col) + (char) ('1' + (2 - row)));
         } else {
             int cell = Math.max(28, Math.min(boardSize / 7, (panelHeight - 100) / 6)), col = (mouseX - x) / cell;
-            if (mouseY >= y - 21 && mouseY < y && col >= 0 && col < 7) module.play(String.valueOf(col + 1));
+            if (mouseX >= x && mouseY >= y - 21 && mouseY < y + cell * 6 && col >= 0 && col < 7) module.play(String.valueOf(col + 1));
         }
     }
 
@@ -514,15 +443,30 @@ public final class MemeGameGui extends GuiScreen {
         layout();
         int wheel = Mouse.getEventDWheel();
         if (wheel == 0) return;
-        int mouseX = Mouse.getEventX() * width / mc.displayWidth;
-        int mouseY = height - Mouse.getEventY() * height / mc.displayHeight - 1;
+        int mouseX = (int) ((Mouse.getEventX() * width / mc.displayWidth) / uiScale);
+        int mouseY = (int) ((height - Mouse.getEventY() * height / mc.displayHeight - 1) / uiScale);
+        if (hit(sideLeft, top + 60, contentRight, listBottom - 36, mouseX, mouseY)) {
+            matchScroll = Math.max(0, Math.min(matchMaximumScroll(), matchScroll - Integer.signum(wheel) * 28)); return;
+        }
         if (!hit(listLeft, listTop, listRight, listBottom, mouseX, mouseY)) return;
         int count = players().size();
-        int cardWidth = Math.max(150, (listRight - listLeft - 28) / 2);
-        int columns = cardWidth >= 150 ? 2 : 1;
+        int columns = playerColumns();
         int rows = (count + columns - 1) / columns, viewport = Math.max(1, listBottom - listTop - 4);
         int maximum = Math.max(0, rows * 40 - viewport);
         playerScroll = Math.max(0, Math.min(maximum, playerScroll - Integer.signum(wheel) * 28));
+    }
+
+    @Override protected void mouseClickMove(int x, int y, int button, long elapsed) {
+        if (button == 0 && (draggingPlayers || draggingMatch)) dragScroll((int) (y / uiScale));
+    }
+    @Override protected void mouseReleased(int x, int y, int button) { draggingPlayers = draggingMatch = false; }
+    private void dragScroll(int y) {
+        int start = draggingPlayers ? listTop : top + 60, end = draggingPlayers ? listBottom - 4 : listBottom - 36;
+        int viewport = end - start;
+        int maximum = draggingPlayers ? Math.max(0, ((players().size() + playerColumns() - 1) / playerColumns()) * 40 - viewport) : matchMaximumScroll();
+        int thumb = Math.max(14, viewport * viewport / (viewport + maximum));
+        int offset = Math.round(maximum * Math.max(0, Math.min(1, (y - start - thumb / 2F) / Math.max(1, viewport - thumb))));
+        if (draggingPlayers) playerScroll = offset; else matchScroll = offset;
     }
 
     private void clickChess(int row, int col) {
@@ -548,8 +492,13 @@ public final class MemeGameGui extends GuiScreen {
         if (mc.getNetHandler() == null || mc.thePlayer == null) return Collections.emptyList();
         List<NetworkPlayerInfo> result = new ArrayList<NetworkPlayerInfo>();
         for (NetworkPlayerInfo info : mc.getNetHandler().getPlayerInfoMap()) {
-            if (info != null && info.getGameProfile() != null && info.getGameProfile().getName() != null
-                    && !info.getGameProfile().getName().equalsIgnoreCase(mc.thePlayer.getName())) result.add(info);
+            if (info != null && info.getGameProfile() != null && info.getGameProfile().getName() != null) result.add(info);
+        }
+        // Merge nearby players omitted from the server's tab list.
+        if (mc.theWorld != null) for (net.minecraft.entity.player.EntityPlayer player : mc.theWorld.playerEntities) {
+            boolean present = false;
+            for (NetworkPlayerInfo info : result) if (player.getUniqueID().equals(info.getGameProfile().getId())) { present = true; break; }
+            if (!present) result.add(new NetworkPlayerInfo(player.getGameProfile()));
         }
         Collections.sort(result, new Comparator<NetworkPlayerInfo>() { @Override public int compare(NetworkPlayerInfo first, NetworkPlayerInfo second) {
             return first.getGameProfile().getName().compareToIgnoreCase(second.getGameProfile().getName());

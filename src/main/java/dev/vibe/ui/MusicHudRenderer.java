@@ -37,7 +37,7 @@ public final class MusicHudRenderer {
     private BufferedImage image;
     private ResourceLocation surface;
     private int cachedWidth, cachedBackground, cachedAccent;
-    private boolean cachedCover, cachedBackdrop;
+    private boolean cachedCover, cachedBackdrop, cachedThumbnail;
     private String trackKey = "";
     private long changedAt;
 
@@ -147,8 +147,9 @@ public final class MusicHudRenderer {
     private void updateSurface(MusicModule module, BufferedImage next) {
         int width = module.hudWidth.getInt(), background = module.background.getArgb(), accent = module.accent.getArgb();
         boolean cover = module.cover.isEnabled(), backdrop = module.coverBackground.isEnabled();
+        boolean thumbnail = next != null && !module.radio.isEnabled();
         if (surface != null && image == next && width == cachedWidth && background == cachedBackground
-                && accent == cachedAccent && cover == cachedCover && backdrop == cachedBackdrop) return;
+                && accent == cachedAccent && cover == cachedCover && backdrop == cachedBackdrop && thumbnail == cachedThumbnail) return;
         BufferedImage tile = next == null ? vinyl(accent) : next;
         BufferedImage canvas = new BufferedImage(width * 2, HEIGHT * 2, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = canvas.createGraphics();
@@ -157,10 +158,15 @@ public final class MusicHudRenderer {
             RoundRectangle2D body = new RoundRectangle2D.Float(0, 4, width, HEIGHT - 8, 16, 16);
             g.setColor(new Color(background, true)); g.fill(body); g.setClip(body);
             if (backdrop) {
-                BufferedImage blurred = blur(tile);
-                g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_ATOP, .48f));
-                // A wide central slice, as in Schizoid, makes the album colors a quiet backdrop.
-                g.drawImage(blurred, 0, 4, width, HEIGHT - 4, 4, 16, 44, 32, null);
+                g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_ATOP, thumbnail ? .85f : .48f));
+                if (thumbnail) {
+                    double scale = Math.max(width / (double) tile.getWidth(), (HEIGHT - 8) / (double) tile.getHeight());
+                    int w = (int) Math.ceil(tile.getWidth() * scale), h = (int) Math.ceil(tile.getHeight() * scale);
+                    g.drawImage(tile, (width - w) / 2, (HEIGHT - h) / 2, w, h, null);
+                } else {
+                    BufferedImage blurred = blur(tile);
+                    g.drawImage(blurred, 0, 4, width, HEIGHT - 4, 4, 16, 44, 32, null);
+                }
                 g.setComposite(AlphaComposite.SrcAtop);
                 g.setPaint(new GradientPaint(0, 0, new Color(0x08000000, true), width, 0, new Color(0x88070A10, true)));
                 g.fill(body);
@@ -173,9 +179,10 @@ public final class MusicHudRenderer {
             if (cover) {
                 RoundRectangle2D outline = new RoundRectangle2D.Float(0, 0, HEIGHT, HEIGHT, 16, 16);
                 g.setColor(new Color(0xFF101318, true)); g.fill(outline); g.setClip(outline);
-                int side = Math.min(tile.getWidth(), tile.getHeight());
-                int cropX = (tile.getWidth() - side) / 2, cropY = (tile.getHeight() - side) / 2;
-                g.drawImage(tile, 0, 0, HEIGHT, HEIGHT, cropX, cropY, cropX + side, cropY + side, null);
+                // Keep the whole video thumbnail visible, including widescreen covers.
+                double scale = HEIGHT / (double) Math.max(tile.getWidth(), tile.getHeight());
+                int w = Math.max(1, (int) Math.round(tile.getWidth() * scale)), h = Math.max(1, (int) Math.round(tile.getHeight() * scale));
+                g.drawImage(tile, (HEIGHT - w) / 2, (HEIGHT - h) / 2, w, h, null);
                 g.setPaint(new GradientPaint(0, 0, new Color(0x28FFFFFF, true), HEIGHT, HEIGHT, new Color(0x04FFFFFF, true)));
                 g.setStroke(new BasicStroke(.75f));
                 g.draw(new RoundRectangle2D.Float(.5f, .5f, HEIGHT - 1, HEIGHT - 1, 15, 15));
@@ -186,7 +193,7 @@ public final class MusicHudRenderer {
         if (surface != null) mc.getTextureManager().deleteTexture(surface);
         surface = mc.getTextureManager().getDynamicTextureLocation("vibe-media-surface", texture);
         image = next; cachedWidth = width; cachedBackground = background; cachedAccent = accent;
-        cachedCover = cover; cachedBackdrop = backdrop;
+        cachedCover = cover; cachedBackdrop = backdrop; cachedThumbnail = thumbnail;
     }
 
     /** Original code-drawn fallback; no upstream vinyl artwork or font files are bundled. */

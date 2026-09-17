@@ -25,7 +25,7 @@ public final class HudModule extends Module {
             "ESP", "TargetESP", "Hitmarker", "Skeletal", "Cosmetics", "ChestESP", "FullBright", "FOV Changer", "CustomCrosshair", "Animations", "AimAssist", "Velocity", "BHop", "Fly",
             "LeftClicker", "Sprint", "NoJumpDelay", "NoSlow", "Eagle", "FastPlace", "HUD Editor", "NameProtect", "ClickGUI");
 
-    private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Vibe", "Vibe", "Skeet"));
+    private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Vibe", "Vibe", "Skeet", "LiquidGlass"));
 
     private final MultiSelectSetting hudElements = addSetting(new MultiSelectSetting("HUD Elements",
                         Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph"),

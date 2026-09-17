@@ -20,8 +20,12 @@ public final class TorusRenderer implements AutoCloseable {
     private boolean failed;
     public boolean hasFailed() { return failed; }
     public void render(HitmarkerModule module) {
-        List<HitmarkerModule.Marker> markers = module.getMarkers();
+        List<HitmarkerModule.Marker> markers = module.getTorusMarkers();
         if (markers.isEmpty() || failed || !GLContext.getCapabilities().OpenGL20) return;
+        boolean active = false;
+        long now = System.currentTimeMillis();
+        for (HitmarkerModule.Marker marker : markers) if (marker.torus && now - marker.created < module.torusLifetime.getInt()) { active = true; break; }
+        if (!active) return;
         Minecraft mc = Minecraft.getMinecraft();
         try (EffectState state = new EffectState()) {
             if (reflection == null) reflection = new EffectProgram("Reflection.vert", "Reflection.frag");
@@ -36,6 +40,7 @@ public final class TorusRenderer implements AutoCloseable {
             int mode = GL11.glGetInteger(GL11.GL_MATRIX_MODE); GL11.glMatrixMode(GL11.GL_MODELVIEW);
             try {
                 for (HitmarkerModule.Marker marker : markers) {
+                    if (!marker.torus) continue;
                     float age = (System.currentTimeMillis()-marker.created)/module.torusLifetime.getFloat();
                     if (age < 0 || age >= 1) continue;
                     GL11.glPushMatrix();

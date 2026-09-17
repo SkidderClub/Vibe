@@ -22,14 +22,17 @@ try {
     $cachedKey = ''; $cachedArtwork = ''; $coverAge = 0
     while (-not $parentProcess.HasExited) {
         try {
-            $sessions = @($manager.GetSessions()) | Sort-Object {
+            # An idle high-priority player must not hide the video currently playing.
+            $sessions = @($manager.GetSessions()) | Sort-Object @{Expression={
+                try { if ([int]$_.GetPlaybackInfo().PlaybackStatus -eq 4) { 0 } else { 1 } } catch { 2 }
+            }}, @{Expression={
                 $owner = $_.SourceAppUserModelId
                 $rank = $priorities.Length
                 for ($i = 0; $i -lt $priorities.Length; $i++) {
                     if ($priorities[$i].Trim().Length -gt 0 -and $owner.IndexOf($priorities[$i].Trim(), [StringComparison]::OrdinalIgnoreCase) -ge 0) { $rank = $i; break }
                 }
                 $rank
-            }
+            }}
             $session = $null; $properties = $null
             foreach ($candidate in $sessions) {
                 try {
@@ -42,13 +45,14 @@ try {
                 $cachedKey = ''; $cachedArtwork = ''
             } else {
                 $key = $session.SourceAppUserModelId + "`n" + $properties.Title + "`n" + $properties.Artist
-                if ($cachedKey -ne $key -or $coverAge -ge 10) {
-                    $cachedKey = $key; $cachedArtwork = ''; $coverAge = 0
+                if ($cachedKey -ne $key -or $cachedArtwork -eq '' -or $coverAge -ge 10) {
+                    if ($cachedKey -ne $key) { $cachedArtwork = '' }
+                    $cachedKey = $key; $coverAge = 0
                     if ($null -ne $properties.Thumbnail) {
                         $stream = $null; $dataReader = $null
                         try {
                             $stream = Await ($properties.Thumbnail.OpenReadAsync()) $streamType
-                            if ($stream.Size -gt 0 -and $stream.Size -le 2000000) {
+                            if ($stream.Size -gt 0 -and $stream.Size -le 8000000) {
                                 $dataReader = $readerType::new($stream.GetInputStreamAt(0))
                                 $length = [uint32]$stream.Size
                                 $loaded = Await ($dataReader.LoadAsync($length)) ([uint32])
