@@ -13,7 +13,7 @@ public final class ConfigEditorModule extends Module {
     }
 
     @Override protected void onEnable() {
-        if (Minecraft.getMinecraft().thePlayer == null) { setEnabled(false); return; }
+        if (isConfigLoading()) { setEnabled(false); return; }
         Minecraft.getMinecraft().displayGuiScreen(new ConfigEditorGui(this));
     }
 }

@@ -23,6 +23,8 @@ public final class HudSettingsGui extends GuiScreen {
     private final List<Setting<?>> settings = new ArrayList<Setting<?>>();
     private final Set<MultiSelectSetting> openMulti = new HashSet<MultiSelectSetting>();
     private StringSetting editing;
+    private dev.vibe.setting.ColorSetting editingColor;
+    private int scroll;
     private String editBuffer = "";
     private NumberSetting draggingNumber;
 
@@ -44,6 +46,8 @@ public final class HudSettingsGui extends GuiScreen {
             settings.add(hud.getArrayOutline());
             settings.add(hud.getArrayStyle());
             settings.add(hud.getArrayListModules());
+            settings.add(hud.getArrayPrimaryColor()); settings.add(hud.getArraySecondaryColor());
+            settings.add(hud.getBackground()); settings.addAll(hud.array.all);
         } else if (HudManager.COORDINATES.equals(element)) {
             settings.add(hud.getCoordinatesOutline());
         } else if (HudManager.SCOREBOARD.equals(element)) {
@@ -66,11 +70,14 @@ public final class HudSettingsGui extends GuiScreen {
         }
         drawDefaultBackground();
         int left = width / 2 - 120;
-        int top = Math.max(16, height / 2 - Math.min(110, 30 + settingsHeight() / 2));
-        drawRect(left, top, left + 240, top + 34 + settingsHeight(), 0xE00A1020);
+        int top = 16;
+        scroll = Math.min(scroll, Math.max(0, settingsHeight() - (height - 66)));
+        drawRect(left, top, left + 240, height - 12, 0xE00A1020);
         fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.format("%s SETTINGS", dev.vibe.language.LanguageManager.translate(element.toUpperCase())), left + 10, top + 10, 0xFFFFFFFF);
-        int y = top + 34;
+        int y = top + 34 - scroll;
+        try (dev.vibe.ui.GuiClip clip = new dev.vibe.ui.GuiClip(left, top + 34, 240, height - 66)) {
         for (Setting<?> setting : settings) {
+            if (!setting.isVisible()) continue;
             fontRendererObj.drawStringWithShadow(setting.getName(), left + 12, y + 4, 0xFFD5E1F5);
             String state = describe(setting);
             int color = setting instanceof BooleanSetting && ((BooleanSetting) setting).isEnabled() ? 0xFF2DE2C2 : 0xFF8FA5C4;
@@ -96,19 +103,25 @@ public final class HudSettingsGui extends GuiScreen {
                 }
             }
         }
+        }
+        fontRendererObj.drawStringWithShadow("Scroll | Click color to enter #RRGGBBAA", left + 4, height - 10, 0xFF8FA5C4);
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
-        if (mouseButton == 0) {
+        if (mouseButton == 0 && mouseY >= 50 && mouseY < height - 16) {
             int left = width / 2 - 120;
-            int top = Math.max(16, height / 2 - Math.min(110, 30 + settingsHeight() / 2));
-            int y = top + 34;
+            int top = 16;
+            int y = top + 34 - scroll;
             for (Setting<?> setting : settings) {
+                if (!setting.isVisible()) continue;
                 int rowHeight = setting instanceof NumberSetting ? 30 : 22;
                 if (mouseX >= left && mouseX < left + 240 && mouseY >= y && mouseY < y + rowHeight) {
-                    if (setting instanceof BooleanSetting) ((BooleanSetting) setting).toggle();
+                    if (setting instanceof dev.vibe.setting.ColorSetting) {
+                        editingColor = (dev.vibe.setting.ColorSetting) setting;
+                        editing = null; editBuffer = editingColor.getHex();
+                    } else if (setting instanceof BooleanSetting) ((BooleanSetting) setting).toggle();
                     else if (setting instanceof ModeSetting) ((ModeSetting) setting).cycle(false);
                     else if (setting instanceof MultiSelectSetting) { if (!openMulti.add((MultiSelectSetting) setting)) openMulti.remove(setting); }
                     else if (setting instanceof NumberSetting) {
@@ -118,6 +131,7 @@ public final class HudSettingsGui extends GuiScreen {
                         editing = (StringSetting) setting; editBuffer = editing.getValue();
                     }
                     Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
+                    dev.vibe.ui.ArrayListRenderer.applyPreset(Vibe.getInstance().getModuleManager().getModule(HudModule.class));
                     return;
                 }
                 y += rowHeight;
@@ -146,6 +160,15 @@ public final class HudSettingsGui extends GuiScreen {
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
+        if (editingColor != null) {
+            if (keyCode == Keyboard.KEY_ESCAPE) { editingColor = null; return; }
+            if (keyCode == Keyboard.KEY_RETURN) {
+                if (editingColor.setHex(editBuffer)) { editingColor = null; manager.save(); } return;
+            }
+            if (keyCode == Keyboard.KEY_BACK && !editBuffer.isEmpty()) editBuffer = editBuffer.substring(0,editBuffer.length()-1);
+            else if ("#0123456789abcdefABCDEF".indexOf(typedChar)>=0 && editBuffer.length()<9) editBuffer += typedChar;
+            return;
+        }
         if (editing != null) {
             if (keyCode == Keyboard.KEY_ESCAPE || keyCode == Keyboard.KEY_RETURN) {
                 editing.setValue(editBuffer); Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager()); editing = null; return;
@@ -168,6 +191,7 @@ public final class HudSettingsGui extends GuiScreen {
     private int settingsHeight() {
         int result = 0;
         for (Setting<?> setting : settings) {
+            if (!setting.isVisible()) continue;
             result += setting instanceof NumberSetting ? 30 : 22;
             if (setting instanceof MultiSelectSetting && openMulti.contains(setting)) result += ((MultiSelectSetting) setting).getOptions().size() * 14;
         }
@@ -180,7 +204,13 @@ public final class HudSettingsGui extends GuiScreen {
         float ratio = Math.max(0.0F, Math.min(1.0F, (mouseX - left) / (float) Math.max(1, right - left)));
         setting.setValue(setting.getMinimum() + (setting.getMaximum() - setting.getMinimum()) * ratio);
     }
+    @Override public void handleMouseInput() throws IOException {
+        super.handleMouseInput();
+        int wheel = org.lwjgl.input.Mouse.getEventDWheel();
+        if (wheel != 0) scroll = Math.max(0, Math.min(Math.max(0,settingsHeight()-(height-66)),scroll-(wheel>0?36:-36)));
+    }
     private String describe(Setting<?> setting) {
+        if (setting instanceof dev.vibe.setting.ColorSetting) return editingColor == setting ? editBuffer + "_" : ((dev.vibe.setting.ColorSetting)setting).getHex();
         if (setting instanceof BooleanSetting) return dev.vibe.language.LanguageManager.translate(((BooleanSetting) setting).isEnabled() ? "ON" : "OFF");
         if (setting instanceof ModeSetting) return dev.vibe.language.LanguageManager.translate(((ModeSetting) setting).getValue());
         if (setting instanceof MultiSelectSetting) return dev.vibe.language.LanguageManager.format("%s selected", ((MultiSelectSetting) setting).getValue().size());

@@ -10,7 +10,7 @@ import org.lwjgl.input.Keyboard;
 public final class Gta7Module extends Module {
     public Gta7Module() { super("GTA7", "A 3D first-person city with police, traffic and permanent upgrades", Category.MEME, Keyboard.KEY_NONE); }
     @Override protected void onEnable() {
-        if (Minecraft.getMinecraft().thePlayer == null) { setEnabled(false); return; }
+        if (isConfigLoading()) { setEnabled(false); return; }
         Minecraft.getMinecraft().displayGuiScreen(new Gta7Gui(this));
     }
 }

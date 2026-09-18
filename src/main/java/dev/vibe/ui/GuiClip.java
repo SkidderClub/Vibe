@@ -7,10 +7,10 @@ import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 
 /** Nested GUI clipping that preserves the enclosing scroll panel. */
-final class GuiClip implements AutoCloseable {
+public final class GuiClip implements AutoCloseable {
     private final boolean enabled = GL11.glIsEnabled(GL11.GL_SCISSOR_TEST);
     private final IntBuffer previous = BufferUtils.createIntBuffer(16);
-    GuiClip(int x, int y, int width, int height) {
+    public GuiClip(int x, int y, int width, int height) {
         GL11.glGetInteger(GL11.GL_SCISSOR_BOX, previous);
         Minecraft mc = Minecraft.getMinecraft();
         int scale = new ScaledResolution(mc).getScaleFactor();

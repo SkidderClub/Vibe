@@ -25,8 +25,10 @@ public final class CosmeticPreviewRenderer {
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final Map<String, EntityOtherPlayerMP> players = new HashMap<String, EntityOtherPlayerMP>();
 
+    private net.minecraft.world.World previewWorld;
+
     public void draw(final CosmeticPreset preset, int x, int bottom, int scale, float yaw) {
-        if (preset == null || minecraft.theWorld == null) return;
+        if (preset == null) return;
         final EntityOtherPlayerMP player = playerFor(preset.getSkinName()); if (player == null) return;
         float oldOffset = player.renderYawOffset, oldYaw = player.rotationYaw, oldPitch = player.rotationPitch, oldHead = player.rotationYawHead;
         float oldPrevOffset = player.prevRenderYawOffset, oldPrevYaw = player.prevRotationYaw, oldPrevPitch = player.prevRotationPitch, oldPrevHead = player.prevRotationYawHead;
@@ -85,7 +87,7 @@ public final class CosmeticPreviewRenderer {
                 minecraft.getTextureManager().loadTexture(skin, new ThreadDownloadImageData(null, "https://minotar.net/skin/" + key, DefaultPlayerSkin.getDefaultSkinLegacy(), null));
             } catch (Throwable ignored) { }
         }
-        EntityOtherPlayerMP result = new EntityOtherPlayerMP(minecraft.theWorld, new GameProfile(UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8)), name == null ? "xHeist_" : name)) {
+        EntityOtherPlayerMP result = new EntityOtherPlayerMP(previewWorld == null ? (previewWorld = new EspPreviewWorld()) : previewWorld, new GameProfile(UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8)), name == null ? "xHeist_" : name)) {
             @Override public ResourceLocation getLocationSkin() { return skin; }
             @Override public boolean hasSkin() { return true; }
         };

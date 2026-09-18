@@ -36,6 +36,7 @@ import dev.vibe.module.impl.FlyModule;
 import dev.vibe.module.impl.BlurModule;
 import dev.vibe.module.impl.WaifuModule;
 import dev.vibe.module.impl.CustomCrosshairModule;
+import dev.vibe.module.impl.CustomCosmeticsModule;
 import dev.vibe.module.impl.AnimationsModule;
 import dev.vibe.module.impl.ParticlesModule;
 import dev.vibe.module.impl.QolModule;
@@ -91,6 +92,7 @@ public final class ModuleManager {
         register(new FullBrightModule());
         register(new FovChangerModule());
         register(new CustomCrosshairModule());
+        register(new CustomCosmeticsModule());
         register(new dev.vibe.module.impl.FogModule());
         register(new dev.vibe.module.impl.MusicModule());
         register(new AnimationsModule());

@@ -46,7 +46,7 @@ public abstract class MemeGameModule extends Module {
     }
 
     @Override protected void onEnable() {
-        if (minecraft.thePlayer == null) { setEnabled(false); return; }
+        if (isConfigLoading()) { setEnabled(false); return; }
         minecraft.displayGuiScreen(new MemeGameGui(this));
     }
 

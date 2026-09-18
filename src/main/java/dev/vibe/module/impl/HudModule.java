@@ -60,6 +60,8 @@ public final class HudModule extends Module {
     private final ColorSetting background = addSetting(new ColorSetting("Array Background", 0xD9141E34,
             () -> true));
 
+    public final dev.vibe.hud.ArrayListSettings array = new dev.vibe.hud.ArrayListSettings(this::addSetting);
+
     public HudModule() {
         super("HUD", "Customizable Vibe HUD", Category.CLIENT, Keyboard.KEY_NONE);
         setEnabled(true);

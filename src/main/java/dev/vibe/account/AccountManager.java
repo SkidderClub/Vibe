@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -24,6 +26,7 @@ import net.minecraft.util.Session;
 public final class AccountManager {
     private final Minecraft minecraft;
     private final Session launcherSession;
+    private final Path directory;
     private final AccountStore store;
     private final CookieFolderImporter cookieFolder;
     private final MicrosoftLogin auth = new MicrosoftLogin();
@@ -44,6 +47,7 @@ public final class AccountManager {
 
     public AccountManager(Minecraft minecraft, Path directory) {
         this.minecraft = minecraft;
+        this.directory = directory;
         launcherSession = minecraft.getSession();
         store = new AccountStore(directory);
         cookieFolder = new CookieFolderImporter(directory.resolveSibling("cookies"),
@@ -61,9 +65,28 @@ public final class AccountManager {
             if (!busy && !storageUnavailable) cookieFolder.scan();
         }, 0, 3, TimeUnit.SECONDS);
         if (!storageUnavailable) {
-            Account startup = accounts.stream().filter(this::isAutoLogin).findFirst().orElse(null);
+            // The launcher stores only an account UUID/name. Tokens remain in this vault,
+            // and the normal in-client Account Manager performs any token refresh.
+            Account startup = launcherSelectedAccount();
+            if (startup == null) startup = accounts.stream().filter(this::isAutoLogin).findFirst().orElse(null);
             if (startup != null) login(startup);
         }
+    }
+
+    private Account launcherSelectedAccount() {
+        Path bridge = directory.getParent().resolve("launcher.properties");
+        if (!Files.isRegularFile(bridge, LinkOption.NOFOLLOW_LINKS)) return null;
+        try (java.io.InputStream input = Files.newInputStream(bridge)) {
+            Properties values = new Properties();
+            values.load(input);
+            String uuid = values.getProperty("selectedUuid", "");
+            if (!uuid.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")) return null;
+            UUID selected = UUID.fromString(uuid);
+            for (Account account : accounts) if (selected.equals(account.getUuid())) return account;
+        } catch (Exception ignored) {
+            // Launcher preferences are optional and never replace Vibe's own flow.
+        }
+        return null;
     }
 
     public synchronized List<Account> getAccounts() { return Collections.unmodifiableList(new ArrayList<>(accounts)); }
@@ -303,6 +326,19 @@ public final class AccountManager {
 
     private void checkCurrent(long ticket) {
         if (ticket != generation || Thread.currentThread().isInterrupted()) throw new CancellationException();
+    }
+
+    /** Activate an ephemeral offline identity without touching the vault or auto-login preference. */
+    public synchronized boolean useTemporaryOffline(String name) {
+        if (name == null || !name.matches("[A-Za-z0-9_]{3,16}")) return false;
+        cancel(); // Invalidate a pending asynchronous login before changing the live session.
+        try {
+            UUID uuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            setSession(new Session(name, uuid.toString().replace("-", ""), "0", "legacy"));
+            status = "Temporary offline session: " + name;
+            error = false;
+            return true;
+        } catch (IOException e) { report(e.getMessage()); return false; }
     }
 
     private void activate(Account account, String accessToken) {

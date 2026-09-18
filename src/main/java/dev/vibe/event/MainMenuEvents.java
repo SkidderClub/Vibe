@@ -1,6 +1,7 @@
 package dev.vibe.event;
 
 import dev.vibe.Vibe;
+import dev.vibe.launcher.LauncherBridge;
 import dev.vibe.ui.GamertagSetupGui;
 import dev.vibe.ui.AccountManagerGui;
 import dev.vibe.ui.MainMenuShaderManager;
@@ -23,6 +24,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiMainMenu;
+import net.minecraft.client.gui.GuiSelectWorld;
 import net.minecraft.client.gui.GuiIngameMenu;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.ScaledResolution;
@@ -53,6 +55,14 @@ public final class MainMenuEvents {
         }
         if (!Vibe.getInstance().getIdentity().isConfigured()) {
             event.gui = new GamertagSetupGui(shaders, Vibe.getInstance().getIdentity());
+        } else if (LauncherBridge.consumeAccountsRequest(mc.mcDataDir)) {
+            // Use Vibe's own protected Microsoft/offline account flow, not a
+            // second launcher implementation that would have to handle tokens.
+            event.gui = new AccountManagerGui(event.gui, shaders, Vibe.getInstance().getAccountManager());
+        } else if (LauncherBridge.consumeGta7Request(mc.mcDataDir)) {
+            LauncherBridge.clearGta7Request(mc.mcDataDir);
+            event.gui = new dev.vibe.ui.Gta7Gui(Vibe.getInstance().getModuleManager()
+                    .getModule(dev.vibe.module.impl.Gta7Module.class));
         }
     }
 
@@ -120,6 +130,18 @@ public final class MainMenuEvents {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onMenuKey(GuiScreenEvent.KeyboardInputEvent.Pre event) {
+        // Menus consume key events before Forge's in-world KeyInputEvent.
+        dev.vibe.module.impl.ClickGuiModule click = Vibe.getInstance().getModuleManager()
+                .getModule(dev.vibe.module.impl.ClickGuiModule.class);
+        if (Minecraft.getMinecraft().theWorld == null && Keyboard.getEventKeyState()
+                && !Keyboard.isRepeatEvent() && click != null && click.getKey() != Keyboard.KEY_NONE
+                && Keyboard.getEventKey() == click.getKey()
+                && (event.gui instanceof GuiMainMenu || event.gui instanceof net.minecraft.client.gui.GuiMultiplayer
+                    || event.gui instanceof net.minecraft.client.gui.GuiDisconnected || event.gui instanceof GuiSelectWorld)) {
+            Vibe.getInstance().openClickGui();
+            event.setCanceled(true);
+            return;
+        }
         if (event.gui instanceof GuiMainMenu && presentation != null && Keyboard.getEventKeyState()
                 && presentation.keyInput(Keyboard.getEventKey())) event.setCanceled(true);
     }

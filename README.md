@@ -39,6 +39,17 @@ Run these commands from the project root, or double-click the scripts:
 
 The installable JAR is written to `build/libs/Vibe-1.8.9-<version>.jar`.
 
+## Desktop launcher
+
+Build the separate Vibe Launcher with `launcher\buildLauncher.bat`. Its executable
+JAR is written to `launcher\VibeLauncher.jar`. Starting that JAR downloads and
+updates the managed Vibe source from `SkidderClub/Vibe`, installs private runtimes
+when required, then builds Vibe before starting the persistent Forge 1.8.9 profile
+with OptiFine. It accepts dropped custom mods, shares Vibe's menu themes, opens the
+native Alt Manager for Microsoft/offline sign-in, and can route a world launch into
+GTA7. See [launcher/README.md](launcher/README.md) for automatic updates, runtime
+repair and log locations.
+
 `./gradlew verifyNeverLoseRendering` checks NeverLose controls and clipping in an
 offscreen OpenGL context, writing screenshots to `build/neverlose-render-check/`.
 `./gradlew verifyXanaxRendering` checks Xanax rendering, controls, profiles and

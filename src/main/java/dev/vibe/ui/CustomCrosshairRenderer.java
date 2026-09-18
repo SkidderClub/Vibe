@@ -51,7 +51,7 @@ public final class CustomCrosshairRenderer {
                 GL11.glTranslatef(-x, -y, 0.0F);
             }
             if (module.getStyle().is("Dot")) {
-                dot(x, y, module.getDotSize().getInt(), color, module);
+                dot(x, y, 1, color, module);
             } else if (module.getStyle().is("Circle")) {
                 circle(x, y, module.getCircleRadius().getFloat(), module.getCircleSegments().getInt(), color, module);
             } else {
@@ -63,7 +63,7 @@ public final class CustomCrosshairRenderer {
                 cross(x, y, module.getGap().getInt() + Math.round(dynamic), module.getLength().getInt(),
                         module.getThickness().getInt(), color, module);
                 if (module.getStyle().is("Cross Dot") || module.getCenterDot().isEnabled()) {
-                    dot(x, y, module.getDotSize().getInt(), color, module);
+                    dot(x, y, 1, color, module);
                 }
             }
             if (minecraftWorld && module.getBreakCircle().isEnabled()) {
@@ -83,7 +83,7 @@ public final class CustomCrosshairRenderer {
         if (module.getStyle().is("Circle")) {
             extent = module.getCircleRadius().getFloat() + module.getThickness().getFloat() / 2 + outline;
         } else if (module.getStyle().is("Dot")) {
-            extent = (module.getDotSize().getInt() + 1) / 2 + outline;
+            extent = (1 + 1) / 2 + outline;
             if (module.getRotate().isEnabled()) extent *= Math.sqrt(2);
         } else {
             float dynamic = module.getStyle().is("Dynamic") && module.getMovementGap().isEnabled()
@@ -97,7 +97,7 @@ public final class CustomCrosshairRenderer {
                 extent = Math.max(length * cos + halfWidth * sin, length * sin + halfWidth * cos);
             }
             if (module.getStyle().is("Cross Dot") || module.getCenterDot().isEnabled()) {
-                float dot = (module.getDotSize().getInt() + 1) / 2 + outline;
+                float dot = (1 + 1) / 2 + outline;
                 if (module.getRotate().isEnabled()) dot *= Math.sqrt(2);
                 extent = Math.max(extent, dot);
             }

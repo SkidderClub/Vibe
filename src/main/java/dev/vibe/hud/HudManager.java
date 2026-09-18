@@ -196,92 +196,9 @@ public final class HudManager {
         watermark.setBounds(left, top, width, 26);
     }
 
-    private void drawArrayList(HudModule hud, ScaledResolution resolution, final FontRenderer font) {
-        hud.synchronizeArrayListModules();
-        List<Module> modules = new ArrayList<Module>();
-        for (Module module : Vibe.getInstance().getModuleManager().getModules()) {
-            if (module.isEnabled() && hud.getArrayListModules().isSelected(module.getRawName())) {
-                modules.add(module);
-            }
-        }
-        Collections.sort(modules, new Comparator<Module>() {
-            @Override
-            public int compare(Module first, Module second) {
-                return font.getStringWidth(second.getName()) - font.getStringWidth(first.getName());
-            }
-        });
-        // The array is measured from its visible text every frame.  This keeps
-        // the background and outline snug when the enabled module set changes.
-        int width = 10;
-        for (Module module : modules) {
-            width = Math.max(width, font.getStringWidth(module.getName()) + 10);
-        }
-        // Alignment follows the HUD designer position. Switching the anchor
-        // preserves the visual location while making right-side text right
-        // aligned and left-side text left aligned automatically.
-        int rowHeight = hud.getArrayStyle().is("Cards") ? 14 : 12;
-        int totalHeight = modules.size() * rowHeight;
-        arrayList.ensureOnScreen(resolution, width, Math.max(1, totalHeight));
-        int currentLeft = arrayList.left(resolution, width);
-        boolean rightAligned = currentLeft + width / 2 >= resolution.getScaledWidth() / 2;
-        arrayList.setRightAnchored(rightAligned, resolution, width);
-        int left = arrayList.left(resolution, width);
-        int y = arrayList.getY();
-        int startY = y;
-        if (modules.isEmpty()) {
-            arrayList.setBounds(left, y, width, 0);
-            return;
-        }
-        arrayList.setBounds(left, y, width, totalHeight);
-        // Measure the stair-step silhouette, including narrow rows, before any drawing.
-        int outline = !isSkeet() && hud.getArrayOutline().isEnabled() ? 1 : 0;
-        for (int index = 0; index < modules.size(); index++) {
-            int moduleWidth = font.getStringWidth(modules.get(index).getName()) + 10;
-            int moduleLeft = rightAligned ? left + width - moduleWidth : left;
-            int rowTop = startY + index * rowHeight;
-            if (DebugOverlay.overlaps(moduleLeft - outline, rowTop - outline,
-                    moduleLeft + moduleWidth + outline, rowTop + rowHeight + outline)) return;
-        }
-        List<ArrayRow> rows = new ArrayList<ArrayRow>();
-        int row = 0;
-        for (Module module : modules) {
-            int accent = arrayColor(hud, row * 0.12F);
-            int moduleWidth = font.getStringWidth(module.getName()) + 10;
-            int moduleLeft = rightAligned ? left + width - moduleWidth : left;
-            int moduleRight = moduleLeft + moduleWidth;
-            rows.add(new ArrayRow(moduleLeft, moduleRight, y, y + rowHeight, accent));
-            // Each entry has a clipped Kawase pass of its own. The empty space
-            // between unequal name widths is never sampled or dimmed.
-            if (blurEnabled(BlurModule.ARRAY_LIST)) {
-                KawaseBlur.drawRegion(moduleLeft, y, moduleRight, y + rowHeight, 3, 0.0F);
-            }
-            if (!hud.getArrayStyle().is("Minimal")) {
-                if (hud.getMode().is("LiquidGlass")) drawHudSurface(hud, moduleLeft, y, moduleRight, y + rowHeight);
-                else Gui.drawRect(moduleLeft, y, moduleRight, y + rowHeight, hud.getBackground().getArgb());
-            }
-            if (!hud.getArrayStyle().is("Minimal")) {
-                if (rightAligned) {
-                    Gui.drawRect(moduleRight - 2, y, moduleRight, y + rowHeight, accent);
-                } else {
-                    Gui.drawRect(moduleLeft, y, moduleLeft + 2, y + rowHeight, accent);
-                }
-            }
-            int color = hud.getArrayStyle().is("Minimal") ? accent : RenderUtils.TEXT;
-            int textX = rightAligned ? left + width - 5 - font.getStringWidth(module.getName()) : left + 5;
-            font.drawStringWithShadow(module.getName(), textX, y + 2, color);
-            y += rowHeight;
-            row++;
-        }
-        if (hud.getArrayOutline().isEnabled() && !hud.getMode().is("LiquidGlass")) {
-            drawArrayOutline(rows, rightAligned, hud);
-        }
-        arrayList.setBounds(left, startY, width, y - startY);
-    }
-
-    private int arrayColor(HudModule hud, float phase) {
-        float progress = (float) ((System.currentTimeMillis() % 4200L) / 4200.0D);
-        float blend = (float) ((Math.sin((progress + phase) * Math.PI * 2.0D) + 1.0D) * 0.5D);
-        return RenderUtils.blend(hud.getArrayPrimaryColor().getArgb(), hud.getArraySecondaryColor().getArgb(), blend);
+    private final dev.vibe.ui.ArrayListRenderer arrayRenderer = new dev.vibe.ui.ArrayListRenderer();
+    private void drawArrayList(HudModule hud, ScaledResolution resolution, FontRenderer font) {
+        arrayRenderer.draw(hud,arrayList,resolution,false);
     }
 
     private boolean blurEnabled(String element) {
@@ -320,46 +237,6 @@ public final class HudManager {
         Gui.drawRect(left, top + 1, left + 1, bottom, 0xFF25252A);
         Gui.drawRect(right - 1, top + 1, right, bottom, 0xFF25252A);
         Gui.drawRect(left, bottom - 1, right, bottom, 0xFF25252A);
-    }
-
-    /** Draws one continuous stair-step border around the visible row union. */
-    private void drawArrayOutline(List<ArrayRow> rows, boolean rightAligned, HudModule hud) {
-        if (rows.isEmpty()) {
-            return;
-        }
-        ArrayRow first = rows.get(0);
-        ArrayRow last = rows.get(rows.size() - 1);
-        if (rightAligned) {
-            // Top, fixed outer edge, then the varying inner edge forms the
-            // upside-down staircase shown in the requested design.
-            Gui.drawRect(first.left, first.top, first.right, first.top + 1, first.color);
-            for (int index = 0; index < rows.size(); index++) {
-                ArrayRow current = rows.get(index);
-                // The stationary outer edge and this module's inner stair
-                // edge use the same accent as the module beside them.
-                Gui.drawRect(current.right - 1, current.top, current.right, current.bottom, current.color);
-                Gui.drawRect(current.left, current.top, current.left + 1, current.bottom, current.color);
-                if (index + 1 < rows.size()) {
-                    ArrayRow next = rows.get(index + 1);
-                    Gui.drawRect(Math.min(current.left, next.left), current.bottom,
-                            Math.max(current.left, next.left) + 1, current.bottom + 1, next.color);
-                }
-            }
-            Gui.drawRect(last.left, last.bottom - 1, last.right, last.bottom, last.color);
-        } else {
-            Gui.drawRect(first.left, first.top, first.right, first.top + 1, first.color);
-            for (int index = 0; index < rows.size(); index++) {
-                ArrayRow current = rows.get(index);
-                Gui.drawRect(current.left, current.top, current.left + 1, current.bottom, current.color);
-                Gui.drawRect(current.right - 1, current.top, current.right, current.bottom, current.color);
-                if (index + 1 < rows.size()) {
-                    ArrayRow next = rows.get(index + 1);
-                    Gui.drawRect(Math.min(current.right, next.right), current.bottom,
-                            Math.max(current.right, next.right) + 1, current.bottom + 1, next.color);
-                }
-            }
-            Gui.drawRect(last.left, last.bottom - 1, last.right, last.bottom, last.color);
-        }
     }
 
     private void drawHudOutline(int left, int top, int right, int bottom, int color) {
@@ -874,13 +751,8 @@ public final class HudManager {
                     element.getTop() + 22, 0xAA2DE2C2);
             font.drawStringWithShadow(LanguageManager.translate("WATERMARK"), element.getLeft() + 4, element.getTop() + 6, 0xFFFFFFFF);
         } else if (element == arrayList) {
-            int width = Math.max(100, element.getWidth());
-            int height = Math.max(42, element.getHeight());
-            Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + width + 2, element.getTop() + height + 2,
-                    0xAAA855F7);
-            font.drawStringWithShadow(LanguageManager.translate("ARRAYLIST"), element.getLeft() + 4, element.getTop() + 6, 0xFFFFFFFF);
-            font.drawStringWithShadow(LanguageManager.translate("Module One"), element.getLeft() + 4, element.getTop() + 18, 0xFFD5E1F5);
-            font.drawStringWithShadow(LanguageManager.translate("Module Two"), element.getLeft() + 4, element.getTop() + 30, 0xFFD5E1F5);
+            arrayRenderer.draw(Vibe.getInstance().getModuleManager().getModule(HudModule.class), arrayList,
+                    new ScaledResolution(minecraft), true);
         } else if (element == coordinates) {
             Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(110, element.getWidth()) + 2,
                     element.getTop() + 22, 0xAA60D5FF);
@@ -1126,6 +998,7 @@ public final class HudManager {
             JsonObject value = new JsonObject();
             value.addProperty("x", x);
             value.addProperty("y", y);
+            value.addProperty("rightAnchored", rightAnchored);
             value.addProperty("centred", centred);
             value.addProperty("verticallyCentred", verticallyCentred);
             return value;
@@ -1139,6 +1012,7 @@ public final class HudManager {
                 if (value.has("y")) {
                     y = value.get("y").getAsInt();
                 }
+                if (value.has("rightAnchored")) rightAnchored = value.get("rightAnchored").getAsBoolean();
                 if (value.has("centred")) {
                     centred = value.get("centred").getAsBoolean();
                 }

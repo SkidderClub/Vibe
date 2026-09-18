@@ -5,6 +5,8 @@ import dev.vibe.module.Module;
 import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ModeSetting;
 import dev.vibe.setting.NumberSetting;
+import dev.vibe.setting.StringSetting;
+import dev.vibe.nes.RetroArchLauncher;
 import dev.vibe.ui.NesEmulatorGui;
 import java.awt.Desktop;
 import java.io.File;
@@ -14,24 +16,34 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.input.Keyboard;
 
-/** Opens Vibe's local, ROM-folder-backed NES player. */
+/** Built-in fast NES player plus locally installed RetroArch support for other systems. */
 public final class NesEmulatorModule extends Module {
-    private final File folder = new File(Minecraft.getMinecraft().mcDataDir, "vibe/nes/roms");
+    private final File folder = new File(Minecraft.getMinecraft().mcDataDir, "vibe/roms");
     private final ModeSetting rom;
+    private final ModeSetting backend = addSetting(new ModeSetting("Backend", "Built-in NES", "Built-in NES", "RetroArch"));
+    private final ModeSetting system = addSetting(new ModeSetting("System", "Auto", "Auto", "NES", "SNES", "Game Boy", "Game Boy Color",
+            "Game Boy Advance", "Sega Genesis", "Master System", "Game Gear", "PC Engine", "Neo Geo Pocket", "WonderSwan",
+            "Atari 2600", "Atari 7800", "Atari Lynx", "PlayStation", "Nintendo 64", "Nintendo DS", "PSP"));
     private final ModeSetting region = addSetting(new ModeSetting("Region", "NTSC", "NTSC", "PAL"));
     private final NumberSetting scale = addSetting(new NumberSetting("Scale", 2.0D, 1.0D, 3.0D, 1.0D));
+    private final NumberSetting presentationFps = addSetting(new NumberSetting("Presentation FPS", 60.0D, 30.0D, 60.0D, 30.0D,
+            () -> backend.is("Built-in NES")));
+    private final StringSetting retroArchExecutable = addSetting(new StringSetting("RetroArch Executable", "", 512,
+            () -> backend.is("RetroArch")));
+    private final StringSetting retroArchCore = addSetting(new StringSetting("RetroArch Core", "", 512,
+            () -> backend.is("RetroArch")));
     private final BooleanSetting openFolder = addSetting(new BooleanSetting("Open Folder", false));
     private long lastScan;
 
     public NesEmulatorModule() {
-        super("NES Emulator", "Play local .nes ROM files in a Vibe GUI", Category.MEME, Keyboard.KEY_NONE);
+        super("NES Emulator", "Fast built-in NES and RetroArch ROM launcher", Category.MEME, Keyboard.KEY_NONE);
         ensureFolder();
         List<String> choices = romChoices();
         rom = addSetting(new ModeSetting("ROM", "None", choices.toArray(new String[choices.size()])));
     }
 
     @Override protected void onEnable() {
-        if (Minecraft.getMinecraft().thePlayer == null) { setEnabled(false); return; }
+        if (isConfigLoading()) { setEnabled(false); return; }
         refreshRoms();
         Minecraft.getMinecraft().displayGuiScreen(new NesEmulatorGui(this));
     }
@@ -77,11 +89,28 @@ public final class NesEmulatorModule extends Module {
 
     public List<File> getRoms() {
         if (!folder.isDirectory()) return Collections.emptyList();
-        File[] files = folder.listFiles();
         List<File> roms = new ArrayList<File>();
-        if (files != null) for (File file : files) if (file.isFile() && file.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".nes")) roms.add(file);
+        collectRoms(folder, roms, 0);
         Collections.sort(roms);
         return roms;
+    }
+
+    private void collectRoms(File root, List<File> into, int depth) {
+        File[] files = root.listFiles(); if (files == null || depth > 3) return;
+        for (File file : files) {
+            if (file.isDirectory()) collectRoms(file, into, depth + 1);
+            else if (isSupported(file)) into.add(file);
+        }
+    }
+    private boolean isSupported(File file) {
+        String name = file.getName().toLowerCase(java.util.Locale.ROOT);
+        return name.endsWith(".nes") || name.endsWith(".fds") || name.endsWith(".sfc") || name.endsWith(".smc")
+                || name.endsWith(".gb") || name.endsWith(".gbc") || name.endsWith(".gba") || name.endsWith(".gen")
+                || name.endsWith(".md") || name.endsWith(".sms") || name.endsWith(".gg") || name.endsWith(".pce")
+                || name.endsWith(".ngp") || name.endsWith(".ngc") || name.endsWith(".ws") || name.endsWith(".wsc")
+                || name.endsWith(".a26") || name.endsWith(".a78") || name.endsWith(".lnx") || name.endsWith(".cue")
+                || name.endsWith(".chd") || name.endsWith(".n64") || name.endsWith(".z64") || name.endsWith(".v64")
+                || name.endsWith(".nds") || name.endsWith(".iso") || name.endsWith(".cso") || name.endsWith(".zip");
     }
 
     private List<String> romChoices() {
@@ -92,7 +121,27 @@ public final class NesEmulatorModule extends Module {
     private void ensureFolder() { if (!folder.isDirectory()) folder.mkdirs(); }
     public File getFolder() { return folder; }
     public ModeSetting getRom() { return rom; }
+    public ModeSetting getBackend() { return backend; }
+    public ModeSetting getSystem() { return system; }
     public ModeSetting getRegion() { return region; }
     public NumberSetting getScale() { return scale; }
+    public NumberSetting getPresentationFps() { return presentationFps; }
+    public StringSetting getRetroArchExecutable() { return retroArchExecutable; }
+    public StringSetting getRetroArchCore() { return retroArchCore; }
     public BooleanSetting getOpenFolder() { return openFolder; }
+    public String selectedSystem() {
+        if (!system.is("Auto")) return system.getValue();
+        File file = getSelectedRom(); if (file == null) return "NES";
+        String name = file.getName().toLowerCase(java.util.Locale.ROOT);
+        if (name.endsWith(".sfc") || name.endsWith(".smc")) return "SNES";
+        if (name.endsWith(".gbc")) return "Game Boy Color"; if (name.endsWith(".gb")) return "Game Boy";
+        if (name.endsWith(".gba")) return "Game Boy Advance";
+        if (name.endsWith(".gen") || name.endsWith(".md")) return "Sega Genesis";
+        if (name.endsWith(".sms")) return "Master System"; if (name.endsWith(".gg")) return "Game Gear";
+        if (name.endsWith(".pce")) return "PC Engine"; if (name.endsWith(".n64") || name.endsWith(".z64") || name.endsWith(".v64")) return "Nintendo 64";
+        if (name.endsWith(".nds")) return "Nintendo DS"; if (name.endsWith(".iso") || name.endsWith(".cso")) return "PSP";
+        if (name.endsWith(".cue") || name.endsWith(".chd")) return "PlayStation"; return "NES";
+    }
+    public String launchRetroArch() { return RetroArchLauncher.launch(getSelectedRom(), retroArchExecutable.getValue(), retroArchCore.getValue(), selectedSystem()); }
+    public boolean canUseBuiltIn() { return selectedSystem().equals("NES"); }
 }

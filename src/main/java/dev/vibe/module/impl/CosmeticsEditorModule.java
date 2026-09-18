@@ -10,7 +10,7 @@ import org.lwjgl.input.Keyboard;
 public final class CosmeticsEditorModule extends Module {
     public CosmeticsEditorModule() { super("Cosmetics Editor", "Create, preview and assign cosmetic presets", Category.CLIENT, Keyboard.KEY_NONE); }
     @Override protected void onEnable() {
-        if (Minecraft.getMinecraft().thePlayer == null) { setEnabled(false); return; }
+        if (isConfigLoading()) { setEnabled(false); return; }
         Minecraft.getMinecraft().displayGuiScreen(new CosmeticsEditorGui(this));
     }
 }

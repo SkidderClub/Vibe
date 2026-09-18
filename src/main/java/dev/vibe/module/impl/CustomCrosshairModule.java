@@ -24,8 +24,6 @@ public final class CustomCrosshairModule extends Module {
             () -> !style.is("Dot") && !style.is("Circle")));
     private final BooleanSetting centerDot = addSetting(new BooleanSetting("Center Dot", false,
             () -> !style.is("Dot") && !style.is("Cross Dot")));
-    private final NumberSetting dotSize = addSetting(new NumberSetting("Dot Size", 2.0D, 1.0D, 8.0D, 1.0D,
-            () -> style.is("Dot") || style.is("Cross Dot") || centerDot.isEnabled()));
     private final NumberSetting circleRadius = addSetting(new NumberSetting("Circle Radius", 7.0D, 2.0D, 32.0D, 1.0D,
             () -> style.is("Circle")));
     private final NumberSetting circleSegments = addSetting(new NumberSetting("Circle Segments", 32.0D, 12.0D, 96.0D, 2.0D,
@@ -65,7 +63,6 @@ public final class CustomCrosshairModule extends Module {
     public NumberSetting getThickness() { return thickness; }
     public NumberSetting getGap() { return gap; }
     public BooleanSetting getCenterDot() { return centerDot; }
-    public NumberSetting getDotSize() { return dotSize; }
     public NumberSetting getCircleRadius() { return circleRadius; }
     public NumberSetting getCircleSegments() { return circleSegments; }
     public BooleanSetting getMovementGap() { return movementGap; }

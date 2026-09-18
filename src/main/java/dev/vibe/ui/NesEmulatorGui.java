@@ -13,7 +13,7 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
-/** Standalone NES window with Vibe's normal blur/particle GUI treatment. */
+/** Standalone built-in NES player and RetroArch launcher. */
 public final class NesEmulatorGui extends GuiScreen {
     private final NesEmulatorModule module;
     private final NesRuntime runtime = new NesRuntime();
@@ -41,7 +41,7 @@ public final class NesEmulatorGui extends GuiScreen {
 
     @Override public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         SkeetEditorStyle.backdrop(this, BlurModule.NES_EMULATOR, partialTicks);
-        SkeetEditorStyle.window(left, top, left + panelWidth, top + panelHeight, "NES emulator", "local ROM player • Z / X • Shift / Enter • arrows");
+        SkeetEditorStyle.window(left, top, left + panelWidth, top + panelHeight, "Retro emulator", "local ROMs • built-in NES or installed RetroArch");
 
         int scale = displayScale();
         int drawWidth = NesRuntime.WIDTH * scale;
@@ -70,13 +70,14 @@ public final class NesEmulatorGui extends GuiScreen {
         int right = left + panelWidth - 17;
         SkeetEditorStyle.panel(side - 5, top + 52, right + 5, top + panelHeight - 20, "Cartridge");
         drawChoice("ROM", module.getRom().getValue(), side, top + 75, right);
-        drawChoice("Region", module.getRegion().getValue(), side, top + 112, right);
-        button(side, top + 151, right, "RESTART", 0xFF2DE2C2);
-        button(side, top + 177, right, "OPEN ROM FOLDER", 0xFF536FAD);
-        fontRendererObj.drawStringWithShadow(runtime.getStatus(), side, top + 218, RenderUtils.TEXT);
+        drawChoice("System", module.getSystem().getValue(), side, top + 112, right);
+        drawChoice("Backend", module.getBackend().getValue(), side, top + 149, right);
+        button(side, top + 188, right, module.getBackend().is("RetroArch") ? "OPEN WITH RETROARCH" : "START / RESTART", 0xFF2DE2C2);
+        button(side, top + 214, right, "OPEN ROM FOLDER", 0xFF536FAD);
+        fontRendererObj.drawSplitString(runtime.getStatus(), side, top + 248, Math.max(60, right - side), RenderUtils.TEXT);
         if (module.getRom().is("None")) {
-        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Add .nes files to the ROM folder,"), side, top + 246, RenderUtils.MUTED);
-        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("then click the ROM row to select one."), side, top + 258, RenderUtils.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Add owned ROM files to the ROM folder,"), side, top + 280, RenderUtils.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("then click the ROM row to select one."), side, top + 292, RenderUtils.MUTED);
         }
         fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("CONTROLS"), side, top + panelHeight - 91, SkeetEditorStyle.MUTED);
         fontRendererObj.drawStringWithShadow("A  Z       B  X", side, top + panelHeight - 76, RenderUtils.TEXT);
@@ -104,9 +105,10 @@ public final class NesEmulatorGui extends GuiScreen {
             int side = left + 18 + displayScale() * NesRuntime.WIDTH + 25;
             int right = left + panelWidth - 17;
             if (hit(side, top + 72, right, top + 108, mouseX, mouseY)) { module.refreshRoms(); module.getRom().cycle(false); startSelectedRom(); return; }
-            if (hit(side, top + 109, right, top + 145, mouseX, mouseY)) { module.getRegion().cycle(false); startSelectedRom(); return; }
-            if (hit(side, top + 151, right, top + 171, mouseX, mouseY)) { startSelectedRom(); return; }
-            if (hit(side, top + 177, right, top + 197, mouseX, mouseY)) { module.openFolder(); return; }
+            if (hit(side, top + 109, right, top + 145, mouseX, mouseY)) { module.getSystem().cycle(false); startSelectedRom(); return; }
+            if (hit(side, top + 146, right, top + 182, mouseX, mouseY)) { module.getBackend().cycle(false); startSelectedRom(); return; }
+            if (hit(side, top + 188, right, top + 208, mouseX, mouseY)) { startSelectedRom(); return; }
+            if (hit(side, top + 214, right, top + 234, mouseX, mouseY)) { module.openFolder(); return; }
         }
         super.mouseClicked(mouseX, mouseY, mouseButton);
     }
@@ -137,7 +139,13 @@ public final class NesEmulatorGui extends GuiScreen {
     }
 
     private void startSelectedRom() {
-        runtime.start(module.getSelectedRom(), module.getRegion().is("PAL"));
+        if (module.getBackend().is("RetroArch")) {
+            runtime.stop();
+            runtime.showStatus(module.launchRetroArch());
+        } else if (!module.canUseBuiltIn()) {
+            runtime.stop();
+            runtime.showStatus("Built-in playback supports NES/FDS. Choose RetroArch for " + module.selectedSystem() + ".");
+        } else runtime.start(module.getSelectedRom(), module.getRegion().is("PAL"), module.getPresentationFps().getInt());
     }
 
     private int displayScale() {

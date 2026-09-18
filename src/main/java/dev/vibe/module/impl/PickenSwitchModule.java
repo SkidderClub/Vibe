@@ -20,7 +20,7 @@ public final class PickenSwitchModule extends Module {
     private final ModeSetting priority=addSetting(new ModeSetting("Enchantment Priority","Both","Both","Knockback","Fire Aspect"));
     private final ModeSetting selection=addSetting(new ModeSetting("Enchanted Item","Automatic","Automatic","Hotbar Slot"));
     private final NumberSetting itemSlot=addSetting(new NumberSetting("Item Slot",9,1,9,1,()->selection.is("Hotbar Slot")));
-    private final NumberSetting warmup=addSetting(new NumberSetting("Weapon Warmup (ticks)",2,2,10,1));
+    private final NumberSetting warmup=addSetting(new NumberSetting("Weapon Warmup (ticks)",0,0,10,1));
     private final NumberSetting cooldown=addSetting(new NumberSetting("Cooldown (ticks)",4,2,20,1));
     private final NumberSetting restoreDelay=addSetting(new NumberSetting("Restore Delay (ticks)",1,1,4,1));
     private final BooleanSetting playersOnly=addSetting(new BooleanSetting("Players Only",true));
@@ -53,7 +53,7 @@ public final class PickenSwitchModule extends Module {
             }
         }
         ItemStack stack=mc.thePlayer.getHeldItem();int slot=mc.thePlayer.inventory.currentItem;
-        if(enchantedSlot<0&&stableSlot==slot&&stableStack==stack)stableTicks++;
+        if(enchantedSlot<0&&stableSlot==slot&&sameWeapon(stableStack,stack))stableTicks++;
         else {stableTicks=0;stableSlot=slot;stableStack=stack;}
     }
 
@@ -73,7 +73,7 @@ public final class PickenSwitchModule extends Module {
         if(scaffold!=null&&scaffold.hasSilentSlot())return -1;
         int visible=mc.thePlayer.inventory.currentItem;
         ItemStack weapon=mc.thePlayer.getHeldItem();
-        if(visible!=stableSlot||weapon!=stableStack||weapon==null||!(weapon.getItem() instanceof ItemSword||weapon.getItem() instanceof ItemTool))return -1;
+        if(visible!=stableSlot||!sameWeapon(weapon,stableStack)||weapon==null||!(weapon.getItem() instanceof ItemSword||weapon.getItem() instanceof ItemTool))return -1;
         int candidate=chooseSlot(mc.thePlayer.inventory.mainInventory,visible,victim.isBurning());
         if(candidate<0)return -1;
         originalSlot=visible;enchantedSlot=candidate;silent=mode.is("Silent");lastSwitch=tick;restoreAt=tick+restoreDelay.getInt();stableTicks=0;
@@ -83,10 +83,16 @@ public final class PickenSwitchModule extends Module {
     }
 
     int chooseSlot(ItemStack[] hotbar,int held,boolean burning){
-        ItemStack source=hotbar[held];double base=baseDamage(source);int best=-1,bestScore=0;
+        if(hotbar==null||held<0||held>=Math.min(9,hotbar.length))return -1;
+        ItemStack source=hotbar[held];int best=-1,bestScore=0;
+        // An explicitly chosen slot is an instruction, independent of enchantment scoring.
+        if(selection.is("Hotbar Slot")){
+            int slot=itemSlot.getInt()-1;
+            return slot!=held&&slot<hotbar.length&&hotbar[slot]!=null&&hotbar[slot].stackSize>0?slot:-1;
+        }
         for(int slot=0;slot<Math.min(9,hotbar.length);slot++){
             ItemStack candidate=hotbar[slot];
-            if(slot==held||candidate==null||candidate.stackSize<=0||baseDamage(candidate)>=base
+            if(slot==held||candidate==null||candidate.stackSize<=0
                     ||selection.is("Hotbar Slot")&&slot!=itemSlot.getInt()-1)continue;
             int knock=Math.max(0,level(candidate,Enchantment.knockback)-level(source,Enchantment.knockback));
             int fire=burning&&skipBurning.isEnabled()?0:Math.max(0,level(candidate,Enchantment.fireAspect)-level(source,Enchantment.fireAspect));
@@ -95,6 +101,9 @@ public final class PickenSwitchModule extends Module {
         }
         return best;
     }
+    // Server inventory updates replace ItemStack instances and change durability on every hit.
+    // Neither change means that the player selected a different weapon.
+    private static boolean sameWeapon(ItemStack a,ItemStack b){return a==b||a!=null&&b!=null&&a.getItem()==b.getItem();}
     private static int level(ItemStack stack,Enchantment enchant){return stack==null?0:EnchantmentHelper.getEnchantmentLevel(enchant.effectId,stack);}
     static double baseDamage(ItemStack stack){
         double base=1,added=0,multiplier=1;

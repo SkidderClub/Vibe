@@ -36,6 +36,7 @@ public final class NesRuntime {
     private ScriptEngine engine;
     private Invocable invocable;
     private long lastUploadNanos;
+    private long uploadIntervalNanos = 16_000_000L;
     /**
      * Forge's LaunchClassLoader can deliberately hide third-party packages
      * added inside a mod JAR. Keep a private loader fallback for the bundled
@@ -44,7 +45,7 @@ public final class NesRuntime {
     private URLClassLoader engineLoader;
     private Thread worker;
 
-    public synchronized boolean start(File rom, boolean pal) {
+    public synchronized boolean start(File rom, boolean pal, int presentationFps) {
         stop();
         if (rom == null || !rom.isFile()) {
             status = "ROM file is missing.";
@@ -61,13 +62,12 @@ public final class NesRuntime {
                 for (String script : SCRIPTS) engine.eval(readResource("/assets/vibe/nes/emu/" + script));
                 boolean nashorn = engine.getFactory().getEngineName().toLowerCase(java.util.Locale.ROOT).contains("nashorn");
                 String frameCallback = nashorn
-                        ? "onFrame:function(frame){ if((__vibePresent++ & 1) === 0) frameSink.accept(Java.to(frame, 'int[]')); }"
-                        : "onFrame:function(frame){ if((__vibePresent++ & 1) === 0) frameSink.accept(frame); }";
+                        ? "onFrame:function(frame){ frameSink.accept(Java.to(frame, 'int[]')); }"
+                        : "onFrame:function(frame){ frameSink.accept(frame); }";
                 engine.eval("var __vibeNes = new NES({emulateSound:false, preferredFrameRate:60, " + frameCallback + "});"
                         // Parse these calls once. Re-evaluating a source
                         // string for every frame was expensive, especially
                         // with Rhino as the compatible fallback engine.
-                        + "var __vibePresent = 0;"
                         + "function __vibeFrame(){ __vibeNes.frame(); }"
                         + "function __vibeButton(button, down){ if(down) __vibeNes.buttonDown(1, button); else __vibeNes.buttonUp(1, button); }");
                 engine.put("vibeRomData", new String(readFile(rom), StandardCharsets.ISO_8859_1));
@@ -76,15 +76,16 @@ public final class NesRuntime {
             running = true;
             failure = null;
             lastUploadNanos = 0L;
+            uploadIntervalNanos = presentationFps <= 30 ? 33_000_000L : 16_000_000L;
             // Emulation itself must run at the source frame-rate; presenting
             // every other completed frame controls GUI upload cost without
             // making gameplay progress at half speed.
-            int frameDelay = pal ? 20 : 16;
+            final long frameNanos = pal ? 20_000_000L : 16_666_667L;
             worker = new Thread(new Runnable() {
-                @Override public void run() { runFrames(frameDelay); }
+                @Override public void run() { runFrames(frameNanos); }
             }, "Vibe-NES");
             worker.setDaemon(true);
-            worker.setPriority(Thread.NORM_PRIORITY - 1);
+            worker.setPriority(Thread.NORM_PRIORITY + 1);
             worker.start();
             status = "Running " + rom.getName() + (pal ? " • PAL" : " • NTSC");
             return true;
@@ -95,6 +96,9 @@ public final class NesRuntime {
             return false;
         }
     }
+
+    /** Compatibility entry point used by old callers and tests. */
+    public synchronized boolean start(File rom, boolean pal) { return start(rom, pal, 60); }
 
     public synchronized void stop() {
         running = false;
@@ -115,6 +119,7 @@ public final class NesRuntime {
 
     public boolean isRunning() { return running; }
     public String getStatus() { return status; }
+    public void showStatus(String message) { status = message == null ? "" : message; }
     public Throwable getFailure() { return failure; }
 
     public void setButton(int controllerButton, boolean down) {
@@ -129,11 +134,10 @@ public final class NesRuntime {
 
     /** Called by the GUI thread immediately before drawing the NES texture. */
     public void upload(DynamicTexture texture) {
-        // The emulator runs at 60Hz but presents at 30Hz. FrameSink copies
-        // directly into DynamicTexture, avoiding a 61k-int allocation per
-        // GUI frame.
+        // Present every completed frame (up to the GUI refresh rate). The old
+        // half-rate cap made correctly running ROMs look like they were lagging.
         long now = System.nanoTime();
-        if (now - lastUploadNanos < 33_000_000L || texture == null) return;
+        if (now - lastUploadNanos < uploadIntervalNanos || texture == null) return;
         int[] target = texture.getTextureData();
         if (!frameSink.copyTo(target)) return;
         for (int index = 0; index < WIDTH * HEIGHT; index++) target[index] |= 0xFF000000;
@@ -141,10 +145,10 @@ public final class NesRuntime {
         lastUploadNanos = now;
     }
 
-    private void runFrames(int frameDelay) {
+    private void runFrames(long frameNanos) {
         int appliedButtons = -1;
+        long next = System.nanoTime();
         while (running) {
-            long started = System.currentTimeMillis();
             try {
                 synchronized (engineLock) {
                     if (invocable == null) throw new IllegalStateException("JavaScript runtime stopped");
@@ -171,8 +175,11 @@ public final class NesRuntime {
                 running = false;
                 break;
             }
-            long wait = frameDelay - (System.currentTimeMillis() - started);
-            if (wait > 0L) try { Thread.sleep(wait); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); break; }
+            next += frameNanos;
+            long wait = next - System.nanoTime();
+            if (wait > 0L) java.util.concurrent.locks.LockSupport.parkNanos(wait);
+            else if (wait < -frameNanos * 3L) next = System.nanoTime();
+            if (Thread.interrupted()) { Thread.currentThread().interrupt(); break; }
         }
     }
 

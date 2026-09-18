@@ -111,6 +111,15 @@ if not exist "%SCRIPT_DIR%gradlew.bat" (
 
 set "JAVA_HOME=%VIBE_JAVA%"
 set "PATH=%JAVA_HOME%\bin;%PATH%"
+set "VIBE_GRADLE_JAVA8_ARG="
+
+rem A standalone Vibe Launcher can supply a private Java 8 runtime for the
+rem remapped Forge client while this script itself continues to build on JDK 21.
+if defined VIBE_JAVA8 if exist "%VIBE_JAVA8%\bin\java.exe" (
+    rem Gradle expects a comma-separated toolchain list, even on Windows.
+    set "VIBE_GRADLE_JAVA8_ARG="-Dorg.gradle.java.installations.paths=%JAVA_HOME%,%VIBE_JAVA8%""
+    echo [Vibe] Using launcher-provided Java 8 runtime: %VIBE_JAVA8%
+)
 
 rem Unimined opens its transformed Forge JAR through Java's ZIP filesystem.
 rem The normal cache location under this project is longer than legacy Win32
@@ -144,9 +153,9 @@ if defined VIBE_SUBST_DRIVE (
 )
 set "GRADLE_USER_HOME=%USERPROFILE%\.gradle"
 if "%~1"=="" (
-    call "%SCRIPT_DIR%gradlew.bat" clean build --no-daemon
+    call "%SCRIPT_DIR%gradlew.bat" clean build --no-daemon %VIBE_GRADLE_JAVA8_ARG%
 ) else (
-    call "%SCRIPT_DIR%gradlew.bat" %* --no-daemon
+    call "%SCRIPT_DIR%gradlew.bat" %* --no-daemon %VIBE_GRADLE_JAVA8_ARG%
 )
 set "BUILD_EXIT=%ERRORLEVEL%"
 popd

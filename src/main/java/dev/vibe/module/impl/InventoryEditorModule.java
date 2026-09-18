@@ -25,11 +25,8 @@ public final class InventoryEditorModule extends Module {
 
     @Override
     protected void onEnable() {
+        if (isConfigLoading()) { setEnabled(false); return; }
         Minecraft minecraft = Minecraft.getMinecraft();
-        if (minecraft.thePlayer == null) {
-            setEnabled(false);
-            return;
-        }
         minecraft.displayGuiScreen(new InventoryEditorGui(this));
     }
 

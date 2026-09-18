@@ -55,6 +55,12 @@ public abstract class Module {
     protected void onDisable() {
     }
 
+    /** One-shot GUI modules must never reopen while a profile is being applied. */
+    protected final boolean isConfigLoading() {
+        return Vibe.getInstance() != null && Vibe.getInstance().getConfig() != null
+                && Vibe.getInstance().getConfig().isLoading();
+    }
+
     public String getName() {
         return LanguageManager.translate(name);
     }

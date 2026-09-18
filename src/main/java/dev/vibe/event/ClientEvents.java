@@ -1,6 +1,7 @@
 package dev.vibe.event;
 
 import dev.vibe.Vibe;
+import dev.vibe.launcher.LauncherBridge;
 import dev.vibe.command.VibeChatGui;
 import dev.vibe.module.Module;
 import dev.vibe.module.impl.AutoClickerModule;
@@ -22,6 +23,7 @@ import dev.vibe.module.impl.TestModule;
 import dev.vibe.module.impl.KillAuraModule;
 import dev.vibe.module.impl.ItemEspModule;
 import dev.vibe.module.impl.GirlfriendModule;
+import dev.vibe.module.impl.Gta7Module;
 import dev.vibe.module.impl.QolModule;
 import dev.vibe.module.impl.VelocityModule;
 import dev.vibe.module.impl.BHopModule;
@@ -69,6 +71,7 @@ import dev.vibe.ui.BacktrackRenderer;
 import dev.vibe.ui.CuteVisualsRenderer;
 import dev.vibe.ui.TrajectoriesRenderer;
 import dev.vibe.ui.ItemEspRenderer;
+import dev.vibe.ui.CustomCosmeticsRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiChat;
@@ -129,12 +132,14 @@ public final class ClientEvents {
     private final CuteVisualsRenderer cuteVisualsRenderer = new CuteVisualsRenderer();
     private final TrajectoriesRenderer trajectoriesRenderer = new TrajectoriesRenderer();
     private final ItemEspRenderer itemEspRenderer = new ItemEspRenderer();
+    private final CustomCosmeticsRenderer customCosmeticsRenderer = new CustomCosmeticsRenderer();
     private Scoreboard suppressedScoreboard;
     private ScoreObjective suppressedSidebar;
     private ScoreObjective suppressedTeamSidebar;
     private int suppressedTeamSlot = -1;
     private RenderGameOverlayEvent.Text debugText;
     private boolean deferredCrosshair;
+    /** GTA7 reuses Minecraft input/player state, so it starts after the selected world joins. */
     private final Map<NetworkPlayerInfo, IChatComponent> protectedTabEntries = new HashMap<NetworkPlayerInfo, IChatComponent>();
 
     @SubscribeEvent
@@ -194,6 +199,8 @@ public final class ClientEvents {
             AutoToolModule autoTool = Vibe.getInstance().getModuleManager().getModule(AutoToolModule.class);
             dev.vibe.module.impl.PickenSwitchModule picken=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.PickenSwitchModule.class);
             if(picken!=null)picken.tick();
+            dev.vibe.module.impl.CustomCosmeticsModule customCosmetics = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.CustomCosmeticsModule.class);
+            if (customCosmetics != null) customCosmetics.tick();
             if (autoTool != null) autoTool.tick();
             BedAuraModule bedAura = Vibe.getInstance().getModuleManager().getModule(BedAuraModule.class);
             if (bedAura != null) bedAura.tick();
@@ -237,6 +244,13 @@ public final class ClientEvents {
         }
         if (event.phase != TickEvent.Phase.END) {
             return;
+        }
+        NesEmulatorModule nes = Vibe.getInstance().getModuleManager().getModule(NesEmulatorModule.class);
+        if (nes != null) {
+            nes.tick();
+        }
+        for (Module module : Vibe.getInstance().getModuleManager().getModules()) {
+            if (module instanceof MemeGameModule) ((MemeGameModule) module).tick();
         }
         if (minecraft.thePlayer == null) return;
         dev.vibe.module.impl.TargetsModule targets = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.TargetsModule.class);
@@ -285,13 +299,6 @@ public final class ClientEvents {
         WaifuModule waifu = Vibe.getInstance().getModuleManager().getModule(WaifuModule.class);
         if (waifu != null) {
             waifu.tick();
-        }
-        NesEmulatorModule nes = Vibe.getInstance().getModuleManager().getModule(NesEmulatorModule.class);
-        if (nes != null) {
-            nes.tick();
-        }
-        for (Module module : Vibe.getInstance().getModuleManager().getModules()) {
-            if (module instanceof MemeGameModule) ((MemeGameModule) module).tick();
         }
         AmbienceModule ambience = Vibe.getInstance().getModuleManager().getModule(AmbienceModule.class);
         if (ambience != null) {
@@ -616,6 +623,7 @@ public final class ClientEvents {
         targetEspRenderer.render(event);
         hitmarkerRenderer.renderWorld(event);
         skeletalRenderer.render(event);
+        customCosmeticsRenderer.render(event);
     }
 
     @SubscribeEvent
