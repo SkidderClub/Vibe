@@ -27,7 +27,6 @@ public class CombatHooksTest {
     private static final String PLAYER = "net.minecraft.client.entity.EntityPlayerSP";
     private static final String RENDERER = "net.minecraft.client.renderer.entity.RenderPlayer";
     private static final String AUTO_TOOL = "dev/vibe/module/impl/AutoToolModule";
-    private static final String SCAFFOLD = "dev/vibe/module/impl/ScaffoldModule";
 
     @Test public void developmentInputAndRenderHooksHaveValidStacksAndCorrectOrder() throws Exception {
         verifyInput(transform(MC, MC, resource(MC)), false);
@@ -64,10 +63,8 @@ public class CombatHooksTest {
         verifyToolScope(node, method(node, obfuscated ? "a" : "attackEntity", obfuscated ? "(Lwn;Lpk;)V" : "(Lnet/minecraft/entity/player/EntityPlayer;Lnet/minecraft/entity/Entity;)V"));
         MethodNode sync = method(node, obfuscated ? "n" : "syncCurrentPlayItem", "()V");
         verify(node, sync);
-        assertEquals(2, calls(sync, "serverSlotHook"));
+        assertEquals(1, calls(sync, "serverSlotHook"));
         assertEquals(1, calls(sync, "serverSlotHook", AUTO_TOOL));
-        assertEquals(1, calls(sync, "serverSlotHook", SCAFFOLD));
-        assertTrue(callIndex(sync, "serverSlotHook", AUTO_TOOL) < callIndex(sync, "serverSlotHook", SCAFFOLD));
     }
 
     private void verifyToolScope(ClassNode node, MethodNode wrapper) throws Exception {

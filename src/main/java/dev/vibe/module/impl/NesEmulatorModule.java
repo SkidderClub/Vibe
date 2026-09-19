@@ -23,10 +23,11 @@ public final class NesEmulatorModule extends Module {
     private final ModeSetting backend = addSetting(new ModeSetting("Backend", "Built-in NES", "Built-in NES", "RetroArch"));
     private final ModeSetting system = addSetting(new ModeSetting("System", "Auto", "Auto", "NES", "SNES", "Game Boy", "Game Boy Color",
             "Game Boy Advance", "Sega Genesis", "Master System", "Game Gear", "PC Engine", "Neo Geo Pocket", "WonderSwan",
-            "Atari 2600", "Atari 7800", "Atari Lynx", "PlayStation", "Nintendo 64", "Nintendo DS", "PSP"));
+            "Atari 2600", "Atari 7800", "Atari Lynx", "Atari Jaguar", "Commodore 64", "Sega CD", "Sega 32X", "Virtual Boy",
+            "PlayStation", "Nintendo 64", "Nintendo DS", "PSP", "Arcade"));
     private final ModeSetting region = addSetting(new ModeSetting("Region", "NTSC", "NTSC", "PAL"));
     private final NumberSetting scale = addSetting(new NumberSetting("Scale", 2.0D, 1.0D, 3.0D, 1.0D));
-    private final NumberSetting presentationFps = addSetting(new NumberSetting("Presentation FPS", 60.0D, 30.0D, 60.0D, 30.0D,
+    private final NumberSetting presentationFps = addSetting(new NumberSetting("Presentation FPS", 30.0D, 30.0D, 60.0D, 30.0D,
             () -> backend.is("Built-in NES")));
     private final StringSetting retroArchExecutable = addSetting(new StringSetting("RetroArch Executable", "", 512,
             () -> backend.is("RetroArch")));
@@ -83,7 +84,12 @@ public final class NesEmulatorModule extends Module {
 
     public File getSelectedRom() {
         if (rom.is("None")) return null;
-        for (File file : getRoms()) if (file.getName().equalsIgnoreCase(rom.getValue())) return file;
+        for (File file : getRoms()) {
+            // Older profiles stored only the file name. Keep those working
+            // while new entries use a relative path so duplicate ROM names
+            // in separate console folders remain distinguishable.
+            if (displayName(file).equalsIgnoreCase(rom.getValue()) || file.getName().equalsIgnoreCase(rom.getValue())) return file;
+        }
         return null;
     }
 
@@ -110,13 +116,25 @@ public final class NesEmulatorModule extends Module {
                 || name.endsWith(".ngp") || name.endsWith(".ngc") || name.endsWith(".ws") || name.endsWith(".wsc")
                 || name.endsWith(".a26") || name.endsWith(".a78") || name.endsWith(".lnx") || name.endsWith(".cue")
                 || name.endsWith(".chd") || name.endsWith(".n64") || name.endsWith(".z64") || name.endsWith(".v64")
+                || name.endsWith(".vb") || name.endsWith(".vboy") || name.endsWith(".j64") || name.endsWith(".jag")
+                || name.endsWith(".d64") || name.endsWith(".t64") || name.endsWith(".crt") || name.endsWith(".32x")
                 || name.endsWith(".nds") || name.endsWith(".iso") || name.endsWith(".cso") || name.endsWith(".zip");
     }
 
     private List<String> romChoices() {
         List<String> choices = new ArrayList<String>(); choices.add("None");
-        for (File file : getRoms()) choices.add(file.getName());
+        for (File file : getRoms()) choices.add(displayName(file));
         return choices;
+    }
+    public String displayName(File file) {
+        if (file == null) return "None";
+        try { return folder.toPath().relativize(file.toPath()).toString().replace('\\', '/'); }
+        catch (Exception ignored) { return file.getName(); }
+    }
+    public void selectRom(File file) { if (file != null) rom.setValue(displayName(file)); }
+    public void saveSettings() {
+        if (dev.vibe.Vibe.getInstance() != null && dev.vibe.Vibe.getInstance().getConfig() != null)
+            dev.vibe.Vibe.getInstance().getConfig().save(dev.vibe.Vibe.getInstance().getModuleManager());
     }
     private void ensureFolder() { if (!folder.isDirectory()) folder.mkdirs(); }
     public File getFolder() { return folder; }
@@ -139,6 +157,12 @@ public final class NesEmulatorModule extends Module {
         if (name.endsWith(".gen") || name.endsWith(".md")) return "Sega Genesis";
         if (name.endsWith(".sms")) return "Master System"; if (name.endsWith(".gg")) return "Game Gear";
         if (name.endsWith(".pce")) return "PC Engine"; if (name.endsWith(".n64") || name.endsWith(".z64") || name.endsWith(".v64")) return "Nintendo 64";
+        if (name.endsWith(".ngp") || name.endsWith(".ngc")) return "Neo Geo Pocket";
+        if (name.endsWith(".ws") || name.endsWith(".wsc")) return "WonderSwan";
+        if (name.endsWith(".a26")) return "Atari 2600"; if (name.endsWith(".a78")) return "Atari 7800";
+        if (name.endsWith(".lnx")) return "Atari Lynx"; if (name.endsWith(".j64") || name.endsWith(".jag")) return "Atari Jaguar";
+        if (name.endsWith(".d64") || name.endsWith(".t64") || name.endsWith(".crt")) return "Commodore 64";
+        if (name.endsWith(".32x")) return "Sega 32X"; if (name.endsWith(".vb") || name.endsWith(".vboy")) return "Virtual Boy";
         if (name.endsWith(".nds")) return "Nintendo DS"; if (name.endsWith(".iso") || name.endsWith(".cso")) return "PSP";
         if (name.endsWith(".cue") || name.endsWith(".chd")) return "PlayStation"; return "NES";
     }

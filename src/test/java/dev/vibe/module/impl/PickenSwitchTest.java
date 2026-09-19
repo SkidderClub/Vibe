@@ -20,18 +20,23 @@ public class PickenSwitchTest {
         if(!f.getBoolean(null)){f.setBoolean(null,true);net.minecraft.block.Block.registerBlocks();Item.registerItems();}
     }
     private ItemStack sword(){return new ItemStack(new ItemSword(Item.ToolMaterial.EMERALD));}
-    private ItemStack enchanted(int knock,int fire){ItemStack s=new ItemStack(new Item());if(knock>0)s.addEnchantment(Enchantment.knockback,knock);if(fire>0)s.addEnchantment(Enchantment.fireAspect,fire);return s;}
-    @Test public void picksInferiorItemsOnlyWhenEnchantmentsImproveTheHit(){
+    private ItemStack enchanted(int knock,int fire){ItemStack s=new ItemStack(new ItemSword(Item.ToolMaterial.EMERALD));if(knock>0)s.addEnchantment(Enchantment.knockback,knock);if(fire>0)s.addEnchantment(Enchantment.fireAspect,fire);return s;}
+    @Test public void picksImprovedEnchantmentsEvenWhenTheUtilityStackHasLowerDamage(){
         PickenSwitchModule m=new PickenSwitchModule();ItemStack[] bar=new ItemStack[9];bar[0]=sword();bar[2]=enchanted(1,0);bar[5]=enchanted(2,2);
         assertEquals(5,m.chooseSlot(bar,0,false));assertEquals(8,PickenSwitchModule.baseDamage(bar[0]),0);
-        assertEquals(1,PickenSwitchModule.baseDamage(bar[5]),0);
+        assertEquals(8,PickenSwitchModule.baseDamage(bar[5]),0);
         bar[5]=enchanted(0,2);assertEquals(2,m.chooseSlot(bar,0,true));
         bar[0].addEnchantment(Enchantment.knockback,2);bar[0].addEnchantment(Enchantment.fireAspect,2);
         assertEquals(-1,m.chooseSlot(bar,0,false));
+        ItemStack[] inferiorOnly=new ItemStack[9];inferiorOnly[0]=sword();inferiorOnly[4]=new ItemStack(new Item());inferiorOnly[4].addEnchantment(Enchantment.knockback,3);
+        // The vanilla hit method calculates base damage from the equipped
+        // attributes before it reads held-item enchantments. Picken's hook
+        // therefore deliberately permits this utility item at that point.
+        assertEquals(4,m.chooseSlot(inferiorOnly,0,false));
     }
     @Test public void vanillaAttackUsesCachedDamageAndCurrentHeldEnchantments(){
         TestWorld world=new TestWorld();Player attacker=new Player(world),victim=new Player(world);
-        ItemStack weapon=sword(),utility=enchanted(2,2);
+        ItemStack weapon=sword(),utility=new ItemStack(new Item());utility.addEnchantment(Enchantment.knockback,2);utility.addEnchantment(Enchantment.fireAspect,2);
         attacker.inventory.mainInventory[0]=weapon;attacker.inventory.mainInventory[1]=utility;
         // EntityLivingBase.onUpdate applies these equipment attributes once per server tick.
         attacker.getAttributeMap().applyAttributeModifiers(weapon.getAttributeModifiers());

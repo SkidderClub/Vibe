@@ -52,6 +52,7 @@ public final class ReconnectEvents {
             if (!Vibe.getInstance().getAccountManager().useTemporaryOffline(name)) {
                 error = Vibe.getInstance().getAccountManager().getStatus(); return;
             }
+            if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordRandomCracked(name);
         }
         mc.displayGuiScreen(new GuiConnecting(new GuiMultiplayer(new GuiMainMenu()), mc, lastServer));
     }

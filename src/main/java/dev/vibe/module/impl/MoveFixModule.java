@@ -43,6 +43,12 @@ public final class MoveFixModule extends Module {
     private volatile FakeRotation fakeRotation;
     private FakeRotation previousRenderRotation;
     private volatile String rotationOwner;
+    // A pathing module can supply a movement vector in server-rotation space.
+    // This is deliberately separate from the user's movement policy: a bot
+    // must still walk toward its target when MoveFix is configured as Off.
+    private volatile String forcedMovementOwner;
+    private volatile float forcedForward, forcedStrafe;
+    private volatile boolean forcedJump;
     private final Random rotationRandom = new Random();
     private EntityPlayerSP hookedPlayer;
     private EntityPlayerSP rotationPlayer;
@@ -140,6 +146,24 @@ public final class MoveFixModule extends Module {
         }
     }
 
+    /** Feed a controlled movement vector through the same silent rotation path as player input. */
+    public void setForcedMovement(String owner, float forward, float strafe, boolean jump) {
+        if (owner == null || !Float.isFinite(forward) || !Float.isFinite(strafe)) return;
+        forcedMovementOwner = owner;
+        forcedForward = Math.max(-1.0F, Math.min(1.0F, forward));
+        forcedStrafe = Math.max(-1.0F, Math.min(1.0F, strafe));
+        forcedJump = jump;
+    }
+
+    /** Stops a producer without clearing input owned by another producer. */
+    public void clearForcedMovement(String owner) {
+        if (owner == null || owner.equals(forcedMovementOwner)) {
+            forcedMovementOwner = null;
+            forcedForward = forcedStrafe = 0.0F;
+            forcedJump = false;
+        }
+    }
+
     /** Advances an unowned fake rotation toward the local camera. */
     public void tick() {
         syncRotationPlayer();
@@ -208,7 +232,7 @@ public final class MoveFixModule extends Module {
     }
 
     private boolean usesDirectYaw() {
-        return correctMovement.is("Direct") || correctMovement.is("Silent");
+        return forcedMovementOwner != null || correctMovement.is("Direct") || correctMovement.is("Silent");
     }
 
     /**
@@ -431,6 +455,7 @@ public final class MoveFixModule extends Module {
         fakeRotation = null;
         previousRenderRotation = null;
         rotationOwner = null;
+        clearForcedMovement(null);
         if (packetPlayer != null) {
             packetPlayer.rotationYaw = packetYaw;
             packetPlayer.rotationPitch = packetPitch;
@@ -578,7 +603,13 @@ public final class MoveFixModule extends Module {
             moveForward = vanillaInput.moveForward;
             jump = vanillaInput.jump;
             sneak = vanillaInput.sneak;
-            module.correctKeyboardInput(this);
+            if (module.forcedMovementOwner != null) {
+                moveForward = module.forcedForward;
+                moveStrafe = module.forcedStrafe;
+                jump = jump || module.forcedJump;
+            } else {
+                module.correctKeyboardInput(this);
+            }
         }
     }
 

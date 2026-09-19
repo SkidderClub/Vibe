@@ -40,6 +40,8 @@ public final class ChamsRenderer {
         if (vibe == null || vibe.getModuleManager() == null || mc == null
                 || mc.theWorld == null || mc.thePlayer == null) return null;
         EspModule esp = vibe.getModuleManager().getModule(EspModule.class);
+        dev.vibe.module.impl.HypixelModule hypixel = vibe.getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+        if (hypixel != null && hypixel.suppressVisuals()) return null;
         if (esp == null || !esp.isEnabled() || !esp.getModes().isSelected("Chams")) return null;
         EntityLivingBase entity = (EntityLivingBase) candidate;
         if (entity.worldObj != mc.theWorld || !entity.isEntityAlive() || entity.isDead) return null;
@@ -85,7 +87,7 @@ public final class ChamsRenderer {
         float opacity = qol == null ? 1 : qol.getInvisibleAlpha().getFloat() / 255.0F;
         EntityLivingBase living=(EntityLivingBase)entity;
         draw(esp,armor,opacity,()->model.render(entity,swing,amount,age,yaw,pitch,scale),false,
-                esp.resolvedProfile(esp.profileFor(living)),esp.teamColor(living),living.hurtTime>0,-1);
+                esp.resolvedProfile(esp.profileFor(living)),esp.teamColor(living),living.hurtTime>0,-1,overrideColor(living));
     }
 
     /** Shared with the offscreen driver check; geometry already has vanilla's transforms and pose. */
@@ -97,17 +99,17 @@ public final class ChamsRenderer {
     public static void drawNative(EspModule esp, Runnable geometry) { draw(esp, false, 1, geometry, true); }
 
     private static void draw(EspModule esp, boolean armor, float opacity, Runnable geometry, boolean nativeMesh) {
-        draw(esp,armor,opacity,geometry,nativeMesh,0,0,false,-1);
+        draw(esp,armor,opacity,geometry,nativeMesh,0,0,false,-1,0);
     }
 
     static void preview(EspModule esp,int profile,boolean occluded,int team,boolean hurt,boolean armor,Runnable geometry) {
         boolean previous=directPreview;directPreview=true;
-        try { draw(esp,armor,1,geometry,false,esp.resolvedProfile(profile),team,hurt,occluded?0:1); }
+        try { draw(esp,armor,1,geometry,false,esp.resolvedProfile(profile),team,hurt,occluded?0:1,0); }
         finally {directPreview=previous;}
     }
 
     private static void draw(EspModule esp, boolean armor, float opacity, Runnable geometry, boolean nativeMesh,
-                             int profile,int team,boolean hurt,int previewSide) {
+                             int profile,int team,boolean hurt,int previewSide,int overrideColor) {
         try (EffectState state = new EffectState()) {
             GL11.glEnable(GL11.GL_DEPTH_TEST);
             GL11.glDepthMask(false);
@@ -136,15 +138,18 @@ public final class ChamsRenderer {
                 GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL11.GL_TEXTURE_ENV_MODE, GL11.GL_MODULATE);
             }
             EspModule.ChamsSettings hidden=esp.getChams(profile,false),visible=esp.getChams(profile,true);
-            if(previewSide!=1)pass(hidden,armor,opacity,previewSide==0?GL11.GL_ALWAYS:GL11.GL_GREATER,shader,geometry,team,hurt);
-            if(previewSide!=0)pass(visible,armor,opacity,previewSide==1?GL11.GL_ALWAYS:GL11.GL_LEQUAL,shader,geometry,team,hurt);
+            if(previewSide!=1)pass(hidden,armor,opacity,previewSide==0?GL11.GL_ALWAYS:GL11.GL_GREATER,false,shader,geometry,team,hurt,overrideColor);
+            // Write the visible model back to the depth buffer. Cape and other
+            // vanilla player layers are rendered afterwards and must still be
+            // occluded by the body rather than painting through its front.
+            if(previewSide!=0)pass(visible,armor,opacity,previewSide==1?GL11.GL_ALWAYS:GL11.GL_LEQUAL,true,shader,geometry,team,hurt,overrideColor);
             if(shader&&((previewSide!=1&&hidden.getMode().is("Glow"))||(previewSide!=0&&visible.getMode().is("Glow")))) {
                 ChamsGlow.capture(()->{
                     if(nativeMesh)GL11.glDisable(GL11.GL_CULL_FACE);
                     material.integer("MaskPass",1);
                     try {
-                        if(previewSide!=1&&hidden.getMode().is("Glow"))pass(hidden,armor,opacity,previewSide==0?GL11.GL_ALWAYS:GL11.GL_GREATER,true,geometry,team,hurt);
-                        if(previewSide!=0&&visible.getMode().is("Glow"))pass(visible,armor,opacity,previewSide==1?GL11.GL_ALWAYS:GL11.GL_LEQUAL,true,geometry,team,hurt);
+                        if(previewSide!=1&&hidden.getMode().is("Glow"))pass(hidden,armor,opacity,previewSide==0?GL11.GL_ALWAYS:GL11.GL_GREATER,false,true,geometry,team,hurt,overrideColor);
+                        if(previewSide!=0&&visible.getMode().is("Glow"))pass(visible,armor,opacity,previewSide==1?GL11.GL_ALWAYS:GL11.GL_LEQUAL,false,true,geometry,team,hurt,overrideColor);
                     } finally {material.integer("MaskPass",0);}
                 });
             }
@@ -156,12 +161,14 @@ public final class ChamsRenderer {
     }
 
     private static void pass(EspModule.ChamsSettings settings, boolean armor, float opacity,
-                             int depth, boolean shader, Runnable geometry,int team,boolean hurt) {
+                             int depth, boolean writeDepth, boolean shader, Runnable geometry,int team,boolean hurt,int overrideColor) {
         int color=settings.getColor().resolve(team,hurt);
+        if(overrideColor!=0)color=(color&0xFF000000)|(overrideColor&0x00FFFFFF);
         float r=(color>>16&255)/255F,g=(color>>8&255)/255F,b=(color&255)/255F;
         float alpha = (color>>>24) / 255.0F * Math.max(0, Math.min(1, opacity));
         if (alpha <= 0 || (armor && !settings.getArmor().isEnabled())) return;
         GL11.glDepthFunc(depth);
+        GL11.glDepthMask(writeDepth);
         if (shader) {
             material.vec3("Tint",r,g,b);
             material.scalar("Opacity", alpha);
@@ -173,6 +180,14 @@ public final class ChamsRenderer {
             GL11.glColor4f(r,g,b,alpha);
         }
         geometry.run();
+    }
+
+    /** Murder Mystery colours are an explicit ESP override, including Chams. */
+    private static int overrideColor(EntityLivingBase entity) {
+        Vibe vibe=Vibe.getInstance();
+        if(vibe==null||vibe.getModuleManager()==null)return 0;
+        dev.vibe.module.impl.HypixelModule hypixel=vibe.getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+        return hypixel==null?0:hypixel.visualColor(entity);
     }
 
     private static boolean prepareMaterial() {

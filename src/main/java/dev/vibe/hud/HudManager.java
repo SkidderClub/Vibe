@@ -14,6 +14,7 @@ import dev.vibe.target.TargetManager;
 import dev.vibe.ui.RenderUtils;
 import dev.vibe.ui.DebugOverlay;
 import dev.vibe.ui.KawaseBlur;
+import dev.vibe.ui.effect.LiquidGlassRenderer;
 import dev.vibe.input.ClickStats;
 import java.io.File;
 import java.io.FileInputStream;
@@ -40,7 +41,6 @@ import net.minecraft.scoreboard.ScoreObjective;
 import net.minecraft.scoreboard.ScorePlayerTeam;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.stats.StatList;
 import org.lwjgl.opengl.GL11;
 
 /** Owns the movable HUD elements and their standalone JSON layout. */
@@ -86,7 +86,7 @@ public final class HudManager {
     private final dev.vibe.ui.MusicHudRenderer musicRenderer = new dev.vibe.ui.MusicHudRenderer();
     private final dev.vibe.ui.MusicVisualizer musicVisualizer = new dev.vibe.ui.MusicVisualizer();
     private final long sessionStarted = System.currentTimeMillis();
-    private int sessionStartKills = -1;
+    private final LiquidGlassRenderer liquidGlass = new LiquidGlassRenderer();
     private final float[] motionSamples = new float[96];
     private int motionSampleIndex;
     private long lastMotionSample;
@@ -101,6 +101,7 @@ public final class HudManager {
     }
 
     public void draw() {
+        KawaseBlur.beginHudFrame();
         if (!(minecraft.currentScreen instanceof dev.vibe.ui.Gta7Gui)) drawMusic(false);
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         if (hud == null || !hud.isEnabled() || minecraft.thePlayer == null) {
@@ -152,8 +153,6 @@ public final class HudManager {
         if (m == null || !m.isEnabled()) { musicRenderer.close(); musicVisualizer.clear(); return; }
         ScaledResolution resolution = new ScaledResolution(minecraft);
         dev.vibe.media.MusicService service = m.service();
-        if (!preview && m.visualizer.isEnabled() && service != null)
-            musicVisualizer.draw(m, service.spectrum(), resolution.getScaledWidth(), resolution.getScaledHeight());
         if (!m.hud.isEnabled()) { musicRenderer.close(); return; }
         dev.vibe.media.MediaTrack track = service == null ? dev.vibe.media.MediaTrack.idle("Waiting for media") : service.track();
         if (!preview && m.hideIdle.isEnabled() && !track.playing) return;
@@ -201,12 +200,21 @@ public final class HudManager {
         arrayRenderer.draw(hud,arrayList,resolution,false);
     }
 
+    /** Draw before Minecraft begins its overlay sequence, keeping the wave behind health, hotbar and item slots. */
+    public void drawMusicVisualizer() {
+        dev.vibe.module.impl.MusicModule module = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.MusicModule.class);
+        if (module == null || !module.isEnabled() || !module.visualizer.isEnabled() || module.service() == null) return;
+        ScaledResolution resolution = new ScaledResolution(minecraft);
+        musicVisualizer.draw(module, module.service().spectrum(), resolution.getScaledWidth(), resolution.getScaledHeight());
+    }
+
     private boolean blurEnabled(String element) {
         // Only widgets with an opaque Skeet surface suppress their blur.
         boolean unthemed = BlurModule.ARRAY_LIST.equals(element) || STALKER.equals(element) || SCOREBOARD.equals(element);
         if (isSkeet() && !unthemed) return false;
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
-        // Glass surfaces composite their own rounded blur.
+        // Glass surfaces composite their own rounded blur so the blur stays
+        // inside their curved silhouette.
         if (hud != null && hud.getMode().is("LiquidGlass") && !SCOREBOARD.equals(element)) return false;
         BlurModule blur = Vibe.getInstance().getModuleManager().getModule(BlurModule.class);
         return blur != null && blur.isEnabled() && blur.getElements().isSelected(element);
@@ -221,15 +229,19 @@ public final class HudManager {
     private void drawHudSurface(HudModule hud, int left, int top, int right, int bottom) {
         if (hud.getMode().is("LiquidGlass")) {
             float radius = Math.min(8, (bottom - top) / 2.0F);
-            KawaseBlur.drawRoundedRegion(left, top, right, bottom, radius, 4, 0);
-            RenderUtils.roundedRect(left, top, right, bottom, radius, 0x483B5067);
-            RenderUtils.roundedOutline(left, top, right, bottom, radius, 1, 0x70E7F6FF);
-            RenderUtils.roundedRect(left + 3, top + 2, right - 3, top + 4, 1, 0x55FFFFFF);
-            RenderUtils.roundedRect(left + 5, bottom - 3, right - 5, bottom - 2, .5F, 0x308BCCFF);
+            if (!liquidGlass.draw(left, top, right, bottom, radius, hud.getLiquidGlassBlur().isEnabled()
+                    ? hud.getLiquidGlassBlurStrength().getFloat() : 0.0F, hud.getLiquidGlassRefraction().getFloat(),
+                    hud.getLiquidGlassOpacity().getFloat(), hud.getLiquidGlassTint().getArgb())) {
+                KawaseBlur.drawRoundedRegion(left, top, right, bottom, radius, 4, 0);
+                RenderUtils.roundedRect(left, top, right, bottom, radius, 0x443B6684);
+            }
             return;
         }
         if (!hud.getMode().is("Skeet")) {
-            Gui.drawRect(left, top, right, bottom, RenderUtils.alpha(hud.getBackground().getArgb(), 92));
+            // Vibe is layered on top of the cached blur. A low-opacity tint
+            // preserves the actual blurred scene instead of replacing it with
+            // a black rectangle.
+            Gui.drawRect(left, top, right, bottom, RenderUtils.alpha(hud.getBackground().getArgb(), 42));
             return;
         }
         Gui.drawRect(left, top, right, bottom, 0xEE111113);
@@ -291,12 +303,9 @@ public final class HudManager {
     }
 
     private void drawSessionInfo(HudModule hud, ScaledResolution resolution, FontRenderer font) {
-        if (sessionStartKills < 0) {
-            sessionStartKills = minecraft.thePlayer.getStatFileWriter().readStat(StatList.playerKillsStat);
-        }
         long elapsed = Math.max(0L, System.currentTimeMillis() - sessionStarted) / 1000L;
         String time = String.format(java.util.Locale.ROOT, "%02d:%02d:%02d", elapsed / 3600L, (elapsed / 60L) % 60L, elapsed % 60L);
-        int kills = Math.max(0, minecraft.thePlayer.getStatFileWriter().readStat(StatList.playerKillsStat) - sessionStartKills);
+        int kills = Vibe.getInstance().getStatistics() == null ? 0 : Vibe.getInstance().getStatistics().getSessionKills();
         drawSimpleWidget(sessionInfo, "Session " + time + " | Kills " + kills, hud, resolution, font, 0.72F);
     }
 
@@ -666,17 +675,18 @@ public final class HudManager {
         if (blurEnabled(BlurModule.SCOREBOARD)) {
             KawaseBlur.drawRegion(backgroundLeft, top, backgroundRight, backgroundBottom, 4, partialTicks);
         }
+        // Keep the scoreboard a single HUD surface. Per-row black rectangles
+        // were painting over Vibe blur and LiquidGlass completely.
+        drawHudSurface(hud, backgroundLeft, top, backgroundRight, backgroundBottom);
         int y = top;
         for (Score score : visible) {
             ScorePlayerTeam team = board.getPlayersTeam(score.getPlayerName());
             String player = ScorePlayerTeam.formatPlayerName(team, score.getPlayerName());
             String points = EnumChatFormatting.RED + "" + score.getScorePoints();
-            Gui.drawRect(backgroundLeft, y, backgroundRight, y + font.FONT_HEIGHT, 0x60000000);
             font.drawString(player, left, y, 0xFFFFFFFF);
             font.drawStringWithShadow(points, left + width - 3 - font.getStringWidth(points), y, 0xFFFFFFFF);
             y += font.FONT_HEIGHT;
         }
-        Gui.drawRect(backgroundLeft, y, backgroundRight, y + font.FONT_HEIGHT + 3, 0x90000000);
         font.drawString(title, left + (contentWidth - font.getStringWidth(title)) / 2,
                 y + 2, 0xFFFFFFFF);
         scoreboard.setBounds(backgroundLeft, top, backgroundRight - backgroundLeft, height);

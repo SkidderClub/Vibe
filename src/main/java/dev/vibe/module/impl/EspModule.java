@@ -128,7 +128,11 @@ public final class EspModule extends Module {
     }
 
     public Style getStyleFor(EntityLivingBase entity) {
-        return getPreviewStyle(profileFor(entity),teamColor(entity),entity.hurtTime>0);
+        Style style = getPreviewStyle(profileFor(entity),teamColor(entity),entity.hurtTime>0);
+        HypixelModule hypixel = Vibe.getInstance() == null || Vibe.getInstance().getModuleManager() == null ? null
+                : Vibe.getInstance().getModuleManager().getModule(HypixelModule.class);
+        int override = hypixel == null ? 0 : hypixel.visualColor(entity);
+        return override == 0 ? style : style.recolor(override);
     }
     public Style getPreviewStyle(int type) { return getPreviewStyle(type,0,false); }
     public Style getPreviewStyle(int type,int team,boolean hurt) {

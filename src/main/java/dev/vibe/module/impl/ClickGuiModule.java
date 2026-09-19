@@ -13,7 +13,7 @@ public final class ClickGuiModule extends Module {
 
     // Each style renders through VibeClickGui's shared Module/Setting model,
     // so switching the look never changes bindings, values, or config data.
-    private final ModeSetting theme = addSetting(new ModeSetting("Theme", "Skeet", "Skeet", "Futuristic", "NeverLose", "Sigma", "Augustus", "Xanax"));
+    private final ModeSetting theme = addSetting(new ModeSetting("Theme", "Skeet", "Skeet", "Futuristic", "NeverLose", "Augustus", "Xanax"));
     private final ColorSetting primaryColor = addSetting(new ColorSetting("Primary Color", 0xFF2DE2C2));
     private final ColorSetting secondaryColor = addSetting(new ColorSetting("Secondary Color", 0xFFA855F7));
     private final BooleanSetting augustusRoundedCorners = addSetting(new BooleanSetting("Rounded Corners", true, () -> theme.is("Augustus")));

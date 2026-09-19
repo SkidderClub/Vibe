@@ -45,6 +45,7 @@ public abstract class Module {
         }
         if (Vibe.getInstance() != null && Vibe.getInstance().getConfig() != null
                 && Vibe.getInstance().getModuleManager() != null && !Vibe.getInstance().getConfig().isLoading()) {
+            if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordModuleToggle();
             Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
         }
     }

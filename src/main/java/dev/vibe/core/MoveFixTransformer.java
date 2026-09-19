@@ -20,7 +20,6 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
     private static final String AURA_HOOK = "dev/vibe/module/impl/KillAuraModule";
     private static final String INPUT = "net/minecraft/util/MovementInput";
     private static final String HOOK = "dev/vibe/module/impl/MoveFixModule";
-    private static final String SCAFFOLD_HOOK = "dev/vibe/module/impl/ScaffoldModule";
 
     @Override
     public byte[] transform(String name, String transformedName, byte[] bytes) {
@@ -206,7 +205,6 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
             if (opcode == Opcodes.GETFIELD && "I".equals(desc)
                     && ("currentItem".equals(name) || "field_70461_c".equals(name) || ("wm".equals(owner) && "c".equals(name)))) {
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/module/impl/AutoToolModule", "serverSlotHook", "(I)I", false);
-                super.visitMethodInsn(Opcodes.INVOKESTATIC, SCAFFOLD_HOOK, "serverSlotHook", "(I)I", false);
             }
         }
     }

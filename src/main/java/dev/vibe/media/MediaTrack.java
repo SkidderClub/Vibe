@@ -15,6 +15,14 @@ public final class MediaTrack {
         this.artwork = artwork; sampledAt = System.currentTimeMillis();
     }
     private static String clean(String s) { return s == null ? "" : s.replace('\u00a7', ' ').replaceAll("[\\p{Cntrl}]", " ").trim(); }
-    public long position() { return Math.min(durationMs, positionMs + (playing ? Math.max(0, System.currentTimeMillis()-sampledAt) : 0)); }
+    /** Unknown-duration video sessions still expose a useful elapsed timer. */
+    public long position() {
+        // Radio/live sessions intentionally have no meaningful timeline.
+        // A regular media session can also report an unknown duration, and
+        // that case must keep counting so its timer remains visible.
+        if (live) return 0;
+        long elapsed = positionMs + (playing ? Math.max(0, System.currentTimeMillis() - sampledAt) : 0);
+        return durationMs > 0 ? Math.min(durationMs, elapsed) : elapsed;
+    }
     public static MediaTrack idle(String status) { return new MediaTrack("Waiting for media", "", "", status, false, false, 0, 0, null); }
 }

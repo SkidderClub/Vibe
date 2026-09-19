@@ -16,6 +16,7 @@ import dev.vibe.target.TargetManager;
 import dev.vibe.ui.VibeClickGui;
 import dev.vibe.ui.AnimationItemRenderer;
 import dev.vibe.script.ScriptRuntime;
+import dev.vibe.statistics.StatisticsService;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.FMLCommonHandler;
@@ -31,7 +32,7 @@ public final class Vibe {
     public static final String MOD_ID = "clientcore";
     public static final String NAME = "Vibe";
     public static final String FORGE_NAME = "Client Core";
-    public static final String VERSION = "0.0.5";
+    public static final String VERSION = "0.0.6";
 
     private static Vibe instance;
 
@@ -47,6 +48,7 @@ public final class Vibe {
     private TargetManager targetManager;
     private ScriptRuntime scriptRuntime;
     private AccountManager accountManager;
+    private StatisticsService statistics;
     private int loadedModuleCount;
     private int loadedSettingCount;
 
@@ -58,6 +60,8 @@ public final class Vibe {
     public void preInit(FMLPreInitializationEvent event) {
         instance = this;
         accountManager = new AccountManager(minecraft, new java.io.File(minecraft.mcDataDir, "vibe/accounts").toPath());
+        statistics = new StatisticsService(minecraft, new java.io.File(minecraft.mcDataDir, "vibe/statistics").toPath());
+        statistics.recordLaunch();
         config = new VibeConfig(event.getModConfigurationDirectory());
         identity = new ClientIdentity(minecraft.mcDataDir);
         friendManager = new FriendManager(event.getModConfigurationDirectory());
@@ -135,6 +139,7 @@ public final class Vibe {
     public TargetManager getTargetManager() { return targetManager; }
     public ScriptRuntime getScriptRuntime() { return scriptRuntime; }
     public AccountManager getAccountManager() { return accountManager; }
+    public StatisticsService getStatistics() { return statistics; }
 
     /** Snapshot shown on the menu; recalculated after every client startup. */
     public void refreshLoadedCounts() {

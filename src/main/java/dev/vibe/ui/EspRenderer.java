@@ -81,6 +81,8 @@ public final class EspRenderer {
     public void renderWorld(RenderWorldLastEvent event) {
         EspModule esp = Vibe.getInstance().getModuleManager().getModule(EspModule.class);
         screenBoxes.clear();
+        dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+        if (hypixel != null && hypixel.suppressVisuals()) return;
         if (esp == null || !esp.isEnabled() || minecraft.thePlayer == null || minecraft.theWorld == null) {
             return;
         }
@@ -133,6 +135,7 @@ public final class EspRenderer {
                                 held == null ? "" : held.getDisplayName(), held, armor,
                                 antiInvisible ? qol.getInvisibleAlpha().getFloat() / 255F : 1);
                         actor.profile=esp.resolvedProfile(esp.profileFor(player));actor.teamColor=esp.teamColor(player);actor.hurt=player.hurtTime>0;
+                        actor.forcedColor=hypixel==null?0:hypixel.visualColor(player);
                         screenBoxes.add(new ScreenBox(bounds,actor));
                     }
                 }
@@ -146,6 +149,8 @@ public final class EspRenderer {
 
     public void renderOverlay() {
         EspModule esp = Vibe.getInstance().getModuleManager().getModule(EspModule.class);
+        dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+        if (hypixel != null && hypixel.suppressVisuals()) return;
         if (esp == null || !esp.isEnabled() || !esp.getModes().isSelected("2D")) {
             return;
         }

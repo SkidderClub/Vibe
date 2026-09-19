@@ -61,10 +61,14 @@ public final class NesRuntime {
                 engine.eval("function load(path) { }\n");
                 for (String script : SCRIPTS) engine.eval(readResource("/assets/vibe/nes/emu/" + script));
                 boolean nashorn = engine.getFactory().getEngineName().toLowerCase(java.util.Locale.ROOT).contains("nashorn");
+                // Copying 61k JavaScript pixels is the expensive boundary
+                // crossing. The core still emulates at 60 Hz; a 30 Hz
+                // presentation simply transfers alternate completed frames.
+                String every = Integer.toString(presentationFps <= 30 ? 2 : 1);
                 String frameCallback = nashorn
-                        ? "onFrame:function(frame){ frameSink.accept(Java.to(frame, 'int[]')); }"
-                        : "onFrame:function(frame){ frameSink.accept(frame); }";
-                engine.eval("var __vibeNes = new NES({emulateSound:false, preferredFrameRate:60, " + frameCallback + "});"
+                        ? "onFrame:function(frame){ if((__vibePresent++ % " + every + ")===0) frameSink.accept(Java.to(frame, 'int[]')); }"
+                        : "onFrame:function(frame){ if((__vibePresent++ % " + every + ")===0) frameSink.accept(frame); }";
+                engine.eval("var __vibePresent=0; var __vibeNes = new NES({emulateSound:false, preferredFrameRate:60, " + frameCallback + "});"
                         // Parse these calls once. Re-evaluating a source
                         // string for every frame was expensive, especially
                         // with Rhino as the compatible fallback engine.
@@ -134,13 +138,13 @@ public final class NesRuntime {
 
     /** Called by the GUI thread immediately before drawing the NES texture. */
     public void upload(DynamicTexture texture) {
-        // Present every completed frame (up to the GUI refresh rate). The old
-        // half-rate cap made correctly running ROMs look like they were lagging.
+        // Uploading is throttled independently from emulation so the worker
+        // always advances gameplay at the original console frame rate.
         long now = System.nanoTime();
         if (now - lastUploadNanos < uploadIntervalNanos || texture == null) return;
         int[] target = texture.getTextureData();
         if (!frameSink.copyTo(target)) return;
-        for (int index = 0; index < WIDTH * HEIGHT; index++) target[index] |= 0xFF000000;
+        for (int index = 0; index < WIDTH * HEIGHT; index++) target[index] = 0xFF000000 | (target[index] & 0x00FFFFFF);
         texture.updateDynamicTexture();
         lastUploadNanos = now;
     }

@@ -1,5 +1,6 @@
 package dev.vibe.ui;
 
+import dev.vibe.Vibe;
 import dev.vibe.game.battlefront.*;
 import dev.vibe.module.impl.Battlefront3Module;
 import java.io.IOException;
@@ -52,7 +53,10 @@ public final class Battlefront3Gui extends GuiScreen {
                 int before=game.ammo,oldKills=game.kills,shots=game.shots;game.advance(dt,input);ambientDelay-=dt;
                 if(game.ammo<before)sound("fire",game.kit==2?.72f:1.1f);
                 else if(game.shots>shots&&ambientDelay<=0){sound("distant",.8f);ambientDelay=.25;}
-                if(game.kills>oldKills)sound("confirm",1);
+                if(game.kills>oldKills){
+                    sound("confirm",1);
+                    if(Vibe.getInstance().getStatistics()!=null) for(int kill=oldKills;kill<game.kills;kill++) Vibe.getInstance().getStatistics().recordBattlefrontKill();
+                }
             }
             if(game.finished)capture(false);
         }

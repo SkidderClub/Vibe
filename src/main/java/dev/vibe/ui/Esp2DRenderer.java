@@ -18,7 +18,7 @@ public final class Esp2DRenderer {
         public final float health, maxHealth, armor, distance, opacity;
         public final ItemStack item;
         public String nativeItem = "";
-        public int teamColor,profile;public boolean hurt;
+        public int teamColor,profile,forcedColor;public boolean hurt;
         public final ItemStack[] equipment;
         public Actor(String name,float health,float maxHealth,float armor,float distance,String itemName,
                      ItemStack item,ItemStack[] equipment,float opacity) {
@@ -81,16 +81,16 @@ public final class Esp2DRenderer {
                 float s=frame.scale*e.scale.getFloat();
                 if(e.kind==Kind.BAR){
                     float outline=e.outline.isEnabled()?e.outlineWidth.getFloat()*s:0;
-                    if(outline>0)border(r,outline,alpha(e.outlineColor.resolve(actor.teamColor,actor.hurt),actor.opacity));
-                    if(e.backgroundEnabled.isEnabled())solid(r,alpha(e.background.resolve(actor.teamColor,actor.hurt),actor.opacity));
+                    if(outline>0)border(r,outline,alpha(resolve(e.outlineColor,actor),actor.opacity));
+                    if(e.backgroundEnabled.isEnabled())solid(r,alpha(resolve(e.background,actor),actor.opacity));
                     float ratio=e==settings.healthBar?actor.health/Math.max(.001F,actor.maxHealth):actor.armor/20;
                     ratio=Math.max(0,Math.min(1,ratio));
                     EspLayout.Rect fill=e.vertical()?new EspLayout.Rect(r.x,r.bottom()-r.h*ratio,r.w,r.h*ratio):new EspLayout.Rect(r.x,r.y,r.w*ratio,r.h);
                     paint(settings,e.color,r,screenWidth,screenHeight,false,actor,seconds);quad(fill);GL20.glUseProgram(0);
                 }else if(e.kind==Kind.TEXT){drawText(settings,e,label(e,settings,actor),r,s,actor,screenWidth,screenHeight,seconds);}
                 else {
-                    if(e.backgroundEnabled.isEnabled())solid(r.expand(2*s),alpha(e.background.resolve(actor.teamColor,actor.hurt),actor.opacity));
-                    if(e.outline.isEnabled())border(r,e.outlineWidth.getFloat()*s,alpha(e.outlineColor.resolve(actor.teamColor,actor.hurt),actor.opacity));
+                    if(e.backgroundEnabled.isEnabled())solid(r.expand(2*s),alpha(resolve(e.background,actor),actor.opacity));
+                    if(e.outline.isEnabled())border(r,e.outlineWidth.getFloat()*s,alpha(resolve(e.outlineColor,actor),actor.opacity));
                     if(e.kind==Kind.ICON){if(actor.item!=null)drawItem(actor.item,r.x,r.y,s,actor.opacity);else drawNativeItem(actor.nativeItem,r,s,actor.opacity);}
                     else {int i=0;for(ItemStack item:actor.equipment)if(item!=null){drawItem(item,r.x+(e.vertical()?0:i*16*s),r.y+(e.vertical()?i*16*s:0),s,actor.opacity);i++;}}
                 }
@@ -109,22 +109,22 @@ public final class Esp2DRenderer {
         float radius=Math.min(Math.min(r.w,r.h)/2,e.rounding.getFloat()*s);
         boolean corners=e.corners.isEnabled()&&a.distance>=e.cornerDistance.getFloat();
         float length=Math.min(r.w,r.h)*e.cornerLength.getFloat();
-        if(e.backgroundEnabled.isEnabled())solidRounded(r,radius,alpha(e.background.resolve(a.teamColor,a.hurt),a.opacity));
+        if(e.backgroundEnabled.isEnabled())solidRounded(r,radius,alpha(resolve(e.background,a),a.opacity));
         if(e.outline.isEnabled()) {
             GlStateManager.disableTexture2D();
-            color(alpha(e.outlineColor.resolve(a.teamColor,a.hurt),a.opacity));
+            color(alpha(resolve(e.outlineColor,a),a.opacity));
             stroke(r,radius,line+2*e.outlineWidth.getFloat()*s,corners,length+e.outlineWidth.getFloat()*s);
         }
         paint(settings,e.color,r,w,h,false,a,seconds);stroke(r,radius,line,corners,length);GL20.glUseProgram(0);
     }
     private void drawText(Esp2DSettings settings,Element e,String value,EspLayout.Rect r,float scale,Actor actor,int w,int h,double seconds) {
         TextStyle t=e.resolvedText();float size=t.size.getFloat()/9*scale,opacity=actor.opacity;
-        if(e.backgroundEnabled.isEnabled())solid(r.expand(2*scale),alpha(e.background.resolve(actor.teamColor,actor.hurt),opacity));
+        if(e.backgroundEnabled.isEnabled())solid(r.expand(2*scale),alpha(resolve(e.background,actor),opacity));
         GlStateManager.pushMatrix();GlStateManager.translate(r.x,r.y-(t.font.is("Minecraft")?0:font(t).inkTop(value)*size),0);GlStateManager.scale(size,size,1);
         try {
             if(e.outline.isEnabled()) {
                 float d=e.outlineWidth.getFloat()*scale/size;
-                for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)if(x!=0||y!=0)text(t,value,x*d,y*d,alpha(e.outlineColor.resolve(actor.teamColor,actor.hurt),opacity));
+                for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)if(x!=0||y!=0)text(t,value,x*d,y*d,alpha(resolve(e.outlineColor,actor),opacity));
             }
             if(t.shadow.isEnabled())text(t,value,1,1,alpha(0xB0000000,opacity));
             boolean shader=paint(settings,t.color,r,w,h,true,actor,seconds);
@@ -138,17 +138,22 @@ public final class Esp2DRenderer {
     private boolean paint(Esp2DSettings settings,Paint paint,EspLayout.Rect rect,int w,int h,boolean texture,Actor actor,double seconds) {
         GL11.glDisable(GL11.GL_ALPHA_TEST);GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(770,771);
         if(!texture)GlStateManager.disableTexture2D();
-        boolean shader=EspPaintShader.bind(settings,paint,rect,w,h,texture,actor.opacity,seconds,actor.teamColor,actor.hurt);
+        // A detected Murder Mystery role is an explicit colour override. Use
+        // the CPU paint path for it so gradients and rainbow paints cannot
+        // leak their original hue through the role colour.
+        boolean shader=actor.forcedColor==0&&EspPaintShader.bind(settings,paint,rect,w,h,texture,actor.opacity,seconds,actor.teamColor,actor.hurt,actor.forcedColor);
         if(!shader) {GL20.glUseProgram(0);color(alpha(fallback(settings,paint,rect,w,h,seconds,actor),actor.opacity));}
         return shader;
     }
     private int fallback(Esp2DSettings settings,Paint paint,EspLayout.Rect rect,int w,int h,double seconds,Actor actor){
-        int c=paint.solid.resolve(actor.teamColor,actor.hurt);if(paint.solid.isHurtOverride(actor.hurt))return c;
-        if(paint.mode.is("Team"))return actor.teamColor==0?c:(c&0xFF000000)|(actor.teamColor&0xFFFFFF);
-        if(paint.mode.is("Rainbow"))return java.awt.Color.HSBtoRGB((float)((seconds*paint.rainbowSpeed.getDouble())%1),paint.rainbowSaturation.getFloat(),1);
-        if(!paint.mode.is("Static")){boolean global=paint.mode.is("Global Gradient");EspGradient g=new EspGradient(global?settings.global:paint.gradient,seconds,actor.teamColor,actor.hurt);return g.sample(global?rect.x+rect.w/2:rect.w/2,global?rect.y+rect.h/2:rect.h/2,global?w:rect.w,global?h:rect.h);}
-        return c;
+        int c=paint.solid.resolve(actor.teamColor,actor.hurt);if(paint.solid.isHurtOverride(actor.hurt))return force(c,actor);
+        if(paint.mode.is("Team"))return force(actor.teamColor==0?c:(c&0xFF000000)|(actor.teamColor&0xFFFFFF),actor);
+        if(paint.mode.is("Rainbow"))return force(java.awt.Color.HSBtoRGB((float)((seconds*paint.rainbowSpeed.getDouble())%1),paint.rainbowSaturation.getFloat(),1),actor);
+        if(!paint.mode.is("Static")){boolean global=paint.mode.is("Global Gradient");EspGradient g=new EspGradient(global?settings.global:paint.gradient,seconds,actor.teamColor,actor.hurt);return force(g.sample(global?rect.x+rect.w/2:rect.w/2,global?rect.y+rect.h/2:rect.h/2,global?w:rect.w,global?h:rect.h),actor);}
+        return force(c,actor);
     }
+    private static int resolve(dev.vibe.setting.ColorSetting setting,Actor actor){return force(setting.resolve(actor.teamColor,actor.hurt),actor);}
+    private static int force(int color,Actor actor){return actor.forcedColor==0?color:(color&0xFF000000)|(actor.forcedColor&0x00FFFFFF);}
     private void drawNativeItem(String kind,EspLayout.Rect r,float scale,float opacity) {
         GlStateManager.pushMatrix();GlStateManager.translate(r.x,r.y,0);GlStateManager.scale(scale,scale,1);
         try {

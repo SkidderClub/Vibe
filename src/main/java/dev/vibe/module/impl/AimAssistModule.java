@@ -33,6 +33,11 @@ public final class AimAssistModule extends Module {
     private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Simple", "Simple", "Adaptive"));
     private final BooleanSetting requireMouseDown = addSetting(new BooleanSetting("Require Mouse Down", true));
     private final BooleanSetting aimVertically = addSetting(new BooleanSetting("Aim Vertically", false));
+    private final BooleanSetting boostAim = addSetting(new BooleanSetting("Boost Aim", false));
+    private final NumberSetting boostTowards = addSetting(new NumberSetting("Boost Towards", 1.5D, 1.0D, 3.0D, 0.05D,
+            () -> boostAim.isEnabled()));
+    private final NumberSetting slowAway = addSetting(new NumberSetting("Slow Away", .45D, 0.0D, 1.0D, 0.05D,
+            () -> boostAim.isEnabled()));
     private final BooleanSetting strafeIncrease = addSetting(new BooleanSetting("Strafe Increase", false));
     private final BooleanSetting checkBlockBreak = addSetting(new BooleanSetting("Check Block Break", false));
     private final BooleanSetting breakBlocksWhitelist = addSetting(new BooleanSetting("Break Blocks Whitelist", false,
@@ -58,6 +63,8 @@ public final class AimAssistModule extends Module {
 
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private EntityLivingBase target;
+    private float previousYaw;
+    private boolean hasPreviousYaw;
 
     public AimAssistModule() {
         super("AimAssist", "Smoothly aims at the best Vibe target", Category.COMBAT, Keyboard.KEY_NONE);
@@ -79,6 +86,13 @@ public final class AimAssistModule extends Module {
         if (Math.abs(yawDelta) <= yawDeadzone.getFloat()) yawDelta = 0.0F;
         if (Math.abs(pitchDelta) <= pitchDeadzone.getFloat()) pitchDelta = 0.0F;
         float yawSpeed = speed(horizontalSpeed.getFloat(), Math.abs(yawDelta));
+        if (boostAim.isEnabled() && hasPreviousYaw) {
+            float mouseDirection = MathHelper.wrapAngleTo180_float(minecraft.thePlayer.rotationYaw - previousYaw);
+            if (Math.abs(mouseDirection) > .001F) {
+                boolean towards = Math.signum(mouseDirection) == Math.signum(yawDelta);
+                yawSpeed *= towards ? boostTowards.getFloat() : slowAway.getFloat();
+            }
+        }
         if (strafeIncrease.isEnabled() && Math.abs(minecraft.thePlayer.movementInput.moveStrafe) > 0.01F) {
             yawSpeed *= 1.6F;
         }
@@ -88,11 +102,14 @@ public final class AimAssistModule extends Module {
             minecraft.thePlayer.rotationPitch = MathHelper.clamp_float(minecraft.thePlayer.rotationPitch
                     + clamp(pitchDelta, -pitchSpeed, pitchSpeed), -90.0F, 90.0F);
         }
+        previousYaw = minecraft.thePlayer.rotationYaw;
+        hasPreviousYaw = true;
     }
 
     @Override
     protected void onDisable() {
         target = null;
+        hasPreviousYaw = false;
     }
 
     private boolean canAim() {

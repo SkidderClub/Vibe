@@ -68,6 +68,7 @@ public final class VibeConfig {
             }
             if (!getFile(DEFAULT_PROFILE).isFile()) {
                 loadCompiledDefaults(manager);
+                if (Vibe.getInstance() != null && Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordConfigLoad();
                 return;
             }
         }
@@ -97,6 +98,7 @@ public final class VibeConfig {
             if (!rootElement.isJsonObject() || !apply(rootElement.getAsJsonObject(), manager, withKeybinds, withVisuals)) return false;
             activeName = safeName;
             rememberActiveName();
+            if (Vibe.getInstance() != null && Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordConfigLoad();
             return true;
         } catch (Exception ignored) {
             return false;
@@ -118,6 +120,7 @@ public final class VibeConfig {
         root.addProperty("format", FORMAT_VERSION);
         root.addProperty("profile", safeName);
         File output = getFile(safeName);
+        boolean created = !output.isFile();
         JsonObject previous = readObject(output);
         String now = formatDate(System.currentTimeMillis());
         String author = configAuthor();
@@ -164,6 +167,7 @@ public final class VibeConfig {
             replaceFile(temporary, output);
             activeName = safeName;
             rememberActiveName();
+            if (created && Vibe.getInstance() != null && Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordConfigCreated();
             return true;
         } catch (IOException ignored) {
             return false;
@@ -177,6 +181,7 @@ public final class VibeConfig {
         if (safeName == null) return false;
         File file = getFile(safeName);
         boolean deleted = file.isFile() && file.delete();
+        if (deleted && Vibe.getInstance() != null && Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordConfigDeleted();
         if (deleted && safeName != null && safeName.equalsIgnoreCase(activeName)) {
             activeName = DEFAULT_PROFILE;
             rememberActiveName();

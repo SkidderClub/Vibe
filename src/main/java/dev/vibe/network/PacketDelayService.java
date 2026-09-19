@@ -18,6 +18,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.client.C07PacketPlayerDigging;
+import net.minecraft.network.play.server.S08PacketPlayerPosLook;
 
 /**
  * One ordered Netty interceptor shared by modules which deliberately delay a
@@ -87,6 +88,9 @@ public final class PacketDelayService {
         // They queue it for their next main-thread tick, so this Netty path
         // never reads or mutates the Minecraft world directly.
         if (packet instanceof C07PacketPlayerDigging && Vibe.getInstance() != null) {
+            // Statistics consumes the completed destroy packet on its next
+            // client tick. Do not inspect world state from Netty.
+            if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordDigging((C07PacketPlayerDigging) packet);
             GirlfriendModule girlfriend = Vibe.getInstance().getModuleManager().getModule(GirlfriendModule.class);
             if (girlfriend != null) girlfriend.onDigging((C07PacketPlayerDigging) packet);
             CuteVisualsModule cuteVisuals = Vibe.getInstance().getModuleManager().getModule(CuteVisualsModule.class);
@@ -114,6 +118,15 @@ public final class PacketDelayService {
     }
 
     private boolean delayInbound(Packet<?> packet, ChannelHandlerContext ctx) {
+        if (packet instanceof S08PacketPlayerPosLook && Vibe.getInstance() != null) {
+            final S08PacketPlayerPosLook correction = (S08PacketPlayerPosLook) packet;
+            minecraft.addScheduledTask(new Runnable() {
+                @Override public void run() {
+                    dev.vibe.module.impl.FlagDetectorModule module = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.FlagDetectorModule.class);
+                    if (module != null) module.observe(correction);
+                }
+            });
+        }
         ScriptRuntime scripts = Vibe.getInstance() == null ? null : Vibe.getInstance().getScriptRuntime();
         if (scripts != null && !scripts.inbound(packet)) return true;
         BacktrackModule backtrack = Vibe.getInstance() == null ? null

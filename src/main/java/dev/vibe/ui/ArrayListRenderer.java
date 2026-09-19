@@ -68,19 +68,28 @@ public final class ArrayListRenderer {
         try {
             GlStateManager.enableBlend(); GlStateManager.tryBlendFuncSeparate(770,771,1,0);
             GlStateManager.alphaFunc(GL11.GL_GREATER,0.001f);
-            // All blur samples happen before any list paint, avoiding repeated blur of previous rows.
-            if(blurred)for(Row row:rows)KawaseBlur.drawRoundedRegion((int)row.x,(int)row.y,(int)Math.ceil(row.x+row.width),
-                    (int)Math.ceil(row.y+rh),s.radius.getFloat()*scale,blur.getStrength().getInt(),0);
-            if(s.glow.isEnabled())for(int i=0;i<rows.size();i++){
-                Row r=rows.get(i);int radius=s.glowRadius.getInt();
-                for(int pass=radius;pass>=1;pass--)RenderUtils.roundedOutline((int)r.x-pass,(int)r.y-pass,
-                        (int)Math.ceil(r.x+r.width)+pass,(int)Math.ceil(r.y+rh)+pass,s.radius.getFloat()+pass,1,
-                        alpha(r.color,s.glowStrength.getFloat()*(1-pass/(float)(radius+1))*.28f));
+            // KawaseBlur captures and filters the complete framebuffer. Doing
+            // that once per entry turned a twenty-row list into twenty full
+            // screen blur passes. Blur the list silhouette as one region,
+            // then paint the individual cards over it below.
+            if(blurred){
+                // Capture and filter once, then clip the shared blurred frame
+                // to every visible card. This keeps blur inside each real
+                // ArrayList background instead of filling the stair-step gap.
+                KawaseBlur.prepareRoundedFrame(blur.getStrength().getInt(),0);
+                for(Row row:rows)KawaseBlur.drawRoundedRegion((int)Math.floor(row.x),(int)Math.floor(row.y),
+                        (int)Math.ceil(row.x+row.width),(int)Math.ceil(row.y+rh),s.radius.getFloat()*scale,blur.getStrength().getInt(),0);
             }
+            // Both outline layers belong behind the text.  Drawing the solid
+            // line last made wide outlines and glow passes cut straight
+            // through glyphs, which is what made the list unreadable.
+            if(s.glow.isEnabled() && hud.getArrayOutline().isEnabled()) drawOutlineGlow(rows,right,rh,gap,s);
+            if(hud.getArrayOutline().isEnabled())outline(rows,right,rh,gap,s,hud);
             for(int i=0;i<rows.size();i++){
                 Row r=rows.get(i);float fade=fade(s,i,rows.size());
-                if(!s.background.is("None") && !hud.getArrayStyle().is("Minimal"))RenderUtils.roundedRect((int)r.x,(int)r.y,
-                        (int)Math.ceil(r.x+r.width),(int)Math.ceil(r.y+rh),s.radius.getFloat()*scale,alpha(hud.getBackground().getArgb(),fade));
+                // Minimal is the sole presentation: each configured step is
+                // still blur/outline compatible but never gains a second card
+                // background from the removed Array Style selector.
                 float rail=s.railWidth.getFloat();
                 if(s.rail.is("Both")||s.rail.is("Outer"))rect(right?r.x+r.width-rail:r.x,r.y,right?r.x+r.width:r.x+rail,r.y+rh,r.color);
                 if(s.rail.is("Both")||s.rail.is("Inner"))rect(right?r.x:r.x+r.width-rail,r.y,right?r.x+rail:r.x+r.width,r.y+rh,r.color);
@@ -90,7 +99,6 @@ public final class ArrayListRenderer {
                 drawText(r.name,x,y,s,hud,i,rows.size(),now,false);
                 drawText(r.suffix,x+textWidth(r.name,s)*scale,y,s,hud,i,rows.size(),now,true);
             }
-            if(hud.getArrayOutline().isEnabled())outline(rows,right,rh,gap,s,hud);
         } finally {
             GL11.glPopAttrib();GlStateManager.color(1,1,1,1);
         }
@@ -136,8 +144,8 @@ public final class ArrayListRenderer {
                 int c=suffix&&!s.suffixAccent.isEnabled()?alpha(s.suffixColor.getArgb(),fade(s,index,count))
                         :color(hud,index,count,s.horizontal.isEnabled()?cursor/total:0,now);
                 if(s.textGlow.isEnabled()){
-                    float r=s.textGlowRadius.getFloat();int glow=alpha(c,s.textGlowStrength.getFloat()*.3f);
-                    for(int j=0;j<8;j++){double a=j*Math.PI/4;text(ch,cursor+(float)Math.cos(a)*r,(float)Math.sin(a)*r,glow,s);}
+                    float r=Math.min(1.25f,s.textGlowRadius.getFloat()*.35f);int glow=alpha(c,s.textGlowStrength.getFloat()*.18f);
+                    for(int j=0;j<4;j++){double a=j*Math.PI/2;text(ch,cursor+(float)Math.cos(a)*r,(float)Math.sin(a)*r,glow,s);}
                 }
                 if(s.shadow.isEnabled())text(ch,cursor+1,1,(c&0xFF000000)|((c&0xFCFCFC)>>2),s);
                 text(ch,cursor,0,c,s);cursor+=textWidth(ch,s);
@@ -159,6 +167,57 @@ public final class ArrayListRenderer {
             if(i+1==rows.size())rect(r.x,r.y+rh-t,r.x+r.width,r.y+rh,c);
             else {Row next=rows.get(i+1);float a=right?r.x:r.x+r.width,b=right?next.x:next.x+next.width;rect(Math.min(a,b),r.y+rh-t,Math.max(a,b)+t,r.y+rh,c);}
         }
+    }
+    /**
+     * Draw the glow ourselves instead of routing it through roundedOutline.
+     * That helper restores the normal alpha blend function for every row,
+     * which turned a large glow radius into a stack of hard, cyan outlines.
+     */
+    private void drawOutlineGlow(List<Row> rows,boolean right,float rh,float gap,ArrayListSettings s){
+        float strength=Math.max(0.0F,Math.min(1.0F,s.glowStrength.getFloat()));
+        float radius=Math.min(10.0F,Math.max(1.0F,s.glowRadius.getFloat()));
+        int passes=Math.max(2,Math.min(4,(int)Math.ceil(radius*.4F)));
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT|GL11.GL_COLOR_BUFFER_BIT|GL11.GL_CURRENT_BIT|GL11.GL_LINE_BIT);
+        try{
+            // Normal alpha composition prevents bright colour channels from
+            // accumulating into white when neighbouring stepped rows overlap.
+            GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);
+            GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glEnable(GL11.GL_LINE_SMOOTH);
+            // Each pass is the real outer silhouette. The old implementation
+            // expanded one rounded rectangle per row, leaving a stack of hard
+            // boxes across the text instead of a glow around the ArrayList.
+            for(int pass=passes;pass>=0;pass--){
+                float progress=pass/(float)passes;
+                GL11.glLineWidth(1.0F+radius*progress*.65F);
+                float opacity=strength*.075F*(1.0F-progress)*(1.0F-progress);
+                if(opacity<=.002F)continue;
+                glowPath(rows,right,rh,gap,s,opacity);
+            }
+        }finally{GL11.glPopAttrib();}
+    }
+    private static void glowPath(List<Row> rows,boolean right,float rh,float gap,ArrayListSettings s,float opacity){
+        if(rows.isEmpty())return;
+        if(s.outline.is("Rectangle")){
+            float left=Float.MAX_VALUE,rightEdge=-Float.MAX_VALUE;for(Row row:rows){left=Math.min(left,row.x);rightEdge=Math.max(rightEdge,row.x+row.width);}
+            int color=alpha(border(rows.get(0),s),opacity);
+            glowSegment(left,rows.get(0).y,rightEdge,rows.get(0).y,color);glowSegment(left,rows.get(rows.size()-1).y+rh,rightEdge,rows.get(rows.size()-1).y+rh,color);
+            glowSegment(left,rows.get(0).y,left,rows.get(rows.size()-1).y+rh,color);glowSegment(rightEdge,rows.get(0).y,rightEdge,rows.get(rows.size()-1).y+rh,color);return;
+        }
+        for(int i=0;i<rows.size();i++){
+            Row row=rows.get(i);int color=alpha(border(row,s),opacity);
+            if(s.outline.is("Rows")||gap>0){
+                glowSegment(row.x,row.y,row.x+row.width,row.y,color);glowSegment(row.x,row.y+rh,row.x+row.width,row.y+rh,color);
+                glowSegment(row.x,row.y,row.x,row.y+rh,color);glowSegment(row.x+row.width,row.y,row.x+row.width,row.y+rh,color);continue;
+            }
+            glowSegment(row.x,row.y,row.x,row.y+rh,color);glowSegment(row.x+row.width,row.y,row.x+row.width,row.y+rh,color);
+            if(i==0)glowSegment(row.x,row.y,row.x+row.width,row.y,color);
+            if(i+1==rows.size())glowSegment(row.x,row.y+rh,row.x+row.width,row.y+rh,color);
+            else {Row next=rows.get(i+1);float a=right?row.x:row.x+row.width,b=right?next.x:next.x+next.width;glowSegment(Math.min(a,b),row.y+rh,Math.max(a,b),row.y+rh,color);}
+        }
+    }
+    private static void glowSegment(float x1,float y1,float x2,float y2,int color){
+        if((color>>>24)==0)return;GlStateManager.color((color>>16&255)/255F,(color>>8&255)/255F,(color&255)/255F,(color>>>24)/255F);
+        GL11.glBegin(GL11.GL_LINES);GL11.glVertex2f(x1,y1);GL11.glVertex2f(x2,y2);GL11.glEnd();
     }
     private static int border(Row row,ArrayListSettings s){return s.outlineAccent.isEnabled()?row.color:alpha(s.outlineColor.getArgb(),(row.color>>>24)/255f);}
     private static float fade(ArrayListSettings s,int row,int count){return s.opacity.getFloat()*(1-s.fade.getFloat()*row/Math.max(1f,count-1));}
@@ -186,7 +245,7 @@ public final class ArrayListRenderer {
         s.shadow.setEnabled(true);s.suffix.setValue("Mode");s.separator.setValue("Space");s.suffixAccent.setEnabled(false);s.suffixColor.setValue(0xFFCCCCCC);
         s.sorting.setValue("Width");s.alignment.setValue("Auto");s.rowHeight.setValue(12d);s.padding.setValue(4d);s.gap.setValue(0d);
         s.radius.setValue(0d);s.background.setValue("Steps");s.rail.setValue("None");s.railWidth.setValue(1d);s.outline.setValue("Steps");
-        hud.getArrayStyle().setValue("Compact");hud.getArrayOutline().setEnabled(false);s.outlineAccent.setEnabled(true);s.outlineWidth.setValue(1d);
+        hud.getArrayOutline().setEnabled(false);s.outlineAccent.setEnabled(true);s.outlineWidth.setValue(1d);
         s.color.setValue("Wave");s.horizontal.setEnabled(false);s.fade.setValue(0d);s.opacity.setValue(1d);s.glow.setEnabled(false);s.textGlow.setEnabled(false);
         s.speed.setValue(1d);s.spread.setValue(1d);hud.getBackground().setValue(0xC0101117);
         if(preset.equals("Rose Cards")){s.casing.setValue("Lowercase");hud.getArrayPrimaryColor().setValue(0xFFFF969D);hud.getArraySecondaryColor().setValue(0xFFA54E60);}

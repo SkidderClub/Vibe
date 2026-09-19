@@ -23,6 +23,10 @@ public class HitmarkerDelayTest {
             EntityZombie target = allocate(EntityZombie.class);
             module.mark(target);
             HitmarkerModule.Marker first = module.getTorusMarkers().get(0);
+            HitmarkerModule.Marker world = module.getMarkers().get(0);
+            assertEquals("World hitmarkers keep a usable plane after a transient player loss", 0.0D, world.lookX, 0.0D);
+            assertEquals(0.0D, world.lookY, 0.0D);
+            assertEquals(1.0D, world.lookZ, 0.0D);
             // Pin the last-spawn time ahead of the clock to avoid timing-dependent sleeps.
             set(HitmarkerModule.class,module,"lastTorus",System.currentTimeMillis()+1000);
             for(int i=0;i<30;i++)module.mark(target);

@@ -12,6 +12,7 @@ import java.util.Random;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.inventory.GuiChest;
 import net.minecraft.inventory.ContainerChest;
+import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.Slot;
 import org.lwjgl.input.Keyboard;
 
@@ -23,6 +24,7 @@ public final class ChestStealerModule extends Module {
     private final RangeSetting stealDelay = addSetting(new RangeSetting("Steal Delay (ms)", 70.0D, 125.0D, 0.0D, 1500.0D, 5.0D,
             () -> mode.is("Default")));
     private final BooleanSetting autoClose = addSetting(new BooleanSetting("Auto Close", true));
+    private final BooleanSetting titleCheck = addSetting(new BooleanSetting("Title Check", true));
     private final RangeSetting closeDelay = addSetting(new RangeSetting("Close Delay (ms)", 120.0D, 260.0D, 0.0D, 2500.0D, 10.0D,
             () -> autoClose.isEnabled()));
     private final ModeSetting selection = addSetting(new ModeSetting("Selection", "Random", () -> mode.is("Default"), "Random", "Left To Right"));
@@ -88,7 +90,17 @@ public final class ChestStealerModule extends Module {
     private ContainerChest activeChest() {
         if (!(minecraft.currentScreen instanceof GuiChest) || minecraft.thePlayer == null
                 || !(minecraft.thePlayer.openContainer instanceof ContainerChest)) return null;
-        return (ContainerChest) minecraft.thePlayer.openContainer;
+        ContainerChest chest = (ContainerChest) minecraft.thePlayer.openContainer;
+        return titleCheck.isEnabled() && !hasVanillaChestTitle(chest) ? null : chest;
+    }
+
+    /** Server-selector menus are custom named inventories, never loot them. */
+    private boolean hasVanillaChestTitle(ContainerChest chest) {
+        IInventory inventory = chest.getLowerChestInventory();
+        if (inventory == null || inventory.hasCustomName()) return false;
+        String name = inventory.getName();
+        return "container.chest".equals(name) || "container.chestDouble".equals(name)
+                || "Chest".equalsIgnoreCase(name) || "Large Chest".equalsIgnoreCase(name);
     }
 
     private List<Slot> usefulSlots(ContainerChest chest) {

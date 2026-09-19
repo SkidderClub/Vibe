@@ -4,6 +4,11 @@ import dev.vibe.Vibe;
 import dev.vibe.module.Category;
 import dev.vibe.module.Module;
 import dev.vibe.setting.ColorSetting;
+import dev.vibe.setting.BooleanSetting;
+import dev.vibe.setting.StringSetting;
+import dev.vibe.account.RandomUsername;
+import java.util.HashMap;
+import java.util.Map;
 import net.minecraft.util.EnumChatFormatting;
 import org.lwjgl.input.Keyboard;
 
@@ -23,7 +28,11 @@ public final class NameProtectModule extends Module {
             0x555555, 0x5555FF, 0x55FF55, 0x55FFFF, 0xFF5555, 0xFF55FF, 0xFFFF55, 0xFFFFFF
     };
 
-    private final ColorSetting nameColor = addSetting(new ColorSetting("Name Color", 0xFF2DE2C2));
+    private final StringSetting protectedName = addSetting(new StringSetting("Protected Name", "", 16, () -> true));
+    private final BooleanSetting overrideColor = addSetting(new BooleanSetting("Override Color", false));
+    private final ColorSetting nameColor = addSetting(new ColorSetting("Name Color", 0xFF2DE2C2, () -> overrideColor.isEnabled()));
+    private final BooleanSetting hideOthers = addSetting(new BooleanSetting("Hide Others", false));
+    private final Map<String, String> hiddenNames = new HashMap<String, String>();
 
     public NameProtectModule() {
         super("NameProtect", "Show your Vibe gamertag instead of the account name", Category.CLIENT, Keyboard.KEY_NONE);
@@ -31,16 +40,17 @@ public final class NameProtectModule extends Module {
     }
 
     public String getDisplayName(String original) {
-        if (!isConfigured()) {
+        if (!isEnabled()) {
             return original;
         }
         if (Vibe.getInstance().getFriendManager() != null) {
             dev.vibe.friend.FriendManager.Friend friend = Vibe.getInstance().getFriendManager().find(original);
-            if (friend != null) return friend.getAlias();
+            if (friend != null) return (overrideColor.isEnabled() ? nearestChatColor() : "") + friend.getAlias();
         }
         String accountName = Vibe.getInstance().getMinecraft().getSession().getUsername();
-        if (original != null && !original.equalsIgnoreCase(accountName)) return original;
-        return getColoredGamertag();
+        if (original != null && original.equalsIgnoreCase(accountName)) return getColoredGamertag();
+        if (hideOthers.isEnabled() && original != null && !original.trim().isEmpty()) return hidden(original);
+        return original;
     }
 
     public String protectText(String text) {
@@ -56,7 +66,16 @@ public final class NameProtectModule extends Module {
         }
         if (Vibe.getInstance().getFriendManager() != null) {
             for (dev.vibe.friend.FriendManager.Friend friend : Vibe.getInstance().getFriendManager().getFriends()) {
-                if (!friend.getName().equalsIgnoreCase(friend.getAlias())) result = replacePreserving(result, friend.getName(), friend.getAlias());
+                if (!friend.getName().equalsIgnoreCase(friend.getAlias())) result = replacePreserving(result, friend.getName(),
+                        (overrideColor.isEnabled() ? nearestChatColor() : "") + friend.getAlias());
+            }
+        }
+        if (hideOthers.isEnabled() && Vibe.getInstance().getMinecraft().theWorld != null) {
+            for (Object raw : Vibe.getInstance().getMinecraft().theWorld.playerEntities) {
+                if (!(raw instanceof net.minecraft.entity.player.EntityPlayer)) continue;
+                String name = ((net.minecraft.entity.player.EntityPlayer) raw).getName();
+                String account = Vibe.getInstance().getMinecraft().getSession().getUsername();
+                if (name != null && !name.equalsIgnoreCase(account)) result = replacePreserving(result, name, hidden(name));
             }
         }
         return result;
@@ -81,19 +100,27 @@ public final class NameProtectModule extends Module {
     }
 
     public boolean isConfigured() {
-        return isEnabled() && Vibe.getInstance() != null && Vibe.getInstance().getIdentity() != null
-                && Vibe.getInstance().getIdentity().isConfigured();
+        return isEnabled() && (protectedName.getValue() != null && !protectedName.getValue().trim().isEmpty()
+                || Vibe.getInstance() != null && Vibe.getInstance().getIdentity() != null && Vibe.getInstance().getIdentity().isConfigured());
     }
 
     public String getColoredGamertag() {
         if (!isConfigured()) {
             return "";
         }
-        return nearestChatColor() + Vibe.getInstance().getIdentity().getGamertag();
+        String name = protectedName.getValue() == null ? "" : protectedName.getValue().trim();
+        if (name.isEmpty()) name = Vibe.getInstance().getIdentity().getGamertag();
+        return (overrideColor.isEnabled() ? nearestChatColor() : EnumChatFormatting.RESET) + name;
     }
 
     public ColorSetting getNameColor() {
         return nameColor;
+    }
+    public boolean hidesOthers() { return isEnabled() && hideOthers.isEnabled(); }
+    private String hidden(String original) {
+        String value = hiddenNames.get(original.toLowerCase(java.util.Locale.ROOT));
+        if (value == null) { value = RandomUsername.generate(); hiddenNames.put(original.toLowerCase(java.util.Locale.ROOT), value); }
+        return overrideColor.isEnabled() ? nearestChatColor() + value : value;
     }
 
     private EnumChatFormatting nearestChatColor() {

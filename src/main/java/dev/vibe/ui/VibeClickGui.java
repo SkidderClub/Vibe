@@ -34,7 +34,7 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
-/** Modular ClickGUI with Futuristic, Skeet, NeverLose, Sigma, Augustus and Xanax layouts. */
+/** Modular ClickGUI with Futuristic, Skeet, NeverLose, Augustus and Xanax layouts. */
 public final class VibeClickGui extends GuiScreen {
 
     private static final int PANEL_WIDTH = 176;
@@ -60,7 +60,6 @@ public final class VibeClickGui extends GuiScreen {
     private final List<Target> targets = new ArrayList<Target>();
     private final ParticlesRenderer clickGuiParticles = new ParticlesRenderer();
     private final NeverLoseWorkspace neverLose = new NeverLoseWorkspace();
-    private final SigmaWorkspace sigma = new SigmaWorkspace();
     private final XanaxWorkspace xanax = new XanaxWorkspace();
     private Setting<?> editing;
     private String editBuffer = "";
@@ -124,8 +123,6 @@ public final class VibeClickGui extends GuiScreen {
             xanax.draw(width, height, mouseX, mouseY);
         } else if (isNeverLoseTheme()) {
             drawNeverLose(mouseX, mouseY, partialTicks);
-        } else if (isSigmaTheme()) {
-            drawSigma(mouseX, mouseY, partialTicks);
         } else if (isAugustusTheme()) {
             drawAugustus(mouseX, mouseY, partialTicks);
         } else if (isFuturisticTheme()) {
@@ -193,12 +190,6 @@ public final class VibeClickGui extends GuiScreen {
         }
         int scanY = 42 + (int) ((System.currentTimeMillis() / 18L) % Math.max(1, height - 42));
         Gui.drawRect(0, scanY, width, scanY + 1, RenderUtils.alpha(accent, 42));
-    }
-
-    private void drawSigma(int mouseX, int mouseY, float partialTicks) {
-        drawSkeetBackdrop(partialTicks);
-        clickGuiParticles.draw(this);
-        sigma.draw(width, height, mouseX, mouseY);
     }
 
     /**
@@ -648,7 +639,6 @@ public final class VibeClickGui extends GuiScreen {
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
         if (isXanaxTheme()) { xanax.click(mouseX, mouseY, mouseButton); return; }
         if (isNeverLoseTheme()) { neverLose.click(mouseX, mouseY, mouseButton); return; }
-        if (isSigmaTheme()) { sigma.click(mouseX, mouseY, mouseButton); return; }
         if (isAugustusTheme()) {
             return;
         }
@@ -833,7 +823,6 @@ public final class VibeClickGui extends GuiScreen {
             return;
         }
         if (isXanaxTheme()) { xanax.wheel(mouseX(), mouseY(), wheel); return; }
-        if (isSigmaTheme()) { sigma.wheel(mouseX(), mouseY(), wheel); return; }
         if (isSkeetTheme()) {
             int boardWidth = boardWidth();
             int boardHeight = boardHeight();
@@ -898,10 +887,6 @@ public final class VibeClickGui extends GuiScreen {
             if (!neverLose.key(typedChar, keyCode) && (keyCode == Keyboard.KEY_ESCAPE || keyCode == Keyboard.KEY_RSHIFT)) mc.displayGuiScreen(null);
             return;
         }
-        if (isSigmaTheme()) {
-            if (!sigma.key(typedChar, keyCode) && (keyCode == Keyboard.KEY_ESCAPE || keyCode == Keyboard.KEY_RSHIFT)) mc.displayGuiScreen(null);
-            return;
-        }
         if (isAugustusTheme()) {
             AugustusImGui.handleKey();
             if (keyCode == Keyboard.KEY_ESCAPE || keyCode == Keyboard.KEY_RSHIFT) {
@@ -951,7 +936,6 @@ public final class VibeClickGui extends GuiScreen {
     @Override
     public void onGuiClosed() {
         neverLose.close();
-        sigma.close();
         xanax.close();
         AugustusImGui.closed();
         commitEditing();
@@ -1158,11 +1142,6 @@ public final class VibeClickGui extends GuiScreen {
     private boolean isNeverLoseTheme() {
         ClickGuiModule clickGui = Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
         return clickGui != null && clickGui.getTheme().is("NeverLose");
-    }
-
-    private boolean isSigmaTheme() {
-        ClickGuiModule clickGui = Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
-        return clickGui != null && clickGui.getTheme().is("Sigma");
     }
 
     private boolean isAugustusTheme() {

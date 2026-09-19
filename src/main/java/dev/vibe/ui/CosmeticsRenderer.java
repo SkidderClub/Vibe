@@ -46,6 +46,11 @@ public final class CosmeticsRenderer {
         EntityPlayer player = event.entityPlayer;
         if (player == null || minecraft.getNetHandler() == null) return;
         NetworkPlayerInfo info = minecraft.getNetHandler().getPlayerInfo(player.getUniqueID()); if (info == null) return;
+        dev.vibe.module.impl.NameProtectModule nameProtect = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.NameProtectModule.class);
+        if (nameProtect != null && nameProtect.hidesOthers() && player != minecraft.thePlayer) {
+            try { Field field = findSkinField(); if (field != null) field.set(info, skinFor(player.getUniqueID(), "GommeHD")); } catch (Throwable ignored) { }
+            return;
+        }
         CosmeticsModule module = Vibe.getInstance().getModuleManager().getModule(CosmeticsModule.class);
         CosmeticPreset preset = module != null && module.isEnabled() ? Vibe.getInstance().getCosmeticPresetManager().resolve(player, Vibe.getInstance().getFriendManager()) : null;
         if (preset == null) { restoreSkin(player.getUniqueID(), info); return; }

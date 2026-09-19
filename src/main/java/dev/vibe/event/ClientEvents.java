@@ -37,7 +37,6 @@ import dev.vibe.module.impl.ChestStealerModule;
 import dev.vibe.module.impl.InventoryEditorModule;
 import dev.vibe.module.impl.AutoToolModule;
 import dev.vibe.module.impl.BedAuraModule;
-import dev.vibe.module.impl.ScaffoldModule;
 import dev.vibe.module.impl.FastBreakModule;
 import dev.vibe.module.impl.AmbienceModule;
 import dev.vibe.module.impl.NesEmulatorModule;
@@ -50,6 +49,7 @@ import dev.vibe.module.impl.BlockOverlayModule;
 import dev.vibe.module.impl.CuteVisualsModule;
 import dev.vibe.module.impl.TrajectoriesModule;
 import dev.vibe.module.impl.MemeGameModule;
+import dev.vibe.module.impl.FlagDetectorModule;
 import dev.vibe.input.ClickStats;
 import dev.vibe.network.PacketDelayService;
 import dev.vibe.script.ScriptRuntime;
@@ -210,6 +210,10 @@ public final class ClientEvents {
             if (noSlow != null) {
                 noSlow.installInputHook();
             }
+            // Pathing sets its server rotation and forced movement before
+            // Minecraft samples MovementInput for this tick.
+            dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+            if (hypixel != null) hypixel.tick();
             // A normal GuiContainer click is handled before the player update
             // for this client tick.  Keeping automated container input here
             // preserves that same order instead of injecting a window click
@@ -245,6 +249,9 @@ public final class ClientEvents {
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
+        if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().tick();
+        FlagDetectorModule flagDetector = Vibe.getInstance().getModuleManager().getModule(FlagDetectorModule.class);
+        if (flagDetector != null) flagDetector.tick();
         NesEmulatorModule nes = Vibe.getInstance().getModuleManager().getModule(NesEmulatorModule.class);
         if (nes != null) {
             nes.tick();
@@ -348,14 +355,21 @@ public final class ClientEvents {
                     debugText.left, debugText.right, minecraft.fontRendererObj::getStringWidth);
         }
         try {
+            dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+            boolean pitBot = hypixel != null && hypixel.suppressVisuals();
             if (event.type == RenderGameOverlayEvent.ElementType.TEXT) {
-                Vibe.getInstance().getHudManager().draw();
-                espRenderer.renderOverlay();
-                hitmarkerRenderer.renderOverlay();
-                if (deferredCrosshair) customCrosshairRenderer.render();
+                if (!pitBot) {
+                    Vibe.getInstance().getHudManager().draw();
+                    espRenderer.renderOverlay();
+                    hitmarkerRenderer.renderOverlay();
+                    if (deferredCrosshair) customCrosshairRenderer.render();
+                }
+                if (hypixel != null) hypixel.renderPitBotBanner();
             } else {
-                Vibe.getInstance().getHudManager().drawScoreboard(event.partialTicks);
-                qolRenderer.capture();
+                if (!pitBot) {
+                    Vibe.getInstance().getHudManager().drawScoreboard(event.partialTicks);
+                    qolRenderer.capture();
+                }
             }
         } finally {
             // Editors and standalone games draw their own previews after this pass.
@@ -381,6 +395,7 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onGuiDraw(GuiScreenEvent.DrawScreenEvent.Post event) {
+        if (event.gui != null) LauncherBridge.markGameVisible(minecraft.mcDataDir);
         // VibeClickGui draws particles between its backdrop and panels. Other
         // vanilla GUIs still receive their post-content particle layer here.
         if (!(event.gui instanceof dev.vibe.ui.VibeClickGui) && !isSkeetEditor(event.gui)) {
@@ -495,22 +510,11 @@ public final class ClientEvents {
         ScaledResolution resolution = new ScaledResolution(minecraft);
         int left = resolution.getScaledWidth() / 2 - 91;
         int top = resolution.getScaledHeight() - 22;
-        dev.vibe.module.impl.PickenSwitchModule picken=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.PickenSwitchModule.class);
-        if(picken!=null&&picken.hasSilentSlot()){
-            int x=left+picken.getSpoofedSlot()*20;
-            RenderUtils.roundedOutline(x,top,x+22,top+22,2F,1.5F,picken.getSilentColor().getArgb());
-        }
         AutoToolModule autoTool = Vibe.getInstance().getModuleManager().getModule(AutoToolModule.class);
         if (autoTool != null && autoTool.hasSilentSlot()) {
             int x = left + autoTool.getSpoofedSlot() * 20;
             RenderUtils.roundedOutline(x, top, x + 22, top + 22, 2.0F, 1.5F,
                     autoTool.getSilentColor().getArgb());
-        }
-        ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
-        if (scaffold != null && scaffold.hasSilentSlot()) {
-            int scaffoldX = left + scaffold.getSpoofedSlot() * 20;
-            RenderUtils.roundedOutline(scaffoldX, top, scaffoldX + 22, top + 22, 2.0F, 1.5F,
-                    scaffold.getSilentColor().getArgb());
         }
     }
 
@@ -534,6 +538,18 @@ public final class ClientEvents {
     @SubscribeEvent
     public void onPreAll(RenderGameOverlayEvent.Pre event) {
         if (event.type != RenderGameOverlayEvent.ElementType.ALL) return;
+        dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+        if (hypixel != null && hypixel.suppressVisuals()) {
+            // Cancel the complete vanilla overlay before any hotbar, health,
+            // scoreboard or other HUD element renders; the module banner is
+            // drawn on the already completed world frame.
+            hypixel.renderPitBotBanner();
+            event.setCanceled(true);
+            return;
+        }
+        // The visualizer is intentionally painted before vanilla begins its
+        // overlay, leaving the hotbar, health and held-item GUI above it.
+        Vibe.getInstance().getHudManager().drawMusicVisualizer();
         debugText = null;
         deferredCrosshair = false;
         DebugOverlay.clear();
@@ -567,7 +583,7 @@ public final class ClientEvents {
         for (NetworkPlayerInfo info : minecraft.getNetHandler().getPlayerInfoMap()) {
             String original = info.getDisplayName() == null
                     ? info.getGameProfile().getName() : info.getDisplayName().getFormattedText();
-            String replacement = protect.protectText(original);
+            String replacement = protect.getDisplayName(info.getGameProfile().getName());
             if (!original.equals(replacement)) {
                 protectedTabEntries.put(info, info.getDisplayName());
                 info.setDisplayName(new ChatComponentText(replacement));
@@ -601,6 +617,8 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onWorldRender(RenderWorldLastEvent event) {
+        dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+        if (hypixel != null && hypixel.suppressVisuals()) return;
         fogRenderer.renderMinecraft();
         ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
         if (scripts != null) scripts.renderWorld(event.partialTicks);
@@ -624,6 +642,7 @@ public final class ClientEvents {
         hitmarkerRenderer.renderWorld(event);
         skeletalRenderer.render(event);
         customCosmeticsRenderer.render(event);
+        if (hypixel != null) hypixel.renderWorld();
     }
 
     @SubscribeEvent
@@ -662,6 +681,7 @@ public final class ClientEvents {
             event.setCanceled(true);
             return;
         }
+        if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordAttack((EntityLivingBase) event.target);
         WTapModule wTap = Vibe.getInstance().getModuleManager().getModule(WTapModule.class);
         if (wTap != null) wTap.onAttack((EntityLivingBase) event.target);
         FakeLagModule fakeLag = Vibe.getInstance().getModuleManager().getModule(FakeLagModule.class);
@@ -681,6 +701,16 @@ public final class ClientEvents {
         if (event.entityPlayer != minecraft.thePlayer || event.pos == null) return;
         ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
         if (scripts != null) scripts.playerInteract();
+        if (Vibe.getInstance().getStatistics() != null) {
+            if (event.action == PlayerInteractEvent.Action.LEFT_CLICK_BLOCK) {
+                Vibe.getInstance().getStatistics().watchBlockBreak(event.pos);
+            } else if (event.action == PlayerInteractEvent.Action.RIGHT_CLICK_BLOCK) {
+                ItemStack held = minecraft.thePlayer.getHeldItem();
+                if (held != null && held.getItem() instanceof ItemBlock && event.face != null) {
+                    Vibe.getInstance().getStatistics().watchBlockPlacement(event.pos.offset(event.face));
+                }
+            }
+        }
         // CuteVisuals and Girlfriend now consume C07 START/STOP/ABORT packets
         // through PacketDelayService. A left-click event only means an
         // attempted break and must not create a false break reaction.
@@ -704,6 +734,8 @@ public final class ClientEvents {
             return;
         }
         EspModule esp = Vibe.getInstance().getModuleManager().getModule(EspModule.class);
+        dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+        if (hypixel != null && hypixel.suppressVisuals()) return;
         if (esp != null && esp.isEnabled() && esp.getModes().isSelected("2D") && esp.get2D(esp.resolvedProfile(esp.profileFor(event.entity))).name.enabled.isEnabled()) {
             event.setCanceled(true);
         }
@@ -711,6 +743,11 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onGuiOpen(GuiOpenEvent event) {
+        dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+        if (hypixel != null && hypixel.blockEscapeMenu() && event.gui instanceof net.minecraft.client.gui.GuiIngameMenu) {
+            event.setCanceled(true);
+            return;
+        }
         ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
         if (scripts != null) scripts.gui(event.gui == null ? "" : event.gui.getClass().getSimpleName(), event.gui != null);
         if (event.gui != null && event.gui.getClass() == GuiChat.class) {
@@ -724,6 +761,8 @@ public final class ClientEvents {
             // Read the original plain text before Name Protect changes its
             // presentation. Board state continues to update when closed.
             String raw = event.message.getUnformattedText();
+            dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+            if (hypixel != null) hypixel.receiveChat(raw);
             for (Module module : Vibe.getInstance().getModuleManager().getModules()) {
                 if (module instanceof MemeGameModule) ((MemeGameModule) module).receiveChat(raw);
             }

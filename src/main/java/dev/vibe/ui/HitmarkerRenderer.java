@@ -49,14 +49,17 @@ public final class HitmarkerRenderer {
 
     public void renderWorld(RenderWorldLastEvent event) {
         HitmarkerModule module = module();
-        if (module != null && module.isEnabled() && module.getModes().isSelected("Torus")) torus.render(module);
-        if (module == null || !module.isEnabled() || !module.getModes().isSelected("3D (World)")) {
-            return;
+        if (module == null || !module.isEnabled()) return;
+        // Draw the reliable fixed-function world marker before the optional
+        // reflective torus. Its shader captures the scene and may alter raw
+        // GL state on older OptiFine render paths.
+        if (module.getModes().isSelected("3D (World)")) {
+            for (HitmarkerModule.Marker marker : module.getMarkers()) {
+                float progress = module.progress(marker);
+                if (progress > 0.0F) renderWorldMarker(module, marker, progress);
+            }
         }
-        for (HitmarkerModule.Marker marker : module.getMarkers()) {
-            float progress = module.progress(marker);
-            if (progress > 0.0F) renderWorldMarker(module, marker, progress);
-        }
+        if (module.getModes().isSelected("Torus")) torus.render(module);
     }
 
     private void renderWorldMarker(HitmarkerModule module, HitmarkerModule.Marker marker, float progress) {
@@ -67,9 +70,23 @@ public final class HitmarkerRenderer {
         int color = RenderUtils.alpha(module.getColor().getArgb(), Math.round(((module.getColor().getArgb() >>> 24) & 255) * opacity));
         double expansion = module.getWorldAnimation().is("Expand") ? 0.62D + (1.0D - progress) * 1.35D : 1.0D;
         double size = module.getSize3d().getDouble() * expansion;
-        WorldRenderUtils.begin(module.getThroughWalls().isEnabled());
+        // Do not rely on the GL cache used by other world renderers. The
+        // marker is often the last effect of a frame, so it must be fully
+        // self-contained even after a shader or ESP renderer has run.
+        int matrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_CURRENT_BIT
+                | GL11.GL_DEPTH_BUFFER_BIT | GL11.GL_LINE_BIT | GL11.GL_TEXTURE_BIT);
+        GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        GL11.glPushMatrix();
         try {
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            GL11.glDisable(GL11.GL_LIGHTING);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            GL11.glDepthMask(false);
+            if (module.getThroughWalls().isEnabled()) GL11.glDisable(GL11.GL_DEPTH_TEST);
             GL11.glEnable(GL11.GL_LINE_SMOOTH);
+            GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
             double normalX = marker.lookX;
             double normalY = marker.lookY;
             double normalZ = marker.lookZ;
@@ -84,15 +101,16 @@ public final class HitmarkerRenderer {
             double gap = Math.min(size * 0.86D, Math.max(0.005D, module.getGap3d().getDouble()));
             if (module.getOutline3d().isEnabled()) {
                 GL11.glLineWidth(module.getWidth3d().getFloat() + 1.5F);
-                WorldRenderUtils.color(RenderUtils.alpha(module.getOutlineColor3d().getArgb(), Math.round(module.getOutlineColor3d().getAlpha() * opacity)));
+                color(RenderUtils.alpha(module.getOutlineColor3d().getArgb(), Math.round(module.getOutlineColor3d().getAlpha() * opacity)));
                 drawWorldCross(x, y, z, rightX, rightY, rightZ, upX, upY, upZ, size, gap);
             }
             GL11.glLineWidth(module.getWidth3d().getFloat());
-            WorldRenderUtils.color(color);
+            color(color);
             drawWorldCross(x, y, z, rightX, rightY, rightZ, upX, upY, upZ, size, gap);
-            GL11.glDisable(GL11.GL_LINE_SMOOTH);
         } finally {
-            WorldRenderUtils.end(module.getThroughWalls().isEnabled());
+            GL11.glPopMatrix();
+            GL11.glMatrixMode(matrixMode);
+            GL11.glPopAttrib();
         }
     }
 
@@ -100,6 +118,11 @@ public final class HitmarkerRenderer {
         return Vibe.getInstance() == null ? null : Vibe.getInstance().getModuleManager().getModule(HitmarkerModule.class);
     }
     public void close() { torus.close(); }
+
+    private static void color(int argb) {
+        GL11.glColor4f(((argb >>> 16) & 255) / 255.0F, ((argb >>> 8) & 255) / 255.0F,
+                (argb & 255) / 255.0F, ((argb >>> 24) & 255) / 255.0F);
+    }
 
     private void crossArm(float x, float y, float dx, float dy, float gap, float size) {
         GL11.glVertex2f(x + dx * gap, y + dy * gap);

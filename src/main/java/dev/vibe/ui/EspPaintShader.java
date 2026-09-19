@@ -23,7 +23,7 @@ final class EspPaintShader {
             +"float mask=textured==1?texture2D(image,gl_TexCoord[0].xy).a:1.;gl_FragColor=vec4(c.rgb,c.a*mask*opacity);}";
 
     static boolean bind(Esp2DSettings settings, Esp2DSettings.Paint paint, EspLayout.Rect rect,
-                        int screenWidth,int screenHeight,boolean texture,float opacity,double seconds,int team,boolean hurt) {
+                        int screenWidth,int screenHeight,boolean texture,float opacity,double seconds,int team,boolean hurt,int forcedColor) {
         if (failed) return false;
         if(program==0) {
             int vertex=0,fragment=0,linked=0;
@@ -45,7 +45,9 @@ final class EspPaintShader {
         GL20.glUniform1i(location("image"),0);GL20.glUniform1i(location("textured"),texture?1:0);
         GL20.glUniform1i(location("count"),solid?1:gradient.colors.length);
         for(int i=0;i<gradient.colors.length;i++) {
-            int c=solid?solidColor:gradient.colors[i];GL20.glUniform4f(location("colors["+i+"]"),(c>>16&255)/255F,(c>>8&255)/255F,(c&255)/255F,(c>>>24)/255F);
+            int c=solid?solidColor:gradient.colors[i];
+            if(forcedColor!=0)c=(c&0xFF000000)|(forcedColor&0x00FFFFFF);
+            GL20.glUniform4f(location("colors["+i+"]"),(c>>16&255)/255F,(c>>8&255)/255F,(c&255)/255F,(c>>>24)/255F);
             GL20.glUniform1f(location("stops["+i+"]"),gradient.positions[i]);
         }
         GL20.glUniform2f(location("direction"),gradient.dx,gradient.dy);

@@ -37,23 +37,41 @@ public final class MusicVisualizer {
                     color(m,i/(float)count,1);GL11.glVertex2f(x+cell-gap,y);GL11.glVertex2f(x,y);GL11.glEnd();
                     if(m.peaks.isEnabled()){float py=bottom-peaks[bin]*amplitude;GL11.glBegin(GL11.GL_LINES);GL11.glVertex2f(x,py);GL11.glVertex2f(x+cell-gap,py);GL11.glEnd();}
                 }
+            } else if(m.style.is("Line")) {
+                drawLine(m,count,left,total,bottom,amplitude,0,1.0F);
             } else {
-                int layers=m.style.is("Waves")?m.layers.getInt():1;
-                int points=count*4;
+                // A regular strip emitted as bottom/top pairs makes Waves
+                // deterministic on fixed-function drivers. The old mixed
+                // primitive path intermittently dropped the whole strip.
+                int layers=m.layers.getInt(),points=Math.max(24,count*4);
                 for(int layer=layers-1;layer>=0;layer--) {
-                    float layerScale=1-layer*.13f;
-                    GL11.glBegin(m.style.is("Line")?GL11.GL_LINE_STRIP:GL11.GL_TRIANGLE_STRIP);
+                    float scale=1.0F-layer*.13F;
+                    GL11.glBegin(GL11.GL_TRIANGLE_STRIP);
                     for(int i=0;i<=points;i++) {
-                        float t=i/(float)points,pos=m.mirror.isEnabled()?Math.abs(t*2-1):t;
-                        float value=sample(levels,count,Math.min(1,pos+layer*.012f))*(float)Math.pow(Math.sin(Math.PI*t),.35);
-                        float x=left+total*t,y=bottom-value*amplitude*layerScale;
-                        if(!m.style.is("Line")){color(m,t,.08f);GL11.glVertex2f(x,bottom);}
-                        color(m,t,m.style.is("Line")?1:.8f/(1+layer*.3f));GL11.glVertex2f(x,y);
+                        float t=i/(float)points;
+                        float value=waveValue(m,count,t,layer)*scale;
+                        float x=left+total*t, y=bottom-value*amplitude;
+                        color(m,t,.055F);GL11.glVertex2f(x,bottom);
+                        color(m,t,.72F/(1.0F+layer*.35F));GL11.glVertex2f(x,y);
                     }
                     GL11.glEnd();
+                    drawLine(m,count,left,total,bottom,amplitude,layer,Math.max(.25F,.75F-layer*.12F));
                 }
             }
         } finally{GL11.glPopAttrib();}
+    }
+    private void drawLine(MusicModule m,int count,float left,float total,float bottom,float amplitude,int layer,float alpha){
+        int points=Math.max(24,count*4);GL11.glBegin(GL11.GL_LINE_STRIP);
+        for(int i=0;i<=points;i++){
+            float t=i/(float)points;
+            color(m,t,alpha);
+            GL11.glVertex2f(left+total*t,bottom-waveValue(m,count,t,layer)*amplitude*(1.0F-layer*.13F));
+        }
+        GL11.glEnd();
+    }
+    private float waveValue(MusicModule m,int count,float t,int layer){
+        float position=m.mirror.isEnabled()?Math.abs(t*2.0F-1.0F):t;
+        return sample(levels,count,Math.min(1.0F,position+layer*.012F))*(float)Math.pow(Math.sin(Math.PI*t),.35);
     }
     private boolean overlapsDebugText(MusicModule m, int count, float left, float total, float bottom, float amplitude) {
         float padding = m.lineWidth.getFloat() / (2 * new net.minecraft.client.gui.ScaledResolution(net.minecraft.client.Minecraft.getMinecraft()).getScaleFactor());

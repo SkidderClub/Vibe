@@ -6,6 +6,7 @@ import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ColorSetting;
 import dev.vibe.setting.ModeSetting;
 import dev.vibe.setting.MultiSelectSetting;
+import dev.vibe.setting.NumberSetting;
 import dev.vibe.setting.StringSetting;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -26,6 +27,15 @@ public final class HudModule extends Module {
             "LeftClicker", "Sprint", "NoJumpDelay", "NoSlow", "Eagle", "FastPlace", "HUD Editor", "NameProtect", "ClickGUI");
 
     private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Vibe", "Vibe", "Skeet", "LiquidGlass"));
+    private final BooleanSetting liquidGlassBlur = addSetting(new BooleanSetting("Glass Blur", true, () -> mode.is("LiquidGlass")));
+    private final NumberSetting liquidGlassBlurStrength = addSetting(new NumberSetting("Glass Blur Strength", 2.0D, 0.0D, 8.0D, 0.25D,
+            () -> mode.is("LiquidGlass") && liquidGlassBlur.isEnabled()));
+    private final NumberSetting liquidGlassRefraction = addSetting(new NumberSetting("Glass Refraction", 4.0D, 0.0D, 10.0D, 0.25D,
+            () -> mode.is("LiquidGlass")));
+    private final NumberSetting liquidGlassOpacity = addSetting(new NumberSetting("Glass Opacity", .72D, .15D, 1.0D, .05D,
+            () -> mode.is("LiquidGlass")));
+    private final ColorSetting liquidGlassTint = addSetting(new ColorSetting("Glass Tint", 0xFFFFFFFF,
+            () -> mode.is("LiquidGlass")));
 
     private final MultiSelectSetting hudElements = addSetting(new MultiSelectSetting("HUD Elements",
                         Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph"),
@@ -36,7 +46,6 @@ public final class HudModule extends Module {
     private final MultiSelectSetting watermarkDetails = addSetting(new MultiSelectSetting("Watermark Details",
             Arrays.asList("Version", "FPS", "Username"), Arrays.asList("Version", "FPS"), () -> true));
     private final StringSetting watermarkText = addSetting(new StringSetting("Watermark Text", "VIBE", 24, () -> true));
-    private final ModeSetting arrayStyle = addSetting(new ModeSetting("Array Style", "Cards", () -> true, "Cards", "Compact", "Minimal"));
     private final MultiSelectSetting arrayListModules = addSetting(new MultiSelectSetting("ArrayList Modules",
             LEGACY_ARRAY_LIST_OPTIONS, LEGACY_ARRAY_LIST_DEFAULTS, () -> true));
     private final BooleanSetting arrayOutline = addSetting(new BooleanSetting("ArrayList Outline", true, () -> true));
@@ -69,10 +78,14 @@ public final class HudModule extends Module {
 
     public MultiSelectSetting getHudElements() { return hudElements; }
     public ModeSetting getMode() { return mode; }
+    public BooleanSetting getLiquidGlassBlur() { return liquidGlassBlur; }
+    public NumberSetting getLiquidGlassBlurStrength() { return liquidGlassBlurStrength; }
+    public NumberSetting getLiquidGlassRefraction() { return liquidGlassRefraction; }
+    public NumberSetting getLiquidGlassOpacity() { return liquidGlassOpacity; }
+    public ColorSetting getLiquidGlassTint() { return liquidGlassTint; }
     public BooleanSetting getReplaceScoreboardServer() { return replaceScoreboardServer; }
     public MultiSelectSetting getWatermarkDetails() { return watermarkDetails; }
     public StringSetting getWatermarkText() { return watermarkText; }
-    public ModeSetting getArrayStyle() { return arrayStyle; }
     public MultiSelectSetting getArrayListModules() { return arrayListModules; }
     public BooleanSetting getArrayOutline() { return arrayOutline; }
         public BooleanSetting getWatermarkOutline() { return watermarkOutline; }

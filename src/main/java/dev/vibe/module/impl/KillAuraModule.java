@@ -372,6 +372,7 @@ public final class KillAuraModule extends Module {
     }
 
     public EntityLivingBase getTarget() { return target; }
+    public double getReachRadius() { return reach.getMax(); }
     public boolean isVisualBlocking() { return isEnabled() && visualBlocking && swordHeld(); }
 
     public static void prepareInputHook() {

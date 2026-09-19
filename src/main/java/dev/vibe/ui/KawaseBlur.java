@@ -24,6 +24,10 @@ public final class KawaseBlur {
     private static ShaderGroup roundedShader;
     private static int roundedWidth = -1;
     private static int roundedHeight = -1;
+    /** One source capture and blur is shared by every HUD surface in a frame. */
+    private static long hudFrame;
+    private static long preparedRoundedFrame = Long.MIN_VALUE;
+    private static int preparedRoundedPasses;
 
     private KawaseBlur() {
     }
@@ -69,33 +73,32 @@ public final class KawaseBlur {
 
     /** Draw the same multipass shader as the ClickGUI, clipped to one HUD widget. */
     public static void drawRegion(int left, int top, int right, int bottom, int passes, float partialTicks) {
-        if (right <= left || bottom <= top) {
-            return;
-        }
+        // The former path ran a full-screen ShaderGroup for every small HUD
+        // widget, even though scissoring only happened after the expensive
+        // work. Use the cached rounded compositor as a rectangular mask.
+        drawRoundedRegion(left, top, right, bottom, 0.0F, passes, partialTicks);
+    }
+
+    /** Called once before Vibe's HUD widgets paint in an overlay frame. */
+    public static void beginHudFrame() { hudFrame++; }
+
+    /** Prepares one blurred framebuffer which can be composited many times. */
+    public static void prepareRoundedFrame(int passes, float partialTicks) {
         Minecraft minecraft = Minecraft.getMinecraft();
-        ScaledResolution resolution = new ScaledResolution(minecraft);
-        int scale = resolution.getScaleFactor();
-        int x = Math.max(0, left * scale);
-        int y = Math.max(0, minecraft.displayHeight - bottom * scale);
-        int width = Math.min(minecraft.displayWidth - x, Math.max(0, (right - left) * scale));
-        int height = Math.min(minecraft.displayHeight - y, Math.max(0, (bottom - top) * scale));
-        if (width <= 0 || height <= 0) {
-            return;
-        }
-        boolean hadScissor = GL11.glIsEnabled(GL11.GL_SCISSOR_TEST);
-        IntBuffer previousScissor = BufferUtils.createIntBuffer(16);
-        GL11.glGetInteger(GL11.GL_SCISSOR_BOX, previousScissor);
-        GL11.glEnable(GL11.GL_SCISSOR_TEST);
-        GL11.glScissor(x, y, width, height);
+        if (unavailable || roundedCompositeUnavailable) return;
+        int safePasses = Math.max(1, Math.min(1, passes / 2));
+        if (preparedRoundedFrame == hudFrame && preparedRoundedPasses >= safePasses) return;
         try {
-            drawBackdrop(resolution.getScaledWidth(), resolution.getScaledHeight(), passes, partialTicks);
-        } finally {
-            if (hadScissor) {
-                GL11.glScissor(previousScissor.get(0), previousScissor.get(1), previousScissor.get(2), previousScissor.get(3));
-            } else {
-                GL11.glDisable(GL11.GL_SCISSOR_TEST);
-            }
-            GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+            ensureRoundedShader(minecraft);
+            copyFramebuffer(minecraft.getFramebuffer(), roundedFramebuffer);
+            // A single Kawase iteration has the visual softness intended for
+            // compact HUDs while avoiding a second full-resolution pass.
+            roundedShader.loadShaderGroup(partialTicks);
+            preparedRoundedFrame = hudFrame;
+            preparedRoundedPasses = safePasses;
+        } catch (Exception failure) {
+            roundedCompositeUnavailable = true;
+            org.apache.logging.log4j.LogManager.getLogger("Vibe").warn("Rounded HUD blur unavailable", failure);
         }
     }
 
@@ -110,24 +113,15 @@ public final class KawaseBlur {
         if (right <= left || bottom <= top) {
             return;
         }
-        Minecraft minecraft = Minecraft.getMinecraft();
         if (unavailable || roundedCompositeUnavailable) {
             return;
         }
+        Minecraft minecraft = Minecraft.getMinecraft();
         try {
-            ensureRoundedShader(minecraft);
-            copyFramebuffer(minecraft.getFramebuffer(), roundedFramebuffer);
-            int safePasses = Math.max(1, Math.min(2, passes / 2));
-            for (int pass = 0; pass < safePasses; pass++) {
-                roundedShader.loadShaderGroup(partialTicks);
-            }
+            prepareRoundedFrame(passes, partialTicks);
+            if (roundedCompositeUnavailable || roundedFramebuffer == null) return;
             restoreGuiProjection(minecraft);
             drawRoundedTexture(roundedFramebuffer, left, top, right, bottom, radius);
-        } catch (Exception failure) {
-            // A missing reflective pass list only disables the rounded HUD
-            // composite. The full-screen GUI backdrop remains valid.
-            roundedCompositeUnavailable = true;
-            org.apache.logging.log4j.LogManager.getLogger("Vibe").warn("Rounded HUD blur unavailable", failure);
         } finally {
             // Shader initialization can fail after binding an intermediate FBO.
             // Always return to the HUD target so the fallback surface stays visible.
@@ -197,7 +191,21 @@ public final class KawaseBlur {
         Minecraft minecraft = Minecraft.getMinecraft();
         ScaledResolution resolution = new ScaledResolution(minecraft);
         int scale = resolution.getScaleFactor();
-        int rounded = Math.max(1, Math.min(Math.round(radius), Math.min(right - left, bottom - top) / 2));
+        int rounded = Math.max(0, Math.min(Math.round(radius), Math.min(right - left, bottom - top) / 2));
+        if (rounded == 0) {
+            GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_CURRENT_BIT);
+            try {
+                GlStateManager.enableTexture2D(); GlStateManager.enableBlend();
+                GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+                GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+                source.bindFramebufferTexture();
+                Gui.drawScaledCustomSizeModalRect(left, top, left * scale, source.framebufferTextureHeight - top * scale,
+                        (right - left) * scale, -(bottom - top) * scale, right - left, bottom - top,
+                        source.framebufferTextureWidth, source.framebufferTextureHeight);
+                source.unbindFramebufferTexture();
+            } finally { GL11.glPopAttrib(); }
+            return;
+        }
         double square = rounded * rounded;
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_CURRENT_BIT);
         try {

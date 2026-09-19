@@ -159,10 +159,23 @@ public final class HitmarkerModule extends Module {
             lastX = target.posX;
             lastY = target.posY + target.height * 0.5D;
             lastZ = target.posZ;
+            // A world marker can outlive a disconnect by a few render
+            // frames. Keep a valid plane orientation for that short window.
+            lastLookX = 0.0D;
+            lastLookY = 0.0D;
+            lastLookZ = 1.0D;
             return;
         }
         Vec3 eyes = player.getPositionEyes(1.0F);
         Vec3 look = player.getLook(1.0F);
+        double length = Math.sqrt(look.xCoord * look.xCoord + look.yCoord * look.yCoord + look.zCoord * look.zCoord);
+        if (length < 0.0001D) {
+            double centreX = target.posX - eyes.xCoord;
+            double centreY = target.posY + target.height * 0.5D - eyes.yCoord;
+            double centreZ = target.posZ - eyes.zCoord;
+            length = Math.sqrt(centreX * centreX + centreY * centreY + centreZ * centreZ);
+            look = length < 0.0001D ? new Vec3(0.0D, 0.0D, 1.0D) : new Vec3(centreX / length, centreY / length, centreZ / length);
+        }
         lastLookX = look.xCoord;
         lastLookY = look.yCoord;
         lastLookZ = look.zCoord;

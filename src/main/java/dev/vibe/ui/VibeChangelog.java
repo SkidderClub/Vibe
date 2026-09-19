@@ -3,6 +3,19 @@ package dev.vibe.ui;
 /** Static release notes used by the expandable main-menu changelog. */
 public final class VibeChangelog {
     private static final Entry[] ENTRIES = {
+            new Entry("v0.0.6", new String[] {
+                    "+ ClickGUI now opens from the main menu; games and editors remain usable outside a world",
+                    "+ Reconnect and generated cracked-account actions on disconnect screens, with local encrypted statistics",
+                    "+ Rebuilt HUD ArrayList, efficient masked blur, stable outline/text glow and LiquidGlass controls",
+                    "+ Custom cosmetics: smooth China Hat, trail, jump circle and KillAura circle with per-effect options",
+                    "+ Music media panel, system-video thumbnail artwork and visualizer improvements",
+                    "+ Faster NES runtime, ROM library selection and RetroArch launch support",
+                    "+ Picken Switch timing, 3D hitmarker, Chams depth handling and block/stat tracking fixes",
+                    "+ Statistics dashboard with account/global views, graphs and encrypted local records",
+                    "+ Name Protect, Flag Detector, ChestStealer title filtering and AimAssist Boost Aim controls",
+                    "+ New Hypixel helpers: Murder Mystery detection, BlockParty movement and PitBot pathing",
+                    "~ Startup logging, first-run profile migration, themes, scoreboard and blur rendering refined"
+            }),
             new Entry("Unreleased", new String[] {
                     "+ Licenses & credits in the main and pause menus, with offline texts and Schizoid attribution",
                     "+ run-fresh.bat starts with a separate empty profile every time",

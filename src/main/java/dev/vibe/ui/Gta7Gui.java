@@ -81,8 +81,11 @@ public final class Gta7Gui extends GuiScreen {
             input.sprint=down(mc.gameSettings.keyBindSprint);input.aim=down(mc.gameSettings.keyBindUseItem);
             if(!down(mc.gameSettings.keyBindAttack))attackReleased=true;
             input.attack=attackReleased&&down(mc.gameSettings.keyBindAttack);
-            double beforeX = game.x, beforeZ = game.z;
+            double beforeX = game.x, beforeZ = game.z; int oldKills = game.kills;
             game.advance(dt,input);
+            if (game.kills > oldKills && Vibe.getInstance().getStatistics() != null) {
+                for (int kill = oldKills; kill < game.kills; kill++) Vibe.getInstance().getStatistics().recordGtaKill();
+            }
             crosshairMovement = (float)(Math.hypot(game.x-beforeX, game.z-beforeZ) / Math.max(.001, dt) / 8);
             sounds();
         }

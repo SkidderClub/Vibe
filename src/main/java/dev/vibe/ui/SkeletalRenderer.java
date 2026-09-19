@@ -91,7 +91,11 @@ public final class SkeletalRenderer {
     }
 
     private void drawPlayer(EntityPlayer player, Pose pose, EspModule.SkeletalSettings module, boolean backplate) {
-        WorldRenderUtils.color(backplate ? 0xB8000000 : module.getColor().resolve(color(module, player.getEntityId() * 0.11F), Vibe.getInstance().getModuleManager().getModule(EspModule.class).teamColor(player),player.hurtTime>0));
+        int resolved=module.getColor().resolve(color(module, player.getEntityId() * 0.11F), Vibe.getInstance().getModuleManager().getModule(EspModule.class).teamColor(player),player.hurtTime>0);
+        dev.vibe.module.impl.HypixelModule hypixel=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+        int forced=hypixel==null?0:hypixel.visualColor(player);
+        if(forced!=0)resolved=(resolved&0xFF000000)|(forced&0x00FFFFFF);
+        WorldRenderUtils.color(backplate ? 0xB8000000 : resolved);
         drawPose(pose);
     }
     private static void drawPose(Pose pose) {

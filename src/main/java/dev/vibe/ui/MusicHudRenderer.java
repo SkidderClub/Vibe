@@ -92,7 +92,8 @@ public final class MusicHudRenderer {
         int accent = module.accent.getArgb();
         long position = track.position();
         String timing = track.live ? (track.playing ? "LIVE RADIO" : track.status)
-                : track.durationMs > 0 ? time(position) + " / " + time(track.durationMs) : track.status;
+                : track.durationMs > 0 ? time(position) + " / " + time(track.durationMs)
+                : track.playing ? time(position) + " / --:--" : (track.status.isEmpty() ? "Ready" : track.status);
         // Keep unknown-duration and connection messages visible; never imply seekable live audio.
         String state = track.durationMs > 0 && !track.live ? (track.playing ? "PLAYING" : "PAUSED") : "";
         float statusWidth = state.isEmpty() ? 8 : DETAIL.width(state) + 13;
@@ -146,8 +147,13 @@ public final class MusicHudRenderer {
     /** Bake only on artwork/style changes. The 2x mask avoids polygonal corners at HUD scale. */
     private void updateSurface(MusicModule module, BufferedImage next) {
         int width = module.hudWidth.getInt(), background = module.background.getArgb(), accent = module.accent.getArgb();
-        boolean cover = module.cover.isEnabled(), backdrop = module.coverBackground.isEnabled();
+        // Windows exposes the active video's thumbnail as the session artwork.
+        // Make that artwork automatic for system media: it becomes both the
+        // card icon and backdrop without asking users to enable two unrelated
+        // album-art switches first. Radio keeps its chosen visual settings.
         boolean thumbnail = next != null && !module.radio.isEnabled();
+        boolean cover = module.cover.isEnabled() || thumbnail;
+        boolean backdrop = module.coverBackground.isEnabled() || thumbnail;
         if (surface != null && image == next && width == cachedWidth && background == cachedBackground
                 && accent == cachedAccent && cover == cachedCover && backdrop == cachedBackdrop && thumbnail == cachedThumbnail) return;
         BufferedImage tile = next == null ? vinyl(accent) : next;

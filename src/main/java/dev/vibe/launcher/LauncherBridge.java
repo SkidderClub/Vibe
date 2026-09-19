@@ -9,6 +9,7 @@ import java.util.Properties;
 
 /** Credential-free handoff from the standalone launcher to the Vibe profile. */
 public final class LauncherBridge {
+    private static volatile boolean gameVisible;
     private LauncherBridge() { }
 
     public static Properties read(File minecraftDirectory) {
@@ -40,6 +41,20 @@ public final class LauncherBridge {
     /** Clear only the one-shot game route after GTA7 accepts it. */
     public static void clearGta7Request(File minecraftDirectory) {
         consume(minecraftDirectory, "gta7");
+    }
+
+    /** Lets run.bat close its visible handoff console only after a client GUI is rendered. */
+    public static void markGameVisible(File minecraftDirectory) {
+        if (gameVisible || minecraftDirectory == null) return;
+        gameVisible = true;
+        try {
+            Path ready = minecraftDirectory.toPath().resolve("vibe").resolve("launcher").resolve("game-visible");
+            Files.createDirectories(ready.getParent());
+            Files.write(ready, new byte[] { 'o', 'k' });
+        } catch (Exception ignored) {
+            // The game must remain usable even if the optional launcher
+            // handoff marker cannot be written.
+        }
     }
 
     private static boolean consume(File minecraftDirectory, String expectedMode) {
