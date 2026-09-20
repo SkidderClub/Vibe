@@ -23,6 +23,7 @@ public final class FogRenderer implements AutoCloseable {
     private boolean failed;
     private final long started = System.nanoTime();
     public static FogModule module() {
+        if (dev.vibe.module.impl.HypixelModule.visualsSuppressed()) return null;
         return Vibe.getInstance() == null || Vibe.getInstance().getModuleManager() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(FogModule.class);
     }

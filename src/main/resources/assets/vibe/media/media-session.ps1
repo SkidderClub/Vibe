@@ -3,10 +3,9 @@ $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 try {
     Add-Type -AssemblyName System.Runtime.WindowsRuntime
+    . (Join-Path $PSScriptRoot 'media-artwork.ps1')
     $managerType = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType=WindowsRuntime]
     $propertiesType = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties, Windows.Media.Control, ContentType=WindowsRuntime]
-    $streamType = [Windows.Storage.Streams.IRandomAccessStreamWithContentType, Windows.Storage.Streams, ContentType=WindowsRuntime]
-    $readerType = [Windows.Storage.Streams.DataReader, Windows.Storage.Streams, ContentType=WindowsRuntime]
     $asTask = [System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object {
         $_.Name -eq 'AsTask' -and $_.IsGenericMethod -and $_.GetGenericArguments().Count -eq 1 -and
         $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1'
@@ -19,7 +18,7 @@ try {
     $parentProcess = [Diagnostics.Process]::GetProcessById($ParentId)
     $manager = Await ($managerType::RequestAsync()) $managerType
     $priorities = $OwnerPriority.Split(',')
-    $cachedKey = ''; $cachedArtwork = ''; $coverAge = 0
+    $cachedKey = ''; $cachedArtwork = ''; $coverAge = 0; $artworkError = ''
     while (-not $parentProcess.HasExited) {
         try {
             # An idle high-priority player must not hide the video currently playing.
@@ -46,26 +45,13 @@ try {
             } else {
                 $key = $session.SourceAppUserModelId + "`n" + $properties.Title + "`n" + $properties.Artist
                 if ($cachedKey -ne $key -or $cachedArtwork -eq '' -or $coverAge -ge 10) {
-                    if ($cachedKey -ne $key) { $cachedArtwork = '' }
+                    if ($cachedKey -ne $key) { $cachedArtwork = ''; $artworkError = '' }
                     $cachedKey = $key; $coverAge = 0
                     if ($null -ne $properties.Thumbnail) {
-                        $stream = $null; $dataReader = $null
                         try {
-                            $stream = Await ($properties.Thumbnail.OpenReadAsync()) $streamType
-                            if ($stream.Size -gt 0 -and $stream.Size -le 8000000) {
-                                $dataReader = $readerType::new($stream.GetInputStreamAt(0))
-                                $length = [uint32]$stream.Size
-                                $loaded = Await ($dataReader.LoadAsync($length)) ([uint32])
-                                $bytes = New-Object byte[] $loaded
-                                $dataReader.ReadBytes($bytes)
-                                $cachedArtwork = [Convert]::ToBase64String($bytes)
-                            }
-                        } catch { } finally {
-                            # WinRT exposes IClosable through IDisposable explicitly.
-                            # Cleanup must not discard otherwise valid track metadata.
-                            if ($null -ne $dataReader) { try { ([IDisposable]$dataReader).Dispose() } catch { } }
-                            if ($null -ne $stream) { try { ([IDisposable]$stream).Dispose() } catch { } }
-                        }
+                            $cachedArtwork = Read-VibeMediaArtwork $properties.Thumbnail
+                            $artworkError = ''
+                        } catch { $artworkError = $_.Exception.Message }
                     }
                 }
                 $coverAge++
@@ -77,8 +63,8 @@ try {
                 $duration = ($timeline.EndTime - $timeline.StartTime).TotalMilliseconds
                 @{
                     title=$properties.Title;artist=$properties.Artist;owner=$session.SourceAppUserModelId
-                    playing=$playing;position=[long][Math]::Max(0,[Math]::Min($duration,$position));duration=[long]$duration
-                    artwork=$cachedArtwork;status=$(if($playing){'Playing'}else{'Paused'})
+                    playing=$playing;position=[long][Math]::Max(0,$(if($duration -gt 0){[Math]::Min($duration,$position)}else{$position}));duration=[long]$duration
+                    artwork=$cachedArtwork;artworkError=$artworkError;status=$(if($playing){'Playing'}else{'Paused'})
                 } | ConvertTo-Json -Compress | ForEach-Object { [Console]::WriteLine($_) }
             }
         } catch {

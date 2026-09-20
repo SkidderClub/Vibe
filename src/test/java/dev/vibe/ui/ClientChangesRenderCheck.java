@@ -73,6 +73,18 @@ public final class ClientChangesRenderCheck {
             Vibe vibe = new Vibe(); set(Vibe.class,null,"instance",vibe);
             ModuleManager modules = instance(ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<Module>()); set(Vibe.class,vibe,"moduleManager",modules);
+            if (args.length>0 && args[0].equals("liquid-glass")) {
+                mc.displayWidth=960;mc.displayHeight=540;
+                testHud(modules);testLiquidGlass();
+                System.out.println("LiquidGlass transparency, bevel refraction, blur, GUI scaling and GL state passed.");
+                return;
+            }
+            if (args.length>0 && args[0].equals("pit-media-array")) {
+                mc.displayWidth=960;mc.displayHeight=540;
+                testMusicCover();testArrayList(modules);testPitTextInput(modules,vibe);
+                System.out.println("Music covers, ArrayList typography/alpha and Skeet/Futuristic PitBot input passed.");
+                return;
+            }
             mc.thePlayer = instance(FixturePlayer.class);
             NetHandlerPlayClient network = instance(NetHandlerPlayClient.class);
             set(EntityPlayerSP.class,mc.thePlayer,"sendQueue",network);
@@ -120,7 +132,10 @@ public final class ClientChangesRenderCheck {
             render(gui,"connect-four.png");
             testImpacts();
             testHud(modules);
+            testLiquidGlass();
             testMusicCover();
+            testArrayList(modules);
+            testPitTextInput(modules,vibe);
             testMoveRequests();
             System.out.println("Scaled lobby, 101 players, scroll input, board assets, expanded columns and all impact modes passed.");
         } finally { buffer.destroy(); }
@@ -160,7 +175,7 @@ public final class ClientChangesRenderCheck {
         HudModule hud = new HudModule(); BlurModule blur = new BlurModule();
         set(Module.class,blur,"enabled",true);
         set(ModuleManager.class,modules,"modules",new ArrayList<Module>(Arrays.asList(hud,blur)));
-        dev.vibe.hud.HudManager manager = instance(dev.vibe.hud.HudManager.class);
+        dev.vibe.hud.HudManager manager = new dev.vibe.hud.HudManager(OUTPUT.resolve("hud-fixture").toFile());
         Method enabled = manager.getClass().getDeclaredMethod("blurEnabled",String.class); enabled.setAccessible(true);
         hud.getMode().setValue("Skeet");
         for(String element:new String[]{"arraylist","scoreboard","stalker"})
@@ -177,12 +192,16 @@ public final class ClientChangesRenderCheck {
         }
         save("hud-styles.png");
         if ((Boolean)get(KawaseBlur.class,null,"roundedCompositeUnavailable")) throw new AssertionError("Glass blur unavailable");
-        BufferedImage result=ImageIO.read(OUTPUT.resolve("hud-styles.png").toFile());
-        int minimum=255,maximum=0;
-        for(int row=335;row<378;row++)for(int col=220;col<450;col++) {
-            int value=(result.getRGB(col,row)>>16)&255; minimum=Math.min(minimum,value); maximum=Math.max(maximum,value);
-        }
-        if(maximum-minimum>10)throw new AssertionError("Glass copy is transparent or unblurred: "+(maximum-minimum));
+        if ((Boolean)enabled.invoke(manager,"scoreboard")) throw new AssertionError("LiquidGlass scoreboard received a second rectangular blur");
+        // Compare actual edge energy with blur off/on while excluding the rim.
+        hud.getLiquidGlassRefraction().setValue(0D);
+        hud.getLiquidGlassOpacity().setValue(1D);
+        hud.getLiquidGlassBlur().setEnabled(false);
+        double sharp=glassEdgeEnergy(manager,hud,surface);
+        hud.getLiquidGlassBlur().setEnabled(true);
+        hud.getLiquidGlassBlurStrength().setValue(8D);
+        double soft=glassEdgeEnergy(manager,hud,surface);
+        if(sharp<1 || soft>=sharp*.75)throw new AssertionError("Glass blur did not soften edges: "+sharp+" -> "+soft);
         // At GUI scale 2 the sampled texture region must still match physical screen coordinates.
         mc.gameSettings.guiScale=2;
         frame(960,540);
@@ -190,10 +209,122 @@ public final class ClientChangesRenderCheck {
         net.minecraft.client.gui.Gui.drawRect(480,0,960,540,0xFF2020DC);
         KawaseBlur.drawRoundedRegion(80,80,400,130,6,4,0);
         save("glass-scale2.png");
-        result=ImageIO.read(OUTPUT.resolve("glass-scale2.png").toFile());
+        BufferedImage result=ImageIO.read(OUTPUT.resolve("glass-scale2.png").toFile());
         if (((result.getRGB(680,210))&255)<150 || ((result.getRGB(300,210)>>16)&255)<150)
             throw new AssertionError("Scaled glass samples the wrong portion of the screen");
         mc.gameSettings.guiScale=1;
+    }
+
+    private static double glassEdgeEnergy(dev.vibe.hud.HudManager manager,HudModule hud,Method surface) throws Exception {
+        frame(960,540);
+        for(int y=0;y<540;y+=20)for(int x=0;x<960;x+=20)
+            net.minecraft.client.gui.Gui.drawRect(x,y,x+20,y+20,((x+y)/20%2==0)?0xFF3D637D:0xFF273D55);
+        surface.invoke(manager,hud,100,320,500,390);
+        ByteBuffer pixels=BufferUtils.createByteBuffer(200*30*4);
+        GL11.glReadPixels(220,180,200,30,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,pixels);
+        double energy=0;
+        for(int y=0;y<30;y++)for(int x=1;x<200;x++) {
+            int at=(y*200+x)*4;
+            int difference=(pixels.get(at)&255)-(pixels.get(at-4)&255);
+            energy+=difference*difference;
+        }
+        return energy/(199*30);
+    }
+
+    private static void testLiquidGlass() throws Exception {
+        try (dev.vibe.ui.effect.LiquidGlassRenderer glass = new dev.vibe.ui.effect.LiquidGlassRenderer()) {
+            for (int scale : new int[]{1,2}) {
+                mc.gameSettings.guiScale=scale;
+                frame(960,540);
+                net.minecraft.client.gui.Gui.drawRect(0,0,960,540,0xFF404040);
+                if (!glass.draw(40,40,240,120,12,0,4,1)) throw new AssertionError("LiquidGlass shader failed");
+                save("glass-geometry-scale"+scale+".png");
+                BufferedImage solid=ImageIO.read(OUTPUT.resolve("glass-geometry-scale"+scale+".png").toFile());
+                if (Math.abs((solid.getRGB(140*scale,80*scale)&255)-64)>2)
+                    throw new AssertionError("Clear glass washes out the center at scale "+scale);
+                if ((solid.getRGB(40*scale,40*scale)&0xFFFFFF)!=0x404040)
+                    throw new AssertionError("Glass paints outside the rounded corner");
+                if ((solid.getRGB(140*scale,40*scale)&255)<85)
+                    throw new AssertionError("Glass has no polished top rim");
+                if (GL11.glIsEnabled(GL11.GL_SCISSOR_TEST) || GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM)!=0)
+                    throw new AssertionError("Glass leaked shader/clipping state");
+
+                // Tint makes the silhouette measurable independently of the light direction.
+                frame(960,540);
+                net.minecraft.client.gui.Gui.drawRect(0,0,960,540,0xFF808080);
+                glass.draw(40,40,240,120,12,0,0,1,0xFFFF0000);
+                save("glass-corners-scale"+scale+".png");
+                BufferedImage corners=ImageIO.read(OUTPUT.resolve("glass-corners-scale"+scale+".png").toFile());
+                for(int a=0;a<12;a++)for(int b=0;b<12;b++) {
+                    double distance=Math.hypot(12-a-.5/scale,12-b-.5/scale)-12;
+                    if(Math.abs(distance)<1.5)continue; // Ignore the antialias fringe.
+                    int pixel=corners.getRGB((40+a)*scale,(40+b)*scale);
+                    boolean tinted=((pixel>>16)&255)-(pixel&255)>2;
+                    if(tinted!=(distance<0))throw new AssertionError("Glass corner is stretched at scale "+scale+": "+a+", "+b);
+                }
+                frame(960,540);
+                net.minecraft.client.gui.Gui.drawRect(0,0,480,540,0xFFDC2020);
+                net.minecraft.client.gui.Gui.drawRect(480,0,960,540,0xFF2020DC);
+                glass.draw(100/scale,100/scale,800/scale,220/scale,12,0,4,1);
+                save("glass-sampling-scale"+scale+".png");
+                BufferedImage sampled=ImageIO.read(OUTPUT.resolve("glass-sampling-scale"+scale+".png").toFile());
+                if((sampled.getRGB(300,160)&0xFFFFFF)!=0xDC2020 || (sampled.getRGB(680,160)&0xFFFFFF)!=0x2020DC)
+                    throw new AssertionError("LiquidGlass samples the wrong screen region at scale "+scale);
+            }
+            mc.gameSettings.guiScale=1;
+            BufferedImage[] refracted=new BufferedImage[2];
+            for(int index=0;index<2;index++) {
+                frame(960,540);
+                for(int y=0;y<540;y+=4)net.minecraft.client.gui.Gui.drawRect(0,y,960,y+4,(y/4%2==0)?0xFFCCAA66:0xFF302010);
+                glass.draw(80,80,420,200,12,0,index*6,1);
+                save("glass-refraction-"+index+".png");
+                refracted[index]=ImageIO.read(OUTPUT.resolve("glass-refraction-"+index+".png").toFile());
+            }
+            double center=0,edge=0;
+            for(int x=110;x<390;x++)for(int y=80;y<200;y++) {
+                int difference=Math.abs((refracted[0].getRGB(x,y)&255)-(refracted[1].getRGB(x,y)&255));
+                if(y>=100&&y<180)center+=difference;
+                else edge+=difference;
+            }
+            if(center>1 || edge/(280*40)<5)throw new AssertionError("Refraction must bend the rim and keep the center stable: "+center+", "+edge);
+
+            // A textured, warm scene makes refraction visible without a running world.
+            frame(960,540);
+            for(int y=0;y<540;y++) {
+                float t=y/540F;
+                int color=RenderUtils.blend(0xFF443026,0xFFE9A562,t);
+                net.minecraft.client.gui.Gui.drawRect(0,y,960,y+1,color);
+            }
+            mc.renderEngine.bindTexture(new ResourceLocation("textures/blocks/planks_oak.png"));
+            net.minecraft.client.renderer.GlStateManager.color(1,1,1,1);
+            for(int x=0;x<960;x+=96)net.minecraft.client.gui.Gui.drawModalRectWithCustomSizedTexture(x,350,0,0,96,190,48,48);
+            for(int x:new int[]{170,420,710}) {
+                mc.renderEngine.bindTexture(new ResourceLocation("textures/blocks/log_oak.png"));
+                net.minecraft.client.gui.Gui.drawModalRectWithCustomSizedTexture(x,0,0,0,85,480,64,64);
+            }
+            glass.draw(22,20,110,50,10);glass.draw(124,20,194,50,10);glass.draw(208,20,300,50,10);
+            glass.draw(22,76,256,210,12);
+            glass.draw(22,244,256,424,12);
+            glass.draw(625,410,930,500,12);
+            mc.fontRendererObj.drawStringWithShadow("VIBE",36,31,0xFFCC44FF);
+            mc.fontRendererObj.drawStringWithShadow("19:16",139,31,0xFFFFFFFF);
+            mc.fontRendererObj.drawStringWithShadow("94 FPS",225,31,0xFFFFFFFF);
+            mc.fontRendererObj.drawStringWithShadow("SESSION",38,92,0xFFCC44FF);
+            mc.fontRendererObj.drawStringWithShadow("Kills                          0",38,127,0xFFFFFFFF);
+            mc.fontRendererObj.drawStringWithShadow("K/D                          0.0",38,153,0xFFFFFFFF);
+            mc.fontRendererObj.drawStringWithShadow("Playtime                      3m",38,179,0xFFFFFFFF);
+            RenderUtils.roundedRect(28,254,250,280,5,0xFFBA00EF);
+            int y=263;
+            for(String category:new String[]{"COMBAT","MOVEMENT","VISUAL","PLAYER","WORLD"}) {
+                mc.fontRendererObj.drawStringWithShadow(category,39,y,0xFFFFFFFF);y+=32;
+            }
+            mc.fontRendererObj.drawStringWithShadow("Player",690,427,0xFFFFFFFF);
+            net.minecraft.client.gui.Gui.drawRect(690,447,910,452,0xAA163725);
+            net.minecraft.client.gui.Gui.drawRect(690,447,840,452,0xFF63FF51);
+            mc.fontRendererObj.drawStringWithShadow("10.7 HP",690,468,0xFFFFFFFF);
+            save("liquid-glass-preview.png");
+            if(GL11.glGetError()!=GL11.GL_NO_ERROR)throw new AssertionError("LiquidGlass GL error");
+        } finally {mc.gameSettings.guiScale=1;}
     }
 
     private static void testMusicCover() throws Exception {
@@ -211,6 +342,66 @@ public final class ClientChangesRenderCheck {
         save("music-radio.png");
         if (Boolean.TRUE.equals(get(MusicHudRenderer.class,renderer,"cachedThumbnail")))throw new AssertionError("Radio retained video thumbnail");
         renderer.close();
+    }
+
+    private static void testArrayList(ModuleManager modules) throws Exception {
+        HudModule hud=new HudModule();
+        set(ModuleManager.class,modules,"modules",new ArrayList<Module>(Arrays.asList(hud)));
+        Constructor<dev.vibe.hud.HudManager.HudElement> ctor=dev.vibe.hud.HudManager.HudElement.class
+                .getDeclaredConstructor(String.class,int.class,int.class,boolean.class,boolean.class);
+        ctor.setAccessible(true);
+        dev.vibe.hud.HudManager.HudElement element=ctor.newInstance("arraylist",12,12,true,false);
+        ArrayListRenderer renderer=new ArrayListRenderer();
+        hud.array.font.setValue("Minecraft");hud.array.horizontal.setEnabled(true);
+        hud.array.textGlow.setEnabled(true);hud.array.textGlowStrength.setValue(.05);
+        hud.array.rowHeight.setValue(9D);hud.array.padding.setValue(0D);hud.array.outlineWidth.setValue(3D);
+        hud.array.scale.setValue(2D);
+        frame(960,540);
+        renderer.draw(hud,element,new net.minecraft.client.gui.ScaledResolution(mc),true);
+        save("arraylist.png");
+        if(element.getHeight()<90)throw new AssertionError("ArrayList rows overlap outline/text at large scale");
+        // Vanilla forces alpha 0..3 to 255. Faint glow must not make opaque glyph copies.
+        Method text=ArrayListRenderer.class.getDeclaredMethod("text",String.class,float.class,float.class,int.class,dev.vibe.hud.ArrayListSettings.class);
+        text.setAccessible(true);
+        frame(960,540);GL11.glClearColor(0,0,0,1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+        text.invoke(renderer,"Inventory Manager",30F,30F,0x0200FFFF,hud.array);
+        ByteBuffer pixels=BufferUtils.createByteBuffer(960*540*4);
+        GL11.glReadPixels(0,0,960,540,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,pixels);
+        for(int i=0;i<pixels.capacity();i+=4)
+            if(pixels.get(i)!=0||pixels.get(i+1)!=0||pixels.get(i+2)!=0)throw new AssertionError("Faint text became opaque");
+        if(GL11.glGetError()!=GL11.GL_NO_ERROR)throw new AssertionError("ArrayList GL error");
+    }
+
+    private static void testPitTextInput(ModuleManager modules,Vibe vibe) throws Exception {
+        HypixelModule hypixel=new HypixelModule();ClickGuiModule theme=new ClickGuiModule();
+        hypixel.getModes().setValue(new HashSet<String>(Arrays.asList(HypixelModule.PIT_BOT)));
+        set(ModuleManager.class,modules,"modules",new ArrayList<Module>(Arrays.asList(hypixel,theme)));
+        set(Vibe.class,vibe,"config",new dev.vibe.config.VibeConfig(OUTPUT.resolve("text-config").toFile()));
+        // Synthetic key state keeps the check offscreen; GuiTextField uses the
+        // vanilla modifier polling API even for ordinary character events.
+        boolean keyboardCreated=org.lwjgl.input.Keyboard.isCreated();
+        set(org.lwjgl.input.Keyboard.class,null,"created",true);
+        try {
+            for(String name:new String[]{"Skeet","Futuristic"}) {
+                theme.getTheme().setValue(name);hypixel.getPitTarget().setValue("");
+                VibeClickGui gui=new VibeClickGui();gui.setWorldAndResolution(mc,960,540);
+                Method draw=VibeClickGui.class.getDeclaredMethod("drawSettingAt",dev.vibe.setting.Setting.class,int.class,int.class,int.class,int.class,boolean.class,boolean.class);
+                draw.setAccessible(true);
+                frame(960,540);
+                draw.invoke(gui,hypixel.getPitTarget(),500,740,160,0xFF00CCFF,name.equals("Futuristic"),name.equals("Skeet"));
+                gui.mouseClicked(625,168,0);
+                for(char ch:"Player_123".toCharArray())gui.keyTyped(ch,0);
+                if(!hypixel.getPitTarget().getValue().equals("Player_123"))throw new AssertionError(name+" cannot type PitBot name");
+                gui.keyTyped('\0',org.lwjgl.input.Keyboard.KEY_LEFT);
+                gui.keyTyped('\0',org.lwjgl.input.Keyboard.KEY_BACK);
+                if(!hypixel.getPitTarget().getValue().equals("Player_13"))throw new AssertionError(name+" cursor/backspace failed");
+                gui.keyTyped('\0',org.lwjgl.input.Keyboard.KEY_END);
+                for(int i=0;i<30;i++)gui.keyTyped('x',0);
+                if(hypixel.getPitTarget().getValue().length()!=16)throw new AssertionError(name+" ignores player-name limit");
+                gui.keyTyped('\0',org.lwjgl.input.Keyboard.KEY_RETURN);
+                if(get(VibeClickGui.class,gui,"editing")!=null)throw new AssertionError(name+" did not finish editing");
+            }
+        } finally { set(org.lwjgl.input.Keyboard.class,null,"created",keyboardCreated); }
     }
 
     private static void testMoveRequests() throws Exception {

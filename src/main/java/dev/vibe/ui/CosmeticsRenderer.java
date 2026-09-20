@@ -76,6 +76,7 @@ public final class CosmeticsRenderer {
 
     /** Called while the vanilla player-model matrix and limb pose are live. */
     private void renderLayer(AbstractClientPlayer player, ModelPlayer playerModel) {
+        if (dev.vibe.module.impl.HypixelModule.visualsSuppressed()) return;
         if (Boolean.TRUE.equals(RENDERING.get())) return;
         if (player == null || playerModel == null) return;
         CosmeticsModule module = Vibe.getInstance().getModuleManager().getModule(CosmeticsModule.class);

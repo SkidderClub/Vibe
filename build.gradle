@@ -183,6 +183,26 @@ tasks.register('verifyMusicIntegration', JavaExec) {
     workingDir project.projectDir
 }
 
+// Native regressions for the PitBot editor, ArrayList and media covers.
+tasks.register('verifyPitMediaRendering', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.ui.ClientChangesRenderCheck'
+    args 'pit-media-array'
+    workingDir project.projectDir
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    doFirst {
+        def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+        def platform = os.contains('win') ? 'windows' : os.contains('mac') ? 'osx' : 'linux'
+        def archive = sourceSets.main.runtimeClasspath.files.find { it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar') }
+        if (archive == null) throw new GradleException('LWJGL natives unavailable')
+        def nativeDir = layout.buildDirectory.dir('pit-media-check/natives').get().asFile
+        project.copy { from project.zipTree(archive); include '*.dll', '*.so', '*.dylib', '*.jnilib'; into nativeDir }
+        systemProperty 'org.lwjgl.librarypath', nativeDir.absolutePath
+    }
+}
+
 tasks.register('verifyAugustusRendering', JavaExec) {
     dependsOn tasks.named('testClasses')
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
@@ -335,9 +355,8 @@ unimined.minecraft {
     }
 }
 
-// run.bat opts into one stable game directory.  The builder temporarily maps
-// the project onto a short drive for remapping, so relying on Gradle's inferred
-// working directory can otherwise create an empty second client profile.
+// The launchers opt into one stable game directory regardless of the caller's
+// working directory. Settings in this profile belong exclusively to Vibe.
 if (providers.gradleProperty('vibePersistentRun').isPresent()) {
     tasks.named('runClient').configure { client ->
         doFirst {

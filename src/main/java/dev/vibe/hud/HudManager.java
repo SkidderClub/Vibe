@@ -215,7 +215,7 @@ public final class HudManager {
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         // Glass surfaces composite their own rounded blur so the blur stays
         // inside their curved silhouette.
-        if (hud != null && hud.getMode().is("LiquidGlass") && !SCOREBOARD.equals(element)) return false;
+        if (hud != null && hud.getMode().is("LiquidGlass")) return false;
         BlurModule blur = Vibe.getInstance().getModuleManager().getModule(BlurModule.class);
         return blur != null && blur.isEnabled() && blur.getElements().isSelected(element);
     }
@@ -232,8 +232,12 @@ public final class HudManager {
             if (!liquidGlass.draw(left, top, right, bottom, radius, hud.getLiquidGlassBlur().isEnabled()
                     ? hud.getLiquidGlassBlurStrength().getFloat() : 0.0F, hud.getLiquidGlassRefraction().getFloat(),
                     hud.getLiquidGlassOpacity().getFloat(), hud.getLiquidGlassTint().getArgb())) {
-                KawaseBlur.drawRoundedRegion(left, top, right, bottom, radius, 4, 0);
-                RenderUtils.roundedRect(left, top, right, bottom, radius, 0x443B6684);
+                if (hud.getLiquidGlassBlur().isEnabled())
+                    KawaseBlur.drawRoundedRegion(left, top, right, bottom, radius, 4, 0);
+                RenderUtils.roundedRect(left, top, right, bottom, radius,
+                        RenderUtils.alpha(hud.getLiquidGlassTint().getArgb(), Math.round(22 * hud.getLiquidGlassOpacity().getFloat())));
+                RenderUtils.roundedOutline(left, top, right, bottom, radius, 1,
+                        RenderUtils.alpha(0xFFFFFFFF, Math.round(95 * hud.getLiquidGlassOpacity().getFloat())));
             }
             return;
         }

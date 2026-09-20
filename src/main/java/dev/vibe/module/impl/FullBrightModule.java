@@ -19,7 +19,12 @@ public final class FullBrightModule extends Module {
             return;
         }
         previousGamma = Vibe.getInstance().getMinecraft().gameSettings.gammaSetting;
-        Vibe.getInstance().getMinecraft().gameSettings.gammaSetting = 1000.0F;
+        tick();
+    }
+
+    public void tick() {
+        if (isEnabled() && Vibe.getInstance().getMinecraft().gameSettings != null)
+            Vibe.getInstance().getMinecraft().gameSettings.gammaSetting = HypixelModule.visualsSuppressed() && previousGamma >= 0 ? previousGamma : 1000.0F;
     }
 
     @Override

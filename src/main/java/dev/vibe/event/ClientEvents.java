@@ -263,9 +263,7 @@ public final class ClientEvents {
         dev.vibe.module.impl.TargetsModule targets = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.TargetsModule.class);
         if (targets != null) targets.tickWarnings();
         FullBrightModule fullBright = Vibe.getInstance().getModuleManager().getModule(FullBrightModule.class);
-        if (fullBright != null && fullBright.isEnabled()) {
-            minecraft.gameSettings.gammaSetting = 1000.0F;
-        }
+        if (fullBright != null) fullBright.tick();
         SprintModule sprint = Vibe.getInstance().getModuleManager().getModule(SprintModule.class);
         if (sprint != null && sprint.isEnabled() && minecraft.thePlayer.movementInput.moveForward > 0.0F
                 && !minecraft.thePlayer.isSneaking() && !minecraft.thePlayer.isCollidedHorizontally) {
@@ -540,6 +538,10 @@ public final class ClientEvents {
         if (event.type != RenderGameOverlayEvent.ElementType.ALL) return;
         dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
         if (hypixel != null && hypixel.suppressVisuals()) {
+            restoreVanillaScoreboard();
+            debugText = null;
+            deferredCrosshair = false;
+            DebugOverlay.clear();
             // Cancel the complete vanilla overlay before any hotbar, health,
             // scoreboard or other HUD element renders; the module banner is
             // drawn on the already completed world frame.

@@ -43,14 +43,19 @@ public final class LauncherBridge {
         consume(minecraftDirectory, "gta7");
     }
 
-    /** Lets run.bat close its visible handoff console only after a client GUI is rendered. */
+    /** Optional readiness signal for external launchers after a client GUI is rendered. */
     public static void markGameVisible(File minecraftDirectory) {
         if (gameVisible || minecraftDirectory == null) return;
-        gameVisible = true;
         try {
-            Path ready = minecraftDirectory.toPath().resolve("vibe").resolve("launcher").resolve("game-visible");
+            // Each run.bat invocation has its own marker; another client or a
+            // stale marker from a previous launch must not close its console.
+            String requested = System.getenv("VIBE_LAUNCH_READY_FILE");
+            Path ready = requested == null || requested.isEmpty()
+                    ? minecraftDirectory.toPath().resolve("vibe").resolve("launcher").resolve("game-visible")
+                    : java.nio.file.Paths.get(requested);
             Files.createDirectories(ready.getParent());
             Files.write(ready, new byte[] { 'o', 'k' });
+            gameVisible = true;
         } catch (Exception ignored) {
             // The game must remain usable even if the optional launcher
             // handoff marker cannot be written.

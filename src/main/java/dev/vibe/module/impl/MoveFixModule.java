@@ -121,6 +121,7 @@ public final class MoveFixModule extends Module {
             fakeRotation = null;
             previousRenderRotation = null;
             rotationOwner = null;
+            clearForcedMovement(null);
             transported = false;
         }
     }
@@ -382,6 +383,9 @@ public final class MoveFixModule extends Module {
     /** Tarasande's PreventBackwardsSprinting test, adapted to 1.8.9's flag. */
     private float sprintForward(float vanillaForward, Object entity) {
         FakeRotation rotation = activeRotation();
+        // Forced vectors already use the server yaw. Comparing them to the
+        // camera yaw incorrectly prevents a bot from sprinting sideways/backwards.
+        if (forcedMovementOwner != null && entity == Minecraft.getMinecraft().thePlayer) return vanillaForward;
         if (rotation == null || !correctMovement.is("Prevent Backwards Sprinting")
                 || entity != Minecraft.getMinecraft().thePlayer) {
             return vanillaForward;

@@ -140,6 +140,30 @@ public class MoveFixRenderTest {
         return player.prevRotationYawHead + RotationMath.difference(player.rotationYawHead, player.prevRotationYawHead) * partial;
     }
 
+    @Test public void forcedMovementSprintsInServerSpaceAndResetsOnRespawn() throws Exception {
+        moveFix.beginRotationTick();
+        moveFix.getCorrectMovement().setValue("Prevent Backwards Sprinting");
+        player.movementInput=new net.minecraft.util.MovementInput();
+        moveFix.installInputHook();
+        moveFix.setFakeRotation("PitBot",180,0);
+        moveFix.setForcedMovement("PitBot",1,0,true);
+        player.movementInput.updatePlayerMoveState();
+        java.lang.reflect.Method sprint=MoveFixModule.class.getDeclaredMethod("sprintForward",float.class,Object.class);
+        sprint.setAccessible(true);
+        assertEquals(1F,(Float)sprint.invoke(moveFix,1F,player),0F);
+        assertEquals(1F,player.movementInput.moveForward,0F);
+        assertTrue(player.movementInput.jump);
+        moveFix.clearForcedMovement("Other");
+        player.movementInput.updatePlayerMoveState();
+        assertEquals(1F,player.movementInput.moveForward,0F);
+        minecraft.thePlayer=allocate(EntityPlayerSP.class);
+        minecraft.thePlayer.movementInput=new net.minecraft.util.MovementInput();
+        moveFix.beginRotationTick();moveFix.installInputHook();
+        minecraft.thePlayer.movementInput.updatePlayerMoveState();
+        assertEquals(0F,minecraft.thePlayer.movementInput.moveForward,0F);
+        assertFalse(minecraft.thePlayer.movementInput.jump);
+    }
+
     private float bodyAt(float partial) {
         return player.prevRenderYawOffset + RotationMath.difference(player.renderYawOffset, player.prevRenderYawOffset) * partial;
     }

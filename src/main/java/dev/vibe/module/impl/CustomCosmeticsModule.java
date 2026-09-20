@@ -91,6 +91,7 @@ public final class CustomCosmeticsModule extends Module {
     }
 
     public void tick() {
+        if (HypixelModule.visualsSuppressed()) { clear(); return; }
         if (!isEnabled() || minecraft.thePlayer == null || minecraft.theWorld == null) { clear(); return; }
         long now = System.currentTimeMillis();
         if (active("Trail")) {
