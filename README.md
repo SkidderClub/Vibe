@@ -59,8 +59,21 @@ cover, armor/skin toggles and OpenGL state, with a preview in `build/chams-rende
 
 | Command | Purpose |
 | --- | --- |
-| `.\run.bat` | Build and launch with OptiFine; keep data in `run/client/`. |
+| `.\run.bat` | Build and launch with OptiFine; close the startup console when Minecraft's first menu appears. Keep data in `run/client/`. |
+| `.\run.bat --keep-console --debug` | Keep the console open for the game session and include Gradle's full debug output. |
 | `.\run-fresh.bat` | Launch with a new profile in `run/first-start/session-*/`. |
+
+`run.bat` shows output during startup and closes its console after the Forge
+loading screen, once Minecraft has drawn a menu. Logging continues in a timestamped
+UTF-8 file in `logs/`. Startup failures keep the console open and include stack
+traces. Minecraft also writes `run/client/logs/latest.log`. When invoked from an
+existing terminal, the script returns to the prompt. Set `VIBE_NO_PAUSE=1` when invoking the batch files
+from another script. `run.bat --dry-run` checks the Gradle task setup without
+launching the game.
+
+The launchers use the actual project path without assigning a drive letter.
+They do not copy settings or resource packs from `%APPDATA%\.minecraft`;
+Vibe saves its own settings in its game directory.
 
 With `JAVA_HOME` set to JDK 21, use `./gradlew build` on Linux/macOS or
 `.\gradlew.bat build` on Windows. The first build or launch downloads dependencies.

@@ -25,17 +25,28 @@ public final class HudModule extends Module {
     private static final List<String> LEGACY_ARRAY_LIST_DEFAULTS = Arrays.asList(
             "ESP", "TargetESP", "Hitmarker", "Skeletal", "Cosmetics", "ChestESP", "FullBright", "FOV Changer", "CustomCrosshair", "Animations", "AimAssist", "Velocity", "BHop", "Fly",
             "LeftClicker", "Sprint", "NoJumpDelay", "NoSlow", "Eagle", "FastPlace", "HUD Editor", "NameProtect", "ClickGUI");
+    private static final List<String> DEFAULT_ARRAY_LIST_OPTIONS = Arrays.asList(
+            "ESP", "TargetESP", "Hitmarker", "Skeletal", "Cosmetics", "ChestESP", "FullBright", "FOV Changer", "CustomCrosshair", "Animations", "Targets", "AimAssist", "Velocity", "Speed", "Fly",
+            "LeftClicker", "Sprint", "NoJumpDelay", "NoSlow", "Eagle", "FastPlace", "HUD Editor",
+            "HUD", "NameProtect", "ClickGUI", "Blur", "Waifu", "Particles", "QOL");
+    private static final List<String> DEFAULT_ARRAY_LIST_DEFAULTS = Arrays.asList(
+            "ESP", "TargetESP", "Hitmarker", "Skeletal", "Cosmetics", "ChestESP", "FullBright", "FOV Changer", "CustomCrosshair", "Animations", "AimAssist", "Velocity", "Speed", "Fly",
+            "LeftClicker", "Sprint", "NoJumpDelay", "NoSlow", "Eagle", "FastPlace", "HUD Editor", "NameProtect", "ClickGUI");
 
-    private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Vibe", "Vibe", "Skeet", "LiquidGlass"));
-    private final BooleanSetting liquidGlassBlur = addSetting(new BooleanSetting("Glass Blur", true, () -> mode.is("LiquidGlass")));
+    // Retained only as the migration fallback for layouts that predate
+    // per-element themes. New choices are made in the HUD editor inspector.
+    private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Vibe", () -> false, "Vibe", "Skeet", "LiquidGlass"));
+    // These tune any HUD element that selects LiquidGlass in the HUD editor.
+    // The legacy global Mode remains a fallback for older layouts only.
+    private final BooleanSetting liquidGlassBlur = addSetting(new BooleanSetting("Glass Blur", true, () -> true));
     private final NumberSetting liquidGlassBlurStrength = addSetting(new NumberSetting("Glass Blur Strength", 2.0D, 0.0D, 8.0D, 0.25D,
-            () -> mode.is("LiquidGlass") && liquidGlassBlur.isEnabled()));
+            () -> liquidGlassBlur.isEnabled()));
     private final NumberSetting liquidGlassRefraction = addSetting(new NumberSetting("Glass Refraction", 4.0D, 0.0D, 10.0D, 0.25D,
-            () -> mode.is("LiquidGlass")));
+            () -> true));
     private final NumberSetting liquidGlassOpacity = addSetting(new NumberSetting("Glass Opacity", .72D, .15D, 1.0D, .05D,
-            () -> mode.is("LiquidGlass")));
+            () -> true));
     private final ColorSetting liquidGlassTint = addSetting(new ColorSetting("Glass Tint", 0xFFFFFFFF,
-            () -> mode.is("LiquidGlass")));
+            () -> true));
 
     private final MultiSelectSetting hudElements = addSetting(new MultiSelectSetting("HUD Elements",
                         Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph"),
@@ -47,7 +58,7 @@ public final class HudModule extends Module {
             Arrays.asList("Version", "FPS", "Username"), Arrays.asList("Version", "FPS"), () -> true));
     private final StringSetting watermarkText = addSetting(new StringSetting("Watermark Text", "VIBE", 24, () -> true));
     private final MultiSelectSetting arrayListModules = addSetting(new MultiSelectSetting("ArrayList Modules",
-            LEGACY_ARRAY_LIST_OPTIONS, LEGACY_ARRAY_LIST_DEFAULTS, () -> true));
+            DEFAULT_ARRAY_LIST_OPTIONS, DEFAULT_ARRAY_LIST_DEFAULTS, () -> true));
     private final BooleanSetting arrayOutline = addSetting(new BooleanSetting("ArrayList Outline", true, () -> true));
         private final BooleanSetting watermarkOutline = addSetting(new BooleanSetting("Watermark Outline", true, () -> true));
     private final BooleanSetting coordinatesOutline = addSetting(new BooleanSetting("Coordinates Outline", true, () -> true));
@@ -107,6 +118,8 @@ public final class HudModule extends Module {
         // Restrict recovery to the exact old default. Custom filters, including
         // deliberately empty selections, must keep their saved values.
         if (!selected.equals(new LinkedHashSet<String>(LEGACY_ARRAY_LIST_DEFAULTS))) return;
+        selected.remove("BHop");
+        selected.add("Speed");
         for (String option : arrayListModules.getOptions()) {
             if (!LEGACY_ARRAY_LIST_OPTIONS.contains(option)) selected.add(option);
         }

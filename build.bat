@@ -7,7 +7,6 @@ rem With no arguments, build the release JAR. Otherwise forward Gradle tasks/opt
 set "SCRIPT_DIR=%~dp0"
 set "BUILD_EXIT=1"
 set "VIBE_JAVA="
-set "VIBE_SUBST_DRIVE="
 set "VIBE_RUN_CLIENT="
 if /i "%~1"=="runClient" set "VIBE_RUN_CLIENT=1"
 if defined VIBE_RUN_CLIENT title Vibe 1.8.9 Forge Client
@@ -121,18 +120,6 @@ if defined VIBE_JAVA8 if exist "%VIBE_JAVA8%\bin\java.exe" (
     echo [Vibe] Using launcher-provided Java 8 runtime: %VIBE_JAVA8%
 )
 
-rem Unimined opens its transformed Forge JAR through Java's ZIP filesystem.
-rem The normal cache location under this project is longer than legacy Win32
-rem ZIP paths permit, so use a short-lived drive mapping for Gradle's cache.
-rem Keep the project path short for the remapper. Gradle's normal user cache
-rem is used below so its provisioned Java toolchains remain discoverable.
-for %%D in (V U T S R Q P O N M L K J I H G F E) do (
-    if not defined VIBE_SUBST_DRIVE if not exist "%%D:\" set "VIBE_SUBST_DRIVE=%%D:"
-)
-if defined VIBE_SUBST_DRIVE (
-    subst %VIBE_SUBST_DRIVE% "%SCRIPT_DIR:~0,-1%" >nul 2>&1
-    if errorlevel 1 set "VIBE_SUBST_DRIVE="
-)
 echo [Vibe] Using JDK: %JAVA_HOME%
 if defined VIBE_RUN_CLIENT (
     echo [Vibe] Building and starting Minecraft with Vibe...
@@ -141,16 +128,10 @@ if defined VIBE_RUN_CLIENT (
 )
 echo.
 
-rem Run Gradle from the short mapped drive while keeping its cache in the
-rem normal user location so auto-provisioned toolchains are available.
-rem On JDK 21, TinyRemapper opens the just-created development JAR with the
-rem ZIP filesystem; resolving the project through the original long Desktop
-rem path can make that open fail with AccessDeniedException on Windows.
-if defined VIBE_SUBST_DRIVE (
-    pushd %VIBE_SUBST_DRIVE%\
-) else (
-    pushd "%SCRIPT_DIR%"
-)
+rem Use the real project directory; do not allocate a drive for each launch.
+rem Keep the normal user cache so provisioned toolchains remain available.
+pushd "%SCRIPT_DIR%"
+if errorlevel 1 goto :finish
 set "GRADLE_USER_HOME=%USERPROFILE%\.gradle"
 if "%~1"=="" (
     call "%SCRIPT_DIR%gradlew.bat" clean build --no-daemon %VIBE_GRADLE_JAVA8_ARG%
@@ -159,8 +140,6 @@ if "%~1"=="" (
 )
 set "BUILD_EXIT=%ERRORLEVEL%"
 popd
-
-if defined VIBE_SUBST_DRIVE subst %VIBE_SUBST_DRIVE% /D >nul 2>&1
 
 if not "%BUILD_EXIT%"=="0" (
     echo.

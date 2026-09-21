@@ -41,6 +41,7 @@ public final class AmbienceModule extends Module {
 
     /** Advances animated time once per game tick. */
     public void tick() {
+        if (HypixelModule.visualsSuppressed()) { onDisable(); return; }
         if (!isEnabled()) {
             return;
         }
@@ -68,6 +69,7 @@ public final class AmbienceModule extends Module {
 
     /** Called at RenderTick START so a server update cannot flash between ticks. */
     public void renderTick() {
+        if (HypixelModule.visualsSuppressed()) { onDisable(); return; }
         if (!isEnabled()) {
             return;
         }

@@ -3,6 +3,7 @@
 .gradle/
 build/
 out/
+build-artifact/
 
 # Local game data and credentials
 run/

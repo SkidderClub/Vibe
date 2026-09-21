@@ -59,6 +59,10 @@ public final class Vibe {
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         instance = this;
+        // A timer-owned combat module can be enabled in the active profile.
+        // Restore vanilla timing before config restoration and before a world
+        // exists so a previous session can never start the client frozen.
+        dev.vibe.module.impl.CombatTimerAccess.resetVanillaTimer();
         accountManager = new AccountManager(minecraft, new java.io.File(minecraft.mcDataDir, "vibe/accounts").toPath());
         statistics = new StatisticsService(minecraft, new java.io.File(minecraft.mcDataDir, "vibe/statistics").toPath());
         statistics.recordLaunch();

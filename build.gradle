@@ -183,6 +183,26 @@ tasks.register('verifyMusicIntegration', JavaExec) {
     workingDir project.projectDir
 }
 
+// Native regressions for the PitBot editor, ArrayList and media covers.
+tasks.register('verifyPitMediaRendering', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.ui.ClientChangesRenderCheck'
+    args 'pit-media-array'
+    workingDir project.projectDir
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    doFirst {
+        def os = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+        def platform = os.contains('win') ? 'windows' : os.contains('mac') ? 'osx' : 'linux'
+        def archive = sourceSets.main.runtimeClasspath.files.find { it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar') }
+        if (archive == null) throw new GradleException('LWJGL natives unavailable')
+        def nativeDir = layout.buildDirectory.dir('pit-media-check/natives').get().asFile
+        project.copy { from project.zipTree(archive); include '*.dll', '*.so', '*.dylib', '*.jnilib'; into nativeDir }
+        systemProperty 'org.lwjgl.librarypath', nativeDir.absolutePath
+    }
+}
+
 tasks.register('verifyAugustusRendering', JavaExec) {
     dependsOn tasks.named('testClasses')
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
@@ -335,15 +355,58 @@ unimined.minecraft {
     }
 }
 
-// run.bat opts into one stable game directory.  The builder temporarily maps
-// the project onto a short drive for remapping, so relying on Gradle's inferred
-// working directory can otherwise create an empty second client profile.
+// The launchers opt into one stable game directory regardless of the caller's
+// working directory. Settings in this profile belong exclusively to Vibe.
 if (providers.gradleProperty('vibePersistentRun').isPresent()) {
     tasks.named('runClient').configure { client ->
+        File launchedGameDirectory = null
+        String launchedInstanceId = ''
         doFirst {
-            File gameDirectory = project.file('run/client').canonicalFile
+            // A stable directory is kept for a direct runClient invocation,
+            // while run.bat supplies an id for each detached launch. This
+            // prevents Minecraft's session.lock from serializing instances.
+            String rawInstance = System.getenv('VIBE_INSTANCE_ID')
+            String instanceId = rawInstance == null ? '' : rawInstance.replaceAll('[^A-Za-z0-9._-]', '_')
+            File baselineDirectory = project.file('run/client').canonicalFile
+            File gameDirectory = instanceId.isEmpty()
+                    ? baselineDirectory
+                    : project.file('run/instances/session-' + instanceId).canonicalFile
+            launchedGameDirectory = gameDirectory
+            launchedInstanceId = instanceId
             if (!gameDirectory.isDirectory() && !gameDirectory.mkdirs()) {
                 throw new GradleException('Could not create Vibe client directory: ' + gameDirectory)
+            }
+            if (!instanceId.isEmpty()) {
+                File marker = new File(gameDirectory, '.vibe-baseline-copied')
+                if (!marker.isFile() && baselineDirectory.isDirectory() && baselineDirectory != gameDirectory) {
+                    ['config', 'mods', 'resourcepacks', 'shaderpacks', 'texturepacks', 'vibe', 'servers.dat'].each { name ->
+                        File source = new File(baselineDirectory, name)
+                        if (source.isDirectory()) {
+                            project.copy { from source; into new File(gameDirectory, name) }
+                        } else if (source.isFile()) {
+                            project.copy { from source; into gameDirectory }
+                        }
+                    }
+                    File[] optionFiles = baselineDirectory.listFiles()
+                    if (optionFiles != null) optionFiles.findAll { file ->
+                        file.isFile() && file.name.startsWith('options') && file.name.endsWith('.txt')
+                    }.each { source -> project.copy { from source; into gameDirectory } }
+                    marker.createNewFile()
+                }
+            }
+            // RunConfig resolves these placeholders relative to workingDir at
+            // execution time. Keep the prepared natives, libraries, and
+            // assets anchored to their original directories before assigning
+            // this launch its own game directory.
+            File originalDirectory = client.workingDir
+            ['natives_directory', 'library_directory', 'assets_root', 'game_assets'].each { name ->
+                def provider = client.getProperties().get(name)
+                if (provider != null) {
+                    def originalPath = new File(provider.invoke())
+                    def resolved = (originalPath.isAbsolute() ? originalPath
+                            : new File(originalDirectory, originalPath.path)).absolutePath
+                    client.setProperty(name, { resolved })
+                }
             }
             List<String> launchArguments = new ArrayList<String>()
             client.args.each { launchArguments.add(String.valueOf(it)) }
@@ -357,6 +420,24 @@ if (providers.gradleProperty('vibePersistentRun').isPresent()) {
             client.setArgs(launchArguments)
             client.workingDir = gameDirectory
             logger.lifecycle('[Vibe] Using persistent client settings: ' + gameDirectory)
+        }
+        doLast {
+            // Parallel launches must have independent game directories, but
+            // vanilla video/options files are user preferences, not instance
+            // state. Bring every normally closed instance's latest values
+            // back to the shared launch profile for the next run.
+            if (launchedInstanceId.isEmpty() || launchedGameDirectory == null || !launchedGameDirectory.isDirectory()) return
+            File baselineDirectory = project.file('run/client').canonicalFile
+            if (!baselineDirectory.isDirectory() && !baselineDirectory.mkdirs()) {
+                logger.warn('[Vibe] Could not preserve client options: ' + baselineDirectory)
+                return
+            }
+            File[] optionFiles = launchedGameDirectory.listFiles()
+            if (optionFiles == null) return
+            optionFiles.findAll { file -> file.isFile() && file.name.startsWith('options') && file.name.endsWith('.txt') }.each { source ->
+                project.copy { from source; into baselineDirectory }
+            }
+            logger.lifecycle('[Vibe] Saved client options for the next launch.')
         }
     }
 }

@@ -9,10 +9,10 @@ import dev.vibe.module.impl.BlurModule;
 import dev.vibe.setting.*;
 import java.util.*;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.GlStateManager;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL14;
 
 /** Independent measured rows: HUD anchoring, blur silhouette, typography and paint share one layout. */
 public final class ArrayListRenderer {
@@ -35,16 +35,23 @@ public final class ArrayListRenderer {
             rows.add(new Row(name("Custom Cosmetics",s), "",0));
             rows.add(new Row(name("Sprint",s), decorate("Legit",s),0));
         }
-        final float scale = s.scale.getFloat();
+        // HUD editor scaling is independent from the typography scale.  Keep
+        // both factors in the measured row geometry so a resized ArrayList
+        // remains anchored and clickable exactly where it is painted.
+        final float scale = s.scale.getFloat() * element.getScale();
+        float inset = Math.max(s.padding.getFloat(), Math.max(hud.getArrayOutline().isEnabled() ? s.outlineWidth.getFloat() + 1 : 1,
+                s.rail.is("None") ? 0 : s.railWidth.getFloat() + 1));
         float maximum = 12;
         for (Row row : rows) {
-            row.width = textWidth(row.name+row.suffix,s)*scale + 2*s.padding.getFloat()*scale;
+            row.width = textWidth(row.name+row.suffix,s)*scale + 2*inset*scale;
             maximum = Math.max(maximum,row.width);
         }
         Comparator<Row> width = Comparator.comparingDouble((Row r) -> -r.width).thenComparing(r -> r.name);
         Collections.sort(rows,s.sorting.is("Width") ? width : s.sorting.is("Category")
                 ? Comparator.comparingInt((Row r) -> r.category).thenComparing(width) : Comparator.comparing(r -> r.name));
-        float rh = Math.max(9,s.rowHeight.getFloat())*scale, gap = s.gap.getFloat()*scale;
+        float textHeight = s.font.is("Minecraft") ? mc.fontRendererObj.FONT_HEIGHT : font(s).inkHeight("Agjpqy");
+        float rh = Math.max(textHeight + 2 * (hud.getArrayOutline().isEnabled() ? s.outlineWidth.getFloat() + 1 : 1),s.rowHeight.getFloat())*scale;
+        float gap = s.gap.getFloat()*scale;
         int maxRows = Math.max(1,(int)(screen.getScaledHeight()/(rh+gap)));
         if(rows.size()>maxRows)rows=new ArrayList<>(rows.subList(0,maxRows));
         int w = (int)Math.ceil(maximum), h = (int)Math.ceil(Math.max(1,rows.size()*(rh+gap)-gap));
@@ -64,8 +71,15 @@ public final class ArrayListRenderer {
             if(s.background.is("Rectangle")){row.x=left;row.width=w;}
             row.color=color(hud,i,rows.size(),0,now);
         }
+        boolean blend=GL11.glIsEnabled(GL11.GL_BLEND), texture=GL11.glIsEnabled(GL11.GL_TEXTURE_2D);
+        boolean depth=GL11.glIsEnabled(GL11.GL_DEPTH_TEST), alphaTest=GL11.glIsEnabled(GL11.GL_ALPHA_TEST);
+        int alphaFunction=GL11.glGetInteger(GL11.GL_ALPHA_TEST_FUNC);
+        float alphaReference=GL11.glGetFloat(GL11.GL_ALPHA_TEST_REF);
+        int src=GL11.glGetInteger(GL14.GL_BLEND_SRC_RGB),dst=GL11.glGetInteger(GL14.GL_BLEND_DST_RGB);
+        int srcAlpha=GL11.glGetInteger(GL14.GL_BLEND_SRC_ALPHA),dstAlpha=GL11.glGetInteger(GL14.GL_BLEND_DST_ALPHA);
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT|GL11.GL_COLOR_BUFFER_BIT|GL11.GL_CURRENT_BIT|GL11.GL_LINE_BIT);
         try {
+            GlStateManager.disableDepth();
             GlStateManager.enableBlend(); GlStateManager.tryBlendFuncSeparate(770,771,1,0);
             GlStateManager.alphaFunc(GL11.GL_GREATER,0.001f);
             // KawaseBlur captures and filters the complete framebuffer. Doing
@@ -80,26 +94,32 @@ public final class ArrayListRenderer {
                 for(Row row:rows)KawaseBlur.drawRoundedRegion((int)Math.floor(row.x),(int)Math.floor(row.y),
                         (int)Math.ceil(row.x+row.width),(int)Math.ceil(row.y+rh),s.radius.getFloat()*scale,blur.getStrength().getInt(),0);
             }
-            // Both outline layers belong behind the text.  Drawing the solid
-            // line last made wide outlines and glow passes cut straight
-            // through glyphs, which is what made the list unreadable.
+            if (!s.background.is("None")) for (Row row : rows)
+                RenderUtils.roundedRect((int)row.x,(int)row.y,(int)Math.ceil(row.x+row.width),(int)Math.ceil(row.y+rh),
+                        s.radius.getFloat()*scale,alpha(hud.getBackground().getArgb(),(row.color>>>24)/255F));
             if(s.glow.isEnabled() && hud.getArrayOutline().isEnabled()) drawOutlineGlow(rows,right,rh,gap,s);
             if(hud.getArrayOutline().isEnabled())outline(rows,right,rh,gap,s,hud);
             for(int i=0;i<rows.size();i++){
-                Row r=rows.get(i);float fade=fade(s,i,rows.size());
-                // Minimal is the sole presentation: each configured step is
-                // still blur/outline compatible but never gains a second card
-                // background from the removed Array Style selector.
-                float rail=s.railWidth.getFloat();
+                Row r=rows.get(i);
+                float rail=s.railWidth.getFloat()*scale;
                 if(s.rail.is("Both")||s.rail.is("Outer"))rect(right?r.x+r.width-rail:r.x,r.y,right?r.x+r.width:r.x+rail,r.y+rh,r.color);
                 if(s.rail.is("Both")||s.rail.is("Inner"))rect(right?r.x:r.x+r.width-rail,r.y,right?r.x+rail:r.x+r.width,r.y+rh,r.color);
                 float textWidth=textWidth(r.name+r.suffix,s)*scale;
-                float x=right?r.x+r.width-s.padding.getFloat()*scale-textWidth:r.x+s.padding.getFloat()*scale;
-                float y=r.y+(rh-9*scale)/2;
-                drawText(r.name,x,y,s,hud,i,rows.size(),now,false);
-                drawText(r.suffix,x+textWidth(r.name,s)*scale,y,s,hud,i,rows.size(),now,true);
+                float x=right?r.x+r.width-inset*scale-textWidth:r.x+inset*scale;
+                float y=r.y+(rh-textHeight*scale)/2;
+                if (!s.font.is("Minecraft")) y -= (font(s).inkTop("Agjpqy") - 1)*scale;
+                drawText(r.name,x,y,s,hud,i,rows.size(),now,false,element.getScale());
+                drawText(r.suffix,x+textWidth(r.name,s)*scale,y,s,hud,i,rows.size(),now,true,element.getScale());
             }
         } finally {
+            // Restore Minecraft's cache too; glPopAttrib alone only restores
+            // driver state and leaves subsequent HUD elements out of sync.
+            if(blend)GlStateManager.enableBlend();else GlStateManager.disableBlend();
+            if(texture)GlStateManager.enableTexture2D();else GlStateManager.disableTexture2D();
+            if(depth)GlStateManager.enableDepth();else GlStateManager.disableDepth();
+            if(alphaTest)GlStateManager.enableAlpha();else GlStateManager.disableAlpha();
+            GlStateManager.alphaFunc(alphaFunction,alphaReference);
+            GlStateManager.tryBlendFuncSeparate(src,dst,srcAlpha,dstAlpha);
             GL11.glPopAttrib();GlStateManager.color(1,1,1,1);
         }
     }
@@ -129,39 +149,48 @@ public final class ArrayListRenderer {
     private NeverLoseFont font(ArrayListSettings s){return s.font.is("Smooth Bold")?bold:smooth;}
     private float textWidth(String text,ArrayListSettings s){return s.font.is("Minecraft")?mc.fontRendererObj.getStringWidth((s.bold.isEnabled()?"§l":"")+text):font(s).width(text);}
     private void text(String text,float x,float y,int color,ArrayListSettings s){
-        if((color>>>24)<2)return;
+        // Vanilla treats alpha 0..3 as an unspecified alpha and makes it fully
+        // opaque. A faint glow/faded row must never turn into solid copies.
+        if((color>>>24)<(s.font.is("Minecraft")?4:1))return;
         if(s.font.is("Minecraft"))mc.fontRendererObj.drawString((s.bold.isEnabled()?"§l":"")+text,x,y,color,false);
         else font(s).draw(text,x,y-1,color);
     }
-    private void drawText(String text,float x,float y,ArrayListSettings s,HudModule hud,int index,int count,long now,boolean suffix){
+    private void drawText(String text,float x,float y,ArrayListSettings s,HudModule hud,int index,int count,long now,boolean suffix,float elementScale){
         if(text.isEmpty())return;
         GlStateManager.pushMatrix();
         try {
-            GlStateManager.translate(x,y,0);GlStateManager.scale(s.scale.getFloat(),s.scale.getFloat(),1);
-            float cursor=0,total=Math.max(1,textWidth(text,s));
-            for(int i=0;i<text.length();i++){
-                String ch=text.substring(i,i+1);
-                int c=suffix&&!s.suffixAccent.isEnabled()?alpha(s.suffixColor.getArgb(),fade(s,index,count))
-                        :color(hud,index,count,s.horizontal.isEnabled()?cursor/total:0,now);
-                if(s.textGlow.isEnabled()){
-                    float r=Math.min(1.25f,s.textGlowRadius.getFloat()*.35f);int glow=alpha(c,s.textGlowStrength.getFloat()*.18f);
-                    for(int j=0;j<4;j++){double a=j*Math.PI/2;text(ch,cursor+(float)Math.cos(a)*r,(float)Math.sin(a)*r,glow,s);}
+            GlStateManager.translate(x,y,0);GlStateManager.scale(s.scale.getFloat()*elementScale,s.scale.getFloat()*elementScale,1);
+            boolean gradient = s.horizontal.isEnabled() && (!suffix || s.suffixAccent.isEnabled());
+            float total=Math.max(1,textWidth(text,s));
+            // Finish each effect for the whole label before painting glyphs.
+            // Otherwise the next glyph's glow/shadow overwrites the previous one.
+            for (int pass=0;pass<3;pass++) {
+                if(pass==0&&!s.textGlow.isEnabled() || pass==1&&!s.shadow.isEnabled())continue;
+                float cursor=0;
+                for(int i=0;i<(gradient?text.length():1);i++){
+                    String part=gradient?text.substring(i,i+1):text;
+                    int c=suffix&&!s.suffixAccent.isEnabled()?alpha(s.suffixColor.getArgb(),fade(s,index,count))
+                            :color(hud,index,count,gradient?cursor/total:0,now);
+                    if(pass==0){
+                        float r=Math.min(1.25f,s.textGlowRadius.getFloat()*.35f);int glow=alpha(c,s.textGlowStrength.getFloat()*.18f);
+                        for(int j=0;j<4;j++){double a=j*Math.PI/2;text(part,cursor+(float)Math.cos(a)*r,(float)Math.sin(a)*r,glow,s);}
+                    } else if(pass==1)text(part,cursor+1,1,(c&0xFF000000)|((c&0xFCFCFC)>>2),s);
+                    else text(part,cursor,0,c,s);
+                    cursor+=textWidth(part,s);
                 }
-                if(s.shadow.isEnabled())text(ch,cursor+1,1,(c&0xFF000000)|((c&0xFCFCFC)>>2),s);
-                text(ch,cursor,0,c,s);cursor+=textWidth(ch,s);
             }
         }finally{GlStateManager.popMatrix();}
     }
     private void outline(List<Row> rows,boolean right,float rh,float gap,ArrayListSettings s,HudModule hud){
-        float t=s.outlineWidth.getFloat();Row first=rows.get(0),last=rows.get(rows.size()-1);
+        float t=s.outlineWidth.getFloat()*s.scale.getFloat();Row first=rows.get(0),last=rows.get(rows.size()-1);
         if(s.outline.is("Rectangle")){
             float l=Float.MAX_VALUE,r=0;for(Row row:rows){l=Math.min(l,row.x);r=Math.max(r,row.x+row.width);}
             rect(l,first.y,r,first.y+t,border(first,s));rect(l,last.y+rh-t,r,last.y+rh,border(last,s));
-            for(Row row:rows){rect(l,row.y,l+t,row.y+rh+gap,border(row,s));rect(r-t,row.y,r,row.y+rh+gap,border(row,s));}return;
+            for(Row row:rows){float bottom=Math.min(last.y+rh,row.y+rh+gap);rect(l,row.y,l+t,bottom,border(row,s));rect(r-t,row.y,r,bottom,border(row,s));}return;
         }
         for(int i=0;i<rows.size();i++){
             Row r=rows.get(i);int c=border(r,s);
-            if(s.outline.is("Rows")||gap>0){RenderUtils.roundedOutline((int)r.x,(int)r.y,(int)(r.x+r.width),(int)(r.y+rh),s.radius.getFloat(),t,c);continue;}
+            if(s.outline.is("Rows")||gap>0){RenderUtils.roundedOutline((int)r.x,(int)r.y,(int)(r.x+r.width),(int)(r.y+rh),s.radius.getFloat()*s.scale.getFloat(),t,c);continue;}
             rect(r.x,r.y,r.x+t,r.y+rh,c);rect(r.x+r.width-t,r.y,r.x+r.width,r.y+rh,c);
             if(i==0)rect(r.x,r.y,r.x+r.width,r.y+t,c);
             if(i+1==rows.size())rect(r.x,r.y+rh-t,r.x+r.width,r.y+rh,c);

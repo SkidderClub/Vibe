@@ -121,6 +121,7 @@ public final class MoveFixModule extends Module {
             fakeRotation = null;
             previousRenderRotation = null;
             rotationOwner = null;
+            clearForcedMovement(null);
             transported = false;
         }
     }
@@ -382,6 +383,9 @@ public final class MoveFixModule extends Module {
     /** Tarasande's PreventBackwardsSprinting test, adapted to 1.8.9's flag. */
     private float sprintForward(float vanillaForward, Object entity) {
         FakeRotation rotation = activeRotation();
+        // Forced vectors already use the server yaw. Comparing them to the
+        // camera yaw incorrectly prevents a bot from sprinting sideways/backwards.
+        if (forcedMovementOwner != null && entity == Minecraft.getMinecraft().thePlayer) return vanillaForward;
         if (rotation == null || !correctMovement.is("Prevent Backwards Sprinting")
                 || entity != Minecraft.getMinecraft().thePlayer) {
             return vanillaForward;
@@ -610,6 +614,11 @@ public final class MoveFixModule extends Module {
             } else {
                 module.correctKeyboardInput(this);
             }
+            // Gothaj's Jump velocity mode listens to the finalized movement
+            // input, after physical keys and MoveFix correction are known.
+            VelocityModule velocity = Vibe.getInstance() == null ? null
+                    : Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
+            if (velocity != null) velocity.applyJumpInput(this);
         }
     }
 

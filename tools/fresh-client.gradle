@@ -1,7 +1,9 @@
-// Used only by run-fresh.bat. Never deletes, copies or reuses a user's game data.
+// Used only by run-fresh.bat. Worlds and Vibe data stay isolated; vanilla
+// display preferences are shared so fresh launches do not reset video options.
 allprojects {
     afterEvaluate {
         tasks.named('runClient', JavaExec).configure {
+            File freshGameDirectory = null
             doFirst { clientTask ->
                 def originalDirectory = clientTask.workingDir
                 // RunConfig expands these placeholders only inside exec(). Keep
@@ -17,6 +19,16 @@ allprojects {
                 def freshRoot = project.file('run/first-start').toPath().toAbsolutePath().normalize()
                 java.nio.file.Files.createDirectories(freshRoot)
                 def freshGame = java.nio.file.Files.createTempDirectory(freshRoot, 'session-').toFile()
+                freshGameDirectory = freshGame
+                // A fresh launch starts with no world/Vibe data, but still
+                // respects the user's normal vanilla display preferences.
+                File baselineDirectory = project.file('run/client').canonicalFile
+                if (baselineDirectory.isDirectory()) {
+                    File[] optionFiles = baselineDirectory.listFiles()
+                    if (optionFiles != null) optionFiles.findAll { file ->
+                        file.isFile() && file.name.startsWith('options') && file.name.endsWith('.txt')
+                    }.each { source -> project.copy { from source; into freshGame } }
+                }
                 def parameters = new ArrayList(clientTask.args)
                 int position = parameters.indexOf('--gameDir')
                 if (position >= 0) parameters[position + 1] = freshGame.absolutePath
@@ -24,6 +36,20 @@ allprojects {
                 clientTask.setArgs(parameters)
                 clientTask.workingDir freshGame
                 logger.lifecycle('[Vibe] Fresh first-start profile: ' + freshGame.absolutePath)
+            }
+            doLast {
+                // Preserve renderer/video settings made during a fresh run.
+                // Vibe profiles and worlds remain isolated in its temporary
+                // directory, so this does not change fresh-launch semantics.
+                if (freshGameDirectory == null || !freshGameDirectory.isDirectory()) return
+                File baselineDirectory = project.file('run/client').canonicalFile
+                if (!baselineDirectory.isDirectory() && !baselineDirectory.mkdirs()) return
+                File[] optionFiles = freshGameDirectory.listFiles()
+                if (optionFiles == null) return
+                optionFiles.findAll { file -> file.isFile() && file.name.startsWith('options') && file.name.endsWith('.txt') }.each { source ->
+                    project.copy { from source; into baselineDirectory }
+                }
+                logger.lifecycle('[Vibe] Saved fresh-launch display options for the next run.')
             }
         }
     }

@@ -3,9 +3,8 @@ package dev.vibe.ui.effect;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL13;
 
-/** Torus-effect shader infrastructure applied to a refractive, pixel-perfect HUD glass mask. */
+/** Clear HUD glass with a curved, refractive rim in physical framebuffer pixels. */
 public final class LiquidGlassRenderer implements AutoCloseable {
     private final SceneTexture scene = new SceneTexture();
     private EffectProgram program;
@@ -28,37 +27,33 @@ public final class LiquidGlassRenderer implements AutoCloseable {
             int width = minecraft.displayWidth, height = minecraft.displayHeight;
             scene.capture(0, 0, width, height, false);
             if (program == null) program = new EffectProgram("fullscreen.vert", "LiquidGlass.frag");
-            float originX = left * scale / (float) width;
-            float originY = 1.0F - bottom * scale / (float) height;
-            float sizeX = (right - left) * scale / (float) width;
-            float sizeY = (bottom - top) * scale / (float) height;
             program.bind();
             FogRenderer.texture(0, scene.color);
             program.integer("Tex0", 0);
-            program.vec2("Origin", originX, originY);
-            program.vec2("Size", sizeX, sizeY);
-            program.scalar("Radius", Math.min(radius * scale / (float) height, Math.min(sizeX, sizeY) * .5F));
+            program.vec2("Origin", left * scale, height - bottom * scale);
+            program.vec2("Size", (right - left) * scale, (bottom - top) * scale);
+            program.scalar("Radius", Math.max(0, Math.min(radius, Math.min(right - left, bottom - top) * .5F)) * scale);
+            program.scalar("Scale", scale);
             program.vec2("Texel", 1.0F / width, 1.0F / height);
-            program.scalar("Time", (float) ((System.nanoTime() / 1000000000L) % 10000L));
             program.scalar("Blur", Math.max(0.0F, Math.min(8.0F, blur)));
             program.scalar("Refraction", Math.max(0.0F, Math.min(10.0F, refraction)));
             program.scalar("Opacity", Math.max(.15F, Math.min(1.0F, opacity)));
             program.vec3("Tint", ((tint >> 16) & 255) / 255.0F, ((tint >> 8) & 255) / 255.0F, (tint & 255) / 255.0F);
-            GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPushMatrix(); GL11.glLoadIdentity();
-            GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPushMatrix(); GL11.glLoadIdentity();
-            try {
-                GL11.glDisable(GL11.GL_DEPTH_TEST); GL11.glEnable(GL11.GL_BLEND);
-                GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-                FogRenderer.quad();
-            } finally {
-                GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPopMatrix();
-                GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPopMatrix();
-                GL11.glMatrixMode(GL11.GL_MODELVIEW);
-            }
+            GL11.glViewport(0, 0, width, height);
+            // The vertex shader already uses clip coordinates. Restrict shading
+            // to this pane instead of running the glass shader over the screen.
+            int x = Math.max(0, left * scale), y = Math.max(0, height - bottom * scale);
+            GL11.glEnable(GL11.GL_SCISSOR_TEST);
+            GL11.glScissor(x, y, Math.max(0, Math.min(width, right * scale) - x),
+                    Math.max(0, Math.min(height, height - top * scale) - y));
+            GL11.glDisable(GL11.GL_DEPTH_TEST); GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            FogRenderer.quad();
             return true;
-        } catch (Exception ignored) {
+        } catch (Exception failure) {
             failed = true;
             close();
+            org.apache.logging.log4j.LogManager.getLogger("Vibe").warn("LiquidGlass renderer unavailable", failure);
             return false;
         }
     }

@@ -17,7 +17,7 @@ public final class FovChangerModule extends Module {
 
     public void tick() {
         if (isEnabled() && Vibe.getInstance().getMinecraft().gameSettings != null) {
-            Vibe.getInstance().getMinecraft().gameSettings.fovSetting = fov.getFloat();
+            Vibe.getInstance().getMinecraft().gameSettings.fovSetting = HypixelModule.visualsSuppressed() && previousFov >= 0 ? previousFov : fov.getFloat();
         }
     }
 

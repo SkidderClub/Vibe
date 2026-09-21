@@ -28,6 +28,7 @@ import java.awt.Color;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.util.ResourceLocation;
@@ -63,6 +64,7 @@ public final class VibeClickGui extends GuiScreen {
     private final XanaxWorkspace xanax = new XanaxWorkspace();
     private Setting<?> editing;
     private String editBuffer = "";
+    private GuiTextField textEditor;
     private Panel dragging;
     private Target draggingSlider;
     private RangeSetting.Drag rangeDrag;
@@ -85,6 +87,7 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     public void initGui() {
+        Keyboard.enableRepeatEvents(true);
         int columns = width >= 1000 ? Category.values().length : (width >= 650 ? 3 : 2);
         int index = 0;
         for (Category category : Category.values()) {
@@ -490,6 +493,7 @@ public final class VibeClickGui extends GuiScreen {
     }
 
     private int settingControlLeft(Setting<?> setting, int left, int right, boolean skeet) {
+        if (setting instanceof StringSetting) return left + Math.round((right - left) * .45F);
         if (setting instanceof NumberSetting || setting instanceof RangeSetting) return left + Math.round((right - left) * .50F);
         if (setting instanceof ColorSetting) return right - (skeet ? 18 : 46);
         String value = "";
@@ -589,10 +593,17 @@ public final class VibeClickGui extends GuiScreen {
             return y;
         }
         if (setting instanceof StringSetting) {
-            String value = editing == setting ? editBuffer : ((StringSetting) setting).getValue();
-            fontRendererObj.drawStringWithShadow(ellipsize(value, 15), right - 5 - fontRendererObj.getStringWidth(ellipsize(value, 15)), y + 4,
-                    editing == setting ? RenderUtils.TEXT : RenderUtils.MUTED);
-            targets.add(new Target(TargetType.TEXT, left, y, right, y + 17, null, setting, -1));
+            Gui.drawRect(controlLeft, y + 2, right - 3, y + 15, editing == setting ? 0xFF303B50 : 0xFF202631);
+            if (editing == setting && textEditor != null) {
+                textEditor.xPosition = controlLeft + 3;
+                textEditor.yPosition = y + 4;
+                textEditor.width = Math.max(1, right - controlLeft - 9);
+                textEditor.drawTextBox();
+            } else {
+                String value = ((StringSetting) setting).getValue();
+                drawControlValue(value.isEmpty() ? "..." : value, controlLeft + 3, right - 6, y + 4, RenderUtils.TEXT);
+            }
+            targets.add(new Target(TargetType.TEXT, controlLeft, y, right - 3, y + 17, null, setting, -1));
             return y + 18;
         }
         if (setting instanceof MultiSelectSetting) {
@@ -641,6 +652,16 @@ public final class VibeClickGui extends GuiScreen {
         if (isNeverLoseTheme()) { neverLose.click(mouseX, mouseY, mouseButton); return; }
         if (isAugustusTheme()) {
             return;
+        }
+        if (editing instanceof StringSetting && textEditor != null) {
+            if (mouseX >= textEditor.xPosition - 3 && mouseX < textEditor.xPosition + textEditor.width + 3
+                    && mouseY >= textEditor.yPosition - 4 && mouseY < textEditor.yPosition + 13) {
+                textEditor.mouseClicked(mouseX, mouseY, mouseButton);
+                return;
+            }
+            commitEditing();
+            editing = null;
+            textEditor = null;
         }
         if (colorPopup != null && colorPopup.contains(mouseX, mouseY)) {
             handleColorPopupClick(mouseX, mouseY, mouseButton);
@@ -742,6 +763,15 @@ public final class VibeClickGui extends GuiScreen {
             commitEditing();
             editing = setting;
             editBuffer = setting instanceof ColorSetting ? ((ColorSetting) setting).getHex() : ((StringSetting) setting).getValue();
+            if (setting instanceof StringSetting) {
+                textEditor = new GuiTextField(0, fontRendererObj, target.left + 3, target.top + 4,
+                        Math.max(1, target.right - target.left - 6), 9);
+                textEditor.setMaxStringLength(((StringSetting) setting).getMaxLength());
+                textEditor.setEnableBackgroundDrawing(false);
+                textEditor.setText(editBuffer);
+                textEditor.setFocused(true);
+                textEditor.setCanLoseFocus(false);
+            }
         } else if (target.type == TargetType.MULTI_TOGGLE) {
             MultiSelectSetting multi = (MultiSelectSetting) setting;
             if (!openSelections.add(multi)) {
@@ -782,6 +812,7 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     public void updateScreen() {
+        if (textEditor != null) textEditor.updateCursorCounter();
         if (draggingSkeet) {
             int boardWidth = boardWidth();
             int boardHeight = boardHeight();
@@ -907,7 +938,15 @@ public final class VibeClickGui extends GuiScreen {
                 return;
             }
             if (keyCode == Keyboard.KEY_ESCAPE) {
+                commitEditing();
                 editing = null;
+                return;
+            }
+            if (editing instanceof StringSetting && textEditor != null) {
+                if (textEditor.textboxKeyTyped(typedChar, keyCode)) {
+                    editBuffer = textEditor.getText();
+                    commitEditing();
+                }
                 return;
             }
             if (keyCode == Keyboard.KEY_BACK && !editBuffer.isEmpty()) {
@@ -935,6 +974,7 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     public void onGuiClosed() {
+        Keyboard.enableRepeatEvents(false);
         neverLose.close();
         xanax.close();
         AugustusImGui.closed();

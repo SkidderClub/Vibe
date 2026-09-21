@@ -25,7 +25,7 @@ public final class WindowsMediaBridge implements AutoCloseable {
         Path directory=null;
         try {
             directory=Files.createTempDirectory("vibe-media-");
-            copy("media-session.ps1",directory);copy("audio-loopback.ps1",directory);copy("AudioLoopback.cs",directory);
+            copy("media-session.ps1",directory);copy("media-artwork.ps1",directory);copy("audio-loopback.ps1",directory);copy("AudioLoopback.cs",directory);
             List<String> command=new ArrayList<String>(Arrays.asList("powershell.exe","-NoLogo","-NoProfile","-NonInteractive","-WindowStyle","Hidden",
                     "-ExecutionPolicy","Bypass","-File",directory.resolve(audio?"audio-loopback.ps1":"media-session.ps1").toString(),
                     "-ParentId",java.lang.management.ManagementFactory.getRuntimeMXBean().getName().split("@")[0]));
@@ -34,7 +34,7 @@ public final class WindowsMediaBridge implements AutoCloseable {
             process=new ProcessBuilder(command).redirectErrorStream(true).start();
             if(closed){process.destroyForcibly();return;}
             if(audio)status.accept("Waiting for system audio");
-            String lastArtwork="";BufferedImage artwork=null;
+            String lastArtwork="", lastArtworkError="";BufferedImage artwork=null;
             try(BufferedReader reader=new BufferedReader(new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8))) {
                 String line;
                 while(!closed&&(line=reader.readLine())!=null) {
@@ -50,6 +50,10 @@ public final class WindowsMediaBridge implements AutoCloseable {
                         JsonObject json=new JsonParser().parse(line).getAsJsonObject();
                         if(json.has("error")){status.accept(json.get("error").getAsString());continue;}
                         if(audio)continue;
+                        String artworkError=string(json,"artworkError");
+                        if(!artworkError.isEmpty()&&!artworkError.equals(lastArtworkError))
+                            org.apache.logging.log4j.LogManager.getLogger("Vibe-Music").warn("Could not read media artwork: {}",artworkError);
+                        lastArtworkError=artworkError;
                         String encoded=string(json,"artwork");
                         if(!encoded.equals(lastArtwork)) {
                             lastArtwork=encoded;artwork=null;
@@ -64,7 +68,7 @@ public final class WindowsMediaBridge implements AutoCloseable {
         } catch(Exception e){if(!closed)status.accept("Windows media unavailable: "+e.getClass().getSimpleName());}
         finally {
             Process current=process;if(current!=null&&current.isAlive())current.destroyForcibly();
-            if(directory!=null)for(String name:new String[]{"media-session.ps1","audio-loopback.ps1","AudioLoopback.cs",""})
+            if(directory!=null)for(String name:new String[]{"media-session.ps1","media-artwork.ps1","audio-loopback.ps1","AudioLoopback.cs",""})
                 try{Files.deleteIfExists(name.isEmpty()?directory:directory.resolve(name));}catch(IOException ignored){}
         }
     }
