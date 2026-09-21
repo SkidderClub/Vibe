@@ -2,10 +2,13 @@ package dev.vibe.network;
 
 import dev.vibe.Vibe;
 import dev.vibe.module.impl.BacktrackModule;
-import dev.vibe.module.impl.FakeLagModule;
 import dev.vibe.module.impl.GirlfriendModule;
+import dev.vibe.module.impl.LagRangeModule;
 import dev.vibe.module.impl.MoveFixModule;
 import dev.vibe.module.impl.CuteVisualsModule;
+import dev.vibe.module.impl.VelocityModule;
+import dev.vibe.module.impl.NoFallModule;
+import dev.vibe.module.impl.KillAuraModule;
 import dev.vibe.script.ScriptRuntime;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
@@ -27,7 +30,7 @@ import net.minecraft.network.play.server.S08PacketPlayerPosLook;
  */
 public final class PacketDelayService {
 
-    public enum Owner { FAKE_LAG, BACKTRACK }
+    public enum Owner { LAG_RANGE, BACKTRACK }
 
     private static final String HANDLER = "vibe_packet_delay";
     private static final PacketDelayService INSTANCE = new PacketDelayService();
@@ -84,6 +87,12 @@ public final class PacketDelayService {
         MoveFixModule moveFix = Vibe.getInstance() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
         if (moveFix != null) moveFix.applyToOutgoing(packet);
+        KillAuraModule aura = Vibe.getInstance() == null ? null
+                : Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
+        if (aura != null && aura.deferAacRelease(packet)) {
+            promise.trySuccess();
+            return true;
+        }
         // These modules receive the exact client-to-server dig lifecycle.
         // They queue it for their next main-thread tick, so this Netty path
         // never reads or mutates the Minecraft world directly.
@@ -96,6 +105,9 @@ public final class PacketDelayService {
             CuteVisualsModule cuteVisuals = Vibe.getInstance().getModuleManager().getModule(CuteVisualsModule.class);
             if (cuteVisuals != null) cuteVisuals.onDigging((C07PacketPlayerDigging) packet);
         }
+        NoFallModule noFall = Vibe.getInstance() == null ? null
+                : Vibe.getInstance().getModuleManager().getModule(NoFallModule.class);
+        if (noFall != null) noFall.handleOutbound(packet);
         ScriptRuntime scripts = Vibe.getInstance() == null ? null : Vibe.getInstance().getScriptRuntime();
         if (scripts != null && !scripts.outbound(packet)) {
             // Cancelling at the Netty boundary must also complete the promise;
@@ -104,16 +116,12 @@ public final class PacketDelayService {
             return true;
         }
         if (scripts != null) scripts.dispatched(packet);
-        FakeLagModule fakeLag = Vibe.getInstance() == null ? null
-                : Vibe.getInstance().getModuleManager().getModule(FakeLagModule.class);
-        if (fakeLag == null || !fakeLag.isEnabled()) return false;
-        FakeLagModule.PacketAction action = fakeLag.classify(packet);
-        if (action == FakeLagModule.PacketAction.FLUSH) {
-            release(outbound, Long.MAX_VALUE, true, Owner.FAKE_LAG);
-            return false;
-        }
-        if (action != FakeLagModule.PacketAction.QUEUE) return false;
-        queue(outbound, new Entry(Owner.FAKE_LAG, packet, ctx, promise, nextRelease(false, fakeLag.getDelay().getInt())));
+        LagRangeModule lagRange = Vibe.getInstance() == null ? null
+                : Vibe.getInstance().getModuleManager().getModule(LagRangeModule.class);
+        if (lagRange == null || !lagRange.shouldBlink(packet)) return false;
+        // Gothaj's BlinkComponent retains movement until LagRange releases a
+        // selected packet. It never assigns an automatic outbound deadline.
+        queue(outbound, new Entry(Owner.LAG_RANGE, packet, ctx, promise, Long.MAX_VALUE));
         return true;
     }
 
@@ -127,6 +135,9 @@ public final class PacketDelayService {
                 }
             });
         }
+        VelocityModule velocity = Vibe.getInstance() == null ? null
+                : Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
+        if (velocity != null && velocity.handleInbound(packet)) return true;
         ScriptRuntime scripts = Vibe.getInstance() == null ? null : Vibe.getInstance().getScriptRuntime();
         if (scripts != null && !scripts.inbound(packet)) return true;
         BacktrackModule backtrack = Vibe.getInstance() == null ? null
@@ -191,8 +202,58 @@ public final class PacketDelayService {
     }
 
     public void flushAll() {
-        flush(Owner.FAKE_LAG);
+        flush(Owner.LAG_RANGE);
         flush(Owner.BACKTRACK);
+    }
+
+    /** Snapshot of the retained outbound stream in original send order. */
+    public List<Packet<?>> queuedOutbound(Owner owner) {
+        List<Packet<?>> packets = new java.util.ArrayList<Packet<?>>();
+        for (Entry entry : outbound) if (entry.owner == owner) packets.add(entry.packet);
+        return packets;
+    }
+
+    /** Gothaj BlinkComponent's one-packet smart release. */
+    public void releaseNextOutbound(final Owner owner) {
+        Channel channel = installedChannel;
+        if (channel == null || !channel.isOpen()) return;
+        channel.eventLoop().execute(new Runnable() {
+            @Override public void run() {
+                Entry selected = null;
+                for (Entry entry : outbound) {
+                    if (entry.owner == owner) { selected = entry; break; }
+                }
+                if (selected == null) return;
+                outbound.remove(selected);
+                try {
+                    selected.context.write(selected.packet, selected.promise);
+                    if (context != null) context.flush();
+                } catch (Throwable ignored) {
+                    // A disconnect can race the selected release.
+                }
+            }
+        });
+    }
+
+    /** Gothaj BlinkComponent's releasePacketsToMS: dispatch retained packets
+     * once they have aged past the requested lag interval. */
+    public void releaseOutboundOlderThan(final Owner owner, final long milliseconds) {
+        final Channel channel = installedChannel;
+        if (channel == null || !channel.isOpen()) return;
+        final long cutoff = System.currentTimeMillis() - Math.max(0L, milliseconds);
+        channel.eventLoop().execute(new Runnable() {
+            @Override public void run() {
+                java.util.ArrayList<Entry> ready = new java.util.ArrayList<Entry>();
+                for (Entry entry : outbound) {
+                    if (entry.owner == owner && entry.createdAt <= cutoff) ready.add(entry);
+                }
+                for (Entry entry : ready) {
+                    outbound.remove(entry);
+                    try { entry.context.write(entry.packet, entry.promise); } catch (Throwable ignored) { }
+                }
+                if (!ready.isEmpty() && context != null) context.flush();
+            }
+        });
     }
 
     private void removeOwner(List<Entry> entries, Owner owner) {
@@ -250,6 +311,7 @@ public final class PacketDelayService {
         private final ChannelHandlerContext context;
         private final ChannelPromise promise;
         private final long releaseAt;
+        private final long createdAt;
 
         private Entry(Owner owner, Packet<?> packet, ChannelHandlerContext context, ChannelPromise promise, long releaseAt) {
             this.owner = owner;
@@ -257,6 +319,7 @@ public final class PacketDelayService {
             this.context = context;
             this.promise = promise;
             this.releaseAt = releaseAt;
+            this.createdAt = System.currentTimeMillis();
         }
     }
 }

@@ -20,6 +20,8 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemSword;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.client.C07PacketPlayerDigging;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.MovingObjectPosition;
@@ -30,7 +32,7 @@ import org.lwjgl.input.Mouse;
 /** Selects rotations before movement; supplies clicks in vanilla's input pass. */
 public final class KillAuraModule extends Module {
     private final RangeSetting reach = addSetting(new RangeSetting("Reach", 3.0D, 3.0D, 3.0D, 6.5D, 0.05D));
-    private final ModeSetting autoblock = addSetting(new ModeSetting("Autoblock Mode", "None", "None", "Vanilla", "Fake", "Legit"));
+    private final ModeSetting autoblock = addSetting(new ModeSetting("Autoblock Mode", "None", "None", "Vanilla", "Fake", "Legit", "AAC330"));
     private final BooleanSetting onlyRightClick = addSetting(new BooleanSetting("Only When Rightclicking", false,
             () -> realBlockMode()));
     private final NumberSetting blockingRange = addSetting(new NumberSetting("Blocking Range", 3.0D, 1.0D, 7.0D, 0.1D,
@@ -72,6 +74,7 @@ public final class KillAuraModule extends Module {
     private boolean attackOwned;
     private boolean useOwned;
     private boolean blockOwned;
+    private boolean aacReleaseResubmit;
     private boolean visualBlocking;
     private boolean hitOverridden;
     private MovingObjectPosition savedMouseOver;
@@ -130,6 +133,7 @@ public final class KillAuraModule extends Module {
         }
         if (!previousBlockMode.equals(autoblock.getValue())) {
             legitBlockUntil = nextLegitBlock = 0L;
+            releaseOwnedBlock();
             previousBlockMode = autoblock.getValue();
         }
         boolean inClickRange = distanceTo(target) <= clickingRange.getDouble();
@@ -304,7 +308,7 @@ public final class KillAuraModule extends Module {
     private Vec3 eyes() { return minecraft.thePlayer.getPositionEyes(1.0F); }
     private double clamp(double value, double min, double max) { return Math.max(min, Math.min(max, value)); }
     private double sample(RangeSetting setting) { return setting.getMin() + random.nextDouble() * (setting.getMax() - setting.getMin()); }
-    private boolean realBlockMode() { return autoblock.is("Vanilla") || autoblock.is("Legit"); }
+    private boolean realBlockMode() { return autoblock.is("Vanilla") || autoblock.is("Legit") || autoblock.is("AAC330"); }
     private boolean rightMouseDown() { return Mouse.isCreated() && Mouse.isButtonDown(1); }
     private boolean swordHeld() {
         ItemStack held = minecraft.thePlayer == null ? null : minecraft.thePlayer.getHeldItem();
@@ -322,6 +326,27 @@ public final class KillAuraModule extends Module {
         if (!blockOwned || minecraft.thePlayer == null) return;
         if (minecraft.thePlayer.isBlocking()) setUseKey(false);
         else blockOwned = false;
+    }
+
+    /**
+     * LiquidSense's AAC autoblock alternates release packets: the first
+     * RELEASE_USE_ITEM is cancelled and pushed through the normal queue once
+     * more; the replay is allowed. PacketDelayService calls this at that
+     * boundary, so packet order remains Minecraft's original order.
+     */
+    public boolean deferAacRelease(Packet<?> packet) {
+        if (!isEnabled() || !autoblock.is("AAC330") || !swordHeld()
+                || !(packet instanceof C07PacketPlayerDigging)
+                || ((C07PacketPlayerDigging) packet).getStatus() != C07PacketPlayerDigging.Action.RELEASE_USE_ITEM) return false;
+        if (aacReleaseResubmit) { aacReleaseResubmit = false; return false; }
+        aacReleaseResubmit = true;
+        final Packet<?> replay = packet;
+        minecraft.addScheduledTask(new Runnable() {
+            @Override public void run() {
+                if (aacReleaseResubmit && minecraft.getNetHandler() != null) minecraft.getNetHandler().addToSendQueue(replay);
+            }
+        });
+        return true;
     }
 
     private void overrideHit(MovingObjectPosition hit) {
@@ -364,7 +389,7 @@ public final class KillAuraModule extends Module {
         clicks.reset();
     }
 
-    @Override protected void onDisable() { clear(); }
+    @Override protected void onDisable() { aacReleaseResubmit = false; releaseOwnedBlock(); clear(); }
 
     private MoveFixModule moveFix() {
         Vibe vibe = Vibe.getInstance();

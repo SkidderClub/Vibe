@@ -5,75 +5,116 @@ import dev.vibe.module.Module;
 import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.MultiSelectSetting;
 import dev.vibe.setting.NumberSetting;
+import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Random;
 import net.minecraft.client.Minecraft;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.S12PacketEntityVelocity;
+import net.minecraft.util.MovementInput;
 import org.lwjgl.input.Keyboard;
 
-/** Scales knockback during the vanilla hurt window. */
+/** Packet and input velocity controls with individually selectable modes. */
 public final class VelocityModule extends Module {
 
-    private final MultiSelectSetting modes = addSetting(new MultiSelectSetting("Modes",
-            Arrays.asList("Normal", "Jump"), Collections.singletonList("Normal")));
-    private final NumberSetting horizontal = addSetting(new NumberSetting("Horizontal", 90.0D, 0.0D, 100.0D, 1.0D,
-            () -> modes.isSelected("Normal")));
-    private final NumberSetting vertical = addSetting(new NumberSetting("Vertical", 100.0D, 0.0D, 100.0D, 1.0D,
-            () -> modes.isSelected("Normal")));
-    private final NumberSetting chance = addSetting(new NumberSetting("Jump Chance", 100.0D, 0.0D, 100.0D, 1.0D,
-            () -> modes.isSelected("Jump")));
-    private final NumberSetting delay = addSetting(new NumberSetting("Jump Delay", 0.0D, 0.0D, 10.0D, 1.0D,
-            () -> modes.isSelected("Jump")));
-    private final NumberSetting positionThreshold = addSetting(new NumberSetting("Position Threshold (ms)", 100.0D,
-            0.0D, 1000.0D, 10.0D));
+    private final MultiSelectSetting mode = addSetting(new MultiSelectSetting("Modes",
+            Arrays.asList("Normal", "Jump", "AACReverse", "Cancel"), Arrays.asList("Normal")));
+    private final NumberSetting horizontal = addSetting(new NumberSetting("Horizontal", 0.0D, -100.0D, 100.0D, 1.0D,
+            () -> mode.isSelected("Normal")));
+    private final NumberSetting vertical = addSetting(new NumberSetting("Vertical", 0.0D, -100.0D, 100.0D, 1.0D,
+            () -> mode.isSelected("Normal")));
+    private final NumberSetting reverseStrength = addSetting(new NumberSetting("Reverse Strength", 1.0D, 0.1D, 1.0D, 0.05D,
+            () -> mode.isSelected("AACReverse")));
+    private final BooleanSetting onlyPlayerDamage = addSetting(new BooleanSetting("Only Player Damage", true));
 
     private final Minecraft minecraft = Minecraft.getMinecraft();
-    private final Random random = new Random();
-    private int hurtTicks;
-    private boolean jumpPending;
-    private boolean jumpTriggered;
-    private long positionCorrectionUntil;
+    private static Field motionX, motionY, motionZ;
+    private boolean velocityInput;
 
     public VelocityModule() {
         super("Velocity", "Reduce received knockback", Category.COMBAT, Keyboard.KEY_NONE);
     }
 
+    /** Handles S12 in the inbound packet path before the game applies it. */
+    public boolean handleInbound(Packet<?> packet) {
+        if (!isEnabled() || minecraft.thePlayer == null || !(packet instanceof S12PacketEntityVelocity)) return false;
+        S12PacketEntityVelocity velocity = (S12PacketEntityVelocity) packet;
+        if (onlyPlayerDamage.isEnabled() && velocity.getEntityID() != minecraft.thePlayer.getEntityId()) return false;
+        if (mode.isSelected("Cancel")) return true;
+        if (mode.isSelected("AACReverse")) {
+            velocityInput = true;
+            return false;
+        }
+        if (!mode.isSelected("Normal") || velocity.getEntityID() != minecraft.thePlayer.getEntityId()) return false;
+        int horizontalValue = horizontal.getInt();
+        int verticalValue = vertical.getInt();
+        writeVelocity(velocity, velocity.getMotionX() / 100 * horizontalValue,
+                velocity.getMotionY() / 100 * verticalValue, velocity.getMotionZ() / 100 * horizontalValue);
+        return horizontalValue == 0 && verticalValue == 0;
+    }
+
+    /** Reverse mode is the source-backed LiquidSense/AAC reverse branch. */
     public void tick() {
-        if (!isEnabled() || minecraft.thePlayer == null || minecraft.thePlayer.hurtTime <= 0
-                || System.currentTimeMillis() < positionCorrectionUntil) {
-            if (minecraft.thePlayer == null || minecraft.thePlayer.hurtTime <= 0) {
-                hurtTicks = 0;
-                jumpPending = false;
-                jumpTriggered = false;
-            }
+        if (!isEnabled() || minecraft.thePlayer == null || !mode.isSelected("AACReverse")) {
+            velocityInput = false;
             return;
         }
-        if (minecraft.thePlayer.hurtTime == minecraft.thePlayer.maxHurtTime) {
-            jumpPending = true;
-            jumpTriggered = false;
-            hurtTicks = 0;
-        }
-        if (hurtTicks++ < delay.getInt()) {
-            return;
-        }
-        if (modes.isSelected("Normal")) {
-            minecraft.thePlayer.motionX *= horizontal.getDouble() / 100.0D;
-            minecraft.thePlayer.motionZ *= horizontal.getDouble() / 100.0D;
-            minecraft.thePlayer.motionY *= vertical.getDouble() / 100.0D;
-        }
-        if (modes.isSelected("Jump") && jumpPending && !jumpTriggered && minecraft.thePlayer.onGround
-                && !minecraft.thePlayer.isInWater() && !minecraft.thePlayer.isOnLadder()
-                && minecraft.thePlayer.motionY <= 0.0D) {
-            if (random.nextDouble() * 100.0D < chance.getDouble()) {
-                minecraft.thePlayer.jump();
-            }
-            jumpTriggered = true;
-            jumpPending = false;
+        EntityLivingBase player = minecraft.thePlayer;
+        if (!velocityInput) return;
+        if (player.hurtTime > 0 && !player.onGround && !CombatRangeSupport.isInWeb(player)
+                && !AacMovementSupport.inLiquid(minecraft.thePlayer)) {
+            AacMovementSupport.strafe(minecraft.thePlayer,
+                    AacMovementSupport.horizontalSpeed(minecraft.thePlayer) * reverseStrength.getDouble());
+        } else if (player.hurtTime <= 0 || player.onGround) {
+            velocityInput = false;
         }
     }
 
-    public void markPositionCorrection() {
-        positionCorrectionUntil = System.currentTimeMillis() + positionThreshold.getInt();
-        hurtTicks = 0;
+    /** Exact Gothaj Jump move-input branch. */
+    public void applyJumpInput(MovementInput input) {
+        if (!isEnabled() || !mode.isSelected("Jump") || input == null || minecraft.thePlayer == null
+                || minecraft.objectMouseOver == null || minecraft.objectMouseOver.entityHit == null) return;
+        EntityLivingBase player = minecraft.thePlayer;
+        if (player.hurtTime <= 0 || player.isBurning() || CombatRangeSupport.isInWeb(player)) return;
+        input.moveForward = 1.0F;
+        if (player.hurtTime > 8) input.jump = true;
+    }
+
+    @Override protected void onDisable() {
+        velocityInput = false;
+    }
+
+    private static void writeVelocity(S12PacketEntityVelocity packet, int x, int y, int z) {
+        try {
+            if (motionX == null) {
+                motionX = field("motionX", "field_149415_b", 1);
+                motionY = field("motionY", "field_149416_c", 2);
+                motionZ = field("motionZ", "field_149414_d", 3);
+            }
+            motionX.setInt(packet, x);
+            motionY.setInt(packet, y);
+            motionZ.setInt(packet, z);
+        } catch (ReflectiveOperationException ignored) {
+            // If a nonstandard packet mapping hides the fields, pass S12
+            // unchanged instead of applying a repeated tick mutation.
+        }
+    }
+
+    private static Field field(String name, String obfuscated, int intIndex) throws NoSuchFieldException {
+        for (String candidate : new String[] {name, obfuscated}) {
+            try {
+                Field field = S12PacketEntityVelocity.class.getDeclaredField(candidate);
+                field.setAccessible(true);
+                return field;
+            } catch (NoSuchFieldException ignored) { }
+        }
+        int seen = 0;
+        for (Field field : S12PacketEntityVelocity.class.getDeclaredFields()) {
+            if (field.getType() == Integer.TYPE && seen++ == intIndex) {
+                field.setAccessible(true);
+                return field;
+            }
+        }
+        throw new NoSuchFieldException(name);
     }
 }

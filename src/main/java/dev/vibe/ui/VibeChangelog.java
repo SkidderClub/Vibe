@@ -14,6 +14,7 @@ public final class VibeChangelog {
                     "+ Statistics dashboard with account/global views, graphs and encrypted local records",
                     "+ Name Protect, Flag Detector, ChestStealer title filtering and AimAssist Boost Aim controls",
                     "+ New Hypixel helpers: Murder Mystery detection, BlockParty movement and PitBot pathing",
+                    "+ Gothaj-style LagRange, TickBase and TimerRange combat modules; FakeLag removed",
                     "~ Startup logging, first-run profile migration, themes, scoreboard and blur rendering refined"
             }),
             new Entry("Unreleased", new String[] {

@@ -26,8 +26,10 @@ import dev.vibe.module.impl.GirlfriendModule;
 import dev.vibe.module.impl.Gta7Module;
 import dev.vibe.module.impl.QolModule;
 import dev.vibe.module.impl.VelocityModule;
-import dev.vibe.module.impl.BHopModule;
 import dev.vibe.module.impl.FlyModule;
+import dev.vibe.module.impl.SpeedModule;
+import dev.vibe.module.impl.LongJumpModule;
+import dev.vibe.module.impl.NoFallModule;
 import dev.vibe.module.impl.WaifuModule;
 import dev.vibe.module.impl.HudModule;
 import dev.vibe.module.impl.CustomCrosshairModule;
@@ -41,8 +43,10 @@ import dev.vibe.module.impl.FastBreakModule;
 import dev.vibe.module.impl.AmbienceModule;
 import dev.vibe.module.impl.NesEmulatorModule;
 import dev.vibe.module.impl.WTapModule;
-import dev.vibe.module.impl.FakeLagModule;
 import dev.vibe.module.impl.BacktrackModule;
+import dev.vibe.module.impl.LagRangeModule;
+import dev.vibe.module.impl.TickBaseModule;
+import dev.vibe.module.impl.TimerRangeModule;
 import dev.vibe.module.impl.BedEspModule;
 import dev.vibe.module.impl.BlockChangeEspModule;
 import dev.vibe.module.impl.BlockOverlayModule;
@@ -191,6 +195,14 @@ public final class ClientEvents {
             cosmeticsRenderer.installLayers();
             skeletalRenderer.installLayers();
             PacketDelayService.getInstance().tick();
+            LagRangeModule lagRange = Vibe.getInstance().getModuleManager().getModule(LagRangeModule.class);
+            if (lagRange != null) lagRange.tick();
+            TickBaseModule tickBase = Vibe.getInstance().getModuleManager().getModule(TickBaseModule.class);
+            if (tickBase != null) tickBase.tick();
+            TimerRangeModule timerRange = Vibe.getInstance().getModuleManager().getModule(TimerRangeModule.class);
+            if (timerRange != null) timerRange.tick();
+            NoFallModule noFall = Vibe.getInstance().getModuleManager().getModule(NoFallModule.class);
+            if (noFall != null) noFall.tick();
             ReachModule reach = Vibe.getInstance().getModuleManager().getModule(ReachModule.class);
             if (reach != null) reach.tick();
             // Tool selection must occur before Minecraft consumes the held
@@ -290,13 +302,11 @@ public final class ClientEvents {
             aimAssist.tick();
         }
         VelocityModule velocity = Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
-        if (velocity != null) {
-            velocity.tick();
-        }
-        BHopModule bhop = Vibe.getInstance().getModuleManager().getModule(BHopModule.class);
-        if (bhop != null) {
-            bhop.tick();
-        }
+        if (velocity != null) velocity.tick();
+        SpeedModule speed = Vibe.getInstance().getModuleManager().getModule(SpeedModule.class);
+        if (speed != null) speed.tick();
+        LongJumpModule longJump = Vibe.getInstance().getModuleManager().getModule(LongJumpModule.class);
+        if (longJump != null) longJump.tick();
         FlyModule fly = Vibe.getInstance().getModuleManager().getModule(FlyModule.class);
         if (fly != null) {
             fly.tick();
@@ -329,6 +339,8 @@ public final class ClientEvents {
     @SubscribeEvent
     public void onRenderTick(TickEvent.RenderTickEvent event) {
         if (event.phase == TickEvent.Phase.END) return;
+        TimerRangeModule timerRange = Vibe.getInstance().getModuleManager().getModule(TimerRangeModule.class);
+        if (timerRange != null) timerRange.frameTick();
         AmbienceModule ambience = Vibe.getInstance().getModuleManager().getModule(AmbienceModule.class);
         if (ambience != null) {
             ambience.renderTick();
@@ -686,8 +698,6 @@ public final class ClientEvents {
         if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordAttack((EntityLivingBase) event.target);
         WTapModule wTap = Vibe.getInstance().getModuleManager().getModule(WTapModule.class);
         if (wTap != null) wTap.onAttack((EntityLivingBase) event.target);
-        FakeLagModule fakeLag = Vibe.getInstance().getModuleManager().getModule(FakeLagModule.class);
-        if (fakeLag != null) fakeLag.onAttack();
         BacktrackModule backtrack = Vibe.getInstance().getModuleManager().getModule(BacktrackModule.class);
         if (backtrack != null) backtrack.onAttack((EntityLivingBase) event.target);
         HitmarkerModule hitmarker = Vibe.getInstance().getModuleManager().getModule(HitmarkerModule.class);

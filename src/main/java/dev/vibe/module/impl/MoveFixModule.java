@@ -614,6 +614,11 @@ public final class MoveFixModule extends Module {
             } else {
                 module.correctKeyboardInput(this);
             }
+            // Gothaj's Jump velocity mode listens to the finalized movement
+            // input, after physical keys and MoveFix correction are known.
+            VelocityModule velocity = Vibe.getInstance() == null ? null
+                    : Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
+            if (velocity != null) velocity.applyJumpInput(this);
         }
     }
 

@@ -46,7 +46,7 @@ import org.lwjgl.opengl.GL11;
 /** Owns the movable HUD elements and their standalone JSON layout. */
 public final class HudManager {
 
-    private static final int LAYOUT_VERSION = 2;
+    private static final int LAYOUT_VERSION = 3;
 
     public static final String WATERMARK = "watermark";
     public static final String ARRAY_LIST = "arraylist";
@@ -185,9 +185,9 @@ public final class HudManager {
         }
         // The blur texture supplies the depth. A light tinted surface keeps
         // it legible without turning the rounded widget into a dark slab.
-        drawHudSurface(hud, left, top, left + width, top + 26);
+        drawHudSurface(hud, watermark, left, top, left + width, top + 26);
         if (hud.getWatermarkOutline().isEnabled()) {
-            drawHudOutline(left, top, left + width, top + 26, hudOutlineColor(hud, 0.0F));
+            drawHudOutline(watermark, hud, left, top, left + width, top + 26, hudOutlineColor(hud, 0.0F));
         }
         int textLeft = left + (width - font.getStringWidth(text)) / 2;
         int textTop = top + (26 - font.FONT_HEIGHT) / 2;
@@ -209,13 +209,15 @@ public final class HudManager {
     }
 
     private boolean blurEnabled(String element) {
-        // Only widgets with an opaque Skeet surface suppress their blur.
-        boolean unthemed = BlurModule.ARRAY_LIST.equals(element) || STALKER.equals(element) || SCOREBOARD.equals(element);
-        if (isSkeet() && !unthemed) return false;
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        if (hud == null) return false;
+        String activeTheme = theme(getElement(element), hud);
+        // A widget's own theme decides its backdrop.  The old global setting
+        // remains the fallback for layouts created before per-widget themes.
+        if ("Skeet".equalsIgnoreCase(activeTheme)) return false;
         // Glass surfaces composite their own rounded blur so the blur stays
         // inside their curved silhouette.
-        if (hud != null && hud.getMode().is("LiquidGlass")) return false;
+if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgnoreCase(activeTheme)) return false;
         BlurModule blur = Vibe.getInstance().getModuleManager().getModule(BlurModule.class);
         return blur != null && blur.isEnabled() && blur.getElements().isSelected(element);
     }
@@ -225,9 +227,14 @@ public final class HudManager {
         return hud != null && hud.getMode().is("Skeet");
     }
 
+    private String theme(HudElement element, HudModule hud) {
+        return element != null && element.getTheme() != null ? element.getTheme() : hud.getMode().getValue();
+    }
+
     /** Skeet HUDs deliberately omit Vibe glow, blur and coloured outlines. */
-    private void drawHudSurface(HudModule hud, int left, int top, int right, int bottom) {
-        if (hud.getMode().is("LiquidGlass")) {
+    private void drawHudSurface(HudModule hud, HudElement element, int left, int top, int right, int bottom) {
+        String theme = theme(element, hud);
+        if ("LiquidGlass".equalsIgnoreCase(theme)) {
             float radius = Math.min(8, (bottom - top) / 2.0F);
             if (!liquidGlass.draw(left, top, right, bottom, radius, hud.getLiquidGlassBlur().isEnabled()
                     ? hud.getLiquidGlassBlurStrength().getFloat() : 0.0F, hud.getLiquidGlassRefraction().getFloat(),
@@ -241,7 +248,7 @@ public final class HudManager {
             }
             return;
         }
-        if (!hud.getMode().is("Skeet")) {
+        if (!"Skeet".equalsIgnoreCase(theme)) {
             // Vibe is layered on top of the cached blur. A low-opacity tint
             // preserves the actual blurred scene instead of replacing it with
             // a black rectangle.
@@ -255,10 +262,8 @@ public final class HudManager {
         Gui.drawRect(left, bottom - 1, right, bottom, 0xFF25252A);
     }
 
-    private void drawHudOutline(int left, int top, int right, int bottom, int color) {
-        if (isSkeet()) return;
-        HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
-        if (hud != null && hud.getMode().is("LiquidGlass")) return;
+    private void drawHudOutline(HudElement element, HudModule hud, int left, int top, int right, int bottom, int color) {
+        if ("Skeet".equalsIgnoreCase(theme(element, hud)) || "LiquidGlass".equalsIgnoreCase(theme(element, hud))) return;
         Gui.drawRect(left - 1, top - 1, right + 1, top, color);
         Gui.drawRect(left - 1, bottom, right + 1, bottom + 1, color);
         Gui.drawRect(left - 1, top, left, bottom, color);
@@ -293,9 +298,9 @@ public final class HudManager {
         if (blurEnabled(BlurModule.COORDINATES)) {
             KawaseBlur.drawRegion(left, top, left + width, top + 24, 3, 0.0F);
         }
-        drawHudSurface(hud, left, top, left + width, top + 24);
+        drawHudSurface(hud, coordinates, left, top, left + width, top + 24);
         if (hud.getCoordinatesOutline().isEnabled()) {
-            drawHudOutline(left, top, left + width, top + 24, hudOutlineColor(hud, 0.5F));
+            drawHudOutline(coordinates, hud, left, top, left + width, top + 24, hudOutlineColor(hud, 0.5F));
         }
         int textLeft = left + (width - font.getStringWidth(text)) / 2;
         int textTop = top + (24 - font.FONT_HEIGHT) / 2;
@@ -309,8 +314,27 @@ public final class HudManager {
     private void drawSessionInfo(HudModule hud, ScaledResolution resolution, FontRenderer font) {
         long elapsed = Math.max(0L, System.currentTimeMillis() - sessionStarted) / 1000L;
         String time = String.format(java.util.Locale.ROOT, "%02d:%02d:%02d", elapsed / 3600L, (elapsed / 60L) % 60L, elapsed % 60L);
-        int kills = Vibe.getInstance().getStatistics() == null ? 0 : Vibe.getInstance().getStatistics().getSessionKills();
-        drawSimpleWidget(sessionInfo, "Session " + time + " | Kills " + kills, hud, resolution, font, 0.72F);
+        dev.vibe.statistics.StatisticsService service = Vibe.getInstance().getStatistics();
+        int kills = service == null ? 0 : service.getSessionKills();
+        long walked = 0L;
+        if (service != null) walked = service.snapshot(dev.vibe.statistics.StatisticsService.Scope.ACCOUNT).blocksWalked;
+        int widgetWidth = 154, widgetHeight = 56;
+        sessionInfo.ensureOnScreen(resolution, widgetWidth, widgetHeight);
+        int left = sessionInfo.left(resolution, widgetWidth), top = sessionInfo.top(resolution, widgetHeight);
+        if (hideForDebug(sessionInfo, left, top, widgetWidth, widgetHeight, isSkeet() ? 0 : 1)) return;
+        if (blurEnabled(BlurModule.SESSION_INFO)) KawaseBlur.drawRegion(left, top, left + widgetWidth, top + widgetHeight, 3, 0.0F);
+        drawHudSurface(hud, sessionInfo, left, top, left + widgetWidth, top + widgetHeight);
+        drawHudOutline(sessionInfo, hud, left, top, left + widgetWidth, top + widgetHeight, hudOutlineColor(hud, .72F));
+        font.drawStringWithShadow("Statistics", left + 8, top + 7, RenderUtils.TEXT);
+        font.drawStringWithShadow("Session", left + 8, top + 22, 0xFF9BA8B9);
+        font.drawStringWithShadow(time, left + widgetWidth - 8 - font.getStringWidth(time), top + 22, 0xFFE7EFF9);
+        font.drawStringWithShadow("Kills", left + 8, top + 38, 0xFF9BA8B9);
+        String killValue = Integer.toString(kills);
+        font.drawStringWithShadow(killValue, left + 51, top + 38, 0xFF79D8FF);
+        font.drawStringWithShadow("Walked", left + 79, top + 38, 0xFF9BA8B9);
+        String walkedValue = Long.toString(walked);
+        font.drawStringWithShadow(walkedValue, left + widgetWidth - 8 - font.getStringWidth(walkedValue), top + 38, 0xFF79D8FF);
+        sessionInfo.setBounds(left, top, widgetWidth, widgetHeight);
     }
 
     private void drawMotionGraph(HudModule hud, ScaledResolution resolution, FontRenderer font) {
@@ -331,8 +355,8 @@ public final class HudManager {
         int right = left + widgetWidth;
         int bottom = top + widgetHeight;
         if (blurEnabled(MOTION_GRAPH)) KawaseBlur.drawRegion(left, top, right, bottom, 3, 0.0F);
-        drawHudSurface(hud, left, top, right, bottom);
-        drawHudOutline(left, top, right, bottom, hudOutlineColor(hud, 0.34F));
+        drawHudSurface(hud, motionGraph, left, top, right, bottom);
+        drawHudOutline(motionGraph, hud, left, top, right, bottom, hudOutlineColor(hud, 0.34F));
         font.drawStringWithShadow(LanguageManager.translate("MOTION GRAPH"), left + 7, top + 5, RenderUtils.TEXT);
         double speed = Math.sqrt(minecraft.thePlayer.motionX * minecraft.thePlayer.motionX
                 + minecraft.thePlayer.motionZ * minecraft.thePlayer.motionZ) * 20.0D;
@@ -388,9 +412,9 @@ public final class HudManager {
             FriendManager.Friend friend = friends == null ? null : friends.find(player.getName());
             boolean isTarget = targets != null && targets.isTarget(player);
             int accent = isTarget ? 0xFFFF5B6E : (friend != null ? 0xFF5BE8A6 : 0xFF8FA5C4);
-            if (hud.getMode().is("LiquidGlass")) drawHudSurface(hud, left, rowTop, left + width, rowTop + 48);
+            if ("LiquidGlass".equalsIgnoreCase(theme(stalker, hud))) drawHudSurface(hud, stalker, left, rowTop, left + width, rowTop + 48);
             else Gui.drawRect(left, rowTop, left + width, rowTop + 48, RenderUtils.alpha(hud.getBackground().getArgb(), 188));
-            drawHudOutline(left, rowTop, left + width, rowTop + 48, accent);
+            drawHudOutline(stalker, hud, left, rowTop, left + width, rowTop + 48, accent);
             drawPlayerFace(player, left + 4, rowTop + 4);
             NameProtectModule protect = Vibe.getInstance().getModuleManager().getModule(NameProtectModule.class);
             String name = protect == null ? player.getName() : protect.protectText(player.getName());
@@ -440,8 +464,8 @@ public final class HudManager {
         if (blurEnabled(element.getId())) {
             KawaseBlur.drawRegion(left, top, left + widgetWidth, top + widgetHeight, 3, 0.0F);
         }
-        drawHudSurface(hud, left, top, left + widgetWidth, top + widgetHeight);
-        drawHudOutline(left, top, left + widgetWidth, top + widgetHeight, hudOutlineColor(hud, phase));
+        drawHudSurface(hud, element, left, top, left + widgetWidth, top + widgetHeight);
+        drawHudOutline(element, hud, left, top, left + widgetWidth, top + widgetHeight, hudOutlineColor(hud, phase));
         font.drawStringWithShadow(text, left + 7, top + 5, RenderUtils.TEXT);
         element.setBounds(left, top, widgetWidth, widgetHeight);
     }
@@ -579,8 +603,8 @@ public final class HudManager {
         int right = left + widgetWidth;
         int bottom = top + widgetHeight;
         if (blurEnabled(CPS_GRAPH)) KawaseBlur.drawRegion(left, top, right, bottom, 3, 0.0F);
-        drawHudSurface(hud, left, top, right, bottom);
-        drawHudOutline(left, top, right, bottom, hudOutlineColor(hud, 0.88F));
+        drawHudSurface(hud, cpsGraph, left, top, right, bottom);
+        drawHudOutline(cpsGraph, hud, left, top, right, bottom, hudOutlineColor(hud, 0.88F));
         font.drawStringWithShadow(LanguageManager.translate("CPS GRAPH"), left + 7, top + 5, RenderUtils.TEXT);
         font.drawStringWithShadow("L", left + 7, top + 16, 0xFF55E8FF);
         font.drawStringWithShadow("R", left + 19, top + 16, 0xFFC17CFF);
@@ -624,8 +648,9 @@ public final class HudManager {
         if (blurEnabled(blurElement)) {
             KawaseBlur.drawRegion(left, top, left + width, top + height, 3, 0.0F);
         }
-        drawHudSurface(hud, left, top, left + width, top + height);
-        drawHudOutline(left, top, left + width, top + height, hudOutlineColor(hud, phase));
+        HudElement element = getElement(blurElement);
+        drawHudSurface(hud, element, left, top, left + width, top + height);
+        drawHudOutline(element, hud, left, top, left + width, top + height, hudOutlineColor(hud, phase));
     }
 
     /** Draws the vanilla-style sidebar at its HUD-editor position. */
@@ -681,7 +706,7 @@ public final class HudManager {
         }
         // Keep the scoreboard a single HUD surface. Per-row black rectangles
         // were painting over Vibe blur and LiquidGlass completely.
-        drawHudSurface(hud, backgroundLeft, top, backgroundRight, backgroundBottom);
+        drawHudSurface(hud, scoreboard, backgroundLeft, top, backgroundRight, backgroundBottom);
         int y = top;
         for (Score score : visible) {
             ScorePlayerTeam team = board.getPlayersTeam(score.getPlayerName());
@@ -759,6 +784,25 @@ public final class HudManager {
     }
 
     public void drawPreview(HudElement element, FontRenderer font) {
+        // The editor must still be useful in the main menu, where the normal
+        // in-world renderers have no player and therefore no fresh bounds.
+        if (element != null) {
+            if (element == watermark) previewCard(element, font, 132, 26, "Vibe client", "90 fps  •  v" + Vibe.VERSION);
+            else if (element == arrayList) previewCard(element, font, 142, 62, "Inventory manager   Greenly", "Block overlay   Fade", "Trajectories   Basic");
+            else if (element == coordinates) previewCard(element, font, 126, 24, "XYZ   0 / 64 / 0");
+            else if (element == clock) previewCard(element, font, 82, 22, "12:34:56");
+            else if (element == sessionInfo) previewCard(element, font, 144, 54, "Statistics", "Session  00:12:34", "Kills  3     Walked  128");
+            else if (element == motionGraph) previewCard(element, font, 196, 64, "Motion graph              2.35 b/s", "--/---/---/---/---/---/--");
+            else if (element == stalker) previewCard(element, font, 202, 48, "Player name                 12m", "20.0 HP    Armor    Item");
+            else if (element == armor) previewCard(element, font, 82, 28, "Armor   [ ] [ ] [ ] [ ]");
+            else if (element == inventory) previewCard(element, font, 172, 64, "Inventory", "[ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]", "[ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]");
+            else if (element == health) previewCard(element, font, 54, 18, "20.0 HP");
+            else if (element == cps) previewCard(element, font, 46, 18, "[8 | 2]");
+            else if (element == cpsGraph) previewCard(element, font, 196, 64, "CPS graph     L 8  •  R 2", "/\\/\\/\\/\\/\\/\\/\\");
+            else if (element == music) previewCard(element, font, 162, 64, "Music", "No track playing", "0:00                     3:42");
+            else previewCard(element, font, 118, 42, "Scoreboard", "Vibe              8", "Player           12");
+            return;
+        }
         if (element == music) { drawMusic(true); return; }
         if (element == watermark) {
             Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(110, element.getWidth()) + 2,
@@ -817,6 +861,38 @@ public final class HudManager {
             font.drawStringWithShadow(LanguageManager.translate("Player      12"), element.getLeft() + 4, element.getTop() + 17, 0xFFD5E1F5);
             font.drawStringWithShadow("Vibe         8", element.getLeft() + 4, element.getTop() + 29, 0xFFD5E1F5);
         }
+    }
+
+    private void previewCard(HudElement element, FontRenderer font, int contentWidth, int contentHeight, String... lines) {
+        HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        if (hud == null) return;
+        ScaledResolution resolution = new ScaledResolution(minecraft);
+        float scale = element.getScale();
+        int width = Math.max(1, Math.round(contentWidth * scale));
+        int height = Math.max(1, Math.round(contentHeight * scale));
+        element.ensureOnScreen(resolution, width, height);
+        int left = element.left(resolution, width);
+        int top = element.top(resolution, height);
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(left, top, 0.0F);
+        GlStateManager.scale(scale, scale, 1.0F);
+        String widgetTheme = theme(element, hud);
+        if ("Skeet".equalsIgnoreCase(widgetTheme)) {
+            Gui.drawRect(0, 0, contentWidth, contentHeight, 0xF0111113);
+            Gui.drawRect(0, 0, contentWidth, 1, 0xFF3C4049);
+        } else if ("LiquidGlass".equalsIgnoreCase(widgetTheme)) {
+            float radius = Math.min(7.0F, contentHeight / 2.0F);
+            RenderUtils.roundedRect(0, 0, contentWidth, contentHeight, radius, 0x6FD5EBFF);
+            RenderUtils.roundedOutline(0, 0, contentWidth, contentHeight, radius, 1, 0xA8FFFFFF);
+        } else {
+            RenderUtils.roundedRect(0, 0, contentWidth, contentHeight, 4, RenderUtils.alpha(hud.getBackground().getArgb(), 162));
+            RenderUtils.roundedOutline(0, 0, contentWidth, contentHeight, 4, 1, RenderUtils.alpha(hud.getArrayPrimaryColor().getArgb(), 150));
+        }
+        for (int index = 0; index < lines.length; index++) {
+            font.drawStringWithShadow(lines[index], 7, 6 + index * 13, index == 0 ? RenderUtils.TEXT : 0xFFD2DAE5);
+        }
+        GlStateManager.popMatrix();
+        element.setBounds(left, top, width, height);
     }
 
     public void save() {
@@ -929,6 +1005,10 @@ public final class HudManager {
         private int top;
         private int width;
         private int height;
+        // Appearance belongs to the widget, not to the entire HUD.  Leaving
+        // this unset retains the old global setting for existing layouts.
+        private String theme;
+        private float scale = 1.0F;
 
         private HudElement(String id, int x, int y, boolean rightAnchored, boolean bottomAnchored) {
             this(id, x, y, rightAnchored, bottomAnchored, false);
@@ -1015,6 +1095,8 @@ public final class HudManager {
             value.addProperty("rightAnchored", rightAnchored);
             value.addProperty("centred", centred);
             value.addProperty("verticallyCentred", verticallyCentred);
+            value.addProperty("scale", scale);
+            if (theme != null) value.addProperty("theme", theme);
             return value;
         }
 
@@ -1032,6 +1114,12 @@ public final class HudManager {
                 }
                 if (value.has("verticallyCentred")) {
                     verticallyCentred = value.get("verticallyCentred").getAsBoolean();
+                }
+                if (value.has("scale")) {
+                    scale = Math.max(0.50F, Math.min(2.00F, value.get("scale").getAsFloat()));
+                }
+                if (value.has("theme")) {
+                    setTheme(value.get("theme").getAsString());
                 }
             }
         }
@@ -1054,6 +1142,14 @@ public final class HudManager {
         public int getWidth() { return width; }
         public int getHeight() { return height; }
         public int getY() { return y; }
+        public float getScale() { return scale; }
+        public void setScale(float value) { scale = Math.max(0.50F, Math.min(2.00F, value)); }
+        public String getTheme() { return theme; }
+        public void setTheme(String value) {
+            if ("Vibe".equalsIgnoreCase(value)) theme = "Vibe";
+            else if ("Skeet".equalsIgnoreCase(value)) theme = "Skeet";
+            else if ("LiquidGlass".equalsIgnoreCase(value)) theme = "LiquidGlass";
+        }
     }
 
     private static final class ArrayRow {

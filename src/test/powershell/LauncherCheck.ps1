@@ -16,6 +16,7 @@ function Assert-Contains([string]$Text, [string]$Expected) {
 echo LAUNCHER_STDOUT
 echo LAUNCHER_STDERR 1>&2
 echo NESTED_PAUSE=%VIBE_NO_PAUSE%
+echo INSTANCE=%VIBE_INSTANCE_ID%
 echo FORWARDED=%*
 :arguments
 if "%~1"=="" goto done
@@ -38,7 +39,12 @@ try {
     Set-Content -LiteralPath (Join-Path $sourceProfile 'options.txt') -Value 'DO_NOT_IMPORT'
     Set-Content -LiteralPath (Join-Path $sourceProfile 'resourcepacks/test.zip') -Value 'DO_NOT_IMPORT'
 
+$launchCount = 0
     foreach ($expectedExit in @(0, 37)) {
+        if ($launchCount++ -eq 1) {
+            Set-Content -LiteralPath (Join-Path $sourceProfile 'options.txt') -Value 'SHOULD_NOT_REIMPORT'
+            Set-Content -LiteralPath (Join-Path $sourceProfile 'resourcepacks/test.zip') -Value 'SHOULD_NOT_REIMPORT'
+        }
         $env:VIBE_TEST_EXIT = [string]$expectedExit
         $output = (& (Join-Path $fixture 'run.bat') --debug '-PlaunchCheck=with spaces' 2>&1 | Out-String)
         if ($LASTEXITCODE -ne $expectedExit) { throw "Exit code: expected $expectedExit, got $LASTEXITCODE. $output" }
@@ -46,14 +52,25 @@ try {
         $log = Get-Content -LiteralPath $logFile.FullName -Raw -Encoding UTF8
         foreach ($expected in @('LAUNCHER_STDOUT', 'LAUNCHER_STDERR', 'NESTED_PAUSE=1', 'ARG=[runClient]',
             'ARG=[-PvibeOptifine]', 'ARG=[-PvibePersistentRun]', '--console=plain',
-            'ARG=[--info]', 'ARG=[--stacktrace]', 'ARG=[--debug]', 'ARG=[-PlaunchCheck=with spaces]',
+'ARG=[--info]', 'ARG=[--stacktrace]', 'INSTANCE=', 'ARG=[--debug]', 'ARG=[-PlaunchCheck=with spaces]',
             "Client task exited with code $expectedExit.")) {
             Assert-Contains $output $expected
             Assert-Contains $log $expected
         }
+if ($output -notmatch 'INSTANCE=\d+-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-\d{3}') {
+            throw "Launcher did not propagate a unique instance id. $output"
+        }
     }
-    if (Test-Path -LiteralPath (Join-Path $fixture 'run')) { throw 'Launcher unexpectedly created/imported a game profile.' }
-    Assert-Contains (Get-Content -LiteralPath (Join-Path $sourceProfile 'options.txt') -Raw) 'DO_NOT_IMPORT'
+    $importedProfile = Join-Path $fixture 'run/client'
+    Assert-Contains (Get-Content -LiteralPath (Join-Path $importedProfile 'options.txt') -Raw) 'DO_NOT_IMPORT'
+    if (-not (Test-Path -LiteralPath (Join-Path $importedProfile 'resourcepacks/test.zip'))) {
+        throw 'Launcher did not import the first-run resource pack.'
+    }
+    Assert-Contains (Get-Content -LiteralPath (Join-Path $importedProfile 'resourcepacks/test.zip') -Raw) 'DO_NOT_IMPORT'
+    if (-not (Test-Path -LiteralPath (Join-Path $importedProfile '.vibe-minecraft-settings-imported'))) {
+        throw 'Launcher did not record first-run settings import.'
+    }
+    Assert-Contains (Get-Content -LiteralPath (Join-Path $sourceProfile 'options.txt') -Raw) 'SHOULD_NOT_REIMPORT'
     # Simulate the rendered menu, then hold the game open until the foreground
     # launcher has exited. It must keep logging without its original console.
     @'
@@ -98,7 +115,7 @@ exit 0
     Assert-Contains $output 'AFTER_CONSOLE_CLOSED'
     Assert-Contains $output 'Client task exited with code 0.'
     if ($output.Contains('Minecraft is ready.')) { throw 'Keep-console detached unexpectedly.' }
-    Write-Output 'Launcher checks passed: arguments, startup errors, no import, menu handoff, continued logging and keep-console.'
+Write-Output 'Launcher checks passed: arguments, one-time profile import, startup errors, menu handoff, continued logging and keep-console.'
 } finally {
     $env:VIBE_NO_PAUSE = $originalNoPause
     $env:VIBE_TEST_EXIT = $originalExit

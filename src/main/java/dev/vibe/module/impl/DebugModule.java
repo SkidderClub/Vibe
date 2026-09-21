@@ -11,7 +11,7 @@ import org.lwjgl.input.Keyboard;
 /** Optional local diagnostics for timing-sensitive combat helpers. */
 public final class DebugModule extends Module {
     private final MultiSelectSetting modes = addSetting(new MultiSelectSetting("Modes",
-            Arrays.asList("Wtap", "FirstHit", "Hit on Backtrack", "Performed FakeLag"),
+            Arrays.asList("Wtap", "FirstHit", "Hit on Backtrack"),
             Arrays.asList("Wtap", "FirstHit")));
 
     public DebugModule() {

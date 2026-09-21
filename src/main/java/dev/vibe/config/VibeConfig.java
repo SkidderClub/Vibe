@@ -355,12 +355,22 @@ public final class VibeConfig {
                     values.add(value.getAsString());
                 }
                 ((MultiSelectSetting) setting).setValue(values);
+            } else if (setting instanceof MultiSelectSetting && element.isJsonPrimitive()) {
+                // Profiles written before Velocity became a multi-select
+                // stored Mode as one string. Preserve that selection while
+                // accepting the new JSON array format going forward.
+                Set<String> values = new LinkedHashSet<String>();
+                values.add(element.getAsString());
+                ((MultiSelectSetting) setting).setValue(values);
             }
         } catch (Exception ignored) {
         }
     }
 
     private Module findModule(ModuleManager manager, String id) {
+        // v0.0.6 renamed BHop to Speed. Keep old profiles and keybinds alive
+        // rather than silently discarding the module record.
+        if ("bhop".equalsIgnoreCase(id)) id = "speed";
         for (Module module : manager.getModules()) {
             if (module.getId().equalsIgnoreCase(id) || module.getRawName().equalsIgnoreCase(id)) {
                 return module;
@@ -423,7 +433,9 @@ public final class VibeConfig {
             for (JsonElement element : modules) {
                 if (!element.isJsonObject()) continue;
                 JsonObject data = element.getAsJsonObject();
-                Module module = findModule(manager, getString(data, "id", ""));
+                String savedId = getString(data, "id", "");
+                boolean legacyBhop = "bhop".equalsIgnoreCase(savedId);
+                Module module = findModule(manager, savedId);
                 if (module == null) continue;
                 if (withKeybinds && data.has("key")) module.setKey(getInt(data, "key", module.getKey()));
                 if (!withVisuals && (module.getCategory() == dev.vibe.module.Category.VISUAL
@@ -431,7 +443,28 @@ public final class VibeConfig {
                 JsonObject settings = data.has("settings") && data.get("settings").isJsonObject()
                         ? data.getAsJsonObject("settings") : new JsonObject();
                 for (Setting<?> setting : module.getSettings()) {
-                    if (settings.has(setting.getRawName())) readSetting(setting, settings.get(setting.getRawName()));
+                    JsonElement savedSetting = settings.get(setting.getRawName());
+                    // Velocity used the singular Mode key briefly before its
+                    // multi-select setting returned to the original Modes
+                    // name. Accept both spellings during profile migration.
+                    if (savedSetting == null && setting instanceof MultiSelectSetting
+                            && "Modes".equals(setting.getRawName())) savedSetting = settings.get("Mode");
+                    if (savedSetting == null) continue;
+                    // The former BHop Custom mode was removed. Keep its
+                    // profile selectable by mapping it to Speed's Custom
+                    // branch instead of restoring a second hop mode.
+                    if (legacyBhop && ("Mode".equals(setting.getRawName()) || "Modes".equals(setting.getRawName()))
+                            && savedSetting.isJsonPrimitive()
+                            && ("BHop Custom".equalsIgnoreCase(savedSetting.getAsString())
+                                || "Custom".equalsIgnoreCase(savedSetting.getAsString()))) {
+                        if (setting instanceof MultiSelectSetting) {
+                            Set<String> migrated = new LinkedHashSet<String>();
+                            migrated.add("Custom");
+                            ((MultiSelectSetting) setting).setValue(migrated);
+                        } else {
+                            ((ModeSetting) setting).setValue("Custom");
+                        }
+                    } else readSetting(setting, savedSetting);
                 }
                 if (module instanceof HudModule && getInt(root, "format", 1) < 3) ((HudModule) module).migrateLegacyArrayListModules();
                 if (data.has("enabled")) module.setEnabled(getBoolean(data, "enabled", module.isEnabled()));

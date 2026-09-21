@@ -35,7 +35,7 @@ public final class ArrayListRenderer {
             rows.add(new Row(name("Custom Cosmetics",s), "",0));
             rows.add(new Row(name("Sprint",s), decorate("Legit",s),0));
         }
-        final float scale = s.scale.getFloat();
+final float scale = s.scale.getFloat() * element.getScale();
         float inset = Math.max(s.padding.getFloat(), Math.max(hud.getArrayOutline().isEnabled() ? s.outlineWidth.getFloat() + 1 : 1,
                 s.rail.is("None") ? 0 : s.railWidth.getFloat() + 1));
         float maximum = 12;
@@ -105,8 +105,8 @@ public final class ArrayListRenderer {
                 float x=right?r.x+r.width-inset*scale-textWidth:r.x+inset*scale;
                 float y=r.y+(rh-textHeight*scale)/2;
                 if (!s.font.is("Minecraft")) y -= (font(s).inkTop("Agjpqy") - 1)*scale;
-                drawText(r.name,x,y,s,hud,i,rows.size(),now,false);
-                drawText(r.suffix,x+textWidth(r.name,s)*scale,y,s,hud,i,rows.size(),now,true);
+drawText(r.name,x,y,s,hud,i,rows.size(),now,false,element.getScale());
+drawText(r.suffix,x+textWidth(r.name,s)*scale,y,s,hud,i,rows.size(),now,true,element.getScale());
             }
         } finally {
             // Restore Minecraft's cache too; glPopAttrib alone only restores
@@ -152,11 +152,11 @@ public final class ArrayListRenderer {
         if(s.font.is("Minecraft"))mc.fontRendererObj.drawString((s.bold.isEnabled()?"§l":"")+text,x,y,color,false);
         else font(s).draw(text,x,y-1,color);
     }
-    private void drawText(String text,float x,float y,ArrayListSettings s,HudModule hud,int index,int count,long now,boolean suffix){
+    private void drawText(String text,float x,float y,ArrayListSettings s,HudModule hud,int index,int count,long now,boolean suffix,float elementScale){
         if(text.isEmpty())return;
         GlStateManager.pushMatrix();
         try {
-            GlStateManager.translate(x,y,0);GlStateManager.scale(s.scale.getFloat(),s.scale.getFloat(),1);
+GlStateManager.translate(x,y,0);GlStateManager.scale(s.scale.getFloat()*elementScale,s.scale.getFloat()*elementScale,1);
             boolean gradient = s.horizontal.isEnabled() && (!suffix || s.suffixAccent.isEnabled());
             float total=Math.max(1,textWidth(text,s));
             // Finish each effect for the whole label before painting glyphs.
