@@ -23,7 +23,7 @@ public final class CommandManager {
             return false;
         }
         String[] parts = message.trim().split("\\s+");
-        String command = parts[0].toLowerCase();
+        String command = parts[0].toLowerCase(java.util.Locale.ROOT);
         if (".toggle".equals(command) || ".t".equals(command)) {
             toggle(parts);
         } else if (".bind".equals(command) || ".b".equals(command)) {
@@ -35,16 +35,16 @@ public final class CommandManager {
         } else if (".ign".equals(command)) {
             copyIgn();
         } else if (".waifu".equals(command)) {
-            Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.WaifuModule.class).getSettings();
             if (parts.length > 1 && "openfolder".equalsIgnoreCase(parts[1])) {
-                Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.WaifuModule.class).getFolder().mkdirs();
+                dev.vibe.module.impl.WaifuModule waifu = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.WaifuModule.class);
+                waifu.getFolder().mkdirs();
                 try {
                     if (java.awt.Desktop.isDesktopSupported()) {
-                        java.awt.Desktop.getDesktop().open(Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.WaifuModule.class).getFolder());
+                        java.awt.Desktop.getDesktop().open(waifu.getFolder());
                     }
                 } catch (Exception ignored) {
                 }
-            }
+            } else moduleSetting(Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.WaifuModule.class), parts, 1);
         } else if (".friend".equals(command) || ".f".equals(command)) {
             friend(parts);
         } else if (".target".equals(command)) {
@@ -61,7 +61,9 @@ public final class CommandManager {
         } else if (".help".equals(command)) {
             help();
         } else {
-            say("Unknown command. Use §b.help§7 for available commands.");
+            Module module = findModule(command.substring(1));
+            if (module == null) say("Unknown command or module. Use §b.help§7 for available commands.");
+            else moduleSetting(module, parts, 1);
         }
         return true;
     }
@@ -74,6 +76,10 @@ public final class CommandManager {
         List<String> results = new ArrayList<String>();
         if (parts.length <= 1) {
             addMatching(results, ROOTS, input.toLowerCase());
+            for (Module module : Vibe.getInstance().getModuleManager().getModules()) {
+                String suggestion = "." + module.getId();
+                if (suggestion.startsWith(input.toLowerCase(java.util.Locale.ROOT)) && !results.contains(suggestion)) results.add(suggestion);
+            }
             return results;
         }
         String root = parts[0].toLowerCase();
@@ -133,6 +139,9 @@ public final class CommandManager {
                     if (info.getName().toLowerCase().startsWith(needle)) results.add(replaceLastToken(input, info.getName()));
                 }
             }
+        } else {
+            Module module = findModule(root.substring(1));
+            if (module != null) results.addAll(ModuleSettingCommands.suggestions(module, input, input.substring(root.length() + 1)));
         }
         return results;
     }
@@ -224,7 +233,19 @@ public final class CommandManager {
         say("§b.f <add|remove|rename|list>§7 — manage friends and aliases");
         say("§b.target <add|remove|list>§7 — manage priority targets");
         say("§b.script <create|reload|load|list|errors|enable|disable|rename|delete|openFolder>§7 — manage local Raven scripts");
+        say("§b.<module> <setting> <value>§7 — change a module setting (names may contain spaces)");
+        say("§b.<module> <min|max> <value>§7 — set the only range, or name the range first");
+        say("§b.<module> <multi-select option>§7 — toggle an option; name its setting if ambiguous");
         say("§8Press Tab in chat for completion.");
+    }
+
+    private void moduleSetting(Module module, String[] parts, int from) {
+        if (module == null) { say("§cModule is unavailable."); return; }
+        ModuleSettingCommands.Result result = ModuleSettingCommands.apply(module, joinParts(parts, from, parts.length));
+        say(result.message);
+        if (result.changed && !Vibe.getInstance().getConfig().save(Vibe.getInstance().getConfig().getActiveName(), Vibe.getInstance().getModuleManager())) {
+            say("§cSetting changed, but the active profile could not be saved.");
+        }
     }
 
     private void friend(String[] parts) {

@@ -52,7 +52,6 @@ try {
     $stamp = Get-Date -Format 'yyyy-MM-dd-HH-mm-ss-fff'
     $logFile = Join-Path $logDirectory "$stamp-$PID.log"
     $readyFile = Join-Path $logDirectory "$stamp-$PID.ready"
-$env:VIBE_INSTANCE_ID = "$PID-$stamp"
     [System.IO.File]::WriteAllText($logFile, '', (New-Object System.Text.UTF8Encoding($false)))
     $message = "[Vibe] Live debug output; log: $logFile"
     [System.IO.File]::AppendAllText($logFile, $message + [Environment]::NewLine)

@@ -355,44 +355,14 @@ unimined.minecraft {
     }
 }
 
-// The launchers opt into one stable game directory regardless of the caller's
-// working directory. Settings in this profile belong exclusively to Vibe.
+// Keep one game directory for every normal launcher run. Worlds and settings
+// must survive native crashes, which skip Gradle's doLast actions entirely.
 if (providers.gradleProperty('vibePersistentRun').isPresent()) {
     tasks.named('runClient').configure { client ->
-        File launchedGameDirectory = null
-        String launchedInstanceId = ''
         doFirst {
-            // A stable directory is kept for a direct runClient invocation,
-            // while run.bat supplies an id for each detached launch. This
-            // prevents Minecraft's session.lock from serializing instances.
-            String rawInstance = System.getenv('VIBE_INSTANCE_ID')
-            String instanceId = rawInstance == null ? '' : rawInstance.replaceAll('[^A-Za-z0-9._-]', '_')
-            File baselineDirectory = project.file('run/client').canonicalFile
-            File gameDirectory = instanceId.isEmpty()
-                    ? baselineDirectory
-                    : project.file('run/instances/session-' + instanceId).canonicalFile
-            launchedGameDirectory = gameDirectory
-            launchedInstanceId = instanceId
+            File gameDirectory = project.file('run/client').canonicalFile
             if (!gameDirectory.isDirectory() && !gameDirectory.mkdirs()) {
                 throw new GradleException('Could not create Vibe client directory: ' + gameDirectory)
-            }
-            if (!instanceId.isEmpty()) {
-                File marker = new File(gameDirectory, '.vibe-baseline-copied')
-                if (!marker.isFile() && baselineDirectory.isDirectory() && baselineDirectory != gameDirectory) {
-                    ['config', 'mods', 'resourcepacks', 'shaderpacks', 'texturepacks', 'vibe', 'servers.dat'].each { name ->
-                        File source = new File(baselineDirectory, name)
-                        if (source.isDirectory()) {
-                            project.copy { from source; into new File(gameDirectory, name) }
-                        } else if (source.isFile()) {
-                            project.copy { from source; into gameDirectory }
-                        }
-                    }
-                    File[] optionFiles = baselineDirectory.listFiles()
-                    if (optionFiles != null) optionFiles.findAll { file ->
-                        file.isFile() && file.name.startsWith('options') && file.name.endsWith('.txt')
-                    }.each { source -> project.copy { from source; into gameDirectory } }
-                    marker.createNewFile()
-                }
             }
             // RunConfig resolves these placeholders relative to workingDir at
             // execution time. Keep the prepared natives, libraries, and
@@ -420,24 +390,6 @@ if (providers.gradleProperty('vibePersistentRun').isPresent()) {
             client.setArgs(launchArguments)
             client.workingDir = gameDirectory
             logger.lifecycle('[Vibe] Using persistent client settings: ' + gameDirectory)
-        }
-        doLast {
-            // Parallel launches must have independent game directories, but
-            // vanilla video/options files are user preferences, not instance
-            // state. Bring every normally closed instance's latest values
-            // back to the shared launch profile for the next run.
-            if (launchedInstanceId.isEmpty() || launchedGameDirectory == null || !launchedGameDirectory.isDirectory()) return
-            File baselineDirectory = project.file('run/client').canonicalFile
-            if (!baselineDirectory.isDirectory() && !baselineDirectory.mkdirs()) {
-                logger.warn('[Vibe] Could not preserve client options: ' + baselineDirectory)
-                return
-            }
-            File[] optionFiles = launchedGameDirectory.listFiles()
-            if (optionFiles == null) return
-            optionFiles.findAll { file -> file.isFile() && file.name.startsWith('options') && file.name.endsWith('.txt') }.each { source ->
-                project.copy { from source; into baselineDirectory }
-            }
-            logger.lifecycle('[Vibe] Saved client options for the next launch.')
         }
     }
 }
