@@ -73,6 +73,36 @@ public final class ClientChangesRenderCheck {
             Vibe vibe = new Vibe(); set(Vibe.class,null,"instance",vibe);
             ModuleManager modules = instance(ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<Module>()); set(Vibe.class,vibe,"moduleManager",modules);
+            if (args.length>0 && args[0].equals("hud-editor")) {
+                HudModule hud = new HudModule();
+                set(ModuleManager.class,modules,"modules",new ArrayList<Module>(Collections.<Module>singletonList(hud)));
+                mc.displayWidth=1280; mc.displayHeight=720;
+                frame(1280,720);
+                dev.vibe.hud.HudManager manager = new dev.vibe.hud.HudManager(OUTPUT.resolve("hud-editor-fixture").toFile());
+                dev.vibe.hud.HudEditorGui editor = new dev.vibe.hud.HudEditorGui(manager);
+                editor.setWorldAndResolution(mc,1280,720);
+                editor.drawScreen(630,330,0);
+                save("hud-editor.png");
+                mc.displayWidth=683; mc.displayHeight=384;
+                frame(683,384);
+                editor.setWorldAndResolution(mc,683,384);
+                editor.drawScreen(320,190,0);
+                save("hud-editor-compact.png");
+                dev.vibe.hud.HudManager.HudElement anchored = manager.getElement(dev.vibe.hud.HudManager.ARMOR);
+                anchored.setScale(1.5F);
+                net.minecraft.client.gui.ScaledResolution resolution = new net.minecraft.client.gui.ScaledResolution(mc);
+                int rawLeft = anchored.left(resolution,82), rawTop = anchored.top(resolution,28);
+                Method scaled = dev.vibe.hud.HudManager.class.getDeclaredMethod("renderScaled",
+                        dev.vibe.hud.HudManager.HudElement.class,net.minecraft.client.gui.ScaledResolution.class,Runnable.class);
+                scaled.setAccessible(true);
+                scaled.invoke(manager,anchored,resolution,(Runnable)() -> anchored.setBounds(rawLeft,rawTop,82,28));
+                if (anchored.getLeft()+anchored.getWidth()!=resolution.getScaledWidth()-9
+                        || anchored.getTop()+anchored.getHeight()!=resolution.getScaledHeight()-9)
+                    throw new AssertionError("Scaled right/bottom anchors moved");
+                if (GL11.glGetError()!=GL11.GL_NO_ERROR) throw new AssertionError("HUD editor GL error");
+                System.out.println("HUD editor screenshot and GL state passed.");
+                return;
+            }
             if (args.length>0 && args[0].equals("liquid-glass")) {
                 mc.displayWidth=960;mc.displayHeight=540;
                 testHud(modules);testLiquidGlass();

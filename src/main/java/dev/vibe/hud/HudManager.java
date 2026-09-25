@@ -94,6 +94,10 @@ public final class HudManager {
     private final float[] rightCpsSamples = new float[96];
     private int cpsSampleIndex;
     private long lastCpsSample;
+    private boolean previewingHud;
+    private boolean scalingHud;
+    private float hudTransformScale = 1.0F;
+    private int hudTransformX, hudTransformY;
 
     public HudManager(File minecraftConfigDirectory) {
         layoutFile = new File(new File(minecraftConfigDirectory, "vibe"), "hud.json");
@@ -110,41 +114,77 @@ public final class HudManager {
         ScaledResolution resolution = new ScaledResolution(minecraft);
         FontRenderer font = minecraft.fontRendererObj;
         if (hud.getHudElements().isSelectedIgnoreCase(WATERMARK)) {
-            drawWatermark(hud, resolution, font);
+            renderScaled(watermark, resolution, () -> drawWatermark(hud, resolution, font));
         }
         if (hud.getHudElements().isSelectedIgnoreCase(ARRAY_LIST)) {
             drawArrayList(hud, resolution, font);
         }
         if (hud.getHudElements().isSelectedIgnoreCase(COORDINATES)) {
-            drawCoordinates(hud, resolution, font);
+            renderScaled(coordinates, resolution, () -> drawCoordinates(hud, resolution, font));
         }
         if (hud.getHudElements().isSelectedIgnoreCase(CLOCK)) {
-            drawClock(hud, resolution, font);
+            renderScaled(clock, resolution, () -> drawClock(hud, resolution, font));
         }
         if (hud.getHudElements().isSelectedIgnoreCase(SESSION_INFO)) {
-            drawSessionInfo(hud, resolution, font);
+            renderScaled(sessionInfo, resolution, () -> drawSessionInfo(hud, resolution, font));
         }
         if (hud.getHudElements().isSelectedIgnoreCase(MOTION_GRAPH)) {
-            drawMotionGraph(hud, resolution, font);
+            renderScaled(motionGraph, resolution, () -> drawMotionGraph(hud, resolution, font));
         }
         if (hud.getHudElements().isSelectedIgnoreCase(STALKER)) {
-            drawStalker(hud, resolution, font);
+            renderScaled(stalker, resolution, () -> drawStalker(hud, resolution, font));
         }
         if (hud.getHudElements().isSelectedIgnoreCase(ARMOR)) {
-            drawArmor(hud, resolution, font);
+            renderScaled(armor, resolution, () -> drawArmor(hud, resolution, font));
         }
         if (hud.getHudElements().isSelectedIgnoreCase(INVENTORY)) {
-            drawInventory(hud, resolution, font);
+            renderScaled(inventory, resolution, () -> drawInventory(hud, resolution, font));
         }
         if (hud.getHudElements().isSelectedIgnoreCase(HEALTH)) {
-            drawHealth(hud, resolution, font);
+            renderScaled(health, resolution, () -> drawHealth(hud, resolution, font));
         }
         if (hud.getHudElements().isSelectedIgnoreCase(CPS)) {
-            drawCps(resolution, font);
+            renderScaled(cps, resolution, () -> drawCps(resolution, font));
         }
         if (hud.getHudElements().isSelectedIgnoreCase(CPS_GRAPH)) {
-            drawCpsGraph(hud, resolution, font);
+            renderScaled(cpsGraph, resolution, () -> drawCpsGraph(hud, resolution, font));
         }
+    }
+
+    /** Scale around the element's anchor so right/bottom aligned widgets stay aligned. */
+    private void renderScaled(HudElement element, ScaledResolution resolution, Runnable render) {
+        float scale = element.getScale();
+        if (Math.abs(scale - 1.0F) < .0001F) { render.run(); return; }
+        int anchorX = element.centred ? resolution.getScaledWidth() / 2 + element.x
+                : element.rightAnchored ? resolution.getScaledWidth() - element.x : element.x;
+        int anchorY = element.verticallyCentred || element.centred ? resolution.getScaledHeight() / 2 + element.y
+                : element.bottomAnchored ? resolution.getScaledHeight() - element.y : element.y;
+        long boundsBefore = element.boundsRevision;
+        if (!previewingHud && element.getWidth() > 1 && element.getHeight() > 1 && blurEnabled(element.id))
+            KawaseBlur.drawRegion(element.getLeft(), element.getTop(),
+                    element.getLeft() + element.getWidth(), element.getTop() + element.getHeight(),
+                    element == scoreboard ? 4 : 3, 0.0F);
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(anchorX, anchorY, 0);
+        GlStateManager.scale(scale, scale, 1);
+        GlStateManager.translate(-anchorX, -anchorY, 0);
+        boolean previousScaling = scalingHud;
+        float previousScale = hudTransformScale;
+        int previousX = hudTransformX, previousY = hudTransformY;
+        scalingHud = true;
+        hudTransformScale = scale; hudTransformX = anchorX; hudTransformY = anchorY;
+        try { render.run(); }
+        finally {
+            scalingHud = previousScaling;
+            hudTransformScale = previousScale; hudTransformX = previousX; hudTransformY = previousY;
+            GlStateManager.popMatrix();
+        }
+        if (element.boundsRevision == boundsBefore) return;
+        int rawLeft = element.getLeft(), rawTop = element.getTop();
+        element.setBounds(Math.round(anchorX + (rawLeft - anchorX) * scale),
+                Math.round(anchorY + (rawTop - anchorY) * scale),
+                Math.max(1, Math.round(element.getWidth() * scale)),
+                Math.max(1, Math.round(element.getHeight() * scale)));
     }
 
     /** Music owns its visibility; it can render even when the general HUD module is disabled. */
@@ -156,13 +196,13 @@ public final class HudManager {
         if (!m.hud.isEnabled()) { musicRenderer.close(); return; }
         dev.vibe.media.MediaTrack track = service == null ? dev.vibe.media.MediaTrack.idle("Waiting for media") : service.track();
         if (!preview && m.hideIdle.isEnabled() && !track.playing) return;
-        float scale = dev.vibe.ui.MusicHudRenderer.effectiveScale(m, resolution.getScaledWidth(), resolution.getScaledHeight());
+        float scale = dev.vibe.ui.MusicHudRenderer.effectiveScale(m, resolution.getScaledWidth(), resolution.getScaledHeight()) * music.getScale();
         int width = Math.round(m.hudWidth.getFloat()*scale), height = Math.round(64*scale);
         music.ensureOnScreen(resolution, width, height);
         int left = Math.max(0, music.left(resolution, width)), top = Math.max(0, music.top(resolution, height));
         music.setBounds(left, top, width, height);
         if (!preview && DebugOverlay.overlaps(left, top, left + width, top + height)) return;
-        musicRenderer.draw(m, track, left, top, preview);
+        musicRenderer.draw(m, track, left, top, preview, scale);
         if (preview && m.visualizer.isEnabled() && service != null)
             minecraft.fontRendererObj.drawStringWithShadow(service.audioStatus(), left, top+height+3, 0xFFD6DFEB);
     }
@@ -209,6 +249,7 @@ public final class HudManager {
     }
 
     private boolean blurEnabled(String element) {
+        if (previewingHud || scalingHud) return false;
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         if (hud == null) return false;
         String activeTheme = theme(getElement(element), hud);
@@ -236,6 +277,25 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         String theme = theme(element, hud);
         if ("LiquidGlass".equalsIgnoreCase(theme)) {
             float radius = Math.min(8, (bottom - top) / 2.0F);
+            // The shader addresses framebuffer pixels directly. Supply the
+            // transformed rectangle for scaled in-world widgets; the editor
+            // uses a tinted sample because its canvas has another transform.
+            if (scalingHud && !previewingHud) {
+                int scaledLeft = Math.round(hudTransformX + (left - hudTransformX) * hudTransformScale);
+                int scaledTop = Math.round(hudTransformY + (top - hudTransformY) * hudTransformScale);
+                int scaledRight = Math.round(hudTransformX + (right - hudTransformX) * hudTransformScale);
+                int scaledBottom = Math.round(hudTransformY + (bottom - hudTransformY) * hudTransformScale);
+                if (liquidGlass.draw(scaledLeft, scaledTop, scaledRight, scaledBottom, radius * hudTransformScale,
+                        hud.getLiquidGlassBlur().isEnabled() ? hud.getLiquidGlassBlurStrength().getFloat() : 0.0F,
+                        hud.getLiquidGlassRefraction().getFloat(), hud.getLiquidGlassOpacity().getFloat(),
+                        hud.getLiquidGlassTint().getArgb())) return;
+            }
+            if (scalingHud || previewingHud) {
+                RenderUtils.roundedRect(left, top, right, bottom, radius,
+                        RenderUtils.alpha(hud.getLiquidGlassTint().getArgb(), Math.round(82 * hud.getLiquidGlassOpacity().getFloat())));
+                RenderUtils.roundedOutline(left, top, right, bottom, radius, 1, 0x88FFFFFF);
+                return;
+            }
             if (!liquidGlass.draw(left, top, right, bottom, radius, hud.getLiquidGlassBlur().isEnabled()
                     ? hud.getLiquidGlassBlurStrength().getFloat() : 0.0F, hud.getLiquidGlassRefraction().getFloat(),
                     hud.getLiquidGlassOpacity().getFloat(), hud.getLiquidGlassTint().getArgb())) {
@@ -659,6 +719,10 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         if (hud == null || !hud.isEnabled() || !hud.getHudElements().isSelectedIgnoreCase(SCOREBOARD) || minecraft.theWorld == null || minecraft.thePlayer == null) {
             return;
         }
+        renderScaled(scoreboard, new ScaledResolution(minecraft), () -> drawScoreboardContents(partialTicks, hud));
+    }
+
+    private void drawScoreboardContents(float partialTicks, HudModule hud) {
         Scoreboard board = minecraft.theWorld.getScoreboard();
         ScoreObjective objective = null;
         ScorePlayerTeam playerTeam = board.getPlayersTeam(minecraft.thePlayer.getName());
@@ -784,8 +848,22 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     public void drawPreview(HudElement element, FontRenderer font) {
-        // The editor must still be useful in the main menu, where the normal
-        // in-world renderers have no player and therefore no fresh bounds.
+        // In a world, show the real renderer with current module settings and
+        // game data. Sample content remains available in the main menu and for
+        // widgets that currently have no live data (such as an empty sidebar).
+        if (element != null && minecraft.thePlayer != null && minecraft.theWorld != null) {
+            HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+            if (hud != null
+                    && (element != health || !hud.getHealthHideFull().isEnabled()
+                    || minecraft.thePlayer.getHealth() < minecraft.thePlayer.getMaxHealth())
+                    && (element != music || isEnabled(MUSIC))) {
+                previewingHud = true;
+                try { drawLivePreview(element, hud, new ScaledResolution(minecraft), font); }
+                finally { previewingHud = false; }
+                return;
+            }
+        }
+        // The editor must also work from the main menu, without a player.
         if (element != null) {
             if (element == watermark) previewCard(element, font, 132, 26, "Vibe client", "90 fps  •  v" + Vibe.VERSION);
             else if (element == arrayList) previewCard(element, font, 142, 62, "Inventory manager   Greenly", "Block overlay   Fade", "Trajectories   Basic");
@@ -860,6 +938,30 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             font.drawStringWithShadow(LanguageManager.translate("SCOREBOARD"), element.getLeft() + 4, element.getTop() + 5, 0xFFFFFFFF);
             font.drawStringWithShadow(LanguageManager.translate("Player      12"), element.getLeft() + 4, element.getTop() + 17, 0xFFD5E1F5);
             font.drawStringWithShadow("Vibe         8", element.getLeft() + 4, element.getTop() + 29, 0xFFD5E1F5);
+        }
+    }
+
+    private void drawLivePreview(HudElement element, HudModule hud, ScaledResolution resolution, FontRenderer font) {
+        if (element == arrayList) arrayRenderer.draw(hud, arrayList, resolution, true);
+        else if (element == music) drawMusic(true);
+        else if (element == watermark) renderScaled(element, resolution, () -> drawWatermark(hud, resolution, font));
+        else if (element == coordinates) renderScaled(element, resolution, () -> drawCoordinates(hud, resolution, font));
+        else if (element == clock) renderScaled(element, resolution, () -> drawClock(hud, resolution, font));
+        else if (element == sessionInfo) renderScaled(element, resolution, () -> drawSessionInfo(hud, resolution, font));
+        else if (element == motionGraph) renderScaled(element, resolution, () -> drawMotionGraph(hud, resolution, font));
+        else if (element == stalker) {
+            renderScaled(element, resolution, () -> drawStalker(hud, resolution, font));
+            if (element.getHeight() <= 1) previewCard(element, font, 202, 48, "Player name  12m", "20.0 HP  Armor  Item");
+        }
+        else if (element == armor) renderScaled(element, resolution, () -> drawArmor(hud, resolution, font));
+        else if (element == inventory) renderScaled(element, resolution, () -> drawInventory(hud, resolution, font));
+        else if (element == health) renderScaled(element, resolution, () -> drawHealth(hud, resolution, font));
+        else if (element == cps) renderScaled(element, resolution, () -> drawCps(resolution, font));
+        else if (element == cpsGraph) renderScaled(element, resolution, () -> drawCpsGraph(hud, resolution, font));
+        else if (element == scoreboard) {
+            long before = element.boundsRevision;
+            renderScaled(element, resolution, () -> drawScoreboardContents(0.0F, hud));
+            if (element.boundsRevision == before) previewCard(element, font, 118, 42, "Scoreboard", "Vibe  8", "Player  12");
         }
     }
 
@@ -1005,6 +1107,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         private int top;
         private int width;
         private int height;
+        private long boundsRevision;
         // Appearance belongs to the widget, not to the entire HUD.  Leaving
         // this unset retains the old global setting for existing layouts.
         private String theme;
@@ -1051,6 +1154,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             this.top = top;
             this.width = width;
             this.height = height;
+            boundsRevision++;
         }
 
         /** Restore defaults if a resolution/GUI-scale change pushes this HUD item offscreen. */

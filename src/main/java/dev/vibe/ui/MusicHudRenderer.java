@@ -42,6 +42,12 @@ public final class MusicHudRenderer {
     private long changedAt;
 
     public void draw(MusicModule module, MediaTrack track, int left, int top, boolean preview) {
+        ScaledResolution resolution = new ScaledResolution(mc);
+        draw(module, track, left, top, preview,
+                effectiveScale(module, resolution.getScaledWidth(), resolution.getScaledHeight()));
+    }
+
+    public void draw(MusicModule module, MediaTrack track, int left, int top, boolean preview, float scale) {
         if (preview && track.durationMs == 0 && track.artwork == null)
             track = new MediaTrack("Your music, in Vibe", "Artist / Album", "Media preview", "Playing",
                     true, false, 42000, 180000, null);
@@ -52,8 +58,6 @@ public final class MusicHudRenderer {
         boolean alpha = GL11.glIsEnabled(GL11.GL_ALPHA_TEST), blend = GL11.glIsEnabled(GL11.GL_BLEND);
         int sourceRgb = GL11.glGetInteger(GL14.GL_BLEND_SRC_RGB), destRgb = GL11.glGetInteger(GL14.GL_BLEND_DST_RGB);
         int sourceAlpha = GL11.glGetInteger(GL14.GL_BLEND_SRC_ALPHA), destAlpha = GL11.glGetInteger(GL14.GL_BLEND_DST_ALPHA);
-        ScaledResolution resolution = new ScaledResolution(mc);
-        float scale = effectiveScale(module, resolution.getScaledWidth(), resolution.getScaledHeight());
         GL11.glPushMatrix();
         GL11.glTranslatef(left, top, 0);
         GL11.glScalef(scale, scale, 1);
