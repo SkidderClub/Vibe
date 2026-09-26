@@ -92,7 +92,7 @@ public final class NesEmulatorGui extends GuiScreen {
         fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("then click the ROM row to select one."), side, top + 292, RenderUtils.MUTED);
         }
         fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Controls"), side, top + panelHeight - 91, SkeetEditorStyle.MUTED);
-        fontRendererObj.drawStringWithShadow("A  Z       B  X", side, top + panelHeight - 76, RenderUtils.TEXT);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("A  Z       B  X"), side, top + panelHeight - 76, RenderUtils.TEXT);
         fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("SELECT  Shift     START  Enter"), side, top + panelHeight - 62, RenderUtils.TEXT);
         fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("D-Pad  Arrow keys"), side, top + panelHeight - 48, RenderUtils.TEXT);
         if (selectingRom) drawRomSelector(mouseX, mouseY);
@@ -103,7 +103,7 @@ public final class NesEmulatorGui extends GuiScreen {
         fontRendererObj.drawStringWithShadow(label, x, y, RenderUtils.MUTED);
         SkeetEditorStyle.row(x, y + 11, right, y + 31, false, false);
         fontRendererObj.drawStringWithShadow(value, x + 7, y + 17, SkeetEditorStyle.TEXT);
-        fontRendererObj.drawStringWithShadow("‹ ›", right - 21, y + 17, SkeetEditorStyle.accent(0.1F));
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("‹ ›"), right - 21, y + 17, SkeetEditorStyle.accent(0.1F));
     }
 
     private void button(int x, int y, int right, String text) {
@@ -189,7 +189,7 @@ public final class NesEmulatorGui extends GuiScreen {
         SkeetEditorStyle.panel(selectorLeft, selectorTop, selectorRight, selectorBottom, "Select local game");
         List<File> roms = module.getRoms();
         if (roms.isEmpty()) {
-            fontRendererObj.drawStringWithShadow("Put legally owned ROMs in vibe/roms, then reopen this list.", selectorLeft + 12, selectorTop + 32, SkeetEditorStyle.MUTED);
+            fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Put legally owned ROMs in vibe/roms, then reopen this list."), selectorLeft + 12, selectorTop + 32, SkeetEditorStyle.MUTED);
             return;
         }
         int firstY = selectorTop + 22, visible = Math.max(1, (selectorBottom - firstY - 8) / 20);

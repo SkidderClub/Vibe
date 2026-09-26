@@ -1,6 +1,7 @@
 package dev.vibe.ui;
 
 import dev.vibe.Vibe;
+import dev.vibe.language.LanguageManager;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -95,8 +96,8 @@ public final class MainMenuPresentation {
         Gui.drawRect(0, 0, width, height, 0x85000000);
         AccountScreenStyle.window(left, top, panelWidth, panelHeight);
         AccountScreenStyle.title(Vibe.NAME, innerLeft, top + 16);
-        AccountScreenStyle.text("v" + Vibe.VERSION, innerLeft + 52, top + 21, AccountScreenStyle.MUTED);
-        if (details) AccountScreenStyle.text("Minecraft 1.8.9", innerLeft, top + 38, AccountScreenStyle.MUTED);
+        AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("v") + Vibe.VERSION, innerLeft + 52, top + 21, AccountScreenStyle.MUTED);
+        if (details) AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("Minecraft 1.8.9"), innerLeft, top + 38, AccountScreenStyle.MUTED);
 
         boolean accountHovered = isAccountHit(mouseX, mouseY);
         AccountScreenStyle.panel(innerLeft, accountTop, menuWidth, accountHeight,
@@ -106,13 +107,33 @@ public final class MainMenuPresentation {
         int headSize = details ? 30 : 24;
         SkinHeads.draw(mc.getSession().getProfile().getId(), username, innerLeft + 7, accountTop + (accountHeight - headSize) / 2, headSize);
         int textLeft = innerLeft + headSize + 17;
-        AccountScreenStyle.text("PLAYING AS", textLeft, accountTop + (details ? 8 : 4), AccountScreenStyle.MUTED);
+        AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("PLAYING AS"), textLeft, accountTop + (details ? 8 : 4), AccountScreenStyle.MUTED);
         AccountScreenStyle.rawText(AccountScreenStyle.fitRaw(username, menuWidth - headSize - 28), textLeft,
                 accountTop + (details ? 23 : 17), AccountScreenStyle.TEXT);
+        drawLanguageButton(height, mouseX, mouseY);
     }
 
     public boolean isAccountHit(int mouseX, int mouseY) {
         return mouseX >= innerLeft && mouseX < innerLeft + menuWidth && mouseY >= accountTop && mouseY < accountTop + accountHeight;
+    }
+
+    public boolean isLanguageHit(int mouseX, int mouseY, int screenHeight) {
+        return mouseX >= 8 && mouseX < 42 && mouseY >= screenHeight - 32 && mouseY < screenHeight - 8;
+    }
+
+    private void drawLanguageButton(int height, int mouseX, int mouseY) {
+        int x = 8, y = height - 32, buttonWidth = 34, buttonHeight = 24;
+        boolean hovered = isLanguageHit(mouseX, mouseY, height);
+        AccountScreenStyle.panel(x, y, buttonWidth, buttonHeight,
+                hovered ? AccountScreenStyle.HOVER : AccountScreenStyle.SURFACE,
+                hovered ? AccountScreenStyle.ACCENT : AccountScreenStyle.BORDER);
+        LanguageFlags.draw(LanguageManager.selectedLanguage(), x + 5, y + 4);
+        if (hovered) {
+            String name = AccountScreenStyle.fitRaw(LanguageManager.displayName(LanguageManager.selectedLanguage()), 150);
+            int labelWidth = Math.max(64, Minecraft.getMinecraft().fontRendererObj.getStringWidth(name) + 16);
+            AccountScreenStyle.panel(x + 40, y, labelWidth, buttonHeight, AccountScreenStyle.SURFACE, AccountScreenStyle.BORDER);
+            AccountScreenStyle.rawText(name, x + 48, y + 8, AccountScreenStyle.TEXT);
+        }
     }
 
     public void drawOverlay(int width, int height, int mouseX, int mouseY) { changelog.draw(width, height, mouseX, mouseY); }

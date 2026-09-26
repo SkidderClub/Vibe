@@ -92,9 +92,9 @@ public final class LicensesGui extends GuiScreen {
         drawRect(0, 0, width, height, 0x85000000);
         AccountScreenStyle.window(left, top, panelWidth, panelHeight);
         // Fit the localized heading at the normal font size on small GUI scales.
-        AccountScreenStyle.text(AccountScreenStyle.fit("Licenses & credits", panelWidth - 98),
+        AccountScreenStyle.text(AccountScreenStyle.fit(dev.vibe.language.LanguageManager.translate("Licenses & credits"), panelWidth - 98),
                 left + 14, top + 16, AccountScreenStyle.TEXT);
-        AccountScreenStyle.rawText("Vibe " + Vibe.VERSION + "  /  GPLv3 + AGPLv3", left + 14, top + 35, AccountScreenStyle.MUTED);
+        AccountScreenStyle.rawText(dev.vibe.language.LanguageManager.translate("Vibe ") + Vibe.VERSION + "  /  GPLv3 + AGPLv3", left + 14, top + 35, AccountScreenStyle.MUTED);
         drawRect(left + 14, contentTop - 5, left + panelWidth - 14, contentTop - 4, AccountScreenStyle.BORDER);
         try (GuiClip clip = new GuiClip(left + 14, contentTop, panelWidth - 28, contentBottom - contentTop)) {
             for (int index = Math.max(0, scroll / LINE_HEIGHT); index < lines.size(); index++) {

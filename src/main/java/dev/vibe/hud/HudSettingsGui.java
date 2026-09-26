@@ -103,7 +103,7 @@ public final class HudSettingsGui extends GuiScreen {
             }
         }
         }
-        fontRendererObj.drawStringWithShadow("Scroll | Click color to enter #RRGGBBAA", left + 4, height - 10, 0xFF8FA5C4);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Scroll | Click color to enter #RRGGBBAA"), left + 4, height - 10, 0xFF8FA5C4);
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 

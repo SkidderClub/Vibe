@@ -101,14 +101,14 @@ final class NeverLoseWorkspace {
         NeverLoseFont.BOLD.draw("NL", x + 15, y + 16, 0xFFE1F4FF);
         if (sidebar > 100) {
             NeverLoseFont.BOLD.draw("Neverlose", x + 41, y + 10, 0xFFF0F2F6);
-            small("Vibe Client", x + 41, y + 25, DIM);
-        } else small("NEVERLOSE", x + 37, y + 18, TEXT);
+            small(dev.vibe.language.LanguageManager.translate("Vibe Client"), x + 41, y + 25, DIM);
+        } else small(dev.vibe.language.LanguageManager.translate("NEVERLOSE"), x + 37, y + 18, TEXT);
         Gui.drawRect(x + 9, y + HEADER, x + sidebar - 9, y + HEADER + 1, BORDER);
         int row = h < 330 ? Math.max(18, (h - 99) / 7) : 27;
         int tabY = y + HEADER + (h < 330 ? 10 : 26);
-        if (h >= 330) small("GAMEPLAY", x + 14, tabY - 16, DIM);
+        if (h >= 330) small(dev.vibe.language.LanguageManager.translate("GAMEPLAY"), x + 14, tabY - 16, DIM);
         for (Category value : Category.values()) {
-            if (value == Category.CLIENT && h >= 330) { tabY += 23; small("WORKSPACE", x + 14, tabY - 16, DIM); }
+            if (value == Category.CLIENT && h >= 330) { tabY += 23; small(dev.vibe.language.LanguageManager.translate("WORKSPACE"), x + 14, tabY - 16, DIM); }
             boolean active = category == value && query.isEmpty();
             boolean hover = inside(mx, my, x + 6, tabY, sidebar - 12, row - 2);
             if (active || hover) rect(x + 6, tabY, sidebar - 12, row - 2, 5, active ? 0xFF252A31 : 0xFF191E25);
@@ -126,7 +126,7 @@ final class NeverLoseWorkspace {
         if (user == null || user.trim().isEmpty()) user = "Vibe User";
         label(user, x + 41, footer + 10, sidebar - 49, TEXT);
         rect(x + 42, footer + 27, 4, 4, 2, 0xFF4ABF91);
-        small("Vibe " + Vibe.VERSION, x + 50, footer + 24, MUTED);
+        small(dev.vibe.language.LanguageManager.translate("Vibe ") + Vibe.VERSION, x + 50, footer + 24, MUTED);
     }
 
     private void drawHeader(int mx, int my) {

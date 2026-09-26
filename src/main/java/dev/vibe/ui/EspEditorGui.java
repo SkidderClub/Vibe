@@ -93,7 +93,7 @@ public final class EspEditorGui extends GuiScreen {
         if(esp.getModes().isSelected("2D")&&!inherited()) {
             int i=0;for(Element e:settings().elements){button(e.title,28+(i%3)*111,117+(i/3)*27,105,e.enabled.isEnabled());i++;}
         }
-        if(inherited()){text("Using Players appearance",32,125,SkeetEditorStyle.TEXT);text("Disable 'Use player defaults' to customize.",32,145,SkeetEditorStyle.MUTED);}
+        if(inherited()){text(dev.vibe.language.LanguageManager.translate("Using Players appearance"),32,125,SkeetEditorStyle.TEXT);text(dev.vibe.language.LanguageManager.translate("Disable 'Use player defaults' to customize."),32,145,SkeetEditorStyle.MUTED);}
         box=new EspLayout.Rect(left+157,top+250,83,163);
         scissor(18,207,350,265);
         drawPreviewPlayer((int)(box.x+box.w/2),(int)box.bottom());
@@ -112,7 +112,7 @@ public final class EspEditorGui extends GuiScreen {
         text(selected==null?"Select an element to see its resize handle":selected.title+"  /  "+String.format(Locale.ROOT,"%.2fx",selected.scale.getDouble()),32,478,SkeetEditorStyle.TEXT);
         button(previewOccluded?"Occluded":"Visible",28,504,105,previewOccluded);
         button(previewHurt?"Hurt":"Healthy",139,504,105,previewHurt);
-        button("Armor",250,504,105,previewArmor);
+        button(dev.vibe.language.LanguageManager.translate("Armor"),250,504,105,previewArmor);
         if(dragged!=null)text(resizing?"Resizing "+dragged.title:"Place "+dragged.title,mouseX-left+9,mouseY-top+12,0xFFFFFFFF);
     }
     private Esp2DRenderer.Actor previewActor() {
@@ -213,10 +213,10 @@ public final class EspEditorGui extends GuiScreen {
             int sx=x+Math.round(g.positions.get(i).getFloat()*w);
             rect(sx-5,y+29,10,13,activeColor==g.colors.get(i)?0xFFFFFFFF:SkeetEditorStyle.BORDER);rect(sx-3,y+31,6,9,g.colors.get(i).getArgb());
         }
-        text("Click a stop to edit color. Drag to position.",x,y+51,SkeetEditorStyle.MUTED);
+        text(dev.vibe.language.LanguageManager.translate("Click a stop to edit color. Drag to position."),x,y+51,SkeetEditorStyle.MUTED);
         text(g.count.getInt()+" color stops",x,y+74,SkeetEditorStyle.TEXT);
-        rect(x+w-60,y+66,25,20,SkeetEditorStyle.FIELD);text("-",x+w-51,y+72,0xFFFFFFFF);
-        rect(x+w-28,y+66,25,20,SkeetEditorStyle.FIELD);text("+",x+w-20,y+72,0xFFFFFFFF);
+        rect(x+w-60,y+66,25,20,SkeetEditorStyle.FIELD);text(dev.vibe.language.LanguageManager.translate("-"),x+w-51,y+72,0xFFFFFFFF);
+        rect(x+w-28,y+66,25,20,SkeetEditorStyle.FIELD);text(dev.vibe.language.LanguageManager.translate("+"),x+w-20,y+72,0xFFFFFFFF);
     }
     private void scissor(int x,int y,int w,int h){
         float sx=mc.displayWidth/(float)width*uiScale,sy=mc.displayHeight/(float)height*uiScale;
@@ -327,7 +327,7 @@ public final class EspEditorGui extends GuiScreen {
     private void openColor(ColorSetting color){activeColor=color;float[] hsv=java.awt.Color.RGBtoHSB(color.getRed(),color.getGreen(),color.getBlue(),null);hue=hsv[0];saturation=hsv[1];brightness=hsv[2];hex.setText(color.getHex());hex.setFocused(false);}
     private void drawPicker(){
         int x=PICK_X,y=PICK_Y;rect(x-3,y-3,PICK_W+6,309,0xFF09090F);rect(x,y,PICK_W,303,SkeetEditorStyle.WINDOW);
-        text("COLOR / OPACITY",x+14,y+12,SkeetEditorStyle.TEXT);text("x",x+247,y+12,0xFFAAAAAA);
+        text(dev.vibe.language.LanguageManager.translate("COLOR / OPACITY"),x+14,y+12,SkeetEditorStyle.TEXT);text(dev.vibe.language.LanguageManager.translate("x"),x+247,y+12,0xFFAAAAAA);
         int hueColor=java.awt.Color.HSBtoRGB(hue,1,1)|0xFF000000;
         gradientQuad(x+14,y+32,240,160,0xFFFFFFFF,hueColor,hueColor,0xFFFFFFFF);
         gradientQuad(x+14,y+32,240,160,0,0,0xFF000000,0xFF000000);
@@ -337,7 +337,7 @@ public final class EspEditorGui extends GuiScreen {
         RenderUtils.transparencyGrid(left+x+14,top+y+229,left+x+254,top+y+239,4);
         int rgb=activeColor.getArgb()&0xFFFFFF;gradientQuad(x+14,y+229,240,10,rgb,rgb|0xFF000000,rgb|0xFF000000,rgb);
         rect(x+13+activeColor.getAlpha()/255F*240,y+227,2,14,0xFFFFFFFF);
-        text("Alpha "+Math.round(activeColor.getAlpha()/255F*100)+"%",x+14,y+250,SkeetEditorStyle.TEXT);hex.drawTextBox();
+        text(dev.vibe.language.LanguageManager.translate("Alpha ")+Math.round(activeColor.getAlpha()/255F*100)+"%",x+14,y+250,SkeetEditorStyle.TEXT);hex.drawTextBox();
     }
     private void gradientQuad(float x,float y,float w,float h,int tl,int tr,int br,int bl){
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT|GL11.GL_COLOR_BUFFER_BIT|GL11.GL_CURRENT_BIT|GL11.GL_LIGHTING_BIT);

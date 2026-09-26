@@ -86,8 +86,8 @@ public final class MemeGameGui extends GuiScreen {
         playerScroll = Math.max(0, Math.min(maxScroll, playerScroll));
 
         if (players.isEmpty()) {
-            fontRendererObj.drawStringWithShadow("No other players are visible in this game.", listLeft + 11, listTop + 7, SkeetEditorStyle.MUTED);
-            fontRendererObj.drawStringWithShadow("A local robot match is always available.", listLeft + 11, listTop + 21, SkeetEditorStyle.MUTED);
+            fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("No other players are visible in this game."), listLeft + 11, listTop + 7, SkeetEditorStyle.MUTED);
+            fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("A local robot match is always available."), listLeft + 11, listTop + 21, SkeetEditorStyle.MUTED);
         } else {
             try (GuiClip clip = clip(listLeft + 2, listTop, listRight - 8, listBottom - 4)) {
                 for (int index = 0; index < players.size(); index++) {
@@ -116,7 +116,7 @@ public final class MemeGameGui extends GuiScreen {
         SkeetEditorStyle.panel(x, multiplayerTop, right, multiplayerBottom, "Multiplayer");
         drawSharedChatControls(x + 9, multiplayerTop + 23, right - 9, mouseX, mouseY);
         int playerTop = multiplayerTop + 104;
-        fontRendererObj.drawStringWithShadow("Player match", x + 9, playerTop, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Player match"), x + 9, playerTop, SkeetEditorStyle.MUTED);
         drawPlayerPreview(x + 9, playerTop + 11, right - 9);
         button(x + 9, playerTop + 55, right - 9, "Request player", selectedPlayer != null);
         if (module.getPendingOpponent() != null) {
@@ -141,10 +141,10 @@ public final class MemeGameGui extends GuiScreen {
         if (found != null) SkinHeads.draw(found.getGameProfile().getId(), name, x + 7, y + 7, 22);
         else {
             Gui.drawRect(x + 8, y + 8, x + 29, y + 29, 0xFF32333A);
-            fontRendererObj.drawStringWithShadow("?", x + 15, y + 14, SkeetEditorStyle.MUTED);
+            fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("?"), x + 15, y + 14, SkeetEditorStyle.MUTED);
         }
         fontRendererObj.drawStringWithShadow(trim(name, right - x - 45), x + 38, y + 10, selectedPlayer == null ? SkeetEditorStyle.MUTED : SkeetEditorStyle.TEXT);
-        if (selectedPlayer != null) fontRendererObj.drawStringWithShadow("You start as first player", x + 38, y + 21, SkeetEditorStyle.MUTED);
+        if (selectedPlayer != null) fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("You start as first player"), x + 38, y + 21, SkeetEditorStyle.MUTED);
     }
 
     private int playerColumns() { return listRight - listLeft >= 334 ? 2 : 1; }
@@ -167,7 +167,7 @@ public final class MemeGameGui extends GuiScreen {
     private void drawRobotControls(int x, int y, int right, int mouseX, int mouseY) {
         MemeGamePreferences preferences = module.getPreferences();
         SkeetEditorStyle.row(x, y, right, y + 24, false, false);
-        fontRendererObj.drawStringWithShadow("Strength", x + 8, y + 7, SkeetEditorStyle.TEXT);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Strength"), x + 8, y + 7, SkeetEditorStyle.TEXT);
         drawSlider(x + 70, y + 5, right - 8, preferences.getRobotStrength(), 1, 10, preferences.getRobotStrength() + "/10");
         drawCheckbox(x, y + 29, "You start", robotStarts, hit(x, y + 25, right, y + 48, mouseX, mouseY));
         button(x, y + 53, right, "Play robot", true);
@@ -178,7 +178,7 @@ public final class MemeGameGui extends GuiScreen {
         drawCheckbox(x, y, "Check sent message", preferences.isCheckMessage(), hit(x, y - 4, right, y + 18, mouseX, mouseY));
         drawCheckbox(x, y + 21, "Add garbage", preferences.isAddGarbage(), hit(x, y + 17, right, y + 39, mouseX, mouseY));
         SkeetEditorStyle.row(x, y + 45, right, y + 75, false, false);
-        fontRendererObj.drawStringWithShadow("Chat delay", x + 8, y + 55, SkeetEditorStyle.TEXT);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Chat delay"), x + 8, y + 55, SkeetEditorStyle.TEXT);
         drawSlider(x + 67, y + 52, right - 8, preferences.getChatDelay(), 0, 5000, preferences.getChatDelay() + " ms");
     }
 
@@ -335,7 +335,7 @@ public final class MemeGameGui extends GuiScreen {
     }
 
     private void drawPromotionPicker(int x, int y) {
-        fontRendererObj.drawStringWithShadow("Promotion", x, y, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Promotion"), x, y, SkeetEditorStyle.MUTED);
         int itemX = x;
         for (char item : new char[] {'Q', 'R', 'B', 'N'}) {
             SkeetEditorStyle.row(itemX, y + 12, itemX + 28, y + 37, promotion == item, false);
@@ -357,7 +357,7 @@ public final class MemeGameGui extends GuiScreen {
 
     private void drawCheckbox(int x, int y, String label, boolean checked, boolean hovered) {
         SkeetEditorStyle.row(x, y, x + 13, y + 13, checked, hovered);
-        if (checked) fontRendererObj.drawString("✓", x + 3, y + 3, 0xFF151518);
+        if (checked) fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("✓"), x + 3, y + 3, 0xFF151518);
         fontRendererObj.drawStringWithShadow(label, x + 19, y + 3, SkeetEditorStyle.TEXT);
     }
 

@@ -204,7 +204,7 @@ final class XanaxWorkspace {
             Gui.drawRect(left + 1, top + 1, left + 1 + fill, top + 2, 0xFFD44B3C);
         }
         center(compact(value), left, top, width, TEXT, false);
-        text("-", left - 9, top - 1, MUTED); text("+", left + width + 3, top - 1, MUTED);
+        text(dev.vibe.language.LanguageManager.translate("-"), left - 9, top - 1, MUTED); text(dev.vibe.language.LanguageManager.translate("+"), left + width + 3, top - 1, MUTED);
         settingsPane.hit(new Hit(Kind.SLIDER, left, top - 2, width, 14, setting, index));
         settingsPane.hit(new Hit(Kind.STEP, left - 12, top - 2, 11, 14, setting, index * 2));
         settingsPane.hit(new Hit(Kind.STEP, left + width + 1, top - 2, 12, 14, setting, index * 2 + 1));

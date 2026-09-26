@@ -63,7 +63,7 @@ public final class FriendEditorGui extends GuiScreen {
             String profile = "Cosmetic profile";
             fontRendererObj.drawStringWithShadow(fontRendererObj.trimStringToWidth(dev.vibe.language.LanguageManager.translate(profile), 106), left + 20, y + 20, SkeetEditorStyle.MUTED);
             String presetLabel = friend.getCosmeticPreset().isEmpty() ? dev.vibe.language.LanguageManager.translate("None") : presetName(friend);
-            fontRendererObj.drawStringWithShadow("< " + fontRendererObj.trimStringToWidth(presetLabel, 89) + " >", left + 132, y + 20, SkeetEditorStyle.TEXT);
+            fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("< ") + fontRendererObj.trimStringToWidth(presetLabel, 89) + " >", left + 132, y + 20, SkeetEditorStyle.TEXT);
             y += 40;
             if (y + 36 > top + 288) break;
         }
@@ -96,7 +96,7 @@ public final class FriendEditorGui extends GuiScreen {
     @Override protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
         mouseX = Math.round(mouseX / uiScale); mouseY = Math.round(mouseY / uiScale);
         name.mouseClicked(mouseX, mouseY, mouseButton); alias.mouseClicked(mouseX, mouseY, mouseButton);
-        if (mouseButton == 0 && mouseX >= left + 304 && mouseX < left + 344 && mouseY >= top + 32 && mouseY < top + 49) { if (Vibe.getInstance().getFriendManager().add(name.getText(), alias.getText())) { name.setText(""); alias.setText(""); } return; }
+        if (mouseButton == 0 && mouseX >= left + 304 && mouseX < left + 344 && mouseY >= top + 32 && mouseY < top + 49) { if (Vibe.getInstance().getFriendManager().add(name.getText(), alias.getText())) { name.setText(dev.vibe.language.LanguageManager.translate("")); alias.setText(dev.vibe.language.LanguageManager.translate("")); } return; }
         if (mouseButton == 0 && mouseX >= left + 350 && mouseX < left + 390 && mouseY >= top + 32 && mouseY < top + 49) { if (selected != null) Vibe.getInstance().getFriendManager().rename(selected.getName(), alias.getText()); return; }
         if (mouseButton == 0 || mouseButton == 1) {
             List<Friend> friends = Vibe.getInstance().getFriendManager().getFriends();

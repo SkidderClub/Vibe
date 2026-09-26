@@ -82,9 +82,9 @@ public final class ShaderMenuGui extends GuiScreen {
         GlStateManager.color(1, 1, 1, 1);
         Gui.drawRect(0, 0, width, height, 0x85000000);
         AccountScreenStyle.window(left, top, panelWidth, panelHeight);
-        AccountScreenStyle.title("Shaders", left + 14, top + 14);
+        AccountScreenStyle.title(dev.vibe.language.LanguageManager.translate("Shaders"), left + 14, top + 14);
         AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("Active shader") + ": " + shaders.getSelected(), left + 14, top + 39, AccountScreenStyle.ACCENT);
-        AccountScreenStyle.text("Scroll to browse shaders", left + 14, top + 55, AccountScreenStyle.MUTED);
+        AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("Scroll to browse shaders"), left + 14, top + 55, AccountScreenStyle.MUTED);
         drawScrollBar();
         if (!shaders.getLastError().isEmpty()) {
             AccountScreenStyle.text(AccountScreenStyle.fit(dev.vibe.language.LanguageManager.translate("Shader unavailable on this OpenGL profile"), panelWidth - 28), left + 14, top + panelHeight - 51, AccountScreenStyle.ERROR);

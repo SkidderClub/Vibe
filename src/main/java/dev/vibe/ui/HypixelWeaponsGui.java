@@ -62,13 +62,13 @@ public final class HypixelWeaponsGui extends GuiScreen {
         SkeetEditorStyle.window(left, top, right, bottom, "Murderer weapons", "Search vanilla items and add the weapon signatures to watch");
 
         SkeetEditorStyle.panel(left + 12, top + 31, right - 12, top + 126, "Selected weapons");
-        fontRendererObj.drawString("Click an item below to add it. Click a selected tag to remove it.", left + 20, top + 51, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("Click an item below to add it. Click a selected tag to remove it."), left + 20, top + 51, SkeetEditorStyle.MUTED);
         drawTags(mouseX, mouseY);
 
         SkeetEditorStyle.panel(left + 12, top + 137, right - 12, top + 207, "Find a vanilla item");
         SkeetEditorStyle.input(left + 16, top + 153, right - 16, top + 177);
         search.drawTextBox();
-        fontRendererObj.drawString("Type a display name or item ID, for example sword, shears, blaze rod", left + 20, top + 184, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("Type a display name or item ID, for example sword, shears, blaze rod"), left + 20, top + 184, SkeetEditorStyle.MUTED);
 
         SkeetEditorStyle.panel(left + 12, top + 218, right - 12, bottom - 48, "Matching items");
         drawChoices(mouseX, mouseY);
@@ -79,7 +79,7 @@ public final class HypixelWeaponsGui extends GuiScreen {
     private void drawTags(int mouseX, int mouseY) {
         tags.clear(); int x = left + 21, y = top + 67, limit = right - 20;
         if (selected.isEmpty()) {
-            fontRendererObj.drawString("No weapon signatures selected", x, y + 5, SkeetEditorStyle.MUTED); return;
+            fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("No weapon signatures selected"), x, y + 5, SkeetEditorStyle.MUTED); return;
         }
         for (String id : selected) {
             int tagWidth = Math.min(150, Math.max(58, fontRendererObj.getStringWidth(id) + 20));
@@ -88,7 +88,7 @@ public final class HypixelWeaponsGui extends GuiScreen {
             boolean hover = inside(mouseX, mouseY, x, y, x + tagWidth, y + 17);
             SkeetEditorStyle.row(x, y, x + tagWidth, y + 17, false, hover);
             fontRendererObj.drawString(id, x + 6, y + 5, SkeetEditorStyle.TEXT);
-            fontRendererObj.drawString("x", x + tagWidth - 10, y + 5, hover ? 0xFFFF737D : SkeetEditorStyle.MUTED);
+            fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("x"), x + tagWidth - 10, y + 5, hover ? 0xFFFF737D : SkeetEditorStyle.MUTED);
             tags.add(new Tag(id, x, y, x + tagWidth, y + 17)); x += tagWidth + 4;
         }
     }
@@ -98,7 +98,7 @@ public final class HypixelWeaponsGui extends GuiScreen {
         int rows = Math.max(1, (listBottom - listTop - 18) / 22);
         int maxScroll = Math.max(0, matches.size() - rows); scroll = Math.max(0, Math.min(maxScroll, scroll));
         if (matches.isEmpty()) {
-            fontRendererObj.drawString("No matching vanilla items", left + 21, listTop + 23, SkeetEditorStyle.MUTED); return;
+            fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("No matching vanilla items"), left + 21, listTop + 23, SkeetEditorStyle.MUTED); return;
         }
         for (int index = 0; index < rows && index + scroll < matches.size(); index++) {
             Choice choice = matches.get(index + scroll); int y = listTop + 18 + index * 22;

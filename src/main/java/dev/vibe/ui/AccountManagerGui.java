@@ -270,7 +270,7 @@ public final class AccountManagerGui extends GuiScreen {
                 search.isFocused() ? AccountScreenStyle.ACCENT : AccountScreenStyle.BORDER);
         search.drawTextBox();
         if (search.getText().isEmpty() && !search.isFocused())
-            AccountScreenStyle.text("Search accounts...", innerLeft + 11, searchY + 8, AccountScreenStyle.MUTED);
+            AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("Search accounts..."), innerLeft + 11, searchY + 8, AccountScreenStyle.MUTED);
         if (entries.isEmpty()) {
             int y = listTop + Math.max(0, (visibleRows * rowHeight - 26) / 2);
             String label = search.getText().isEmpty() ? "Your accounts appear here" : "No matching accounts";
@@ -310,9 +310,9 @@ public final class AccountManagerGui extends GuiScreen {
             RenderUtils.roundedRect(innerLeft + listWidth - 3, y, innerLeft + listWidth, y + thumb, 1, AccountScreenStyle.ACCENT);
         }
         if (wide) {
-            AccountScreenStyle.text("ADD ACCOUNT", railLeft, bodyTop + 3, AccountScreenStyle.MUTED);
+            AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("ADD ACCOUNT"), railLeft, bodyTop + 3, AccountScreenStyle.MUTED);
             int y = bodyTop + 127;
-            AccountScreenStyle.text("SELECTED ACCOUNT", railLeft, y, AccountScreenStyle.MUTED);
+            AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("SELECTED ACCOUNT"), railLeft, y, AccountScreenStyle.MUTED);
             Account account = selectedAccount();
             if (account != null) {
                 SkinHeads.draw(account.getUuid(), account.getName(), railLeft, y + 18, 32);
@@ -340,19 +340,19 @@ public final class AccountManagerGui extends GuiScreen {
         AccountScreenStyle.panel(width / 2 - w / 2, bodyTop, w, h, AccountScreenStyle.SURFACE, AccountScreenStyle.BORDER);
         if (code != null) {
             int y = bodyTop + Math.max(9, (h - 110) / 2);
-            centered("Enter this code in your browser", width / 2, y, AccountScreenStyle.TEXT);
+            centered(dev.vibe.language.LanguageManager.translate("Enter this code in your browser"), width / 2, y, AccountScreenStyle.TEXT);
             AccountScreenStyle.panel(width / 2 - 76, y + 16, 152, 25, AccountScreenStyle.TINT, AccountScreenStyle.BORDER);
             centered(code.userCode, width / 2, y + 25, AccountScreenStyle.ACCENT);
             centered(AccountScreenStyle.fit(code.verificationUri.toString(), w - 20), width / 2, y + 47, AccountScreenStyle.MUTED);
-            centered(AccountScreenStyle.fit("App: In-Game Account Switcher", w - 20), width / 2, y + 62, AccountScreenStyle.MUTED);
+            centered(AccountScreenStyle.fit(dev.vibe.language.LanguageManager.translate("App: In-Game Account Switcher"), w - 20), width / 2, y + 62, AccountScreenStyle.MUTED);
             if (h >= 115) {
                 long seconds = Math.max(0, (code.expiresAt - System.currentTimeMillis()) / 1000);
-                centered("Expires in " + seconds / 60 + ":" + String.format(Locale.ROOT, "%02d", seconds % 60),
+                centered(dev.vibe.language.LanguageManager.translate("Expires in ") + seconds / 60 + ":" + String.format(Locale.ROOT, "%02d", seconds % 60),
                         width / 2, y + 84, AccountScreenStyle.MUTED);
             }
         } else {
             int y = bodyTop + h / 2 - 18;
-            centered("Working on your account", width / 2, y, AccountScreenStyle.TEXT);
+            centered(dev.vibe.language.LanguageManager.translate("Working on your account"), width / 2, y, AccountScreenStyle.TEXT);
             for (int i = 0; i < 4; i++) {
                 int x = width / 2 - 20 + i * 12;
                 RenderUtils.roundedRect(x, y + 23, x + 5, y + 28, 2,
@@ -365,8 +365,8 @@ public final class AccountManagerGui extends GuiScreen {
         int y = bodyTop + Math.max(0, (contentBottom - bodyTop - 112) / 2);
         if (removing == null) return;
         SkinHeads.draw(removing.getUuid(), removing.getName(), width / 2 - 17, y, 34);
-        centered("Remove " + removing.getName() + "?", width / 2, y + 45, AccountScreenStyle.TEXT);
-        centered("Deletes the saved sign-in from Vibe.", width / 2, y + 62, AccountScreenStyle.MUTED);
+        centered(dev.vibe.language.LanguageManager.translate("Remove ") + removing.getName() + "?", width / 2, y + 45, AccountScreenStyle.TEXT);
+        centered(dev.vibe.language.LanguageManager.translate("Deletes the saved sign-in from Vibe."), width / 2, y + 62, AccountScreenStyle.MUTED);
     }
 
     private void drawCookieFolder() {

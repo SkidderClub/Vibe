@@ -1,6 +1,7 @@
 package dev.vibe.ui;
 
 import dev.vibe.Vibe;
+import dev.vibe.language.LanguageManager;
 import dev.vibe.module.ModuleManager;
 import dev.vibe.module.impl.WaifuModule;
 import java.awt.image.BufferedImage;
@@ -86,15 +87,17 @@ public final class VisualRenderCheck {
                 hostile(); frame(); drawModel(model,player,skin); same("Inventory model, sneak="+sneak,cleanModel,pixels());
             }
             frame(); GuiRenderState.prepare(false);
-            String[] languages={"English","Chinese","Russian","Japanese","Bavarian"};
-            for(int i=0;i<languages.length;i++) LanguageFlags.draw(languages[i],20+i*55,60);
+            String[] languages=LanguageManager.languages().toArray(new String[LanguageManager.languages().size()]);
+            for(int i=0;i<languages.length;i++) LanguageFlags.draw(languages[i],20+(i%8)*36,48+(i/8)*29);
             byte[] flags=pixels();
             BufferedImage flagImage=new BufferedImage(320,240,BufferedImage.TYPE_INT_ARGB);
             for(int y=0;y<240;y++) for(int x=0;x<320;x++) {
                 int offset=((239-y)*320+x)*4;
                 flagImage.setRGB(x,y,0xFF000000|((flags[offset]&255)<<16)|((flags[offset+1]&255)<<8)|(flags[offset+2]&255));
             }
-            ImageIO.write(flagImage,"png",new File("build/visual-render-check/flags.png"));
+            File flagsOutput = new File("build/visual-render-check/flags.png");
+            if (!flagsOutput.getParentFile().isDirectory()) flagsOutput.getParentFile().mkdirs();
+            ImageIO.write(flagImage,"png",flagsOutput);
             int error=GL11.glGetError(); if(error!=GL11.GL_NO_ERROR) throw new AssertionError("OpenGL error: "+error);
             System.out.println("Waifu, particles and standing/sneaking inventory model pixel checks passed: "+GL11.glGetString(GL11.GL_RENDERER));
         } finally { buffer.destroy(); }

@@ -10,6 +10,7 @@ import dev.vibe.ui.MainMenuPresentation;
 import dev.vibe.ui.MenuThemesGui;
 import dev.vibe.ui.VibeMenuButton;
 import dev.vibe.ui.LicensesGui;
+import dev.vibe.ui.LanguagePickerGui;
 import static dev.vibe.ui.MainMenuPresentation.CHANGELOG_BUTTON_ID;
 import static dev.vibe.ui.MainMenuPresentation.DISCORD_BUTTON_ID;
 import static dev.vibe.ui.MainMenuPresentation.SHADER_BUTTON_ID;
@@ -120,6 +121,11 @@ public final class MainMenuEvents {
         Minecraft mc = Minecraft.getMinecraft();
         int x = Mouse.getEventX() * event.gui.width / mc.displayWidth;
         int y = event.gui.height - Mouse.getEventY() * event.gui.height / mc.displayHeight - 1;
+        if (Mouse.getEventButton() == 0 && Mouse.getEventButtonState() && presentation.isLanguageHit(x, y, event.gui.height)) {
+            mc.displayGuiScreen(new LanguagePickerGui(event.gui, shaders));
+            event.setCanceled(true);
+            return;
+        }
         if (Mouse.getEventButton() == 0 && Mouse.getEventButtonState() && presentation.isAccountHit(x, y)) {
             mc.displayGuiScreen(new AccountManagerGui(event.gui, shaders, Vibe.getInstance().getAccountManager()));
             event.setCanceled(true);

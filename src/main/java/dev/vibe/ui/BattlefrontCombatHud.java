@@ -30,14 +30,14 @@ public final class BattlefrontCombatHud {
         centered(String.format(Locale.ROOT,"%d:%02d",remaining/60,remaining%60),cx,top+40,1,WHITE,true);
         for(int i=0;i<3;i++){BattlefrontGame.Post p=g.posts[i];int x=cx-111+i*103,c=team(g,p.owner);
             rect(x-18,top+57,x+18,top+59,0x80667577);rect(x-18,top+57,x-18+36*p.captureRatio(),top+59,c);
-            centered(""+(char)('A'+i),x,top+64,.76f,c,true);}
+            centered(dev.vibe.language.LanguageManager.translate("")+(char)('A'+i),x,top+64,.76f,c,true);}
         compass(g,cx,top+86);
 
         icons.draw(g.scenario==Scenario.ENDOR?"forest":"planet",left+25,top+24,18,WHITE);
         text(g.scenario==Scenario.ENDOR?"ENDOR":"GEONOSIS",left+51,top+23,1.05f,WHITE,true);
         text(g.faction.title,left+25,top+46,.81f,MUTED,false);
         icons.draw("army",left+24,top+69,15,ALLY);text(g.order+"  /  TAB",left+48,top+70,.8f,ALLY,true);
-        text("+"+g.earned+" CR  /  "+g.kills+" eliminations",left+25,top+91,.78f,MUTED,false);
+        text(dev.vibe.language.LanguageManager.translate("+")+g.earned+" CR  /  "+g.kills+" eliminations",left+25,top+91,.78f,MUTED,false);
 
         minimap(g,icons,right-176,top+24,150);
         BattlefrontArchitecture.Building inside=g.world.buildingAt(g.x,g.y,g.z);
@@ -48,16 +48,16 @@ public final class BattlefrontCombatHud {
         int vx=left+25,vy=bottom-83;plate(vx-9,vy-8,223,64,0x8411191E);
         icons.draw("support",vx,vy+6,17,g.health<g.maxHealth()*.3?ENEMY:ALLY);
         text(Integer.toString((int)Math.ceil(g.health)),vx+26,vy-2,2.25f,WHITE,true);
-        text("/ "+(int)g.maxHealth(),vx+95,vy+12,.86f,MUTED,false);
+        text(dev.vibe.language.LanguageManager.translate("/ ")+(int)g.maxHealth(),vx+95,vy+12,.86f,MUTED,false);
         meter(vx,vy+31,202,5,g.health/g.maxHealth(),g.health<g.maxHealth()*.3?ENEMY:ALLY);
         icons.draw("shield",vx,vy+43,12,MUTED);text(g.progress.armor().title+"  /  "+Math.round(g.progress.resistance()*100)+"% resistance",vx+20,vy+42,.69f,MUTED,false);
-        if(g.progress.armor()==Armor.BESKAR){icons.draw("pack",vx,vy-29,13,ALLY);meter(vx+23,vy-22,122,3,g.jetFuel/4,ALLY);text("FUEL",vx+155,vy-27,.67f,MUTED,false);}
-        if(g.protection>0&&g.alive())text("Insertion protection  "+(int)Math.ceil(g.protection)+"s",vx,vy-47,.76f,ALLY,false);
-        text("M  Atlas    Z  Radar zoom    F1  Help",left+25,bottom-16,.70f,MUTED,false);
+        if(g.progress.armor()==Armor.BESKAR){icons.draw("pack",vx,vy-29,13,ALLY);meter(vx+23,vy-22,122,3,g.jetFuel/4,ALLY);text(dev.vibe.language.LanguageManager.translate("FUEL"),vx+155,vy-27,.67f,MUTED,false);}
+        if(g.protection>0&&g.alive())text(dev.vibe.language.LanguageManager.translate("Insertion protection  ")+(int)Math.ceil(g.protection)+"s",vx,vy-47,.76f,ALLY,false);
+        text(dev.vibe.language.LanguageManager.translate("M  Atlas    Z  Radar zoom    F1  Help"),left+25,bottom-16,.70f,MUTED,false);
 
         int wx=right-222,wy=bottom-81;plate(wx-9,wy-8,205,66,0x8411191E);
         icons.draw("weapon",wx,wy+3,34,WHITE);text(g.weapon(),wx+47,wy,.78f,MUTED,true);
-        text(Integer.toString(g.ammo),wx+46,wy+15,2.6f,g.ammo==0?ENEMY:WHITE,true);text("/ "+g.magazine(),wx+113,wy+32,1,MUTED,false);
+        text(Integer.toString(g.ammo),wx+46,wy+15,2.6f,g.ammo==0?ENEMY:WHITE,true);text(dev.vibe.language.LanguageManager.translate("/ ")+g.magazine(),wx+113,wy+32,1,MUTED,false);
         if(g.reload>0){meter(wx+47,wy+55,139,3,g.reloadProgress(),GOLD);rightText(String.format(Locale.ROOT,"RELOADING  %.1fs",g.reload),right-30,wy-24,.72f,GOLD,true);}
         else text(g.ammo<=g.magazine()/4?"[ R ]  Reload":"[ R ]  Power cell",wx+47,wy+54,.68f,g.ammo<=g.magazine()/4?GOLD:MUTED,false);
         ability(icons,"operations","G",g.grenadeCooldown,wx-8,wy-67,false);
@@ -78,7 +78,7 @@ public final class BattlefrontCombatHud {
         }
         if(g.noticeTime>g.time){float fade=(float)Math.min(1,(g.noticeTime-g.time)/.4);String msg=regular.fit(g.notice,380);
             centered(msg,cx,bottom-50,.86f,alpha(WHITE,fade),false);}
-        if(!g.alive()&&!g.finished){plate(cx-150,cy-40,300,84,0xCD11191E);centered("REDEPLOYING",cx,cy-24,1.6f,WHITE,true);centered("Reinsertion in "+Math.max(1,(int)Math.ceil(g.respawn))+"s",cx,cy+6,1,MUTED,false);}
+        if(!g.alive()&&!g.finished){plate(cx-150,cy-40,300,84,0xCD11191E);centered(dev.vibe.language.LanguageManager.translate("REDEPLOYING"),cx,cy-24,1.6f,WHITE,true);centered(dev.vibe.language.LanguageManager.translate("Reinsertion in ")+Math.max(1,(int)Math.ceil(g.respawn))+"s",cx,cy+6,1,MUTED,false);}
     }
     private void compass(BattlefrontGame g,int cx,int y){
         double heading=(g.yaw%360+360)%360;
@@ -105,10 +105,10 @@ public final class BattlefrontCombatHud {
         double a=Math.toRadians(g.yaw);double px=x+size/2.,py=y+size/2.;
         triangle(px,py,px+Math.sin(a-.45)*28,py-Math.cos(a-.45)*28,px+Math.sin(a+.45)*28,py-Math.cos(a+.45)*28,0x358BDDD8);
         arrow(px,py,a,7,0xFF152229);arrow(px,py,a,5,WHITE);
-        plate(x+size/2-8,y-17,16,14,0xDD11191E);centered("N",x+size/2,y-15,.75f,WHITE,true);
-        text("Z  "+(int)radius()+"m",x+3,y+size+9,.71f,MUTED,false);rightText("M  ATLAS",x+size-2,y+size+9,.71f,WHITE,true);
+        plate(x+size/2-8,y-17,16,14,0xDD11191E);centered(dev.vibe.language.LanguageManager.translate("N"),x+size/2,y-15,.75f,WHITE,true);
+        text(dev.vibe.language.LanguageManager.translate("Z  ")+(int)radius()+"m",x+3,y+size+9,.71f,MUTED,false);rightText("M  ATLAS",x+size-2,y+size+9,.71f,WHITE,true);
         if(g.waypoint)rightText("Rally  "+(int)Math.hypot(g.x-g.waypointX,g.z-g.waypointZ)+"m",x+size,y+size+43,.78f,GOLD,true);
-        else{text("ALLY",x+1,y+size+43,.62f,ALLY,true);rightText("HOSTILE",x+size,y+size+43,.62f,ENEMY,true);}
+        else{text(dev.vibe.language.LanguageManager.translate("ALLY"),x+1,y+size+43,.62f,ALLY,true);rightText("HOSTILE",x+size,y+size+43,.62f,ENEMY,true);}
     }
     private void mapMarker(BattlefrontGame g,int x,int y,int size,double wx,double wz,String label,int color){
         double dx=(wx-g.x)*size/(radius()*2),dz=(wz-g.z)*size/(radius()*2),limit=size/2.-11,factor=Math.max(1,Math.max(Math.abs(dx),Math.abs(dz))/limit);

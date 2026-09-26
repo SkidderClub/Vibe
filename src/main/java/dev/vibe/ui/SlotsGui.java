@@ -123,9 +123,9 @@ public final class SlotsGui extends GuiScreen {
         int gateLeft = left + (panelWidth - 360) / 2, gateTop = top + (panelHeight - 220) / 2;
         SkeetEditorStyle.window(gateLeft, gateTop, gateLeft + 360, gateTop + 220, "Slots", "virtual tokens only");
         SkeetEditorStyle.panel(gateLeft + 14, gateTop + 34, gateLeft + 346, gateTop + 172, "Adults only");
-        fontRendererObj.drawStringWithShadow("Enter your age to access the virtual arcade.", gateLeft + 27, gateTop + 61, SkeetEditorStyle.TEXT);
-        fontRendererObj.drawStringWithShadow("Vibe Tokens cannot be bought, sold or withdrawn.", gateLeft + 27, gateTop + 78, SkeetEditorStyle.MUTED);
-        fontRendererObj.drawStringWithShadow("Age", gateLeft + 54, gateTop + 119, SkeetEditorStyle.TEXT);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Enter your age to access the virtual arcade."), gateLeft + 27, gateTop + 61, SkeetEditorStyle.TEXT);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Vibe Tokens cannot be bought, sold or withdrawn."), gateLeft + 27, gateTop + 78, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Age"), gateLeft + 54, gateTop + 119, SkeetEditorStyle.TEXT);
         SkeetEditorStyle.input(gateLeft + 122, gateTop + 111, gateLeft + 212, gateTop + 134);
         ageField.xPosition = gateLeft + 130; ageField.yPosition = gateTop + 114; ageField.drawTextBox();
         SkeetEditorStyle.button(gateLeft + 28, gateTop + 145, gateLeft + 204, gateTop + 168, "Continue", true);
@@ -159,7 +159,7 @@ public final class SlotsGui extends GuiScreen {
 
     private void drawWallet(int x, int y, int right, int bottom, int mouseX, int mouseY) {
         SkeetEditorStyle.panel(x, y, right, bottom, "Virtual wallet");
-        fontRendererObj.drawStringWithShadow("Balance", x + 9, y + 24, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Balance"), x + 9, y + 24, SkeetEditorStyle.MUTED);
         fontRendererObj.drawStringWithShadow(String.valueOf(economy.getBalance()), x + 9, y + 39, SkeetEditorStyle.accent(.2F));
         boolean claimable = economy.canClaimAllowance(System.currentTimeMillis());
         SkeetEditorStyle.button(x + 8, y + 55, right - 8, y + 77, claimable ? "Claim 100 tokens" : allowanceLabel(), claimable);
@@ -174,7 +174,7 @@ public final class SlotsGui extends GuiScreen {
 
 
     private void drawBookOfVibe(int x, int y, int right, int bottom, int mouseX, int mouseY) {
-        fontRendererObj.drawStringWithShadow("5 reels • 5 paylines • outcome is secured before it animates", x, y, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("5 reels • 5 paylines • outcome is secured before it animates"), x, y, SkeetEditorStyle.MUTED);
         int reelTop = y + 20, reelHeight = 156, reelGap = 5, reelWidth = (right - x - reelGap * 4) / 5;
         for (int reel = 0; reel < 5; reel++) for (int row = 0; row < 3; row++) {
             int cellLeft = x + reel * (reelWidth + reelGap), cellTop = reelTop + row * 52;
@@ -193,7 +193,7 @@ public final class SlotsGui extends GuiScreen {
         boolean canSpin = pendingRoundId == null && economy.getBalance() >= SlotConfig.BETS[selectedBet];
         SkeetEditorStyle.button(spinLeft, betTop, right, betTop + 22, canSpin ? "Spin Book of Vibe" : "Not enough tokens", canSpin);
         fontRendererObj.drawStringWithShadow(trim(notice, right - x), x, betTop + 32, SkeetEditorStyle.MUTED);
-        fontRendererObj.drawStringWithShadow("Rules: Wild substitutes. Rift scatters pay anywhere. Configured return: " + Math.round(BookOfVibeSlots.expectedReturn() * 100.0D) + "%.", x, bottom - 14, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Rules: Wild substitutes. Rift scatters pay anywhere. Configured return: ") + Math.round(BookOfVibeSlots.expectedReturn() * 100.0D) + "%.", x, bottom - 14, SkeetEditorStyle.MUTED);
     }
 
     private Symbol displaySymbol(int row, int reel) {
@@ -215,7 +215,7 @@ public final class SlotsGui extends GuiScreen {
     }
 
     private void drawBetButtons(int x, int top, int mouseX, int mouseY) {
-        fontRendererObj.drawStringWithShadow("Bet", x, top + 7, SkeetEditorStyle.TEXT);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Bet"), x, top + 7, SkeetEditorStyle.TEXT);
         for (int index = 0; index < SlotConfig.BETS.length; index++) {
             int bx = x + 34 + index * 53;
             SkeetEditorStyle.button(bx, top, bx + 48, top + 22, String.valueOf(SlotConfig.BETS[index]), selectedBet == index);
@@ -223,7 +223,7 @@ public final class SlotsGui extends GuiScreen {
     }
 
     private void drawHoldem(int x, int y, int right, int bottom, int mouseX, int mouseY) {
-        fontRendererObj.drawStringWithShadow("Heads-up Texas Hold'em • 3% virtual rake from winning and split pots", x, y, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Heads-up Texas Hold'em • 3% virtual rake from winning and split pots"), x, y, SkeetEditorStyle.MUTED);
         if (holdem == null) {
             drawBetButtons(x, y + 26, mouseX, mouseY);
             int playLeft = x + 34 + SlotConfig.BETS.length * 53 + 10;
@@ -237,11 +237,11 @@ public final class SlotsGui extends GuiScreen {
             SkeetEditorStyle.button(x, y + 180, right, y + 202, action, true);
         }
         fontRendererObj.drawStringWithShadow(trim(notice, right - x), x, bottom - 30, SkeetEditorStyle.accent(.08F));
-        fontRendererObj.drawStringWithShadow("No real-money value • encrypted virtual round history", x, bottom - 14, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("No real-money value • encrypted virtual round history"), x, bottom - 14, SkeetEditorStyle.MUTED);
     }
 
     private void drawBlackjack(int x, int y, int right, int bottom, int mouseX, int mouseY) {
-        fontRendererObj.drawStringWithShadow("Six-deck blackjack • dealer stands on 17 • blackjack pays 3:2", x, y, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Six-deck blackjack • dealer stands on 17 • blackjack pays 3:2"), x, y, SkeetEditorStyle.MUTED);
         if (blackjack == null) {
             drawBetButtons(x, y + 26, mouseX, mouseY);
             int playLeft = x + 34 + SlotConfig.BETS.length * 53 + 10;
@@ -265,11 +265,11 @@ public final class SlotsGui extends GuiScreen {
             }
         }
         fontRendererObj.drawStringWithShadow(trim(notice, right - x), x, bottom - 30, SkeetEditorStyle.accent(.08F));
-        fontRendererObj.drawStringWithShadow("No real-money value • hits, stand, double and split use one virtual round", x, bottom - 14, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("No real-money value • hits, stand, double and split use one virtual round"), x, bottom - 14, SkeetEditorStyle.MUTED);
     }
 
     private void drawCases(int x, int y, int right, int bottom, int mouseX, int mouseY) {
-        fontRendererObj.drawStringWithShadow("Original virtual collectibles • outcome is selected before the case reveal", x, y, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Original virtual collectibles • outcome is selected before the case reveal"), x, y, SkeetEditorStyle.MUTED);
         int reelTop = y + 29, cellWidth = (right - x - 16) / 5;
         for (int index = 0; index < 5; index++) {
             String item;
@@ -284,14 +284,14 @@ public final class SlotsGui extends GuiScreen {
         SkeetEditorStyle.button(openLeft, reelTop + 82, right, reelTop + 104, ready ? "Open Vibe Case" : "Case is opening", ready);
         if (caseResult != null && caseRoundId == null) fontRendererObj.drawStringWithShadow(caseResult.label(), x, reelTop + 122, caseRarityColor(caseResult.getRarity()));
         fontRendererObj.drawStringWithShadow(trim(notice, right - x), x, bottom - 30, SkeetEditorStyle.accent(.08F));
-        fontRendererObj.drawStringWithShadow("No trading, resale, withdrawal or real-world value", x, bottom - 14, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("No trading, resale, withdrawal or real-world value"), x, bottom - 14, SkeetEditorStyle.MUTED);
     }
 
     private void drawRoulette(int x, int y, int right, int bottom, int mouseX, int mouseY) {
-        fontRendererObj.drawStringWithShadow("European roulette • one zero • standard 2.70% virtual house edge", x, y, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("European roulette • one zero • standard 2.70% virtual house edge"), x, y, SkeetEditorStyle.MUTED);
         int boardTop = y + 23, cellWidth = 34;
         SkeetEditorStyle.row(x, boardTop, x + cellWidth, boardTop + 78, rouletteNumber == 0, false);
-        fontRendererObj.drawStringWithShadow("0", x + 13, boardTop + 34, 0xFF72D59B);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("0"), x + 13, boardTop + 34, 0xFF72D59B);
         for (int number = 1; number <= 36; number++) {
             int index = number - 1, column = index / 3, row = index % 3, cx = x + cellWidth + column * cellWidth, cy = boardTop + row * 26;
             SkeetEditorStyle.row(cx, cy, cx + cellWidth - 2, cy + 24, rouletteNumber == number, false);
@@ -303,13 +303,13 @@ public final class SlotsGui extends GuiScreen {
             int column = index % 6, row = index / 6, bx = x + column * 73, by = controlTop + row * 26;
             SkeetEditorStyle.button(bx, by, bx + 68, by + 22, values[index].label, rouletteChoice == values[index]);
         }
-        fontRendererObj.drawStringWithShadow("Selected number: " + rouletteNumber + " • " + rouletteChoice.label, x, controlTop + 76, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Selected number: ") + rouletteNumber + " • " + rouletteChoice.label, x, controlTop + 76, SkeetEditorStyle.MUTED);
         drawBetButtons(x, controlTop + 91, mouseX, mouseY);
         int spinLeft = x + 34 + SlotConfig.BETS.length * 53 + 10;
         boolean ready = economy.getPendingRound() == null && economy.getBalance() >= SlotConfig.BETS[selectedBet];
         SkeetEditorStyle.button(spinLeft, controlTop + 91, right, controlTop + 113, ready ? "Spin selected bet" : "Not enough tokens", ready);
         fontRendererObj.drawStringWithShadow(trim(notice, right - x), x, bottom - 30, SkeetEditorStyle.accent(.08F));
-        fontRendererObj.drawStringWithShadow("Click a table number for straight / split / street / corner coverage.", x, bottom - 14, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Click a table number for straight / split / street / corner coverage."), x, bottom - 14, SkeetEditorStyle.MUTED);
     }
 
     private void drawCards(String label, List<PlayingCard> cards, int x, int y, boolean hidden) {
@@ -328,26 +328,26 @@ public final class SlotsGui extends GuiScreen {
     }
 
     private void drawMines(int x, int y, int right, int bottom, int mouseX, int mouseY) {
-        fontRendererObj.drawStringWithShadow("5 x 5 grid • 3 mines • cash out whenever you choose", x, y, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("5 x 5 grid • 3 mines • cash out whenever you choose"), x, y, SkeetEditorStyle.MUTED);
         int gridTop = y + 21, cell = 42, gridSize = cell * 5;
         for (int row = 0; row < 5; row++) for (int column = 0; column < 5; column++) {
             int index = row * 5 + column, cx = x + column * cell, cy = gridTop + row * cell;
             boolean safe = minesRound != null && minesRound.isRevealed(index);
             SkeetEditorStyle.row(cx, cy, cx + cell - 2, cy + cell - 2, safe, hit(cx, cy, cx + cell - 2, cy + cell - 2, mouseX, mouseY));
-            if (safe) fontRendererObj.drawStringWithShadow("+", cx + 17, cy + 16, SkeetEditorStyle.accent(.2F));
+            if (safe) fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("+"), cx + 17, cy + 16, SkeetEditorStyle.accent(.2F));
         }
         int controlsX = x + gridSize + 16, controlsRight = right;
         if (minesRound == null) {
-            fontRendererObj.drawStringWithShadow("Place a virtual wager and reveal safe tiles.", controlsX, gridTop + 8, SkeetEditorStyle.TEXT);
+            fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Place a virtual wager and reveal safe tiles."), controlsX, gridTop + 8, SkeetEditorStyle.TEXT);
             drawBetButtons(controlsX, gridTop + 29, mouseX, mouseY);
             int playLeft = controlsX + 34 + SlotConfig.BETS.length * 53 + 10;
             boolean ready = economy.getPendingRound() == null && economy.getBalance() >= SlotConfig.BETS[selectedBet];
             SkeetEditorStyle.button(playLeft, gridTop + 29, controlsRight, gridTop + 51, ready ? "Start Mines" : "Not enough tokens", ready);
         } else {
-            fontRendererObj.drawStringWithShadow("Safe tiles: " + minesRound.safeReveals(), controlsX, gridTop + 8, SkeetEditorStyle.TEXT);
+            fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Safe tiles: ") + minesRound.safeReveals(), controlsX, gridTop + 8, SkeetEditorStyle.TEXT);
             String potential = "Cash out " + (long) Math.floor(SlotConfig.BETS[selectedBet] * minesRound.multiplier());
             SkeetEditorStyle.button(controlsX, gridTop + 25, controlsRight, gridTop + 47, potential, minesRound.safeReveals() > 0);
-            fontRendererObj.drawStringWithShadow("Multiplier " + String.format(java.util.Locale.ROOT, "%.2fx", minesRound.multiplier()), controlsX, gridTop + 61, SkeetEditorStyle.MUTED);
+            fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Multiplier ") + String.format(java.util.Locale.ROOT, "%.2fx", minesRound.multiplier()), controlsX, gridTop + 61, SkeetEditorStyle.MUTED);
         }
         fontRendererObj.drawStringWithShadow(trim(notice, right - x), x, gridTop + gridSize + 9, SkeetEditorStyle.MUTED);
     }

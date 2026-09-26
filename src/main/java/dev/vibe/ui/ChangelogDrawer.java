@@ -54,8 +54,8 @@ final class ChangelogDrawer {
         if (overlay) Gui.drawRect(0, 0, screenWidth, screenHeight, ((int) (105 * eased)) << 24);
         try (Clip outer = new Clip(x - 4, y, width + 8, Math.round((height + 6) * eased))) {
             AccountScreenStyle.window(x, y, width, height);
-            AccountScreenStyle.title("Changelog", x + 14, y + 15);
-            AccountScreenStyle.text("Latest & previous updates", x + 14, y + 35, AccountScreenStyle.MUTED);
+            AccountScreenStyle.title(dev.vibe.language.LanguageManager.translate("Changelog"), x + 14, y + 15);
+            AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("Latest & previous updates"), x + 14, y + 35, AccountScreenStyle.MUTED);
             close.drawButton(Minecraft.getMinecraft(), mouseX, mouseY);
             try (Clip content = new Clip(x + 12, contentTop, width - 24, contentBottom - contentTop)) {
                 for (Row row : rows) {
@@ -75,7 +75,7 @@ final class ChangelogDrawer {
                 MenuRoundedRenderer.rect(x + width - 17, contentTop, 3, contentBottom - contentTop, 1, AccountScreenStyle.BORDER);
                 MenuRoundedRenderer.rect(x + width - 17, thumbTop(), 3, thumbHeight(), 1, AccountScreenStyle.ACCENT);
             }
-            AccountScreenStyle.text("Scroll for more", x + 16, y + height - 16, AccountScreenStyle.MUTED);
+            AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("Scroll for more"), x + 16, y + height - 16, AccountScreenStyle.MUTED);
         }
     }
 

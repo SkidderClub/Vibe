@@ -48,9 +48,9 @@ public final class StatisticsGui extends GuiScreen {
         metric("Blocks broken", format(stats.blocksBroken), left + 155, top + 166);
         metric("Last server", trim(stats.lastServer, 15), left + 288, top + 166);
 
-        fontRendererObj.drawStringWithShadow("Recent playtime", left + 22, top + 232, SkeetEditorStyle.TEXT);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Recent playtime"), left + 22, top + 232, SkeetEditorStyle.TEXT);
         graph(stats.activity, left + 22, top + 248, overviewRight - left - 44, 80);
-        fontRendererObj.drawString("Last seven days", left + 22, top + 337, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("Last seven days"), left + 22, top + 337, SkeetEditorStyle.MUTED);
 
         int sideLeft = overviewRight + 10;
         SkeetEditorStyle.panel(sideLeft, top + 31, right - 10, top + 226,
@@ -97,7 +97,7 @@ public final class StatisticsGui extends GuiScreen {
             @Override public int compare(Map.Entry<String, Long> a, Map.Entry<String, Long> b) { return Long.compare(b.getValue(), a.getValue()); }
         });
         if (servers.isEmpty()) {
-            fontRendererObj.drawString("No server time recorded yet", x + 8, y, SkeetEditorStyle.MUTED);
+            fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("No server time recorded yet"), x + 8, y, SkeetEditorStyle.MUTED);
             return;
         }
         for (Map.Entry<String, Long> entry : servers.subList(0, Math.min(8, servers.size()))) {
@@ -113,7 +113,7 @@ public final class StatisticsGui extends GuiScreen {
             return;
         }
         if (stats.favourites.isEmpty()) {
-            fontRendererObj.drawString("Play to build your ranking", x + 8, y, SkeetEditorStyle.MUTED);
+            fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("Play to build your ranking"), x + 8, y, SkeetEditorStyle.MUTED);
             return;
         }
         int rank = 1;
@@ -149,9 +149,9 @@ public final class StatisticsGui extends GuiScreen {
     private void drawAccountPicker(String account, int mouseX, int mouseY) {
         int x = left + 188, y = top + 2;
         SkeetEditorStyle.row(x, y, x + 190, y + 15, false, hit(x, y, x + 190, y + 15, mouseX, mouseY));
-        fontRendererObj.drawString("‹", x + 7, y + 4, SkeetEditorStyle.accent(.1F));
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("‹"), x + 7, y + 4, SkeetEditorStyle.accent(.1F));
         fontRendererObj.drawString(trim(account, 18), x + 22, y + 4, SkeetEditorStyle.TEXT);
-        fontRendererObj.drawString("›", x + 177, y + 4, SkeetEditorStyle.accent(.1F));
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("›"), x + 177, y + 4, SkeetEditorStyle.accent(.1F));
     }
 
     private String viewedAccount(StatisticsService service) {

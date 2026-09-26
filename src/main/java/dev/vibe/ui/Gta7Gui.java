@@ -114,8 +114,8 @@ public final class Gta7Gui extends GuiScreen {
     private void hud(boolean aim){
         int margin=12;
         panel(margin,margin,Math.min(width-12,margin+214),margin+37);
-        text("GTA",margin+9,margin+7,WHITE);text("7",margin+29,margin+7,0xFFE6B98D);
-        text("O P E N   W O R L D",margin+46,margin+8,MUTED);
+        text(dev.vibe.language.LanguageManager.translate("GTA"),margin+9,margin+7,WHITE);text(dev.vibe.language.LanguageManager.translate("7"),margin+29,margin+7,0xFFE6B98D);
+        text(dev.vibe.language.LanguageManager.translate("O P E N   W O R L D"),margin+46,margin+8,MUTED);
         text(game.clock(),margin+174,margin+8,ACCENT);
         text(fontRendererObj.trimStringToWidth(game.district(),194),margin+9,margin+23,WHITE);
         int wantedWidth=87;
@@ -123,16 +123,16 @@ public final class Gta7Gui extends GuiScreen {
             panel(width-margin-wantedWidth,margin,width-margin,margin+37);
             text(game.wanted>0?"POLICE SEARCH":"LOW PROFILE",width-margin-wantedWidth+7,margin+7,game.wanted>0?0xFFECB38B:MUTED);
             for(int i=0;i<5;i++)wantedStar(width-margin-wantedWidth+12+i*14,margin+26,i<game.wanted);
-        }else if(game.wanted>0)text("WANTED "+game.wanted,margin+9,margin+42,0xFFF0BB84);
+        }else if(game.wanted>0)text(dev.vibe.language.LanguageManager.translate("WANTED ")+game.wanted,margin+9,margin+42,0xFFF0BB84);
         int hpWidth=Math.min(190,width/2-16),hpX=width-margin-hpWidth,hpY=height-76;
         panel(hpX,hpY,width-margin,height-margin);
-        text("HEALTH",hpX+9,hpY+8,MUTED);
+        text(dev.vibe.language.LanguageManager.translate("HEALTH"),hpX+9,hpY+8,MUTED);
         String health=Gta7Progress.format(game.health.toBigInteger())+" / "+Gta7Progress.format(game.progress.maxHealth().toBigInteger());
         rightText(health,width-margin-8,hpY+8,WHITE);
         Gui.drawRect(hpX+9,hpY+22,width-margin-9,hpY+28,0xFF32434C);
         int filled=hpX+9+Math.round((hpWidth-18)*game.healthRatio());
         if(filled>hpX+9)drawGradientRect(hpX+9,hpY+22,filled,hpY+28,game.healthRatio()<.3?0xFFF1B59B:0xFFB9EBCC,game.healthRatio()<.3?0xFFCF796E:0xFF70BCA7);
-        text("XP BANK",hpX+9,hpY+38,MUTED);
+        text(dev.vibe.language.LanguageManager.translate("XP BANK"),hpX+9,hpY+38,MUTED);
         rightText(Gta7Progress.format(game.progress.xp()),width-margin-8,hpY+38,ACCENT);
         text(fontRendererObj.trimStringToWidth(game.kills+" eliminations this life",hpWidth-18),hpX+9,hpY+51,0xFF8CA6A1);
         int slotWidth=Math.min(94,(width-hpWidth-42)/2),slotY=height-46;
@@ -148,7 +148,7 @@ public final class Gta7Gui extends GuiScreen {
                 Gui.drawRect(cx-gap-4,cy,cx-gap,cy+1,c);Gui.drawRect(cx+gap,cy,cx+gap+4,cy+1,c);
                 Gui.drawRect(cx,cy-gap-4,cx+1,cy-gap,c);Gui.drawRect(cx,cy+gap,cx+1,cy+gap+4,c);
             }
-            if(game.hitMarker>0)text("x",cx-2,cy-4,0xFFFFD7A3);
+            if(game.hitMarker>0)text(dev.vibe.language.LanguageManager.translate("x"),cx-2,cy-4,0xFFFFD7A3);
             if(game.reload>0){
                 centerText("RELOADING  "+(int)Math.ceil(game.reload)+"s",cy+20,WHITE);
                 Gui.drawRect(cx-30,cy+32,cx+30,cy+35,0xB0223641);
@@ -159,12 +159,12 @@ public final class Gta7Gui extends GuiScreen {
                 int nw=fontRendererObj.getStringWidth(notice),nx=(width-nw)/2;
                 panel(nx-9,height-95,nx+nw+9,height-75);text(notice,nx,height-89,WHITE);
             }
-            if(game.hintsVisible()||showHelp)text("ESC  Pause  /  F1  Controls",12,55,0xFFCED6CF);
+            if(game.hintsVisible()||showHelp)text(dev.vibe.language.LanguageManager.translate("ESC  Pause  /  F1  Controls"),12,55,0xFFCED6CF);
             if(showHelp||game.hintsVisible())controls(12,70);
             if(game.world.elevatorAt(game.x,game.z)!=null)centerText("E  Floor up / Shift+E  Down / Ctrl+E  Top",height/2+40,ACCENT);
             else if(game.world.ladderAt(game.x,game.y,game.z)!=null)centerText("SPACE  Climb / SHIFT  Descend",height/2+40,ACCENT);
             if(game.progress.jetCapacity().signum()>0) {
-                text("JET "+(game.jetFuel.compareTo(java.math.BigDecimal.valueOf(1000000))>=0?Gta7Progress.format(game.jetFuel.toBigInteger()):game.jetFuel.setScale(1,java.math.RoundingMode.DOWN).toPlainString())+"s"+(game.jetting?" / BOOST":""),12,height-60,ACCENT);
+                text(dev.vibe.language.LanguageManager.translate("JET ")+(game.jetFuel.compareTo(java.math.BigDecimal.valueOf(1000000))>=0?Gta7Progress.format(game.jetFuel.toBigInteger()):game.jetFuel.setScale(1,java.math.RoundingMode.DOWN).toPlainString())+"s"+(game.jetting?" / BOOST":""),12,height-60,ACCENT);
             }
             if(game.healthRatio()<.15)centerText("CRITICAL HEALTH",height/2+32,0xFFF28888);
         }
@@ -213,9 +213,9 @@ public final class Gta7Gui extends GuiScreen {
         GL11.glColor3f(.12f,.22f,.25f);GL11.glBegin(GL11.GL_TRIANGLES);GL11.glVertex2d(0,-5);GL11.glVertex2d(-3.7,3.5);GL11.glVertex2d(3.7,3.5);GL11.glEnd();
         GL11.glColor3f(.94f,.99f,.89f);GL11.glBegin(GL11.GL_TRIANGLES);GL11.glVertex2d(0,-3.5);GL11.glVertex2d(-2.2,2.2);GL11.glVertex2d(2.2,2.2);GL11.glEnd();
         GL11.glPopMatrix();GL11.glPopAttrib();
-        text("N",x+size/2-2,y-11,MUTED);
+        text(dev.vibe.language.LanguageManager.translate("N"),x+size/2-2,y-11,MUTED);
         Gui.drawRect(x+4,y+size-14,x+43,y+size-4,0xDC233B42);
-        Gui.drawRect(x+6,y+size-8,x+18,y+size-6,WHITE);text("20m",x+21,y+size-12,WHITE);
+        Gui.drawRect(x+6,y+size-8,x+18,y+size-6,WHITE);text(dev.vibe.language.LanguageManager.translate("20m"),x+21,y+size-12,WHITE);
     }
     private void mapRect(double x0,double z0,double x1,double z1,int color,int x,int y,int size,double left,double top,double scale){
         int ax=Math.max(x+4,x+4+(int)((x0-left)*scale)),az=Math.max(y+4,y+4+(int)((z0-top)*scale));
@@ -286,7 +286,7 @@ public final class Gta7Gui extends GuiScreen {
             button(left+w/2+4,footer,left+w-10,bottom-8,"SAVE & EXIT",mouseX,mouseY,false);
             if(shopPages()>1) {
                 int py=bottom-49;
-                text("<",left+12,py,ACCENT);rightText(">",left+w-12,py,ACCENT);
+                text(dev.vibe.language.LanguageManager.translate("<"),left+12,py,ACCENT);rightText(">",left+w-12,py,ACCENT);
                 String page="PAGE "+(shopPage+1)+" / "+shopPages();text(page,left+(w-fontRendererObj.getStringWidth(page))/2,py,MUTED);
             }
         } else {
@@ -298,7 +298,7 @@ public final class Gta7Gui extends GuiScreen {
             if(w>=450) {
                 if(showHelp)controls(left+230,top+85);
                 else {
-                    text("EXPLORE / N",left+232,top+81,ACCENT);
+                    text(dev.vibe.language.LanguageManager.translate("EXPLORE / N"),left+232,top+81,ACCENT);
                     int tw=(w-246)/3,th=Math.min(40,(menuHeight()-112)/3);
                     String[] names={"EMOJI","ARCTIC","MIRAGE","WIZARDS","CITY","GOBLINS","CANDY","DESERT","EMPIRE"};
                     int index=0;
@@ -309,7 +309,7 @@ public final class Gta7Gui extends GuiScreen {
                     }
                 }
             }
-            if(menuHeight()>235)text("LOCAL PROGRESS SAVES AUTOMATICALLY",left+14,bottom-19,0xFF7C9AA6);
+            if(menuHeight()>235)text(dev.vibe.language.LanguageManager.translate("LOCAL PROGRESS SAVES AUTOMATICALLY"),left+14,bottom-19,0xFF7C9AA6);
         }
     }
 

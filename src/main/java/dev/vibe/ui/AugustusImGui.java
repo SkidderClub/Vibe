@@ -435,7 +435,7 @@ public final class AugustusImGui {
             if (textButton("choice-" + option, caption, active ? BLUE : TEXT, textWidth(caption), 24)) {
                 if (mode != null) mode.setValue(option); else multi.toggle(option);
             }
-            if (comma) { ImGui.sameLine(0, 0); ImGui.text(","); }
+            if (comma) { ImGui.sameLine(0, 0); ImGui.text(dev.vibe.language.LanguageManager.translate(",")); }
         }
     }
 

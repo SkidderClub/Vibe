@@ -47,14 +47,14 @@ final class OfflineAccountGui extends GuiScreen {
         GlStateManager.color(1, 1, 1, 1);
         drawRect(0, 0, width, height, 0x85000000);
         AccountScreenStyle.window(left, top, cardWidth, 184);
-        AccountScreenStyle.title("Offline profile", left + 16, top + 17);
-        AccountScreenStyle.text("For singleplayer and offline servers.", left + 16, top + 39, AccountScreenStyle.MUTED);
-        AccountScreenStyle.text("USERNAME", left + 16, top + 64, AccountScreenStyle.MUTED);
+        AccountScreenStyle.title(dev.vibe.language.LanguageManager.translate("Offline profile"), left + 16, top + 17);
+        AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("For singleplayer and offline servers."), left + 16, top + 39, AccountScreenStyle.MUTED);
+        AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("USERNAME"), left + 16, top + 64, AccountScreenStyle.MUTED);
         AccountScreenStyle.panel(left + 16, top + 79, cardWidth - 32, 29, AccountScreenStyle.SURFACE,
                 name.isFocused() ? AccountScreenStyle.ACCENT : AccountScreenStyle.BORDER);
         name.drawTextBox();
         if (!name.getText().isEmpty() && !validName())
-            AccountScreenStyle.text("Use letters, numbers or underscores.", left + 16, top + 117, AccountScreenStyle.ERROR);
+            AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("Use letters, numbers or underscores."), left + 16, top + 117, AccountScreenStyle.ERROR);
         buttonList.get(0).enabled = validName() && accounts.isStorageAvailable() && !accounts.isBusy();
         super.drawScreen(x, y, ticks);
     }

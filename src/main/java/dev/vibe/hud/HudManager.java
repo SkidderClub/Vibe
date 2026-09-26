@@ -385,13 +385,13 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         if (blurEnabled(BlurModule.SESSION_INFO)) KawaseBlur.drawRegion(left, top, left + widgetWidth, top + widgetHeight, 3, 0.0F);
         drawHudSurface(hud, sessionInfo, left, top, left + widgetWidth, top + widgetHeight);
         drawHudOutline(sessionInfo, hud, left, top, left + widgetWidth, top + widgetHeight, hudOutlineColor(hud, .72F));
-        font.drawStringWithShadow("Statistics", left + 8, top + 7, RenderUtils.TEXT);
-        font.drawStringWithShadow("Session", left + 8, top + 22, 0xFF9BA8B9);
+        font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Statistics"), left + 8, top + 7, RenderUtils.TEXT);
+        font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Session"), left + 8, top + 22, 0xFF9BA8B9);
         font.drawStringWithShadow(time, left + widgetWidth - 8 - font.getStringWidth(time), top + 22, 0xFFE7EFF9);
-        font.drawStringWithShadow("Kills", left + 8, top + 38, 0xFF9BA8B9);
+        font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Kills"), left + 8, top + 38, 0xFF9BA8B9);
         String killValue = Integer.toString(kills);
         font.drawStringWithShadow(killValue, left + 51, top + 38, 0xFF79D8FF);
-        font.drawStringWithShadow("Walked", left + 79, top + 38, 0xFF9BA8B9);
+        font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Walked"), left + 79, top + 38, 0xFF9BA8B9);
         String walkedValue = Long.toString(walked);
         font.drawStringWithShadow(walkedValue, left + widgetWidth - 8 - font.getStringWidth(walkedValue), top + 38, 0xFF79D8FF);
         sessionInfo.setBounds(left, top, widgetWidth, widgetHeight);
@@ -666,8 +666,8 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         drawHudSurface(hud, cpsGraph, left, top, right, bottom);
         drawHudOutline(cpsGraph, hud, left, top, right, bottom, hudOutlineColor(hud, 0.88F));
         font.drawStringWithShadow(LanguageManager.translate("CPS GRAPH"), left + 7, top + 5, RenderUtils.TEXT);
-        font.drawStringWithShadow("L", left + 7, top + 16, 0xFF55E8FF);
-        font.drawStringWithShadow("R", left + 19, top + 16, 0xFFC17CFF);
+        font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("L"), left + 7, top + 16, 0xFF55E8FF);
+        font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("R"), left + 19, top + 16, 0xFFC17CFF);
         int graphLeft = left + 7;
         int graphTop = top + 28;
         int graphRight = right - 7;
@@ -892,11 +892,11 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         } else if (element == coordinates) {
             Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(110, element.getWidth()) + 2,
                     element.getTop() + 22, 0xAA60D5FF);
-            font.drawStringWithShadow("XYZ 0 / 64 / 0", element.getLeft() + 4, element.getTop() + 6, 0xFFFFFFFF);
+            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("XYZ 0 / 64 / 0"), element.getLeft() + 4, element.getTop() + 6, 0xFFFFFFFF);
         } else if (element == clock) {
             Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(90, element.getWidth()) + 2,
                     element.getTop() + 22, 0xAA76D7FF);
-            font.drawStringWithShadow("12:34:56", element.getLeft() + 4, element.getTop() + 6, 0xFFFFFFFF);
+            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("12:34:56"), element.getLeft() + 4, element.getTop() + 6, 0xFFFFFFFF);
         } else if (element == sessionInfo) {
             Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(145, element.getWidth()) + 2,
                     element.getTop() + 22, 0xAAFFBD59);
@@ -905,7 +905,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(196, element.getWidth()) + 2,
                     element.getTop() + 64, 0xAA2DE2C2);
             font.drawStringWithShadow(LanguageManager.translate("MOTION GRAPH"), element.getLeft() + 7, element.getTop() + 6, 0xFFFFFFFF);
-            font.drawStringWithShadow("▁▂▅▃▆▇▅▂▃▅", element.getLeft() + 7, element.getTop() + 28, 0xFF8FE8FF);
+            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("▁▂▅▃▆▇▅▂▃▅"), element.getLeft() + 7, element.getTop() + 28, 0xFF8FE8FF);
         } else if (element == stalker) {
             Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(212, element.getWidth()) + 2,
                     element.getTop() + 50, 0xAA2DE2C2);
@@ -919,17 +919,17 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(172, element.getWidth()) + 2,
                     element.getTop() + Math.max(64, element.getHeight()) + 2, 0xAA7EAEFF);
             font.drawStringWithShadow(LanguageManager.translate("INVENTORY"), element.getLeft() + 5, element.getTop() + 5, 0xFFFFFFFF);
-            font.drawStringWithShadow("[ ][ ][ ][ ][ ][ ][ ][ ][ ]", element.getLeft() + 5, element.getTop() + 24, 0xFFD5E1F5);
-            font.drawStringWithShadow("[ ][ ][ ][ ][ ][ ][ ][ ][ ]", element.getLeft() + 5, element.getTop() + 39, 0xFFD5E1F5);
+            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("[ ][ ][ ][ ][ ][ ][ ][ ][ ]"), element.getLeft() + 5, element.getTop() + 24, 0xFFD5E1F5);
+            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("[ ][ ][ ][ ][ ][ ][ ][ ][ ]"), element.getLeft() + 5, element.getTop() + 39, 0xFFD5E1F5);
         } else if (element == health) {
             font.drawStringWithShadow(LanguageManager.translate("20.0 HP"), element.getLeft() + 2, element.getTop() + 6, 0xFF5BE8A6);
         } else if (element == cps) {
-            font.drawStringWithShadow("[8 | 2]", element.getLeft(), element.getTop() + 4, 0xFFFFFFFF);
+            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("[8 | 2]"), element.getLeft(), element.getTop() + 4, 0xFFFFFFFF);
         } else if (element == cpsGraph) {
             Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + 198,
                     element.getTop() + 66, 0xAA2DE2C2);
             font.drawStringWithShadow(LanguageManager.translate("CPS GRAPH"), element.getLeft() + 7, element.getTop() + 6, 0xFFFFFFFF);
-            font.drawStringWithShadow("╱╲╱╲╱╲", element.getLeft() + 7, element.getTop() + 28, 0xFF55E8FF);
+            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("╱╲╱╲╱╲"), element.getLeft() + 7, element.getTop() + 28, 0xFF55E8FF);
         } else {
             int previewWidth = Math.max(110, element.getWidth());
             int previewHeight = Math.max(42, element.getHeight());
@@ -937,7 +937,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
                     element.getTop() + previewHeight + 2, 0xAAFF5B6E);
             font.drawStringWithShadow(LanguageManager.translate("SCOREBOARD"), element.getLeft() + 4, element.getTop() + 5, 0xFFFFFFFF);
             font.drawStringWithShadow(LanguageManager.translate("Player      12"), element.getLeft() + 4, element.getTop() + 17, 0xFFD5E1F5);
-            font.drawStringWithShadow("Vibe         8", element.getLeft() + 4, element.getTop() + 29, 0xFFD5E1F5);
+            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Vibe         8"), element.getLeft() + 4, element.getTop() + 29, 0xFFD5E1F5);
         }
     }
 

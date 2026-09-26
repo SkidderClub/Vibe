@@ -94,13 +94,13 @@ public final class HudEditorGui extends GuiScreen {
         RenderUtils.roundedRect(8, 7, width - 8, 36, 6, 0xF0171D29);
         RenderUtils.roundedOutline(8, 7, width - 8, 36, 6, 1, 0x66546477);
         RenderUtils.roundedRect(16, 14, 31, 29, 4, ACCENT);
-        fontRendererObj.drawString("H", 20, 17, 0xFF111D27);
-        fontRendererObj.drawString("HUD MANAGER", 39, 13, TEXT);
-        fontRendererObj.drawString("Arrange your in-game overlay", 39, 24, MUTED);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("H"), 20, 17, 0xFF111D27);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("HUD MANAGER"), 39, 13, TEXT);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("Arrange your in-game overlay"), 39, 24, MUTED);
         RenderUtils.roundedRect(width - 77, 12, width - 44, 31, 4, 0xFF294651);
-        fontRendererObj.drawString("Save", width - 72, 18, TEXT);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("Save"), width - 72, 18, TEXT);
         RenderUtils.roundedRect(width - 38, 12, width - 17, 31, 4, 0xFF28303D);
-        fontRendererObj.drawString("×", width - 31, 18, TEXT);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("×"), width - 31, 18, TEXT);
     }
 
     private void drawElementList(int mouseX, int mouseY) {
@@ -117,7 +117,7 @@ public final class HudEditorGui extends GuiScreen {
                         active ? 0xFF2A3948 : hover ? 0xD327303D : 0xB01C2430);
                 if (active) drawRect(leftPanel + 7, y + 5, leftPanel + 9, y + 26, ACCENT);
                 RenderUtils.roundedRect(leftPanel + 14, y + 10, leftPanel + 25, y + 21, 3, enabled ? ACCENT : 0xFF45505F);
-                if (enabled) fontRendererObj.drawString("✓", leftPanel + 16, y + 11, 0xFF10202A);
+                if (enabled) fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("✓"), leftPanel + 16, y + 11, 0xFF10202A);
                 String name = friendlyName(id);
                 while (fontRendererObj.getStringWidth(name) > leftPanelRight - leftPanel - 42 && name.length() > 2) name = name.substring(0, name.length() - 1);
                 fontRendererObj.drawString(name, leftPanel + 33, y + 12, enabled ? TEXT : MUTED);
@@ -125,14 +125,14 @@ public final class HudEditorGui extends GuiScreen {
             }
         }
         drawRect(leftPanel + 8, height - 36, leftPanelRight - 8, height - 35, 0x445A6B7E);
-        fontRendererObj.drawString("Click to edit", leftPanel + 11, height - 27, MUTED);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("Click to edit"), leftPanel + 11, height - 27, MUTED);
     }
 
     private void drawPreview() {
         int frameLeft = leftPanelRight + 9, frameRight = inspectorLeft - 9;
         RenderUtils.roundedRect(frameLeft, 43, frameRight, height - 10, 6, 0xD8111721);
         RenderUtils.roundedOutline(frameLeft, 43, frameRight, height - 10, 6, 1, 0x66546477);
-        fontRendererObj.drawString("LIVE CANVAS", frameLeft + 12, 55, TEXT);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("LIVE CANVAS"), frameLeft + 12, 55, TEXT);
         String size = new ScaledResolution(mc).getScaledWidth() + " × " + new ScaledResolution(mc).getScaledHeight();
         fontRendererObj.drawString(size, frameRight - 12 - fontRendererObj.getStringWidth(size), 55, MUTED);
         RenderUtils.roundedRect(canvasX - 2, canvasY - 2, canvasX + canvasWidth + 2, canvasY + canvasHeight + 2, 4, 0x8A0B1320);
@@ -144,10 +144,10 @@ public final class HudEditorGui extends GuiScreen {
             drawGuides(); GlStateManager.popMatrix();
             drawSelection();
         }
-        String caption = selected == null ? "Select an element" : friendlyName(selected.getId()) + "  •  " + Math.round(selected.getScale() * 100.0F) + "%";
+        String caption = selected == null ? dev.vibe.language.LanguageManager.translate("Select an element") : friendlyName(selected.getId()) + "  •  " + Math.round(selected.getScale() * 100.0F) + "%";
         RenderUtils.roundedRect(frameLeft + 9, height - 33, frameRight - 9, height - 17, 4, 0xB51D2632);
         fontRendererObj.drawString(caption, frameLeft + 14, height - 28, ACCENT);
-        String hint = "Drag • corner • wheel";
+        String hint = dev.vibe.language.LanguageManager.translate("Drag • corner • wheel");
         if (frameRight - frameLeft > fontRendererObj.getStringWidth(caption) + fontRendererObj.getStringWidth(hint) + 35)
             fontRendererObj.drawString(hint, frameRight - 14 - fontRendererObj.getStringWidth(hint), height - 28, MUTED);
     }
@@ -167,24 +167,24 @@ public final class HudEditorGui extends GuiScreen {
 
     private void drawInspector(int mouseX, int mouseY) {
         panel(inspectorLeft, 43, width - 8, height - 10, "INSPECTOR");
-        if (selected == null) { fontRendererObj.drawString("Choose an element", inspectorLeft + 13, 77, MUTED); return; }
+        if (selected == null) { fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("Choose an element"), inspectorLeft + 13, 77, MUTED); return; }
         int left = inspectorLeft + 9, right = width - 17;
         RenderUtils.roundedRect(left, 78, right, 100, 4, 0xFF263441);
         fontRendererObj.drawString(friendlyName(selected.getId()), left + 7, 85, TEXT);
         String position = selected.getLeft() + ", " + selected.getTop();
         fontRendererObj.drawString(position, right - 7 - fontRendererObj.getStringWidth(position), 85, MUTED);
-        fontRendererObj.drawString("SCALE", left + 2, 110, MUTED);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("SCALE"), left + 2, 110, MUTED);
         String percent = Math.round(selected.getScale() * 100.0F) + "%";
         fontRendererObj.drawString(percent, right - fontRendererObj.getStringWidth(percent), 110, ACCENT);
         drawRect(left + 24, 131, right - 24, 134, 0xFF405063);
         int knob = left + 24 + Math.round((right - left - 48) * (selected.getScale() - .5F) / 1.5F);
         drawRect(left + 24, 131, knob, 134, ACCENT);
         RenderUtils.roundedRect(knob - 4, 128, knob + 4, 137, 4, 0xFFEDF9FC);
-        fontRendererObj.drawString("−", left + 5, 127, TEXT);
-        fontRendererObj.drawString("+", right - 14, 127, TEXT);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("−"), left + 5, 127, TEXT);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("+"), right - 14, 127, TEXT);
         drawThemeRow(left, right, 143);
         drawRect(left, 178, right, 179, 0x445A6B7E);
-        fontRendererObj.drawString("ELEMENT SETTINGS", left + 2, 175, MUTED);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("ELEMENT SETTINGS"), left + 2, 175, MUTED);
         settingsScroll = Math.min(settingsScroll, maxSettingsScroll());
         int y = SETTINGS_TOP - settingsScroll;
         try (GuiClip ignored = new GuiClip(inspectorLeft + 4, SETTINGS_TOP, width - inspectorLeft - 16, Math.max(1, height - SETTINGS_TOP - 22))) {
@@ -192,15 +192,15 @@ public final class HudEditorGui extends GuiScreen {
         }
     }
     private void drawThemeRow(int left, int right, int y) {
-        RenderUtils.roundedRect(left, y, right, y + 29, 4, 0xFF222C39); fontRendererObj.drawString("Theme", left + 7, y + 10, TEXT);
-        int valueLeft = right - 96; RenderUtils.roundedRect(valueLeft, y + 4, right - 5, y + 25, 3, 0xFF314252); fontRendererObj.drawString(effectiveTheme(selected), valueLeft + 7, y + 10, ACCENT); fontRendererObj.drawString("›", right - 14, y + 10, MUTED);
+        RenderUtils.roundedRect(left, y, right, y + 29, 4, 0xFF222C39); fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("Theme"), left + 7, y + 10, TEXT);
+        int valueLeft = right - 96; RenderUtils.roundedRect(valueLeft, y + 4, right - 5, y + 25, 3, 0xFF314252); fontRendererObj.drawString(effectiveTheme(selected), valueLeft + 7, y + 10, ACCENT); fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("›"), right - 14, y + 10, MUTED);
     }
     private void drawSetting(int left, int right, int y, Setting<?> setting, int mouseX, int mouseY) {
         RenderUtils.roundedRect(left, y, right, y + 42, 4, mouseY >= y && mouseY < y + 42 ? 0xFF2A3543 : PANEL_SOFT);
         drawClippedValue(displayName(setting, selected.getId()), left + 7, y + 7, right - 7, TEXT);
         if (setting instanceof BooleanSetting) {
             boolean on = ((BooleanSetting) setting).isEnabled();
-            fontRendererObj.drawString(on ? "Enabled" : "Disabled", left + 8, y + 26, on ? ACCENT : MUTED);
+            fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate(on ? "Enabled" : "Disabled"), left + 8, y + 26, on ? ACCENT : MUTED);
             RenderUtils.roundedRect(right - 36, y + 23, right - 8, y + 37, 7, on ? ACCENT : 0xFF48515E);
             RenderUtils.roundedRect(on ? right - 21 : right - 34, y + 25, on ? right - 10 : right - 23, y + 35, 5, 0xFFF5F8FC);
         } else if (setting instanceof ColorSetting) {
@@ -208,11 +208,11 @@ public final class HudEditorGui extends GuiScreen {
             RenderUtils.transparencyGrid(right - 38, y + 20, right - 8, y + 37, 4); RenderUtils.roundedRect(right - 38, y + 20, right - 8, y + 37, 3, color.getArgb()); GuiLine.outline(right - 38, y + 20, right - 8, y + 37, 0x776E7888);
         } else if (setting instanceof NumberSetting || setting instanceof RangeSetting) drawSlider(left, right, y, setting);
         else if (setting instanceof StringSetting) drawClippedValue(editingText == setting ? editBuffer + "|" : ((StringSetting) setting).getValue(), left + 8, y + 26, right - 8, MUTED);
-        else if (setting instanceof ModeSetting) { drawClippedValue(((ModeSetting) setting).getValue(), left + 8, y + 26, right - 18, ACCENT); fontRendererObj.drawString(openMode == setting ? "⌃" : "⌄", right - 13, y + 26, MUTED); }
-        else if (setting instanceof MultiSelectSetting) { drawClippedValue(((MultiSelectSetting) setting).getValue().size() + " selected", left + 8, y + 26, right - 18, ACCENT); fontRendererObj.drawString(openMulti.contains(setting) ? "⌃" : "⌄", right - 13, y + 26, MUTED); }
+        else if (setting instanceof ModeSetting) { drawClippedValue(dev.vibe.language.LanguageManager.translate(((ModeSetting) setting).getValue()), left + 8, y + 26, right - 18, ACCENT); fontRendererObj.drawString(openMode == setting ? "⌃" : "⌄", right - 13, y + 26, MUTED); }
+        else if (setting instanceof MultiSelectSetting) { drawClippedValue(((MultiSelectSetting) setting).getValue().size() + " " + dev.vibe.language.LanguageManager.translate("selected"), left + 8, y + 26, right - 18, ACCENT); fontRendererObj.drawString(openMulti.contains(setting) ? "⌃" : "⌄", right - 13, y + 26, MUTED); }
         int nextY = y + 42;
-        if (setting instanceof ModeSetting && openMode == setting) for (String option : ((ModeSetting) setting).getModes()) { RenderUtils.roundedRect(left + 5, nextY + 1, right - 5, nextY + 22, 2, ((ModeSetting) setting).is(option) ? 0xFF293A50 : 0xE8171B24); fontRendererObj.drawString(option, left + 11, nextY + 7, ((ModeSetting) setting).is(option) ? ACCENT : TEXT); nextY += 23; }
-        else if (setting instanceof MultiSelectSetting && openMulti.contains(setting)) for (String option : ((MultiSelectSetting) setting).getOptions()) { boolean on = ((MultiSelectSetting) setting).isSelected(option); RenderUtils.roundedRect(left + 5, nextY + 1, right - 5, nextY + 22, 2, 0xE8171B24); RenderUtils.roundedRect(left + 10, nextY + 7, left + 20, nextY + 17, 2, on ? ACCENT : 0xFF48515E); if (on) fontRendererObj.drawString("✓", left + 12, nextY + 8, 0xFF081018); fontRendererObj.drawString(option, left + 27, nextY + 7, on ? TEXT : MUTED); nextY += 23; }
+        if (setting instanceof ModeSetting && openMode == setting) for (String option : ((ModeSetting) setting).getModes()) { RenderUtils.roundedRect(left + 5, nextY + 1, right - 5, nextY + 22, 2, ((ModeSetting) setting).is(option) ? 0xFF293A50 : 0xE8171B24); fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate(option), left + 11, nextY + 7, ((ModeSetting) setting).is(option) ? ACCENT : TEXT); nextY += 23; }
+        else if (setting instanceof MultiSelectSetting && openMulti.contains(setting)) for (String option : ((MultiSelectSetting) setting).getOptions()) { boolean on = ((MultiSelectSetting) setting).isSelected(option); RenderUtils.roundedRect(left + 5, nextY + 1, right - 5, nextY + 22, 2, 0xE8171B24); RenderUtils.roundedRect(left + 10, nextY + 7, left + 20, nextY + 17, 2, on ? ACCENT : 0xFF48515E); if (on) fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("✓"), left + 12, nextY + 8, 0xFF081018); fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate(option), left + 27, nextY + 7, on ? TEXT : MUTED); nextY += 23; }
         else if (setting instanceof ColorSetting && editingColor == setting) drawColorPicker(left + 5, right - 5, nextY + 5, (ColorSetting) setting);
     }
     private void drawSlider(int left, int right, int y, Setting<?> setting) {
@@ -228,7 +228,7 @@ public final class HudEditorGui extends GuiScreen {
         int alphaTop = hueTop + 14; RenderUtils.transparencyGrid(left, alphaTop, right, alphaTop + 7, 4); int rgb = Color.HSBtoRGB(colorHue, colorSaturation, colorBrightness) & 0xFFFFFF; for (int xx = left; xx < right; xx++) { int alpha = Math.round((xx - left) * 255.0F / Math.max(1, right - left - 1)); drawRect(xx, alphaTop, xx + 1, alphaTop + 7, (alpha << 24) | rgb); }
         int alphaX = left + Math.round(setting.getAlpha() * (right - left - 1) / 255.0F); GuiLine.outline(alphaX - 2, alphaTop - 2, alphaX + 3, alphaTop + 9, 0xFFFFFFFF); String hex = setting.getHex(); fontRendererObj.drawString(hex, right - fontRendererObj.getStringWidth(hex), alphaTop + 16, MUTED);
     }
-    private void panel(int left, int top, int right, int bottom, String title) { RenderUtils.roundedRect(left, top, right, bottom, 5, PANEL); RenderUtils.roundedOutline(left, top, right, bottom, 5, 1, 0x4B576775); RenderUtils.roundedRect(left + 1, top + 1, right - 1, top + 29, 4, 0xE31A1E28); drawRect(left + 5, top + 29, right - 5, top + 30, 0x335F6D82); fontRendererObj.drawString(title, left + 10, top + 11, TEXT); }
+    private void panel(int left, int top, int right, int bottom, String title) { RenderUtils.roundedRect(left, top, right, bottom, 5, PANEL); RenderUtils.roundedOutline(left, top, right, bottom, 5, 1, 0x4B576775); RenderUtils.roundedRect(left + 1, top + 1, right - 1, top + 29, 4, 0xE31A1E28); drawRect(left + 5, top + 29, right - 5, top + 30, 0x335F6D82); fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate(title), left + 10, top + 11, TEXT); }
 
     @Override protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
         if (mouseButton == 0 && hit(width - 77, 12, width - 44, 31, mouseX, mouseY)) { persist(); return; }
@@ -349,8 +349,12 @@ public final class HudEditorGui extends GuiScreen {
     private int settingHeight(Setting<?> setting) { if (setting instanceof ModeSetting && openMode == setting) return 42 + ((ModeSetting) setting).getModes().size() * 23 + 4; if (setting instanceof MultiSelectSetting && openMulti.contains(setting)) return 42 + ((MultiSelectSetting) setting).getOptions().size() * 23 + 4; return setting instanceof ColorSetting && editingColor == setting ? 190 : 46; }
     private String effectiveTheme(HudManager.HudElement element) { if (element.getTheme() != null) return element.getTheme(); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); return hud == null ? "Vibe" : hud.getMode().getValue(); }
     private String nextTheme(String theme) { return "Vibe".equals(theme) ? "Skeet" : "Skeet".equals(theme) ? "LiquidGlass" : "Vibe"; }
-    private String friendlyName(String id) { if (HudManager.ARRAY_LIST.equals(id)) return "Array list"; if (HudManager.SESSION_INFO.equals(id)) return "Statistics"; if (HudManager.MOTION_GRAPH.equals(id)) return "Motion graph"; if (HudManager.CPS_GRAPH.equals(id)) return "CPS graph"; if (HudManager.MUSIC.equals(id)) return "Music"; String value = id == null ? "" : id.replace('_', ' '); return value.isEmpty() ? value : Character.toUpperCase(value.charAt(0)) + value.substring(1); }
-    private String displayName(Setting<?> setting, String element) { String value = setting.getName(); return HudManager.ARRAY_LIST.equals(element) ? value.replaceFirst("(?i)^ArrayList\\s*", "").replaceFirst("(?i)^Array\\s*", "") : value; }
+    private String friendlyName(String id) { String value; if (HudManager.ARRAY_LIST.equals(id)) value = "Array list"; else if (HudManager.SESSION_INFO.equals(id)) value = "Statistics"; else if (HudManager.MOTION_GRAPH.equals(id)) value = "Motion graph"; else if (HudManager.CPS_GRAPH.equals(id)) value = "CPS graph"; else if (HudManager.MUSIC.equals(id)) value = "Music"; else { value = id == null ? "" : id.replace('_', ' '); value = value.isEmpty() ? value : Character.toUpperCase(value.charAt(0)) + value.substring(1); } return dev.vibe.language.LanguageManager.translate(value); }
+    private String displayName(Setting<?> setting, String element) {
+        String value = setting.getRawName();
+        if (HudManager.ARRAY_LIST.equals(element)) value = value.replaceFirst("(?i)^ArrayList\\s*", "").replaceFirst("(?i)^Array\\s*", "");
+        return dev.vibe.language.LanguageManager.translate(value);
+    }
     private boolean insideCanvas(int x, int y) { return hit(canvasX, canvasY, canvasX + canvasWidth, canvasY + canvasHeight, x, y); }
     private int previewX(int mouseX) { return Math.round((mouseX - canvasX) / previewScale); } private int previewY(int mouseY) { return Math.round((mouseY - canvasY) / previewScale); }
     private boolean isInside(HudManager.HudElement element, int x, int y) { return element != null && x >= element.getLeft() && x <= element.getLeft() + Math.max(1, element.getWidth()) && y >= element.getTop() && y <= element.getTop() + Math.max(1, element.getHeight()); }
