@@ -179,6 +179,8 @@ public final class ClientEvents {
             if (music != null) music.tick();
             MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
             if (moveFix != null) moveFix.beginRotationTick();
+            dev.vibe.module.impl.ScaffoldModule scaffold = dev.vibe.module.impl.ScaffoldModule.instance();
+            if (scaffold != null) scaffold.tickLifecycle();
             ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
             if (scripts != null) scripts.tickStart();
             // Producers select the fake rotation before vanilla samples input.
@@ -370,6 +372,8 @@ public final class ClientEvents {
             if (event.type == RenderGameOverlayEvent.ElementType.TEXT) {
                 if (!pitBot) {
                     Vibe.getInstance().getHudManager().draw();
+                    dev.vibe.module.impl.ScaffoldModule scaffold = dev.vibe.module.impl.ScaffoldModule.instance();
+                    if (scaffold != null) scaffold.renderBlockCount(event.resolution);
                     espRenderer.renderOverlay();
                     hitmarkerRenderer.renderOverlay();
                     if (deferredCrosshair) customCrosshairRenderer.render();

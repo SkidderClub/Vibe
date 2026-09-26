@@ -42,6 +42,15 @@ public final class PacketDelayService {
     private volatile ChannelHandlerContext context;
     private volatile long lastInboundRelease;
     private volatile long lastOutboundRelease;
+    private final java.util.Set<Packet<?>> silentPackets = java.util.Collections.newSetFromMap(
+            new java.util.concurrent.ConcurrentHashMap<Packet<?>, Boolean>());
+
+    /** Gothaj sendPacketSilentEvent: skip Vibe packet listeners for this one packet. */
+    public void sendSilent(Packet<?> packet) {
+        if (minecraft.getNetHandler() == null) return;
+        if (context != null) silentPackets.add(packet);
+        minecraft.getNetHandler().getNetworkManager().sendPacket(packet);
+    }
 
     private PacketDelayService() {
     }
@@ -84,6 +93,7 @@ public final class PacketDelayService {
     }
 
     private boolean delayOutbound(Packet<?> packet, ChannelHandlerContext ctx, ChannelPromise promise) {
+        if (silentPackets.remove(packet)) return false;
         MoveFixModule moveFix = Vibe.getInstance() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
         if (moveFix != null) moveFix.applyToOutgoing(packet);

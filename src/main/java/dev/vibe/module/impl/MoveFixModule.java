@@ -43,6 +43,7 @@ public final class MoveFixModule extends Module {
     private volatile FakeRotation fakeRotation;
     private FakeRotation previousRenderRotation;
     private volatile String rotationOwner;
+    private volatile Boolean scaffoldMovement;
     // A pathing module can supply a movement vector in server-rotation space.
     // This is deliberately separate from the user's movement policy: a bot
     // must still walk toward its target when MoveFix is configured as Off.
@@ -103,7 +104,24 @@ public final class MoveFixModule extends Module {
         }
         float continuousYaw = RotationMath.nearest(yaw, getRotationYaw());
         rotationOwner = owner;
+        scaffoldMovement = null;
         fakeRotation = new FakeRotation(continuousYaw, RotationMath.clamp(pitch, -90.0F, 90.0F));
+    }
+
+    /** Gothaj supplies its own key correction; transport stays in this shared service. */
+    public void setScaffoldRotation(float yaw, float pitch, boolean correct) {
+        setFakeRotation("scaffold", yaw, pitch);
+        scaffoldMovement = correct;
+    }
+
+    public boolean isRotationOwner(String owner) { return owner != null && owner.equals(rotationOwner); }
+
+    /** Gothaj has already completed its smooth return; do not start a second return. */
+    public void finishScaffoldRotation() {
+        if (!isRotationOwner("scaffold")) return;
+        rotationOwner = null;
+        scaffoldMovement = null;
+        fakeRotation = null;
     }
 
     /** Snapshot once before any producer changes this tick's rotation. */
@@ -121,6 +139,7 @@ public final class MoveFixModule extends Module {
             fakeRotation = null;
             previousRenderRotation = null;
             rotationOwner = null;
+            scaffoldMovement = null;
             clearForcedMovement(null);
             transported = false;
         }
@@ -144,6 +163,7 @@ public final class MoveFixModule extends Module {
     public void clearFakeRotation(String owner) {
         if (owner == null || owner.equals(rotationOwner)) {
             rotationOwner = null;
+            scaffoldMovement = null;
         }
     }
 
@@ -233,6 +253,7 @@ public final class MoveFixModule extends Module {
     }
 
     private boolean usesDirectYaw() {
+        if (isRotationOwner("scaffold") && scaffoldMovement != null) return scaffoldMovement;
         return forcedMovementOwner != null || correctMovement.is("Direct") || correctMovement.is("Silent");
     }
 
@@ -247,7 +268,7 @@ public final class MoveFixModule extends Module {
         // This wrapper is the player's keyboard input even when another Vibe
         // wrapper (for example NoSlow) sits outside it.  No other input can
         // call this private wrapper method.
-        if (rotation == null || !correctMovement.is("Silent")) {
+        if (rotation == null || scaffoldMovement != null || !correctMovement.is("Silent")) {
             return;
         }
         if (input.moveForward == 0.0F && input.moveStrafe == 0.0F) {
@@ -385,7 +406,7 @@ public final class MoveFixModule extends Module {
         FakeRotation rotation = activeRotation();
         // Forced vectors already use the server yaw. Comparing them to the
         // camera yaw incorrectly prevents a bot from sprinting sideways/backwards.
-        if (forcedMovementOwner != null && entity == Minecraft.getMinecraft().thePlayer) return vanillaForward;
+        if ((forcedMovementOwner != null || scaffoldMovement != null) && entity == Minecraft.getMinecraft().thePlayer) return vanillaForward;
         if (rotation == null || !correctMovement.is("Prevent Backwards Sprinting")
                 || entity != Minecraft.getMinecraft().thePlayer) {
             return vanillaForward;
@@ -459,6 +480,7 @@ public final class MoveFixModule extends Module {
         fakeRotation = null;
         previousRenderRotation = null;
         rotationOwner = null;
+        scaffoldMovement = null;
         clearForcedMovement(null);
         if (packetPlayer != null) {
             packetPlayer.rotationYaw = packetYaw;
@@ -471,6 +493,7 @@ public final class MoveFixModule extends Module {
     }
 
     public static void beginPacketRotationHook(Object entity) {
+        ScaffoldModule.beforeMotionHook(entity);
         MoveFixModule module = module();
         if (module != null) {
             module.beginPacketRotation(entity);
@@ -481,6 +504,7 @@ public final class MoveFixModule extends Module {
         MoveFixModule module = module();
         if (module != null) {
             module.endPacketRotation(entity);
+            ScaffoldModule.afterMotionHook(entity);
             BedAuraModule bedAura = Vibe.getInstance().getModuleManager().getModule(BedAuraModule.class);
             if (bedAura != null) bedAura.afterWalkingUpdate(entity);
         }
@@ -522,7 +546,7 @@ public final class MoveFixModule extends Module {
         FakeRotation rotation = activeRotation();
         Minecraft minecraft = Minecraft.getMinecraft();
         Entity view = minecraft.getRenderViewEntity();
-        if (!raycast.isEnabled() || rotation == null || minecraft.theWorld == null || minecraft.playerController == null
+        if ((!raycast.isEnabled() && scaffoldMovement == null) || rotation == null || minecraft.theWorld == null || minecraft.playerController == null
                 || view == null || view != minecraft.thePlayer) {
             return;
         }
@@ -607,11 +631,13 @@ public final class MoveFixModule extends Module {
             moveForward = vanillaInput.moveForward;
             jump = vanillaInput.jump;
             sneak = vanillaInput.sneak;
+            ScaffoldModule scaffold = ScaffoldModule.instance();
+            boolean scaffoldCorrected = scaffold != null && scaffold.applyMoveInput(this);
             if (module.forcedMovementOwner != null) {
                 moveForward = module.forcedForward;
                 moveStrafe = module.forcedStrafe;
                 jump = jump || module.forcedJump;
-            } else {
+            } else if (!scaffoldCorrected) {
                 module.correctKeyboardInput(this);
             }
             // Gothaj's Jump velocity mode listens to the finalized movement

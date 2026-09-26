@@ -82,6 +82,8 @@ public final class HudManager {
     private final HudElement cps = new HudElement(CPS, 0, 36, false, false, true);
     private final HudElement cpsGraph = new HudElement(CPS_GRAPH, 9, 190, true, false);
     public static final String MUSIC = "Music";
+    public static final String BLOCK_COUNT = "blockcount";
+    private final HudElement blockCount = new HudElement(BLOCK_COUNT, -83, 28, false, false, true, true);
     private final HudElement music = new HudElement(MUSIC, 12, 88, true, true);
     private final dev.vibe.ui.MusicHudRenderer musicRenderer = new dev.vibe.ui.MusicHudRenderer();
     private final dev.vibe.ui.MusicVisualizer musicVisualizer = new dev.vibe.ui.MusicVisualizer();
@@ -794,6 +796,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     public HudElement getElement(String id) {
+        if (BLOCK_COUNT.equals(id)) return blockCount;
         if (MUSIC.equals(id)) return music;
         if (WATERMARK.equals(id)) {
             return watermark;
@@ -835,10 +838,14 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     public String[] getElementIds() {
         return new String[] {WATERMARK, ARRAY_LIST, COORDINATES, SCOREBOARD, CLOCK, SESSION_INFO, MOTION_GRAPH, STALKER,
-                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, MUSIC};
+                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, MUSIC, BLOCK_COUNT};
     }
 
     public boolean isEnabled(String id) {
+        if (BLOCK_COUNT.equals(id)) {
+            dev.vibe.module.impl.ScaffoldModule scaffold = dev.vibe.module.impl.ScaffoldModule.instance();
+            return scaffold != null && scaffold.getRenderCount().isEnabled();
+        }
         if (MUSIC.equals(id)) {
             dev.vibe.module.impl.MusicModule m = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.MusicModule.class);
             return m != null && m.isEnabled() && m.hud.isEnabled();
@@ -848,6 +855,14 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     public void drawPreview(HudElement element, FontRenderer font) {
+        if (element == blockCount) {
+            dev.vibe.module.impl.ScaffoldModule scaffold = dev.vibe.module.impl.ScaffoldModule.instance();
+            if (scaffold != null && minecraft.thePlayer != null && minecraft.thePlayer.getHeldItem() != null
+                    && minecraft.thePlayer.getHeldItem().getItem() instanceof net.minecraft.item.ItemBlock) {
+                scaffold.renderBlockCountPreview(new ScaledResolution(minecraft));
+            } else previewCard(element, font, 154, 30, "64 blocks");
+            return;
+        }
         // In a world, show the real renderer with current module settings and
         // game data. Sample content remains available in the main menu and for
         // widgets that currently have no live data (such as an empty sidebar).
@@ -1048,6 +1063,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         root.add(CPS, cps.toJson());
         root.add(CPS_GRAPH, cpsGraph.toJson());
         root.add(MUSIC, music.toJson());
+        root.add(BLOCK_COUNT, blockCount.toJson());
         return root;
     }
 
@@ -1055,6 +1071,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         if (root == null) {
             return;
         }
+        blockCount.fromJson(root.has(BLOCK_COUNT) && root.get(BLOCK_COUNT).isJsonObject() ? root.getAsJsonObject(BLOCK_COUNT) : null);
         watermark.fromJson(root.has(WATERMARK) && root.get(WATERMARK).isJsonObject() ? root.getAsJsonObject(WATERMARK) : null);
         arrayList.fromJson(root.has(ARRAY_LIST) && root.get(ARRAY_LIST).isJsonObject() ? root.getAsJsonObject(ARRAY_LIST) : null);
         coordinates.fromJson(root.has(COORDINATES) && root.get(COORDINATES).isJsonObject() ? root.getAsJsonObject(COORDINATES) : null);

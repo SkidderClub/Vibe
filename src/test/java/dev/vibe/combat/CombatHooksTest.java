@@ -89,6 +89,8 @@ public class CombatHooksTest {
         assertTrue(hook < callIndex(method, obfuscated ? "aw" : "clickMouse", node.name));
         AbstractInsnNode next = method.instructions.get(hook).getNext();
         assertTrue(next instanceof MethodInsnNode);
+        assertEquals("clickHook", ((MethodInsnNode) next).name);
+        next = next.getNext();
         assertEquals(obfuscated ? "bS" : "isUsingItem", ((MethodInsnNode) next).name);
         MethodNode click = method(node, obfuscated ? "aw" : "clickMouse", "()V");
         verify(node, click);

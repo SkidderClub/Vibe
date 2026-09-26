@@ -160,6 +160,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
                     && (PLAYER.equals(owner) || "bew".equals(owner))
                     && ("isUsingItem".equals(name) || "func_71039_bw".equals(name) || "bS".equals(name))) {
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, AURA_HOOK, "prepareInputHook", "()V", false);
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/module/impl/ScaffoldModule", "clickHook", "()V", false);
                 prepared = true;
             }
             super.visitMethodInsn(opcode, owner, name, descriptor, itf);

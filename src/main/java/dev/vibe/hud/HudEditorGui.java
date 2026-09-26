@@ -331,6 +331,11 @@ public final class HudEditorGui extends GuiScreen {
 
     private List<Setting<?>> settingsFor(String element) {
         List<Setting<?>> settings = new ArrayList<Setting<?>>(); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); if (hud == null) return settings;
+        if (HudManager.BLOCK_COUNT.equals(element)) {
+            dev.vibe.module.impl.ScaffoldModule scaffold = dev.vibe.module.impl.ScaffoldModule.instance();
+            if (scaffold != null) settings.add(scaffold.getRenderCount());
+            return settings;
+        }
         if (HudManager.MUSIC.equals(element)) { MusicModule music = Vibe.getInstance().getModuleManager().getModule(MusicModule.class); if (music != null) { settings.add(music.hudWidth); settings.add(music.hudScale); settings.add(music.cover); settings.add(music.coverBackground); settings.add(music.progress); settings.add(music.scroll); settings.add(music.hideIdle); } }
         else if (HudManager.WATERMARK.equals(element)) { settings.add(hud.getWatermarkOutline()); settings.add(hud.getWatermarkDetails()); settings.add(hud.getWatermarkText()); }
         else if (HudManager.ARRAY_LIST.equals(element)) { settings.add(hud.getArrayOutline()); settings.add(hud.getArrayListModules()); settings.add(hud.getArrayPrimaryColor()); settings.add(hud.getArraySecondaryColor()); settings.add(hud.getBackground()); settings.addAll(hud.array.all); }
@@ -344,7 +349,19 @@ public final class HudEditorGui extends GuiScreen {
         }
         return settings;
     }
-    private void toggleElement(String id) { if (HudManager.MUSIC.equals(id)) { MusicModule music = Vibe.getInstance().getModuleManager().getModule(MusicModule.class); if (music != null) { boolean enable = !manager.isEnabled(id); music.hud.setEnabled(enable); if (enable && !music.isEnabled()) music.setEnabled(true); } } else { HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); if (hud != null) hud.getHudElements().toggle(id); } persist(); }
+    private void toggleElement(String id) {
+        if (HudManager.BLOCK_COUNT.equals(id)) {
+            dev.vibe.module.impl.ScaffoldModule scaffold = dev.vibe.module.impl.ScaffoldModule.instance();
+            if (scaffold != null) scaffold.getRenderCount().toggle();
+        } else if (HudManager.MUSIC.equals(id)) {
+            MusicModule music = Vibe.getInstance().getModuleManager().getModule(MusicModule.class);
+            if (music != null) { boolean enable = !manager.isEnabled(id); music.hud.setEnabled(enable); if (enable && !music.isEnabled()) music.setEnabled(true); }
+        } else {
+            HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+            if (hud != null) hud.getHudElements().toggle(id);
+        }
+        persist();
+    }
     private void persist() { manager.save(); if (Vibe.getInstance().getConfig() != null) Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager()); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); if (hud != null) ArrayListRenderer.applyPreset(hud); }
     private int settingHeight(Setting<?> setting) { if (setting instanceof ModeSetting && openMode == setting) return 42 + ((ModeSetting) setting).getModes().size() * 23 + 4; if (setting instanceof MultiSelectSetting && openMulti.contains(setting)) return 42 + ((MultiSelectSetting) setting).getOptions().size() * 23 + 4; return setting instanceof ColorSetting && editingColor == setting ? 190 : 46; }
     private String effectiveTheme(HudManager.HudElement element) { if (element.getTheme() != null) return element.getTheme(); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); return hud == null ? "Vibe" : hud.getMode().getValue(); }

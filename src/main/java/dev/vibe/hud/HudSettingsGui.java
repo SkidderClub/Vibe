@@ -32,7 +32,10 @@ public final class HudSettingsGui extends GuiScreen {
         this.manager = manager;
         this.element = element;
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
-        if (HudManager.MUSIC.equals(element)) {
+        if (HudManager.BLOCK_COUNT.equals(element)) {
+            dev.vibe.module.impl.ScaffoldModule scaffold = dev.vibe.module.impl.ScaffoldModule.instance();
+            if (scaffold != null) settings.add(scaffold.getRenderCount());
+        } else if (HudManager.MUSIC.equals(element)) {
             dev.vibe.module.impl.MusicModule music = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.MusicModule.class);
             if (music != null) {
                 settings.add(music.hudWidth); settings.add(music.hudScale); settings.add(music.cover);

@@ -73,6 +73,10 @@ public final class ClientChangesRenderCheck {
             Vibe vibe = new Vibe(); set(Vibe.class,null,"instance",vibe);
             ModuleManager modules = instance(ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<Module>()); set(Vibe.class,vibe,"moduleManager",modules);
+            if (args.length>0 && args[0].equals("scaffold")) {
+                testScaffoldCounter(vibe);
+                return;
+            }
             if (args.length>0 && args[0].equals("hud-editor")) {
                 HudModule hud = new HudModule();
                 set(ModuleManager.class,modules,"modules",new ArrayList<Module>(Collections.<Module>singletonList(hud)));
@@ -454,6 +458,39 @@ public final class ClientChangesRenderCheck {
             if(!game.play(moves[i]))throw new AssertionError("Restored move cannot be replayed");
         }
     }
+    private static void testScaffoldCounter(Vibe vibe) throws Exception {
+        // This fixture checks the actual copied font/GLSL/counter. Item rendering
+        // is a marked stand-in; model/atlas loading is outside this check.
+        set(net.minecraft.init.Bootstrap.class,null,"alreadyRegistered",true);
+        net.minecraft.block.Block.registerBlocks(); net.minecraft.item.Item.registerItems();
+        mc.thePlayer = instance(FixturePlayer.class);
+        mc.thePlayer.inventory = new net.minecraft.entity.player.InventoryPlayer(mc.thePlayer);
+        mc.thePlayer.inventoryContainer = new net.minecraft.inventory.ContainerPlayer(mc.thePlayer.inventory,false,mc.thePlayer);
+        mc.thePlayer.inventory.mainInventory[0] = new net.minecraft.item.ItemStack(net.minecraft.init.Blocks.wool, 48, 3);
+        set(Minecraft.class,mc,"renderItem",instance(CounterItemFixture.class));
+        dev.vibe.hud.HudManager hud = new dev.vibe.hud.HudManager(OUTPUT.resolve("scaffold-fixture").toFile());
+        set(Vibe.class,vibe,"hudManager",hud);
+        ScaffoldBlockCountRenderer renderer = new ScaffoldBlockCountRenderer();
+        mc.displayWidth=640; mc.displayHeight=360;
+        for (float scale : new float[]{1, 1.5F}) {
+            hud.getElement(dev.vibe.hud.HudManager.BLOCK_COUNT).setScale(scale);
+            for (int n=0;n<20;n++) { frame(640,360); renderer.render(new net.minecraft.client.gui.ScaledResolution(mc)); }
+            if (GL11.glGetError()!=GL11.GL_NO_ERROR) throw new AssertionError("Scaffold counter GL error");
+            if (GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM)!=0) throw new AssertionError("Counter shader leaked");
+            dev.vibe.hud.HudManager.HudElement element=hud.getElement(dev.vibe.hud.HudManager.BLOCK_COUNT);
+            if(element.getWidth()!=Math.round(154*scale)||element.getHeight()!=Math.round(30*scale)) throw new AssertionError("Counter bounds/scale mismatch");
+            save("scaffold-counter-"+scale+".png");
+        }
+        System.out.println("Gothaj counter font, shaders, animation, scaling and GL state passed.");
+    }
+
+    public static final class CounterItemFixture extends net.minecraft.client.renderer.entity.RenderItem {
+        private CounterItemFixture(){super(null,null);}
+        @Override public void renderItemAndEffectIntoGUI(net.minecraft.item.ItemStack item,int x,int y) {
+            net.minecraft.client.gui.Gui.drawRect(x,y,x+16,y+16,0xFF6FA9D0);
+        }
+    }
+
     private static void frame(int width,int height) throws Exception {
         Framebuffer target = mc.getFramebuffer();
         if (target==null || target.framebufferWidth!=width || target.framebufferHeight!=height) {

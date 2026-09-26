@@ -49,6 +49,11 @@ checks documentation and packaging consistency, not permission to distribute.
 
 ## Maintaining these notices
 
+The Gothaj Scaffold port has a pinned source revision, helper mapping, original
+asset provenance and Forge integration notes in [GOTHAJ-SCAFFOLD.md](GOTHAJ-SCAFFOLD.md).
+The source repository did not contain an upstream license file; that document
+records the available evidence without assigning Vibe's license to those files.
+
 When adding or updating a dependency, copied source file or asset:
 
 1. Record its exact version/revision or original download URL, author, local path,

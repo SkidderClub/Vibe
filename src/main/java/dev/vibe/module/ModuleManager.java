@@ -141,6 +141,7 @@ public final class ModuleManager {
         register(new QolModule());
         register(new NoJumpDelayModule());
         register(new EagleModule());
+        register(new dev.vibe.module.impl.ScaffoldModule());
         register(new FastPlaceModule());
         register(new InventoryManagerModule());
         register(new ChestStealerModule());

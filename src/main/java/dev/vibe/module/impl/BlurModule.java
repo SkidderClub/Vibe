@@ -34,10 +34,11 @@ public final class BlurModule extends Module {
     public static final String SCRIPTS_EDITOR = "scriptseditor";
     public static final String GTA7 = "gta7";
     public static final String MEME_GAMES = "memegames";
+    public static final String SCAFFOLD_COUNT = "scaffoldcount";
 
     private final MultiSelectSetting elements = addSetting(new MultiSelectSetting("Blur Elements",
             Arrays.asList(ARRAY_LIST, WATERMARK, COORDINATES, SCOREBOARD, CLOCK, SESSION_INFO, MOTION_GRAPH, STALKER, ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH,
-                    CLICK_GUI, INVENTORY_EDITOR, FRIEND_EDITOR, CONFIG_EDITOR, KEYBIND_EDITOR, ESP_EDITOR, NES_EMULATOR, COSMETICS_EDITOR, SCRIPTS_EDITOR, GTA7, MEME_GAMES),
+                    CLICK_GUI, INVENTORY_EDITOR, FRIEND_EDITOR, CONFIG_EDITOR, KEYBIND_EDITOR, ESP_EDITOR, NES_EMULATOR, COSMETICS_EDITOR, SCRIPTS_EDITOR, GTA7, MEME_GAMES, SCAFFOLD_COUNT),
             // Vibe's HUD and utility surfaces opt in by default. Health stays
             // deliberately crisp so its crosshair-adjacent readout never
             // receives an unnecessary fullscreen blur pass.
