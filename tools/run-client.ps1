@@ -11,6 +11,7 @@ $reader = $null
 $worker = $null
 $readyFile = $null
 
+<<<<<<< HEAD
 function Import-FirstRunMinecraftOptions {
     param([string]$ProjectRoot)
     $profile = Join-Path $ProjectRoot 'run\client'
@@ -48,13 +49,19 @@ try {
     # every isolated game instance. It is imported only once and never
     # overwrites Vibe's existing client profile.
     Import-FirstRunMinecraftOptions -ProjectRoot $projectRoot
+=======
+try {
+>>>>>>> f485846c52ed7e011bd8968e6d4d06cf0ec60922
     New-Item -ItemType Directory -Path $logDirectory -Force -ErrorAction Stop | Out-Null
     $stamp = Get-Date -Format 'yyyy-MM-dd-HH-mm-ss-fff'
     $logFile = Join-Path $logDirectory "$stamp-$PID.log"
     $readyFile = Join-Path $logDirectory "$stamp-$PID.ready"
+<<<<<<< HEAD
     # Propagate a per-launch directory id to the detached Gradle worker. A
     # PID plus timestamp stays unique even when two launchers start together.
     $env:VIBE_INSTANCE_ID = "$PID-$stamp"
+=======
+>>>>>>> f485846c52ed7e011bd8968e6d4d06cf0ec60922
     [System.IO.File]::WriteAllText($logFile, '', (New-Object System.Text.UTF8Encoding($false)))
     $message = "[Vibe] Live debug output; log: $logFile"
     [System.IO.File]::AppendAllText($logFile, $message + [Environment]::NewLine)

@@ -217,7 +217,11 @@ public final class HudManager {
         if ("Skeet".equalsIgnoreCase(activeTheme)) return false;
         // Glass surfaces composite their own rounded blur so the blur stays
         // inside their curved silhouette.
+<<<<<<< HEAD
         if ("LiquidGlass".equalsIgnoreCase(activeTheme)) return false;
+=======
+        if (hud != null && hud.getMode().is("LiquidGlass")) return false;
+>>>>>>> f485846c52ed7e011bd8968e6d4d06cf0ec60922
         BlurModule blur = Vibe.getInstance().getModuleManager().getModule(BlurModule.class);
         return blur != null && blur.isEnabled() && blur.getElements().isSelected(element);
     }

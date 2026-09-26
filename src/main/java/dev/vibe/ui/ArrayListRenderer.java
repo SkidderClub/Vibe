@@ -35,10 +35,14 @@ public final class ArrayListRenderer {
             rows.add(new Row(name("Custom Cosmetics",s), "",0));
             rows.add(new Row(name("Sprint",s), decorate("Legit",s),0));
         }
+<<<<<<< HEAD
         // HUD editor scaling is independent from the typography scale.  Keep
         // both factors in the measured row geometry so a resized ArrayList
         // remains anchored and clickable exactly where it is painted.
         final float scale = s.scale.getFloat() * element.getScale();
+=======
+        final float scale = s.scale.getFloat();
+>>>>>>> f485846c52ed7e011bd8968e6d4d06cf0ec60922
         float inset = Math.max(s.padding.getFloat(), Math.max(hud.getArrayOutline().isEnabled() ? s.outlineWidth.getFloat() + 1 : 1,
                 s.rail.is("None") ? 0 : s.railWidth.getFloat() + 1));
         float maximum = 12;
@@ -108,8 +112,13 @@ public final class ArrayListRenderer {
                 float x=right?r.x+r.width-inset*scale-textWidth:r.x+inset*scale;
                 float y=r.y+(rh-textHeight*scale)/2;
                 if (!s.font.is("Minecraft")) y -= (font(s).inkTop("Agjpqy") - 1)*scale;
+<<<<<<< HEAD
                 drawText(r.name,x,y,s,hud,i,rows.size(),now,false,element.getScale());
                 drawText(r.suffix,x+textWidth(r.name,s)*scale,y,s,hud,i,rows.size(),now,true,element.getScale());
+=======
+                drawText(r.name,x,y,s,hud,i,rows.size(),now,false);
+                drawText(r.suffix,x+textWidth(r.name,s)*scale,y,s,hud,i,rows.size(),now,true);
+>>>>>>> f485846c52ed7e011bd8968e6d4d06cf0ec60922
             }
         } finally {
             // Restore Minecraft's cache too; glPopAttrib alone only restores
@@ -159,7 +168,11 @@ public final class ArrayListRenderer {
         if(text.isEmpty())return;
         GlStateManager.pushMatrix();
         try {
+<<<<<<< HEAD
             GlStateManager.translate(x,y,0);GlStateManager.scale(s.scale.getFloat()*elementScale,s.scale.getFloat()*elementScale,1);
+=======
+            GlStateManager.translate(x,y,0);GlStateManager.scale(s.scale.getFloat(),s.scale.getFloat(),1);
+>>>>>>> f485846c52ed7e011bd8968e6d4d06cf0ec60922
             boolean gradient = s.horizontal.isEnabled() && (!suffix || s.suffixAccent.isEnabled());
             float total=Math.max(1,textWidth(text,s));
             // Finish each effect for the whole label before painting glyphs.
