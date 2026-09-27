@@ -131,9 +131,9 @@ public final class BattlefrontCombatHud {
     }
     private static int team(BattlefrontGame g,int side){return side<0?GOLD:side==g.side?ALLY:ENEMY;}
     private static int alpha(int c,double opacity){return ((int)(Math.max(0,Math.min(1,opacity))*255)<<24)|(c&0xFFFFFF);}
-    private void text(String s,int x,int y,float size,int color,boolean heavy){NeverLoseFont font=heavy?bold:regular;GlStateManager.pushMatrix();GlStateManager.translate(x,y,0);GlStateManager.scale(size,size,1);font.draw(s,.65f,.85f,(color&0xFF000000)|0x0B1014);font.draw(s,0,0,color);GlStateManager.popMatrix();}
-    private void centered(String s,int x,int y,float size,int color,boolean heavy){text(s,x-(int)((heavy?bold:regular).width(s)*size/2),y,size,color,heavy);}
-    private void rightText(String s,int x,int y,float size,int color,boolean heavy){text(s,x-(int)((heavy?bold:regular).width(s)*size),y,size,color,heavy);}
+    private void text(String s,int x,int y,float size,int color,boolean heavy){s=dev.vibe.language.LanguageManager.translate(s);NeverLoseFont font=heavy?bold:regular;GlStateManager.pushMatrix();GlStateManager.translate(x,y,0);GlStateManager.scale(size,size,1);font.draw(s,.65f,.85f,(color&0xFF000000)|0x0B1014);font.draw(s,0,0,color);GlStateManager.popMatrix();}
+    private void centered(String s,int x,int y,float size,int color,boolean heavy){s=dev.vibe.language.LanguageManager.translate(s);text(s,x-(int)((heavy?bold:regular).width(s)*size/2),y,size,color,heavy);}
+    private void rightText(String s,int x,int y,float size,int color,boolean heavy){s=dev.vibe.language.LanguageManager.translate(s);text(s,x-(int)((heavy?bold:regular).width(s)*size),y,size,color,heavy);}
     private static void plate(int x,int y,int w,int h,int c){RenderUtils.roundedRect(x,y,x+w,y+h,4,c);}
     private static void rect(double x,double y,double X,double Y,int c){Gui.drawRect((int)x,(int)y,(int)X,(int)Y,c);}
     private static void meter(int x,int y,int w,int h,double ratio,int color){rect(x-1,y-1,x+w+1,y+h+1,0xA511191E);rect(x,y,x+w,y+h,0xA85E7377);rect(x,y,x+w*Math.max(0,Math.min(1,ratio)),y+h,color);}

@@ -80,6 +80,7 @@ public final class HudSettingsGui extends GuiScreen {
             fontRendererObj.drawStringWithShadow(setting.getName(), left + 12, y + 4, 0xFFD5E1F5);
             String state = describe(setting);
             int color = setting instanceof BooleanSetting && ((BooleanSetting) setting).isEnabled() ? 0xFF2DE2C2 : 0xFF8FA5C4;
+            state = dev.vibe.language.LanguageManager.translate(state);
             fontRendererObj.drawStringWithShadow(state, left + 228 - fontRendererObj.getStringWidth(state), y + 4, color);
             if (setting instanceof NumberSetting) {
                 NumberSetting number = (NumberSetting) setting;

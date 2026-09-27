@@ -297,7 +297,7 @@ public final class Battlefront3Gui extends GuiScreen {
     private void feedback(String text){feedback=text;feedbackUntil=uiTime+4;}
     private void section(String s,int x,int y){label(s,x,y,hub?1.5f:1.2f,WHITE);}
     private static String format(long n){return String.format(Locale.ROOT,"%,d",n);}
-    private void label(String s,int x,int y,float size,int color){if(hub){if(color==WHITE)color=MENU_TEXT;else if(color==MUTED)color=MENU_MUTED;else if(color==CYAN)color=ROSE;}GlStateManager.pushMatrix();GlStateManager.translate(x,y,0);GlStateManager.scale(size,size,1);(size>=1.2f?NeverLoseFont.BOLD:NeverLoseFont.REGULAR).draw(s,0,-2,color);GlStateManager.popMatrix();}
+    private void label(String s,int x,int y,float size,int color){s=dev.vibe.language.LanguageManager.translate(s);if(hub){if(color==WHITE)color=MENU_TEXT;else if(color==MUTED)color=MENU_MUTED;else if(color==CYAN)color=ROSE;}GlStateManager.pushMatrix();GlStateManager.translate(x,y,0);GlStateManager.scale(size,size,1);(size>=1.2f?NeverLoseFont.BOLD:NeverLoseFont.REGULAR).draw(s,0,-2,color);GlStateManager.popMatrix();}
     private boolean over(int x,int y,int w,int h){return mouseX>=x&&mouseX<x+w&&mouseY>=y&&mouseY<y+h;}
     private void card(int x,int y,int w,int h,int fill,int border){RenderUtils.roundedRect(x,y,x+w,y+h,5,border);RenderUtils.roundedRect(x+1,y+1,x+w-1,y+h-1,4,fill);}
     private void tile(String icon,int x,int y,int size,int color){card(x,y,size,size,0xFF2B2226,0xFF514047);icons.draw(icon,x+size/5,y+size/5,size*3/5,color);}
@@ -325,6 +325,7 @@ public final class Battlefront3Gui extends GuiScreen {
     }
     private void button(int x,int y,int w,int h,String label,boolean selected,int accent,Runnable run){
         boolean hover=over(x,y,w,h),primary=label.equalsIgnoreCase("Deploy to battle")||label.startsWith("PURCHASE & EQUIP");
+        String visible=dev.vibe.language.LanguageManager.translate(label);
         int highlight=hub?ROSE:accent;
         card(x,y,w,h,primary?(hover?0xFFFFB7D6:ROSE):selected?(hub?0xFF31252D:0xFF203640):hover?(hub?0xFF292A29:0xFF223845):(hub?0xFF1B1C1D:0xEA10212C),primary?ROSE:selected?highlight:hover?(hub?0xFF64605E:0xFF678A99):(hub?0xFF383938:0xFF344E5B));
         int color=primary?0xFF20131B:selected?WHITE:hover?WHITE:MUTED,iconColor=primary?0xFF20131B:selected||hover?highlight:hub?0xFFC7A9B6:MUTED;
@@ -332,7 +333,7 @@ public final class Battlefront3Gui extends GuiScreen {
         else{
             int iconSize=h>=38?21:16,leftPadding=h>=38?42:35;
             icons.draw(buttonIcon(label),x+11,y+(h-iconSize)/2,iconSize,iconColor);
-            boolean arrow=(primary&&w>190)||label.trim().endsWith(">");String title=label.replaceAll("\\s*>$","");float sz=Math.min(h>=38?1.02f:.92f,(w-leftPadding-(arrow?38:12))/Math.max(1,NeverLoseFont.REGULAR.width(title)));
+            boolean arrow=(primary&&w>190)||label.trim().endsWith(">");String title=visible.replaceAll("\\s*>$","");float sz=Math.min(h>=38?1.02f:.92f,(w-leftPadding-(arrow?38:12))/Math.max(1,NeverLoseFont.REGULAR.width(title)));
             label(title,x+leftPadding,y+(h-8)/2,sz,color);if(arrow)icons.draw("arrow",x+w-30,y+(h-18)/2,18,color);
         }
         actions.add(new Action(x,y,w,h,run));

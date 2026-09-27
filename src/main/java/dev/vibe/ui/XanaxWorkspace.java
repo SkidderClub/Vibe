@@ -568,11 +568,11 @@ final class XanaxWorkspace {
         }
     }
     private static void arrow(int x, int y) { for (int i = 0; i < 4; i++) Gui.drawRect(x + i, y + i, x + 7 - i, y + i + 1, MUTED); }
-    private static void text(String value, int x, int y, int color) { FONT.draw(value, x, y, color); }
-    private static void label(String value, int x, int y, int width, int color) { text(FONT.fit(value, Math.max(0, width)), x, y, color); }
+    private static void text(String value, int x, int y, int color) { FONT.draw(LanguageManager.translate(value), x, y, color); }
+    private static void label(String value, int x, int y, int width, int color) { text(FONT.fit(LanguageManager.translate(value), Math.max(0, width)), x, y, color); }
     private static void center(String value, int x, int y, int width, int color, boolean bold) {
         NeverLoseFont font = bold ? BOLD : FONT;
-        String fitted = font.fit(value, width); font.draw(fitted, x + (width - font.width(fitted)) / 2F, y, color);
+        String fitted = font.fit(LanguageManager.translate(value), width); font.draw(fitted, x + (width - font.width(fitted)) / 2F, y, color);
     }
     private static String tr(String value) { return LanguageManager.translate(value); }
     private static String caret() { return System.currentTimeMillis() % 1000 < 500 ? "|" : ""; }

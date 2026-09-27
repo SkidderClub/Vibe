@@ -16,6 +16,7 @@ installation and use; the following files have distinct legal/documentation role
 | [LGPL-3.0.txt](LGPL-3.0.txt) | LGPLv3 reference text for IAS and MinecraftAuth; incorporates GPL-3.0.txt. These libraries are not bundled. |
 | [webgl-noise-MIT.txt](webgl-noise-MIT.txt) | Complete MIT permission/warranty text with the Ashima Arts and Stefan Gustavson copyright notices for the noise implementation. |
 | [OFL-1.1.txt](OFL-1.1.txt) | SIL Open Font License for the bundled Noto Sans CJK font. |
+| [FONT_NOTICES.md](FONT_NOTICES.md) | Bundled Standard Galactic and Aurebesh display-font attribution and local license links. |
 | [SCHIZOID.md](SCHIZOID.md) | File-by-file Schizoid provenance, adaptations and source-distribution instructions. |
 
 The license texts differ in length and structure because they are different
@@ -141,6 +142,22 @@ is the unmodified Noto Sans CJK SC Regular font from
 [Noto CJK](https://github.com/notofonts/noto-cjk). The font remains bundled;
 Augustus now uses Minecraft's bitmap font resources. The [SIL Open Font License 1.1](OFL-1.1.txt)
 is stored in `LICENSES/OFL-1.1.txt` and included in the JAR.
+
+### Standard Galactic and Aurebesh display fonts
+
+[`StandardGalactic-Regular.ttf`](../src/main/resources/assets/vibe/fonts/StandardGalactic-Regular.ttf)
+provides the exact Standard Galactic Alphabet used by the optional **Enchantment
+Table** language. It comes from
+[standardgalactic/alphabet](https://github.com/standardgalactic/alphabet) under
+CC0 1.0; the complete text is stored in
+[`STANDARD-GALACTIC-CC0-1.0.txt`](STANDARD-GALACTIC-CC0-1.0.txt).
+
+[`Aurebesh-Rodian.otf`](../src/main/resources/assets/vibe/fonts/Aurebesh-Rodian.otf)
+is the screen-oriented font used by the optional **Aurebesh** language. It comes
+from [AurekFonts/Aurebesh_Rodian](https://github.com/AurekFonts/Aurebesh_Rodian)
+under the MIT license; the complete text is stored in
+[`AUREBESH-RODIAN-MIT.txt`](AUREBESH-RODIAN-MIT.txt). See
+[`FONT_NOTICES.md`](FONT_NOTICES.md) for the compact offline inventory.
 
 ### Cosmetica
 

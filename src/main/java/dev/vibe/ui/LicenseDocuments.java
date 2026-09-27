@@ -16,7 +16,7 @@ public final class LicenseDocuments {
         CREDITS("Credits", null), NOTICES("Notices", "LICENSES/THIRD_PARTY_NOTICES.md"),
         GPL("GPLv3", "LICENSES/GPL-3.0.txt"), AGPL("AGPLv3", "LICENSES/AGPL-3.0.txt"),
         LGPL("LGPLv3", "LICENSES/LGPL-3.0.txt"), MIT("MIT", "LICENSES/webgl-noise-MIT.txt"),
-        SCHIZOID("Schizoid", "LICENSES/SCHIZOID.md"), SOURCE("Source", null);
+        FONTS("Fonts", "LICENSES/FONT_NOTICES.md"), SCHIZOID("Schizoid", "LICENSES/SCHIZOID.md"), SOURCE("Source", null);
 
         public final String label;
         public final String path;

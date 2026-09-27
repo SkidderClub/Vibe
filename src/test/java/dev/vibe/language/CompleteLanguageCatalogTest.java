@@ -32,7 +32,33 @@ public class CompleteLanguageCatalogTest {
                 }
                 keys++;
             }
-            assertTrue("The complete catalog should cover all interface, setting and module keys", keys >= 1300);
+            assertTrue("The complete catalog should cover every built-in visible client key", keys >= 3000);
+            for (String key : Arrays.asList("Reconnect", "Random username", "Operations", "Your army", "Global",
+                    "Encrypted local activity", "Each account and every generated cracked profile remain separate in the encrypted local vault.")) {
+                for (int index = 1; index < header.length; index++) {
+                    assertTrue("Missing visible UI translation for " + key + " in " + header[index],
+                            LanguageManager.hasTranslation(key, header[index]));
+                }
+            }
         }
+    }
+
+    @Test
+    public void generatedVisibleSourceManifestIsFullyCoveredForEveryLanguage() throws Exception {
+        List<String> languages = LanguageManager.languages();
+        int keys = 0;
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                getClass().getResourceAsStream("/assets/vibe/lang/visible-keys.txt"), StandardCharsets.UTF_8))) {
+            String key;
+            while ((key = reader.readLine()) != null) {
+                if (key.trim().isEmpty()) continue;
+                for (int index = 1; index < languages.size(); index++) {
+                    assertTrue("Missing visible source translation for " + key + " in " + languages.get(index),
+                            LanguageManager.hasTranslation(key, languages.get(index)));
+                }
+                keys++;
+            }
+        }
+        assertTrue("The source manifest should cover the complete visible client catalog", keys >= 3000);
     }
 }

@@ -53,10 +53,18 @@ public final class LanguageFlags {
             if ("French".equals(language)) vertical(0xFF002395,0xFFFFFFFF,0xFFED2939);
             else if ("Italian".equals(language)) vertical(0xFF009246,0xFFFFFFFF,0xFFCE2B37);
             else vertical(0xFF002B7F,0xFFFCD116,0xFFCE1126);
-        } else if ("Enchantment Table".equals(language) || "Aurebesh".equals(language)) {
-            fill("Aurebesh".equals(language) ? 0xFF111725 : 0xFF201640);
-            Gui.drawRect(3,4,27,6,0xFF38D7DE); Gui.drawRect(6,9,24,11,0xFFB36BFF); Gui.drawRect(9,14,21,16,0xFF38D7DE);
-            if ("Aurebesh".equals(language)) star(0xFFE8C96A, 15, 10, 4, -Math.PI / 2);
+        } else if ("Enchantment Table".equals(language)) {
+            fill(0xFF171126);
+            // A small enchanted-book cover: cyan runes, violet binding and a
+            // gold spell core distinguish it from the Star Wars option.
+            Gui.drawRect(3,3,27,17,0xFF312251); Gui.drawRect(4,4,14,16,0xFF201838); Gui.drawRect(16,4,26,16,0xFF201838);
+            Gui.drawRect(14,3,16,17,0xFFB56AFF); Gui.drawRect(6,6,8,8,0xFF41E6EE); Gui.drawRect(10,10,12,12,0xFF41E6EE);
+            Gui.drawRect(20,6,22,8,0xFF41E6EE); Gui.drawRect(18,12,24,14,0xFF41E6EE); circle(0xFFFFD56B,15,10,2);
+        } else if ("Aurebesh".equals(language)) {
+            fill(0xFF0C1422);
+            Gui.drawRect(3,3,27,4,0xFFE8C96A); Gui.drawRect(3,16,27,17,0xFFE8C96A); Gui.drawRect(3,3,4,17,0xFFE8C96A); Gui.drawRect(26,3,27,17,0xFFE8C96A);
+            star(0xFFE8C96A, 15, 10, 3.4F, -Math.PI / 2);
+            Gui.drawRect(7,7,9,9,0xFF5D87B6); Gui.drawRect(21,7,23,9,0xFF5D87B6); Gui.drawRect(7,12,9,14,0xFF5D87B6); Gui.drawRect(21,12,23,14,0xFF5D87B6);
         } else if ("Portuguese".equals(language)) { vertical(0xFF006600,0xFF006600,0xFFFF0000); circle(0xFFFFD700, 13,10,5); circle(0xFF004B87,13,10,2); }
         else if ("Ukrainian".equals(language)) horizontal(0xFF0057B7,0xFFFFD700);
         else if ("Hindi".equals(language) || "Marathi".equals(language) || "Telugu".equals(language) || "Gujarati".equals(language) || "Tamil".equals(language)) { horizontal(0xFFFF9933,0xFFFFFFFF,0xFF138808); circle(0xFF000080,15,10,2); }

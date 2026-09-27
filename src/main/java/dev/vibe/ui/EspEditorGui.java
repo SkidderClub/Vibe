@@ -65,7 +65,7 @@ public final class EspEditorGui extends GuiScreen {
     private Esp2DSettings settings() {return esp.get2D(esp.editingProfile());}
     private boolean inherited(){return esp.profileDefaults(esp.editingProfile());}
     private boolean hit(float x,float y,float w,float h,int mx,int my) {return mx>=left+x&&mx<left+x+w&&my>=top+y&&my<top+y+h;}
-    private void text(String value,float x,float y,int color) {fontRendererObj.drawString(value,left+x,top+y,color,false);}
+    private void text(String value,float x,float y,int color) {fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate(value),left+x,top+y,color,false);}
     private void rect(float x,float y,float w,float h,int color) {Gui.drawRect((int)(left+x),(int)(top+y),(int)(left+x+w),(int)(top+y+h),color);}
     private void button(String label,int x,int y,int w,boolean on) {
         SkeetEditorStyle.button(left+x,top+y,left+x+w,top+y+23,label,on);

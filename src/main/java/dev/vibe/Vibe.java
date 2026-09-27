@@ -86,6 +86,7 @@ public final class Vibe {
         ClientEvents events = new ClientEvents();
         MinecraftForge.EVENT_BUS.register(events);
         MinecraftForge.EVENT_BUS.register(new MainMenuEvents());
+        MinecraftForge.EVENT_BUS.register(new dev.vibe.event.GuiButtonLocalizationEvents());
         dev.vibe.event.ReconnectEvents reconnect = new dev.vibe.event.ReconnectEvents();
         MinecraftForge.EVENT_BUS.register(reconnect);
         FMLCommonHandler.instance().bus().register(reconnect);

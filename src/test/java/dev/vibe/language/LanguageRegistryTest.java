@@ -26,11 +26,14 @@ public class LanguageRegistryTest {
 
     @Test
     public void extendedCatalogIncludesBaseUiAndModernModuleLabels() {
-        assertEquals("Idioma", LanguageManager.translate("Language", "Spanish"));
-        assertEquals("Estadísticas", LanguageManager.translate("Statistics", "Spanish"));
-        assertEquals("Statistiken", LanguageManager.translate("Statistics", "German"));
-        assertEquals("اللغة", LanguageManager.translate("Language", "Standard Arabic"));
-        assertEquals("Custom Cosmetics", LanguageManager.translate("Custom Cosmetics", "Hindi"));
-        assertEquals("Aurebesh", LanguageManager.displayName("Aurebesh"));
+        for (String language : Arrays.asList("Spanish", "German", "Standard Arabic", "Hindi")) {
+            assertTrue("Base UI label missing for " + language,
+                    LanguageManager.hasTranslation("Language", language));
+            assertTrue("Modern module label missing for " + language,
+                    LanguageManager.hasTranslation("Statistics", language));
+        }
+        assertNotEquals("Custom Cosmetics", LanguageManager.translate("Custom Cosmetics", "Hindi"));
+        assertEquals("Standard Galactic · Enchanting", LanguageManager.displayName("Enchantment Table"));
+        assertEquals("Aurebesh · Star Wars", LanguageManager.displayName("Aurebesh"));
     }
 }

@@ -142,8 +142,8 @@ public final class SlotsGui extends GuiScreen {
             ArcadeGame game = GAMES[index]; int y = bodyTop + 22 + index * 42;
             boolean selected = selectedGame == index;
             SkeetEditorStyle.row(menuLeft + 8, y, menuRight - 8, y + 35, selected, hit(menuLeft + 8, y, menuRight - 8, y + 35, mouseX, mouseY));
-            fontRendererObj.drawStringWithShadow(game.title, menuLeft + 16, y + 5, selected ? SkeetEditorStyle.accent(.1F) : SkeetEditorStyle.TEXT);
-            fontRendererObj.drawStringWithShadow(game.playable ? "Available" : "Rules preview", menuLeft + 16, y + 19, SkeetEditorStyle.MUTED);
+            fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate(game.title), menuLeft + 16, y + 5, selected ? SkeetEditorStyle.accent(.1F) : SkeetEditorStyle.TEXT);
+            fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate(game.playable ? "Available" : "Rules preview"), menuLeft + 16, y + 19, SkeetEditorStyle.MUTED);
         }
         drawWallet(menuLeft + 8, bodyTop + 282, menuRight - 8, bottom - 8, mouseX, mouseY);
         int contentLeft = menuRight + 14, contentRight = left + panelWidth - 14;
@@ -182,10 +182,12 @@ public final class SlotsGui extends GuiScreen {
             SkeetEditorStyle.row(cellLeft, cellTop, cellLeft + reelWidth, cellTop + 48, false, false);
             int color = symbolColor(symbol);
             String label = symbol.getLabel();
+            label = dev.vibe.language.LanguageManager.translate(label);
             fontRendererObj.drawStringWithShadow(label, cellLeft + (reelWidth - fontRendererObj.getStringWidth(label)) / 2, cellTop + 20, color);
         }
         drawPaylines(x, reelTop, reelWidth, reelGap);
         String result = spinning() ? "Outcome locked • reels are stopping" : outcome == null ? "Select a bet, then spin" : outcome.resultLabel();
+        result = dev.vibe.language.LanguageManager.translate(result);
         fontRendererObj.drawStringWithShadow(trim(result, right - x), x, reelTop + reelHeight + 10, outcome != null && outcome.getPayout() > 0L ? SkeetEditorStyle.accent(.25F) : SkeetEditorStyle.MUTED);
         int betTop = reelTop + reelHeight + 33;
         drawBetButtons(x, betTop, mouseX, mouseY);

@@ -64,7 +64,7 @@ public final class CosmeticAccessoryOptionsGui extends GuiScreen {
     }
 
     private void slider(int x, int y, String label, float value, float min, float max, int axis) {
-        fontRendererObj.drawStringWithShadow(label, x, y, SkeetEditorStyle.TEXT);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate(label), x, y, SkeetEditorStyle.TEXT);
         String valueText = min == max ? "fixed " + number(value) : number(value) + "  [" + number(min) + " .. " + number(max) + "]";
         fontRendererObj.drawStringWithShadow(valueText, x, y + 12, SkeetEditorStyle.MUTED);
         int trackLeft = x + 126, trackRight = right - 32, trackTop = y + 8;
@@ -78,7 +78,7 @@ public final class CosmeticAccessoryOptionsGui extends GuiScreen {
 
     private void drawSwitch(int x, int y, String label, boolean enabled) {
         SkeetEditorStyle.row(x, y, x + 208, y + 20, enabled, false);
-        fontRendererObj.drawStringWithShadow(label, x + 7, y + 6, SkeetEditorStyle.TEXT);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate(label), x + 7, y + 6, SkeetEditorStyle.TEXT);
         fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate(enabled ? "ON" : "OFF"), x + 174, y + 6, enabled ? 0xFF43D89C : 0xFFFF657A);
     }
 

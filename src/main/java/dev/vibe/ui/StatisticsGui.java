@@ -76,7 +76,7 @@ public final class StatisticsGui extends GuiScreen {
 
     private void metric(String title, String value, int x, int y) {
         SkeetEditorStyle.row(x, y, x + 120, y + 42, false, false);
-        fontRendererObj.drawString(title, x + 7, y + 7, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate(title), x + 7, y + 7, SkeetEditorStyle.MUTED);
         fontRendererObj.drawStringWithShadow(value, x + 7, y + 22, SkeetEditorStyle.TEXT);
     }
 
@@ -109,7 +109,7 @@ public final class StatisticsGui extends GuiScreen {
 
     private void drawLowerPanel(StatisticsService.Snapshot stats, int x, int x2, int y) {
         if (scope != StatisticsService.Scope.GLOBAL) {
-            fontRendererObj.drawSplitString("Each account and every generated cracked profile remain separate in the encrypted local vault.", x + 8, y, x2 - x - 16, SkeetEditorStyle.MUTED);
+            fontRendererObj.drawSplitString(dev.vibe.language.LanguageManager.translate("Each account and every generated cracked profile remain separate in the encrypted local vault."), x + 8, y, x2 - x - 16, SkeetEditorStyle.MUTED);
             return;
         }
         if (stats.favourites.isEmpty()) {
@@ -127,7 +127,7 @@ public final class StatisticsGui extends GuiScreen {
     }
 
     private int line(String label, long value, int x, int x2, int y) {
-        fontRendererObj.drawString(label, x + 8, y, SkeetEditorStyle.MUTED);
+        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate(label), x + 8, y, SkeetEditorStyle.MUTED);
         rightText(format(value), x2 - 8, y, SkeetEditorStyle.TEXT);
         return y + 19;
     }

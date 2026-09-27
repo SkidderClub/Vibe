@@ -100,6 +100,7 @@ public final class NesEmulatorGui extends GuiScreen {
     }
 
     private void drawChoice(String label, String value, int x, int y, int right) {
+        label = dev.vibe.language.LanguageManager.translate(label);
         fontRendererObj.drawStringWithShadow(label, x, y, RenderUtils.MUTED);
         SkeetEditorStyle.row(x, y + 11, right, y + 31, false, false);
         fontRendererObj.drawStringWithShadow(value, x + 7, y + 17, SkeetEditorStyle.TEXT);
@@ -107,6 +108,7 @@ public final class NesEmulatorGui extends GuiScreen {
     }
 
     private void button(int x, int y, int right, String text) {
+        text = dev.vibe.language.LanguageManager.translate(text);
         Gui.drawRect(x, y, right, y + 20, 0xFF17171A);
         SkeetEditorStyle.border(x, y, right, y + 20, 0xFF363740);
         Gui.drawRect(x + 1, y + 1, right - 1, y + 2, SkeetEditorStyle.accent(0.15F));

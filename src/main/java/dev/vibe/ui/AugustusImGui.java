@@ -446,7 +446,7 @@ public final class AugustusImGui {
 
     private static void label(String text) {
         float left = ImGui.getCursorScreenPosX(), right = left + ImGui.getContentRegionAvailX() - 12;
-        ImGui.textWrapped(text);
+        ImGui.textWrapped(LanguageManager.translate(text));
         if (ImGui.getItemRectMaxX() + 6 + 90 <= right) ImGui.sameLine(0, 6);
         else ImGui.setCursorScreenPos(left + 12, ImGui.getCursorScreenPosY());
     }

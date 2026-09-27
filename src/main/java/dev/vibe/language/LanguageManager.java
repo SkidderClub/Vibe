@@ -19,6 +19,8 @@ import java.util.regex.Pattern;
 public final class LanguageManager {
 
     private static final Map<String, Map<String, String>> CATALOG = new HashMap<String, Map<String, String>>();
+    /** Maps an encoded custom-script value back to its ASCII source for a real script font. */
+    private static final Map<String, Map<String, String>> SCRIPT_FONT_SOURCES = new HashMap<String, Map<String, String>>();
     private static final Pattern WORD = Pattern.compile("[A-Za-z][A-Za-z0-9+.-]*");
     private static final List<String> LANGUAGES = Collections.unmodifiableList(Arrays.asList(
             "English", "Chinese", "Russian", "Japanese", "Bavarian",
@@ -128,7 +130,7 @@ public final class LanguageManager {
         if ("Spanish".equals(value)) return "Español";
         if ("German".equals(value)) return "Deutsch";
         if ("French".equals(value)) return "Français";
-        if ("Enchantment Table".equals(value)) return "Enchantment Table";
+        if ("Enchantment Table".equals(value)) return "Standard Galactic · Enchanting";
         if ("Portuguese".equals(value)) return "Português";
         if ("Ukrainian".equals(value)) return "Українська";
         if ("Hindi".equals(value)) return "हिन्दी";
@@ -160,7 +162,7 @@ public final class LanguageManager {
         if ("Polish".equals(value)) return "Polski";
         if ("Zulu".equals(value)) return "isiZulu";
         if ("Romanian".equals(value)) return "Română";
-        if ("Aurebesh".equals(value)) return "Aurebesh";
+        if ("Aurebesh".equals(value)) return "Aurebesh · Star Wars";
         return value;
     }
 
@@ -176,6 +178,46 @@ public final class LanguageManager {
         if (translations == null) return text;
         String translated = translations.get(text.toLowerCase(Locale.ROOT));
         return translated == null ? translateCompound(text, translations) : translated;
+    }
+
+    /** True for the two display scripts that have bundled, dedicated UI fonts. */
+    public static boolean usesScriptFont(String language) {
+        String selected = normalizeLanguage(language);
+        return "Enchantment Table".equals(selected) || "Aurebesh".equals(selected);
+    }
+
+    /**
+     * Lets themed Vibe screens draw the genuine Standard Galactic or Aurebesh
+     * font instead of an approximate Unicode fallback. Only catalog values are
+     * converted back to their source wording, so names supplied by a server or
+     * another player remain untouched.
+     */
+    public static String scriptFontText(String text) {
+        return scriptFontText(text, selectedLanguage());
+    }
+
+    /** Same conversion with an explicit language, used by previews and verification. */
+    public static String scriptFontText(String text, String language) {
+        if (text == null || text.isEmpty()) return text;
+        language = normalizeLanguage(language);
+        if (!usesScriptFont(language)) return text;
+        Map<String, String> sources = SCRIPT_FONT_SOURCES.get(language);
+        if (sources == null) return text;
+        String source = sources.get(text);
+        if (source != null) return source;
+        String encoded = translate(text, language);
+        source = sources.get(encoded);
+        return source == null ? text : source;
+    }
+
+    /** Whether this is a Vibe-owned catalog value that may use a script font. */
+    public static boolean isScriptFontText(String text) {
+        if (text == null || !usesScriptFont(selectedLanguage())) return false;
+        Map<String, String> sources = SCRIPT_FONT_SOURCES.get(selectedLanguage());
+        if (sources == null) return false;
+        String source = sources.get(text);
+        // Let FontRenderer retain Minecraft colour/style-code semantics.
+        return source != null && source.indexOf('\u00a7') < 0;
     }
 
     /**
@@ -340,7 +382,17 @@ public final class LanguageManager {
                 if (row.length == 0 || row[0].isEmpty()) continue;
                 for (int index = 1; index < columns.length && index < row.length; index++) {
                     Map<String, String> target = expanded.get(columns[index]);
-                    if (target != null && !row[index].isEmpty()) target.put(row[0].toLowerCase(Locale.ROOT), row[index]);
+                    if (target != null && !row[index].isEmpty()) {
+                        target.put(row[0].toLowerCase(Locale.ROOT), row[index]);
+                        if (usesScriptFont(columns[index])) {
+                            Map<String, String> sources = SCRIPT_FONT_SOURCES.get(columns[index]);
+                            if (sources == null) {
+                                sources = new HashMap<String, String>();
+                                SCRIPT_FONT_SOURCES.put(columns[index], sources);
+                            }
+                            sources.put(row[index], row[0]);
+                        }
+                    }
                 }
             }
             for (Map.Entry<String, Map<String, String>> entry : expanded.entrySet()) {

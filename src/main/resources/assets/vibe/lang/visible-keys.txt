@@ -1,0 +1,3257 @@
+  AK47
+  Aim
+  Attack   /   
+  Augustus Client 
+  Crouch   /   
+  In-Game Account Switcher / LGPLv3+ The_Fireplace, VidTu and contributors 
+  Jump / hold in air: jet   /   
+  Knife   /   
+  LiquidBounce / GPLv3+ CCBlueX and contributors 
+  MinecraftAuth / LGPLv3+ RK_01/RaphiMC and contributors 
+  Move   /   Mouse  Look
+  Schizoid / AGPLv3 
+  Sprint
+  webgl-noise / MIT Ian McEwan, Stefan Gustavson / Ashima Arts 
+  •  LMB toggle  •  RMB settings  •  MMB bind
+  •  scroll to browse
+ (Microsoft).
+ (offline / local servers only).
+ + cleanClassName(program.name) + 
+ + name + 
+ +%.1f
+ - in range
+ <min|max> <value>
+ <range setting> <min|max> <value>§c.
+ <setting> 
+ <setting> <value>§7. Settings: §b
+ <value>
+ Armor
+ Backplate
+ CELL / 
+ CR
+ CR  /  
+ CR TO TRAIN
+ CR included. Progress saved.
+ Color
+ Color Mode
+ Copyright (c) 2023, 2024 Schizoid https://github.com/SchizoidDevelopment/schizoid
+ DMG  /  
+ DMG / 
+ Direction
+ Distance
+ Distance Position
+ Down
+ ELIMINATIONS  /  
+ FPS
+ Fill
+ Font
+ Gradient
+ HP  /  
+ HP / 
+ Health
+ Health End
+ Health Fade
+ Health Position
+ Health Start
+ Health Width
+ Held Item
+ Held Position
+ Hurt Color
+ Hurt Color Source
+ Hurt Override
+ I will cancel the match of 
+ Line Width
+ Mode
+ Name Position
+ Names
+ Outline
+ Override Color
+ Position
+ Position 
+ Rainbow Saturation
+ Rainbow Speed
+ Shadow
+ Show Skin
+ Size
+ Source
+ Speed
+ Static
+ Stop 
+ Stops
+ Through Walls
+ Up
+ Use Player Defaults
+ Vibe Tokens
+ Vibe Tokens returned
+ XP
+ XP THIS LIFE
+ XP collected
+ accepted — you start as 
+ accounts; 
+ already exists.
+ army slots
+ at source line 
+ authored accessories
+ berths assigned
+ cancelled the match
+ color stops
+ duplicates; 
+ eliminations this life
+ enterable locations
+ errors / 
+ field on 
+ from saved accounts. Current session remains active.
+ in RetroArch
+ in check
+ in your browser.
+ invalid / 
+ invited you
+ invited you to 
+ is limited to 
+ is rate limiting sign-ins. Try again later.
+ local accessories
+ module(s)
+ modules and 
+ must be between 
+ on damage
+ personal / 
+ please make your next move
+ requested your next move
+ round safely closed with no payout
+ rules selected
+ safe tiles
+ secured  +60 credits
+ session ended before completion
+ settings loaded
+ sign-in failed (HTTP 
+ starts as 
+ to move
+ to sprint.
+ unreadable files.
+ valid / 
+ virtual tokens
+ winning line
+ winning lines
+ with you, because i don't want to play anymore
+ with you, because you cheated
+ yes lets play a game of 
+ §7(active: 
+ §7appeared in your game.
+ §7bound to §b
+ §7is already §b
+ §7is now 
+ §7script(s).
+ §7to the clipboard.
+ §7to §b
+ §8» §f
+ §a[F]
+ §c[T]
+ §f
+ §r| 
+ §r| §b
+ §r| §fv
+ — you will start when they accept
+ • NTSC
+ • PAL
+ • lost 
+ • no winning bets
+ • paid 
+ • player 
+ • push
+ • winning table
+ • won 
+ • you are 
+##value
+#%02X%02X%02X%02X
+#0123456789abcdefABCDEF
+#EXT-X-
+#HttpOnly_
+#include "
+% RESIST
+% resistance
+%,d
+%.0f HP
+%.1f
+%.1f HP
+%.1fk
+%.2f
+%.2f b/s
+%.2fx
+%02d
+%02d:%02d
+%02d:%02d:%02d
+%03d
+%d:%02d
+%s Cosmetica accessories
+%s Cosmetica accessory
+%s SETTINGS
+%s has an illegal %s
+%s has the murderer weapon: %s
+%s is armed with a %s
+%s is holding a %s
+%s is not safe; they have a %s
+%s is suspicious with a %s
+%s is suspicious; I saw a %s
+%s looks armed with a %s
+%s looks like the murderer with that %s
+%s may be the murderer because of the %s
+%s selected
+%s was seen with a %s
+%sm
+') + 1, line.lastIndexOf('
+(?i)File[0-9]+=.*
+([a-z])([A-Z])
+) || file.getName().startsWith(
+) §8added 
+). Please try again.
+).append(diagnostic.getLineNumber() - 5).append(
+*
++
++ 629 locally bundled accessory models, textures and catalogue previews
++ Automatic cookie folder import with valid/invalid/error results
++ BlockOverlay with animated fill and per-edge colour paths
++ ClickGUI now opens from the main menu; games and editors remain usable outside a world
++ Cosmetica cosmetics, preset editor and friend-specific looks
++ Custom cosmetics: smooth China Hat, trail, jump circle and KillAura circle with per-effect options
++ Direct cookie login with Microsoft Netscape cookie exports
++ Encrypted account storage and Vibe backup file/folder import
++ Expandable, scrollable changelog opened by a small menu button
++ FakeLag and Backtrack modules
++ Faster NES runtime, ROM library selection and RetroArch launch support
++ Gothaj-style LagRange, TickBase and TimerRange combat modules; FakeLag removed
++ Language selector and localized Vibe UI labels
++ Licenses & credits in the main and pause menus, with offline texts and Schizoid attribution
++ Minecraft skin faces in the active profile and account list
++ Music media panel, system-video thumbnail artwork and visualizer improvements
++ Name Protect, Flag Detector, ChestStealer title filtering and AimAssist Boost Aim controls
++ New Hypixel helpers: Murder Mystery detection, BlockParty movement and PitBot pathing
++ Picken Switch timing, 3D hitmarker, Chams depth handling and block/stat tracking fixes
++ Rebuilt HUD ArrayList, efficient masked blur, stable outline/text glow and LiquidGlass controls
++ Reconnect and generated cracked-account actions on disconnect screens, with local encrypted statistics
++ Six saved colour themes for menus and account screens
++ Statistics dashboard with account/global views, graphs and encrypted local records
++ Vibe Accounts: Microsoft login, account switching and offline profiles
++ W-Tab, Debug, CPS, CPS Graph, BedESP and BlockChangeESP
++ run-fresh.bat starts with a separate empty profile every time
++0.27 m/s
++1 second of flight
++10% fire rate
++10% squad capture speed
++10% squad health
++12 maximum health
++12 reinforcement tickets
++15 damage
++18 grenade damage
++18% damage / +8% speed / -15% health
++2 deployed soldiers
++2 shots before overheating
++2% damage reduction
++2% movement speed
++20 maximum health
++20% speed / +25% capture weight / -15% damage
++25 max HP
++25% health / -15% speed / -8% damage
++3 magazine rounds
++4 blaster damage
++4% movement speed
++5 rounds per magazine
++5% elimination credits
++5% fire / reload speed
++5% wall penetration chance
++8 damage
++8 field healing
++8% squad damage
++9% weapon damage
+,
+, classPath(), 
+, compiledDirectory.getAbsolutePath(), 
+, supplied beside this build by its distributor.
+, wanna play a game of 
+,"pageSize":24,"page":
+-
+. Choose: §b
+. Minecraft Java profile verified and saved.
+. Select a core there if prompted.
+. Settings: §b
+. Usage: §b.
+.java §7in the scripts folder.
+.source - source archive, repository and GPLv3/AGPLv3 licenses
+/ 
+0
+01 / THEATER     02 / ALLEGIANCE     03 / OPERATION
+02 / ALLEGIANCE
+03 / OPERATION
+10 personal eliminations: +180 CR  /  3 captures: +220 CR  /  35 army kills: +250 CR
+12:34:56
+1st 12
+20.0 HP
+20.0 HP    Armor    Item
+20.0 HP  Armor  Item
+20m
+22 BBY / OUTER RIM
+2D
+2D (Crosshair)
+2D / Layout
+2D Box Background
+2D Box Color Static
+2D Box Enabled
+2D Box Outline
+2D Default Text
+2D Distance Enabled
+2D Distance Scaling
+2D Element Gap
+2D Global Gradient
+2D Health Bar Color Static
+2D Health Bar Enabled
+2D Health Bar Width
+2D Item Name Enabled
+2D Line Width
+2D Name Enabled
+2D Size
+2D, 3D and expanding reflective torus hit confirmations
+2D, 3D, Skeletal and customizable model Chams ESP
+2nd 12
+3D
+3D (World)
+3D / Boxes
+3D Animation
+3D Centre Gap
+3D Line Width
+3D Outline
+3D Outline Color
+3D Size
+3D Through Walls
+3D and tactical Counter-Strike-style target ESP
+3rd 12
+4 ABY / FOREST MOON
+4 Wins
+448m theater / 
+5 reels • 5 paylines • outcome is secured before it animates
+5 x 5 grid • 3 mines • cash out whenever you choose
+60% bonus damage against droids
+7
+90 fps  •  v
+; could not write its .result note.
+<
+< 
+?
+A
+A  Z       B  X
+A / B / C   Command posts
+A 3D first-person city with police, traffic and permanent upgrades
+A SITE
+A local robot match is always available.
+A mode setting needs at least one mode
+A narrow two-file column for paths and settlements.
+A positive bet and secure RNG are required
+A script named 
+A280 blaster
+AAC
+AAC1.9.10
+AAC1.9.10-Speed
+AAC3.0.5
+AAC3.0.5-Fast
+AAC3.1.6-Gomme
+AAC3.3.11
+AAC3.3.12
+AAC3.3.12-Glide
+AAC3.3.12-Motion
+AAC3.3.13
+AAC3.3.13-Motion
+AAC3.3.15
+AAC330
+AACHop3.3.13
+AACHop3.5.0
+AACHop4
+AACHop5
+AACReverse
+AACYSpoof
+AACv1
+AACv2
+AACv3
+ACTIVE DOCTRINE
+AES
+AES/GCM/NoPadding
+AGPLv3
+AK47
+AK47 / 
+ALLIANCE
+ALLY
+ALT
+APARTMENTS 
+APPDATA
+APPEARANCE
+ARC commando rig
+ARCTIC HOME
+ARF scout
+ARMOR  [ ][ ][ ][ ]
+ARMOR / 
+ARMY
+ARMY & CHARACTER
+ARRAYLIST
+ARSENAL & RESEARCH
+ASSAULT
+Absorption
+Absorption Color
+Acceleration
+Accent
+Accept
+Accept and play second
+Accepted move failed to replay
+Accessories
+Accessory settings
+Account encryption is unavailable.
+Account file is damaged or belongs to another Vibe installation.
+Account file is too large.
+Account limit reached (1000).
+Account operation
+Account operation failed. Please try again.
+Account operation failed. Please try signing in again.
+Account saved. Disconnect from the world before switching.
+Account switch must run on the game thread.
+Accounts
+Active
+Active account
+Active shader
+Active shader: §b%s
+Active: 
+Adaptive
+Add
+Add .nes files to the ROM folder,
+Add Player Velocity
+Add a Microsoft account or select a saved account.
+Add account
+Add and use
+Add garbage
+Add owned ROM files to the ROM folder,
+Added 
+Added friend §a
+Added priority target §c
+Adjust
+Adjust Third Person Model
+Adjust the client mouse-over reach for entities and blocks
+Adult access verified
+Adult-only virtual arcade with local encrypted Vibe Tokens
+Adults only
+Advanced
+Affect Sky
+AffectSky
+Age
+Agjpqy
+Aim Through Walls
+Aim Vertically
+Aim over your shoulder. Walls retract the camera and block shots.
+AimAssist
+Air Strafe
+Air Timer
+Air Timer Tick
+Alias
+All Modes
+All accounts
+All units replenish during battle
+Allowance
+Allowance in 
+Allowance is not available yet
+Allowed
+Allowed Items
+Along Edge
+Alpha
+Alpha 
+Alphabetical
+Alt Manager
+Always On Ground
+Amber
+Ambience
+Amharic
+An expanding V, with the point facing your heading.
+Animals
+Animation
+Animation Speed
+Animations
+Announce murderer
+AntiInvisibility
+Anvil
+App: In-Game Account Switcher
+Appearance copied to all five army roles.
+Applies to menus & accounts
+Arcade
+Arctic
+Arctic villages
+Arctic white
+Arm
+Arm Length
+Armor
+Armor   [ ] [ ] [ ] [ ]
+Armor / autoarmor
+Armor Bar
+Armor Display
+Armor and sustained firepower
+Armored jetpack / hold jump to fly
+Armory
+Army orders / tactical atlas / pause / help. Z cycles radar range.
+Arrange preferred inventory slots and the drop bin
+Arrange your in-game overlay
+Array
+Array Accent Rail
+Array Alignment
+Array Background
+Array Background Shape
+Array Bold
+Array Bottom Fade
+Array Color Mode
+Array Color Speed
+Array Color Spread
+Array Corner Radius
+Array Font
+Array Glow
+Array Glow Radius
+Array Glow Strength
+Array Horizontal Gradient
+Array Name Case
+Array Name Spaces
+Array Opacity
+Array Outline Accent
+Array Outline Color
+Array Outline Shape
+Array Outline Width
+Array Padding
+Array Preset
+Array Rail Width
+Array Rainbow Brightness
+Array Rainbow Saturation
+Array Row Gap
+Array Row Height
+Array Sort
+Array Suffix
+Array Suffix Accent
+Array Suffix Color
+Array Suffix Separator
+Array Text Glow
+Array Text Glow Radius
+Array Text Glow Strength
+Array Text Scale
+Array Text Shadow
+Array list
+ArrayList Modules
+ArrayList Outline
+ArrayList Primary Color
+ArrayList Secondary Color
+Arrow
+Artist / Album
+Assault cuirass
+Assign module keys using the current keyboard layout
+Assist held left-click attacks
+At
+At least one roulette bet is required
+Atari 2600
+Atari 7800
+Atari Jaguar
+Atari Lynx
+Audio Source
+AudioLoopback.cs
+Augustus
+Aurebesh
+Aurora
+Aurora Marker
+AuthMethod
+Authentication protocol and application configuration reference; no library bundled.
+Authorization
+Authors
+Auto
+Auto Close
+Auto Jump
+Auto Login
+Auto Login disabled.
+Auto Login enabled for 
+Auto Login preference is unavailable. Check the account folder permissions, then restart.
+Auto sprint
+Auto → 
+AutoTool
+Autoblock Mode
+Automatic
+Automatic account import
+Automatically aims, clicks and sword-blocks using vanilla input
+Automatically jump while moving
+Available
+Axe
+Axes
+Azure legion
+B
+B APARTMENTS
+B SITE
+B1 battle droid
+B1 command droid
+B2 super battle droid
+BATTALION COMMAND
+BHop
+BHop Custom
+BKSP
+BOOST
+BREAKTHROUGH
+BUILD YOUR BATTALION
+Back
+Back to lobby
+Backend
+Background
+Background / opacity
+Background Alpha
+Background Enabled
+Backtrack
+Backup folder
+Bacta canisters
+Bacta injector
+Bacta injector activated
+Balance
+Balance Regen
+Balls
+Bar Gap
+Bars
+Basic
+Battalion moving to marked rally point / 
+Battle of Endor
+Battle of Geonosis
+Battle scarred
+Battlefront 3
+Battlefront kills
+Battlefront3Gui
+Bavaria
+Bavarian
+Bearer 
+Bed
+Bed Burst
+Bed Burst Count
+Bed Burst Lifetime (ms)
+Bed Burst Size
+Bed Burst Speed
+Bed Color Mode
+Bed Fill
+Bed Outline
+Bed Sound
+Bed-break bursts and heart or dot trails
+BedAura
+BedESP
+Beds broken
+Bengali
+Beskar flight rig
+Bet
+Bind
+Black
+Blackjack
+Blackjack complete • settle the cards
+Blackjack dealt
+Blackjack in progress
+Blacklist
+Blacklist IDs
+Blaster amplifiers
+Block
+Block End Distance
+Block Reach Extension
+Block overlay   Fade
+BlockChangeESP
+BlockOverlay
+BlockParty
+Blocking
+Blocking Range
+Blocking Style
+Blocks
+Blocks Only
+Blocks broken
+Blocks placed
+Blocks walked
+Blue
+Blur
+Blur Elements
+Blur Method
+Blur Strength
+Blurred Cover Background
+Book of Vibe
+Book of Vibe must retain a configurable house edge
+Book of Vibe selected
+Boost Aim
+Boost Towards
+Boots
+Both
+Bottom
+Bottom Offset
+Bow
+Bow ESP color
+Bows
+Box
+Brackets
+Break Animation
+Break Block Items
+Break Blocks
+Break Blocks Delay
+Break Blocks Item Filter
+Break Blocks Items
+Break Blocks Whitelist
+Break Circle
+Break Circle Color
+Break Circle Radius
+Break Circle Width
+Bright Tree lodge
+Browser unavailable
+Buffering
+Built-in NES
+Built-in playback supports NES/FDS. Choose RetroArch for 
+Bullet penetration
+Bundled JavaScript runtime cannot invoke functions
+Burst
+Butterfly
+Butterfly CPS
+Bypass
+C
+C03 onGround
+C:/Program Files (x86)/RetroArch/retroarch.exe
+C:/Program Files/RetroArch/retroarch.exe
+C:/ProgramData/chocolatey/bin/retroarch.exe
+CANDY
+CAPS
+CAPTURING
+CATWALK
+CELL
+CITY
+CITY BOOKS
+CLEAR WAYPOINT
+CLICK TO EQUIP
+COLORS
+COLUMN
+COMMAND
+COMMAND DECK
+COMMAND POSTS
+COMMANDER
+COMPLETE / +300 CR
+COMPOSITION
+CONNECTOR
+CONQUEST
+CONTESTED
+CONTROLS
+CONTROLS  
+CONTROLS  OFF
+CONTROLS  ON
+COPY
+COPY LOOK TO ALL ARMY ROLES
+CORNER MARKET
+CPS
+CPS GRAPH
+CPS Range
+CPS graph     L 8  •  R 2
+CREATE
+CREATE PRESET
+CREDITS EARNED
+CRITICAL HEALTH
+CT SPAWN
+CTRL
+CamPos
+Campaign is read-only.
+Campaign progress
+Campaign save failed; retry by returning to the hub.
+Campaign unreadable; originals preserved. Progress cannot be saved.
+Campaign worn
+Cancel
+Cancel match
+Candy land
+Cannot connect to Microsoft for cookie sign-in. Check your connection and Java runtime.
+Cannot inspect a cookie file. Check the folder permissions.
+Cannot load command deck SVG
+Cannot process the cookie folder. Check folder access and available disk space.
+Cannot read cookie export. Choose a Netscape .txt file smaller than 1 MiB.
+Cannot read the Auto Login preference. Check the account folder permissions.
+Cannot read the account vault. Restore accounts.vault and its matching accounts.key, then restart.
+Canopy scout lodge
+Canyon observatory
+Canyon supply station
+Capture the command posts. Your army is ready.
+Captures posts at twice the rate
+Cards
+Careful around %s and the %s
+Cartridge
+Case is opening
+Case outcome locked • revealing item
+Cash out 
+Catalog unavailable: 
+Category
+Catton Candy
+Center
+Center Dot
+Center stripe
+Centre
+Challenge a player or robot in a four-in-a-row match
+Challenge a player or robot through Minecraft chat
+Chams
+Chams / Materials
+Chams halo shader unavailable
+Chams shader unavailable; using Flat rendering
+Chams.frag
+Chams.vert
+ChamsHalo.frag
+ChamsHalo.vert
+Chance
+Changelog
+Charge Timer
+Chat delay
+Chat delay: wait 
+Chat echo was not seen; continue when your move appears
+Chat invitations • local robot • saved match
+Chat match
+Chat moves
+Check
+Check Block Break
+Check sent message
+Checking 
+Checking Minecraft Java profile...
+Checkmate
+Checkmate — 
+Chess
+Chest
+ChestESP
+ChestStealer
+Chestplate
+China
+China Hat
+China Hat Only Third Person
+China hat, player trail and detailed jump circles
+Chinese
+Choose Book of Vibe to play
+Choose Vibe's interface language
+Choose a .nes ROM to start.
+Choose a .txt file
+Choose a .vibeaccounts file
+Choose a folder with at most 100 Vibe backups.
+Choose a key
+Choose a login method to get started.
+Choose a player or robot to begin
+Choose a theater
+Choose an MP3 station (AAC/HLS/web pages are unsupported)
+Choose an element
+Choose an encrypted Vibe backup (.vibeaccounts).
+Choose language
+Choose the local gamertag Vibe will display.
+Choose which entities combat and ESP use
+Choose your Microsoft cookie export (Netscape .txt).
+Choose your battlefield.
+Choose your colours
+Circle
+Circle Color 1
+Circle Color 2
+Circle Radius
+Circle Segments
+Claim 100 tokens
+Clean plates
+Clear
+Click a stop to edit color. Drag to position.
+Click a swatch to open the color picker.
+Click a table number for straight / split / street / corner coverage.
+Click an item below to add it. Click a selected tag to remove it.
+Click the map to place a marker.
+Click to edit
+Click to expand
+Click to select
+Click-drag model to rotate • %s
+ClickGUI
+ClickGUI###augustus-workspace
+Clicking Mode
+Clicking Range
+Client
+Client Core
+Client launches
+Client totals
+Client-side quality-of-life presentation
+Cloak, elytra and parrot flags are unavailable in 1.8.9.
+Clone commander
+Clone heavy
+Clone legions
+Clone medic
+Clone trooper
+Close
+Close Delay (ms)
+Closest
+Code copied to clipboard.
+Col 1
+Col 2
+Col 3
+Color
+Color / opacity
+Color Fade
+Color Opacity
+Color Preset
+Color mode
+Combat
+Combined arms
+Comet
+Command a Star Wars army across Geonosis and Endor; earn credits and upgrade your forces
+Commando droid
+Commodore 64
+Common
+Comms antenna
+Community cards
+Compact
+Compass
+Complete the age/family settings for this account at xbox.com.
+Completing Microsoft sign-in...
+Composite
+Composite armor
+Config already exists
+Config editor
+Configs
+Configs created
+Configs deleted
+Configs loaded
+Confirm delete
+Connecting to 
+Consumables
+Content-Type
+Continue
+Continue in your browser
+Contracts: 10 eliminations / 3 captures / 35 army kills / 5 caches
+Controls & intel
+Controls hop and AAC movement speed
+Cookie
+Cookie folder
+Cookie login
+Cookie sign-in returned an unsupported sign-in address.
+Cookie sign-in timed out. Check your connection and try again.
+Cookies expired or Microsoft needs confirmation. Export again or use Microsoft login.
+Cooldown (ticks)
+Coordinates
+Coordinates Outline
+Copied §b
+Copy code
+Copy path
+Copy source link
+Corner
+Corner Distance
+Corner Length
+Corners Only
+Corners beyond (m)
+Correct
+Correct Movement
+Corrects movement for fake server rotations
+Cosmetic profile
+Cosmetica catalog
+Cosmetica controls
+Cosmetica public catalog • authored JSON models and textures
+Cosmetics
+Cosmetics are free and persist separately for each role and your character.
+Cosmetics editor
+Could not copy source link.
+Could not delete config
+Could not encrypt Slots currency
+Could not encrypt progress
+Could not load 
+Could not load Minecraft interface font
+Could not load ROM: 
+Could not load config
+Could not load supplied emoji facade
+Could not open folder
+Could not open the browser. Use Copy source link.
+Could not save Auto Login. Check the account folder permissions.
+Could not save config
+Could not save refreshed account credentials. Check the account folder permissions.
+Could not start RetroArch: 
+Could not verify this export. Check the Netscape format, file size (max 1 MiB) and connection. 
+Couldn't save. Try again.
+Count
+Cover Art
+Create an Xbox profile at xbox.com, then try again.
+Create, load and manage Raven BS compatible scripts
+Create, load and manage Vibe JSON profiles
+Create, preview and assign cosmetic presets
+Created
+Created §b
+Creator
+Credits
+Credits: eliminations + captures + field contracts + operation rewards
+Crimson
+Crimson guard
+Cross
+Cross Dot
+Crown
+Cube
+Currency not saved: 
+Currency profile is unreadable; it was left untouched
+Currently playing
+Cursor
+Cursor Speed
+Custom
+Custom Air Control
+Custom Cosmetics
+Custom Gradient
+Custom Motion Y
+Custom Speed
+Custom Y
+Custom first-person crosshair
+CustomCosmetics
+CustomCrosshair
+Customizable Vibe HUD
+Customize first-person sword blocking
+Customize local time and weather
+Customize the selected block outline and fill
+Cute Visuals
+Cycle owned equipment; unlock new items in the Armory.
+Cycling assembly
+Czech
+D-Pad  Arrow keys
+DC-15A rifle
+DC-15LE repeater
+DECK
+DELETE
+DEPLOY
+DEPLOY AGAIN
+DEPLOYED EQUIPMENT
+DESERT
+DETENTION BLOCK
+DISABLE
+DL-44 pistol
+DLT-19X marksman
+DROP BIN
+DUSTWATER
+DUSTWATER SALOON
+Damage color
+Dance floor range
+Dark Teal
+Dash
+Data
+Dawn
+Day
+Deal Blackjack
+Deal Hold'em
+Deal flop
+Deal river
+Deal turn
+Dealer
+Dealer 
+Deathmatch
+Deaths cost tickets. Hold posts to drain enemy reserves.
+Debug
+Deck count and RNG are required
+Deck exhausted
+Default
+Default Color
+Default text
+Defensive bulwark
+Delay
+Delay (ms)
+Deleted
+Deleted §b
+Deletes the saved sign-in from Vibe.
+Deploy to battle
+Depth
+Depth backplate
+Depth fog with blur, custom colors and animated rainbow
+Depth.frag
+Desert sand
+Details
+Detect bow
+Device-login reference and OAuth application; no library bundled.
+Diamond Sword
+Direct
+Direction
+Direction (degrees)
+Disable 'Use player defaults' to customize.
+Disable Auto Login
+Disable shader
+Disabled
+Disconnect from the world or server before changing accounts.
+Discord
+Dispersed patrol
+DisplayClaims
+Dissolve
+Distance
+Distance Color Fade
+Distance Position
+Distance scaling
+Distance unit
+Doctrine applies to all allied roles on deployment.
+Dot
+Dot Size
+Dots
+Dots Lifetime (ms)
+Dots Spawn Rate (ms)
+Double
+Down
+Drag
+Drag / resize / wheel to scale / middle-click to edit
+Drag CPS
+Drag Clicking
+Drag Duration (ms)
+Drag Pause (ms)
+Drag a category into a slot • right click clears • barrier keeps it free
+Drag elements • ESC to save and return
+Drag labels on the preview to change their side.
+Drag model to rotate
+Drag preview to rotate
+Drag • corner • wheel
+Draw
+Draw Position
+Draw a hit confirmation in 2D or world space
+Dream
+Dream Circuit
+Droid assembly works
+Droid battalions
+Droid repair bay
+Drone Zone
+Drop
+Drop Duplicates
+Drop Netscape .txt exports into vibe/cookies. Checking automatically.
+Drop one Netscape .txt export per account into vibe/cookies.
+Drop-bin items
+Dropper
+Duplicates
+Duration
+Dusk
+Dust seas, canyon ridges and the droid foundry
+Dustfall field hospital
+Dustfall relay
+Dustwater frontier
+Dutch
+Dynamic
+Dynamic Speed
+E
+E  Floor up / Shift+E  Down / Ctrl+E  Top
+E / INTERIORS
+E supply caches  /  ESC pause  /  F1 close help
+E-11 carbine
+E: UP / SHIFT+E: DOWN
+EDIT
+EDIT /
+EDIT / 
+EEE MMM dd HH:mm:ss z yyyy
+ELEMENT SETTINGS
+EMOJI
+EMOJI / FLOOR 
+EMOJI DOME / ENTRANCE
+EMPIRE
+ENABLE
+ENDOR
+ENTER
+EQUIP
+EQUIP SELECTED
+EQUIPPED
+ERR
+ESC
+ESC  Pause
+ESC  Pause  /  F1  Controls
+ESP
+ESP Editor
+ESP Modes
+ESP OFF
+ESP ON
+ESP preview
+EXIT
+EXPLORE / N
+Each account and every generated cracked profile remain separate in the encrypted local vault.
+Each legal move is sent to your opponent.
+Each level: +5% base health / +4% base damage
+Each operation lasts up to 7 minutes. Escape pauses; retreat banks earned credits.
+Each processed file has a .result note. Existing accounts are updated.
+Eagle
+Earn more credits in battle to purchase this upgrade.
+Ease In
+Ease Out
+Eastern garrison
+Edge rounding
+Edit 2D, 3D, Skeletal and Chams appearance
+Edit Appearance
+Edit cosmetic preset
+Edit friends and view live equipment
+Egyptian Arabic
+Element gap
+Elements
+Elevator / Floor 
+Eliminations
+Eliminations drain reserves twice as fast. Posts grant field support.
+Emoji Dome
+Emulation stopped: 
+Enable Radio or choose System audio
+Enable System Media or Radio
+Enable shader
+Enabled
+Enabled — receiving callbacks
+Enchanted Item
+Enchanted forest
+Enchantment Priority
+Enchantment Table
+Encrypted backup saved. It requires this installation's accounts.key.
+Encrypted local activity
+End
+End Distance
+Ender
+Ender Chests
+Ender Fill
+Ender Outline
+Ender Pearl
+Endor Alliance
+Endstone
+Endstone Fill
+Endstone Outline
+Enemy
+Enemy Hit
+English
+Enter a config name
+Enter a radio URL
+Enter all buildings; search glowing supply caches for 85 credits.
+Enter this code in your browser
+Enter your age to access the virtual arcade.
+Entity
+Entity Trail
+Equipment & research
+Equipment can be purchased and upgraded in the Armory.
+Equipment modification installed.
+Equipment ready for your next deployment.
+Equipped catalog accessories
+Escape
+European Roulette
+European roulette landed 
+European roulette • one zero • standard 2.70% virtual house edge
+Even
+Every slot symbol needs a positive weight
+Every virtual arcade table must retain a house edge
+Ewok hunter
+Ewoks & Rebel resistance
+Existing Slots profile requires its original .vibe-slots.key
+Existing encrypted profile requires its original .gta7-save.key
+Exit to Minecraft
+Expand
+Expedition pack
+Expires in 
+Explore Northside. Open doorways lead inside.
+Explore this theater
+Export backup
+Export encrypted Vibe accounts
+Exporting encrypted Vibe backup...
+Extended cell
+Extra
+Extra+
+F1: show controls when you resume
+FACTION CAMPAIGNS
+FALSE
+FIELD CONTRACTS / EVERY OPERATION
+FIELD HELP  /  
+FIELD MANUAL
+FORMATION
+FORMATION / FOLLOW & HOLD ORDERS
+FOV
+FOV Changer
+FPS
+FRONTIER BANK
+FUEL
+FULLY TRAINED
+Faction issue
+Factory fresh
+Fade
+Fade Alpha At Max
+Fade Easing
+Fade End
+Fade Out
+Fade Speed
+Fade start
+Fake
+FakeLag
+Falling Blocks
+Far
+Far Color
+Fast built-in NES and RetroArch ROM launcher
+Fast flanks; precision weapons
+Fast shooting
+Fast, compact patrol weapon
+FastBreak
+FastPlace
+Favourite accounts
+Features
+Feet
+Fern valley crossing
+Fern valley sanctuary
+Field contract completed  +
+Field contracts
+Field issue
+Field pack
+File picker unavailable on this desktop.
+Filed 
+Fill
+Fill Color
+Fill Mode
+Fill Primary Color
+Fill Secondary Color
+Find a vanilla item
+Find your next server
+Finish
+Finish At (%)
+FinishFaster
+Finnish
+Fire / aim. Aim for the head to deal extra damage.
+Fire Aspect
+Fireball
+Firing line
+First
+First player to move
+FirstHit
+Five reels, five paylines, original symbols, Wild and Rift scatter.
+Flag Detector
+Flat
+Flint & Steel
+Flower
+Flowers
+Flush
+Fly
+Fog
+Fog Color
+Fog Opacity
+Fog renderer unavailable
+Fog, Torus hit effects and the media HUD are adapted from Schizoid.
+Folder
+Follow distance
+Following 
+Font
+Fonts
+Food
+For singleplayer and offline servers.
+Force
+Force First Hit
+Forest ranger
+Four of a kind
+French
+Freq
+Friend editor
+Friends
+Friends 
+Friends / teams
+Friends/Teams
+Full
+Full house
+FullBright
+Futuristic
+G
+G / Q / V
+GALACTIC
+GAMEPLAY
+GENERAL STORE
+GINGERBREAD HOUSE
+GOBLIN HOLLOW / KEEP OUT
+GOBLIN LODGE
+GOBLINS
+GPLv3
+GPLv3 and AGPLv3 permit this combination. AGPL network-source duties apply when their conditions are met.
+GTA
+GTA 7 / CITY ON HOLD
+GTA 7 / RUN COMPLETE
+GTA7
+GTA7 kills
+GTA7SAVE2
+Galactic Empire
+Galactic Republic
+Game
+Game Boy
+Game Boy Advance
+Game Boy Color
+Game Gear
+Game playtime
+Gamertag
+Games
+Gap
+Gaussian
+Gaussian.frag
+Geonosis
+German
+Girlfriend
+Glass
+Glass Blur
+Glass Blur Strength
+Glass Fill
+Glass Opacity
+Glass Outline
+Glass Refraction
+Glass Tint
+Glass shattered
+Global
+Global gradient
+Globally control Vibe blur surfaces
+Glow
+Goblin Hollow
+GodBridge
+GodBridge SafeWalk
+Gold   Rally waypoint
+Gold rush
+Golden Apple
+GommeHD
+Gradient
+Graphite
+Gravity
+Gray
+Greek
+Green
+Green Fade
+Groove Salad
+Ground
+Ground Hit
+Ground Strafe
+Ground Timer
+GroundSpoof
+GroundStrafe
+Gta7Gui
+Gujarati
+H
+HEAD
+HEAVY
+HELP
+HH:mm:ss
+HLS is unsupported; choose an MP3 stream
+HLS playlists are unsupported
+HOSTILE
+HOTBAR
+HQ 
+HTTP 
+HUD
+HUD Accent
+HUD Background
+HUD Editor
+HUD Elements
+HUD MANAGER
+HUD Scale
+HUD Text
+HUD Width
+Hard-hitting Rebel assault rifle
+Hat Detail
+Hat Fill
+Hat Follow Head Pitch
+Hat Height
+Hat Outline
+Hat Radius
+Hausa
+Head equipment
+Heads-up Texas Hold'em • 3% virtual rake from winning and split pots
+Healing Potion
+Heals nearby troops and you
+Health
+Health Absorption
+Health Bar
+Health Bar Position
+Health Bar Width
+Health End Color
+Health Fade
+Health Max Color
+Health Min Color
+Health Start Color
+Healthy
+Hearts
+Hearts Lifetime (ms)
+Hearts Spawn Rate (ms)
+Heavy precision sidearm
+Heavy siege armor
+Held Item
+Held Item Position
+Helix
+Helix Color 1
+Helix Color 2
+Helmet
+Hidden
+Hide
+Hide Black Background
+Hide Health When Full
+Hide In
+Hide Others
+Hide When Idle
+Hide with armor
+Hide with boots
+Hide with chestplate
+Hide with helmet
+Hide with leggings
+High card
+Highlight
+Highlight Entities
+Highlight Near Beds
+Highlight dropped items
+Highlight normal, redstone, and ender chests
+Highlight the active AimAssist target
+Highlights beds and nearby defensive blocks
+Hindi
+Hit
+Hit on Backtrack
+Hitmarker
+Hizzy
+Hizzy Color 1
+Hizzy Color 2
+Hoe
+Hoes
+Hold To Click
+Hold a majority of command posts to drain enemy reserves.
+Hold'em dealt • reveal the flop
+Hold'em needs seven cards
+Holding Blocks
+Horizontal
+Horizontal Offset
+Horizontal Speed
+Hotbar Slot
+House cards
+Hunter's watch
+Hurt
+Hypixel
+HypixelBlockParty
+I believe %s is the murderer with a %s
+I just saw %s carrying a %s
+I saw %s with a %s
+I saw a %s in %s's hand
+I spotted %s using a %s
+I think %s is the murderer, he killed someone with a %s
+IDs
+IMPERIAL COMMAND
+IMPERIAL GARRISON
+INSPECTOR
+INVENTORY
+Icy-MetaData
+Ignore
+Ignore Slot
+Ignore Teammates
+Ignore protects its slot.
+Illegal move received — match cancelled
+Impact
+Impact Fill
+Impact Fill Color
+Impact Outline
+Impact Outline Color
+Impact Outline Width
+Impact Size
+Imperial communications
+Imperial forest
+Imperial medic
+Imperial officer
+Imperial power station
+Imperial stormtroopers
+Import Vibe account backup
+Import Vibe backups
+Import backup
+Import would exceed the account limit (1000). No accounts were imported.
+Imported 
+Importing Vibe account backups...
+Include armor
+Incomplete battalion
+Incomplete campaign
+Incomplete equipment
+Incomplete fog framebuffer
+Incomplete sign-in response.
+Indonesian
+Inner
+Insertion protection  
+Insignia
+Insufficient credits for this equipment.
+Interactive ambient particles in selected GUIs
+Invalid 
+Invalid GTA7 save key
+Invalid Minecraft font texture: 
+Invalid Slots currency key
+Invalid account record.
+Invalid allowance timestamp
+Invalid appearance
+Invalid army capacity
+Invalid attachment level
+Invalid attachments
+Invalid battalion
+Invalid campaign
+Invalid capped level
+Invalid card
+Invalid cookie export. Use Netscape format with seven tab-separated fields per cookie.
+Invalid cosmetic
+Invalid deployment
+Invalid emoji outline
+Invalid encrypted Slots save
+Invalid encrypted save
+Invalid equipment
+Invalid pending round
+Invalid public profile ID
+Invalid public skin address
+Invalid public skin response
+Invalid roulette bet
+Invalid roulette number
+Invalid roulette resolution
+Invalid service record
+Invalid shader include
+Invalid skin dimensions
+Invalid squad
+Invalid transaction data
+Invalid unit equipment
+Invalid upgrade
+Invalid virtual currency amount
+Invalid virtual currency configuration
+Inventory Editor
+Inventory Manager
+Inventory manager   Greenly
+Invisible
+Invisible Alpha
+Invisibles
+Inward Fill
+Ion detonation
+Ion detonator / bacta heal / orbital strike (6 kills required).
+Ion detonators
+Ion pulse repeater
+Iranian Persian
+Italian
+Item
+Item Icon
+Item Name
+Item Slot
+Item Whitelist
+ItemESP
+ItemRenderer field
+Items
+J
+JET
+JET 
+JWT
+Japanese
+JavaScript runtime stopped
+Javanese
+Jet pack
+Jitter
+Jitter Amount
+Join a world first
+Joins
+Jump
+Jump Circle
+Jump Circle Mode
+Jump Circle Only Third Person
+Jump Detail
+Jump Duration
+Jump Fade
+Jump Fill
+Jump Line Width
+Jump Radius
+Jumps
+K
+KNIFE / 
+Kawase
+Kawase.frag
+Keep Free
+Keep Vanilla Fog
+Keep account
+Keep at least one soldier in your army.
+Keep distance from %s, they have a %s
+Keep saved friends out of combat
+Key
+Keybind Editor
+Keybinds
+Keyboard
+Killaura
+Killaura Circle
+Killaura Circle Detail
+Killaura Circle Fade
+Killaura Circle Height
+Killaura Circle Only Third Person
+Killaura Circle Width
+Kills
+Kills  3     Walked  128
+Knife
+Knockback
+Korean
+L
+LAAC
+LATE NIGHT DELI
+LGPLv3
+LICENSES/AGPL-3.0.txt
+LICENSES/FONT_NOTICES.md
+LICENSES/GPL-3.0.txt
+LICENSES/LGPL-3.0.txt
+LICENSES/SCHIZOID.md
+LICENSES/THIRD_PARTY_NOTICES.md
+LICENSES/webgl-noise-MIT.txt
+LIVE CANVAS
+LIVE MODEL PREVIEW
+LIVE PREVIEW / 
+LIVE RADIO
+LOADOUT
+LOADOUT  /  
+LOCAL CAMPAIGN
+LOCAL PROGRESS SAVES AUTOMATICALLY
+LOCALAPPDATA
+LOCATIONS / SELECT TO MARK
+LOW PROFILE
+LV
+LV 
+Lag
+Lag Range > hit on target
+LagRange
+Landing
+Language
+Language selector
+Large Chest
+Last move restored - please play it again
+Last server
+Last seven days
+Latency
+Latency (ms)
+Latest & previous updates
+Latest diagnostics
+Latest save
+Launcher account
+Lava Bucket
+Lavender
+Layered chest and shoulder armor
+Layered plating
+Layout
+Layout Data
+Leaf
+Left
+Left Down
+Left To Right
+Left Up
+LeftClicker
+Legacy
+Legacy AAC long-jump modes
+Leggings
+Legit
+License document unavailable
+Licenses
+Licenses & credits
+Life support
+Lifetime
+Light plates and sensor visor
+LightBlue
+Limit
+Limit Items
+Limit To Items
+Line
+Line width
+Linear
+LinearSampling
+LiquidGlass
+LiquidGlass renderer unavailable
+LiquidGlass.frag
+Live
+Live preview
+Load
+Load with Keybinds
+Load with Visuals
+Loaded
+Loaded scripts
+Loaded §b
+Loading catalog…
+Local Raven BS compatible script
+Local robot
+Location
+Location discovered / 
+Locations visited: 
+Login configuration reference. Shader provenance details are in Notices.
+Long barrel, scope and high damage
+LongJump
+Look
+Look Down Pitch
+Loot useful chest items with Default or cursor-based timing
+Love
+Lowercase
+Luna
+Lunar Engine
+M  ATLAS
+M  Atlas    Z  Radar zoom    F1  Help
+M / RETURN TO BATTLE
+MARKET
+MARKSMAN
+MAX
+MAX LEVEL 10
+MAXED
+MELEE
+MID
+MIT
+MOTION GRAPH
+Macrobinoculars
+Marathi
+Marching column
+Mask
+MaskPass
+Master System
+Match
+Match complete — 
+Match ended
+Matching items
+Matching source for this build
+Matching source: 
+Material
+Max Angle
+Max Balance
+Max Block Slots
+Max Distance
+Max Food Slots
+Max Skips At Once
+Max Ticks
+Max ammo
+MaxThreshold
+Maximise local brightness
+Maximum Frequency
+Media HUD
+Media cover and title, internet radio and audio-reactive waves
+Media preview
+Meme
+Meme Games
+Menu theme
+Message sent • 
+Metallic
+Meters
+Metric
+Microsoft
+Microsoft account
+Microsoft declined cookie sign-in. Use Microsoft login.
+Microsoft is rate limiting sign-ins. Try again later.
+Microsoft login
+Microsoft may require consent or an interactive sign-in. Use Cookie login for details, then move the export back to vibe/cookies to retry.
+Microsoft needs consent for Minecraft. Complete sign-in in the Minecraft launcher and export again.
+Microsoft requires an interactive sign-in. Use Microsoft login.
+Microsoft returned an incomplete sign-in response.
+Microsoft returned an invalid sign-in address.
+Microsoft returned an invalid sign-in redirect.
+Microsoft returned an invalid sign-in response.
+Microsoft session cookies expired or were revoked. Export again or use Microsoft login.
+Microsoft sign-in is temporarily unavailable. Try again later.
+Microsoft sign-in response did not match this login. Please try again.
+Microsoft sign-in was declined.
+Microsoft sign-in was declined. Use Microsoft login to try again.
+Middle click: bind
+Midnight
+MinThreshold
+Mine hit
+Minecraft
+Minecraft 1.8.9
+Minecraft Java
+Minecraft profile
+Minecraft rejected the sign-in application or account (HTTP 403).
+Minecraft returned an invalid profile ID.
+Mines
+Mines beds directly or clears their defences
+Mines cashout after 
+Mines round started
+Minimal
+Minimum Frequency
+Mint
+Mirage
+Mirror Spectrum
+Mirrored
+Missing 
+Missing Minecraft font resource: 
+Missing bundled legal document: 
+Missing command deck SVG
+Missing emoji facade resource
+Missing packaged NES core: 
+Mobs
+Mode
+Modern
+Modes
+Module One
+Module Two
+Modules
+Modules toggled
+Moonwood great hall
+More
+Motion graph              2.35 b/s
+Mouse
+Mouse Force
+Move / sprint / jump / fire / aim: your Minecraft bindings
+Move automatically
+Move requested from 
+Move watermark and module list
+Move. Mouse looks; hold 
+MoveFix
+Movement
+Movement Gap
+Movement Gap Amount
+Multiplayer
+Multiplier
+Multiplier 
+Murder Mystery
+Murder Mystery, BlockParty and PitBot helpers
+Murder weapons
+Murderer ESP color
+Murderer tracer
+Murderer weapons
+Music
+Music is unavailable. Restart the client; details are in latest.log.
+Mythic
+N
+NE
+NES
+NES Emulator
+NEUTRALIZING
+NL
+NORTH IS UP
+NORTHSIDE / CIVIC GARDENS
+NORTHSIDE / MARKET DISTRICT
+NORTHSIDE / OLD TOWN
+NORTHSIDE / RESIDENTIAL
+NORTHSIDE / Walk through open doorways to explore interiors.
+NORTHSIDE COFFEE
+NTSC
+NW
+Name
+Name (new / rename)
+Name Color
+Name Position
+NameProtect
+Names
+Nashorn runtime is unavailable
+NativeMesh
+Natural blackjack or dealer blackjack • settle
+Near
+Near Color
+Negative 
+Negative balance
+Negative progress value
+Negative slot payout
+Neo Geo Pocket
+Neon circuit
+Nepali
+Netscape cookie export (*.txt)
+NeverLose
+New
+New preset
+New script
+Nigerian Pidgin
+Night
+Nintendo 64
+Nintendo DS
+No .java scripts yet.
+No .vibeaccounts backups found in the selected folder.
+No Ground
+No Minecraft Java profile found. Check ownership and create a Java profile.
+No chat is used against Robot.
+No configs
+No friends saved.
+No local accessories found.
+No matching accounts
+No matching configs
+No matching modules
+No matching vanilla items
+No module is available in this category.
+No module keybinds are set.
+No module named §c
+No modules bound
+No other players are visible in this game.
+No pending request
+No playable station in playlist
+No published accessories found.
+No real-money value • encrypted virtual round history
+No real-money value • hits, stand, double and split use one virtual round
+No scripts loaded. §b.script create <name>
+No server time recorded yet
+No settings
+No track playing
+No trading, resale, withdrawal or real-world value
+No unexpired Microsoft sign-in cookies found. Export your signed-in session again.
+No weapon signatures selected
+No winning line
+NoFall
+NoJumpDelay
+NoSlow
+None
+None selected
+Noon
+Normal
+Normal CPS
+Normal Chests
+Normal Fill
+Normal Outline
+Northern foundry approach
+Northern listening post
+Northside
+Not
+Not In Inv
+Not On
+Not On Consuming
+Not On Falling
+Not On Void
+Not When BlockBreaking
+Not enough tokens
+Not enough tokens to double
+Not enough tokens to split
+Not in this world
+Notices
+O
+O P E N   W O R L D
+O P E R A T I O N   D E B R I E F
+O-O
+O-O-O
+OPEN FOLDER
+OPERATION PAUSED
+OPERATION PAUSED / 448 x 448m
+OPERATIONS
+OUTLAW CAMP
+OWNED
+Objectives secured
+Obsidian
+Obsidian Fill
+Obsidian Outline
+Obtain this archive alongside the JAR from its distributor. A repository checkout may differ from your build.
+Occluded
+Occluded surfaces
+Ocean
+Odd
+Off
+Officer pauldron
+Offline
+Offline profile
+OfflinePlayer:
+On
+On Ground Only
+One-zero colour table with a mathematically negative player return.
+Only
+Only Kill Aura
+Only Moving
+Only On Ground
+Only Player Damage
+Only Targets
+Only When Not Sneaking
+Only When Rightclicking
+Only While Moving
+Only With KillAura
+Only With Tools
+Only third person
+Only third-person
+Opacity
+Open
+Open 
+Open ROM folder
+Open Vibe Case
+Open browser
+Open the Microsoft sign-in page and enter the code below.
+Open the Vibe module manager
+Open the tactical map with M to mark a location and rally your army there.
+Open this folder manually: 
+Open weapon editor
+Open with RetroArch
+OpenInv
+Opened 
+Opened config folder.
+Opened scripts folder.
+Opening cost and RNG are required
+Opening vibe/cookies...
+Operation cancelled.
+Operation reward: 
+Options...
+Orbit
+Orbital
+Orbital Tag
+Orbital support inbound
+Orbital support requires 6 eliminations this battle.
+Order
+Origin
+Original
+Original collectible cases with weighted virtual-only rarity tiers.
+Original virtual collectibles • outcome is selected before the case reveal
+Other
+Other Vanilla GUIs
+Other libraries and assets keep their own terms. See Notices for the full inventory.
+Out
+Outcome locked • reels are stopping
+Outer
+Outer foundry annex
+Outline
+Outline Color
+Outline Mode
+Outline Primary Color
+Outline Secondary Color
+Outline Size
+Outline Width
+Override color
+Oversized campaign
+Overview
+Overview · 
+Own this equipment and meet the credit cost. Maximum level: 8.
+PACK
+PAGE
+PAGE 
+PAL
+PALACE
+PATROL
+PAUSED
+PC Engine
+PCM:
+PITBOT IS ENABLED
+PLATING
+PLAYING
+POLICE SEARCH
+PPPPPPPP
+PSP
+PURCHASE
+PURCHASE & EQUIP
+PURCHASE & EQUIP / 
+Pair
+Parentheses
+Particles
+Pathfinding
+Pause
+Pause After Skip
+Pause On Hurt
+Paused after the current file
+Peak Markers
+Periodic virtual-token allowance
+Permanent equipment, individual modifications and army research.
+Person
+Petranaki barracks
+Petranaki crossroads
+Pickaxe
+Pickaxes
+Picken Switch
+Piercing
+Pistol
+PitBot
+Pitch
+Pitch Aimpoint
+Pitch Deadzone
+Pixel Outline
+Place
+Place 
+Place Delay (ms)
+Place a virtual wager and reveal safe tiles.
+Placeholders
+Plating: +2% resistance / Support: +12 HP / Servos: +2% speed
+Play a complete chess match through Minecraft chat
+Play local .nes ROM files in a Vibe GUI
+Play local reactions to player actions
+Play robot
+Play to build your ranking
+PlayStation
+Player
+Player           12
+Player      12
+Player  12
+Player Priority
+Player color mode
+Player hand 
+Player match
+Player name                 12m
+Player name  12m
+Players
+Players Only
+Players in your game
+Playing Robot • strength 
+Playing as
+Playing as 
+Playlist too large
+Playtime
+Please wait
+Polish
+Portuguese
+Position
+Position Color
+Positive virtual wager required
+Post
+Potential murderer: %s holding a %s
+Potions
+Power coupling
+Power: +9% damage / Cell: +3 rounds / Cycling: +5% speed
+Powered servos
+Pre
+Predicts bow and throwable projectile paths
+Presentation FPS
+Preserve movement while using selected items
+Preset
+Preset name
+Preset preview
+Preset: %s
+Press a key (Esc to clear)
+Press a key to bind. Escape: clear.
+Press key
+Prevent Backwards Sprinting
+Prevents fall damage using legacy AAC packet modes
+Preview
+Preview and arrange tactical ESP elements
+Previous 
+Primary Color
+Print selected module diagnostics in local chat
+Priority targets: §c
+Prism
+Prism Crown
+Prismatic
+Profile ID mismatch
+Profile verified, but the account could not be saved. Check vault access, disk space and the 1000-account limit, then retry.
+Profiles, imports & backups
+Profiles: §b
+Programs/RetroArch/retroarch.exe
+Progress not saved: 
+Progress unreadable; saving is disabled to protect your save and key
+Project repository
+Project source
+Promotion
+Properties
+Protected Name
+Public skin request failed: 
+Pulse
+Pulse Chroma
+Pulse Shatter
+Purple
+Purple Rail
+Put legally owned ROMs in vibe/roms, then reopen this list.
+Q
+QOL
+Queues movement packets while preserving action order
+Quit Game
+R
+R  Reload
+R / 
+R reload  /  G ion detonator  /  Q bacta  /  V orbital support
+RALLY
+RALLY ARMY TO MARKER
+RANK 
+RECON CONTRACT
+REDEPLOYING
+REGROUP
+REINFORCEMENTS
+RELOAD
+RELOADING
+RELOADING  
+RELOADING  %.1fs
+RENAME
+REPUTATION
+RESPAWN
+RESUME
+RESUME OPERATION
+RETAIL
+RETREAT
+RETREAT / BANK CREDITS
+RETURN
+RGBPuke
+RMB ×
+RNBQKBNR
+ROM
+ROM file is missing.
+RPS
+Radio
+Radio / 
+Radio Reconnect
+Radio Station
+Radio URL
+Radio Volume
+Radio audio
+Radio: 
+Radius
+Rain
+Rainbow
+Rainbow Brightness
+Rainbow Duration (ms)
+Rainbow Line Width
+Rainbow Speed
+Rainbow saturation
+Rally  
+Rally sends troops to that location.
+Random
+Random Delay (ms)
+Random accounts
+Random cracked accounts
+Random username
+Randomization
+Randomize CPS
+Randomize Delays
+Randomize Unsneak
+Range
+Rangefinder
+Ranger landing
+Rare
+Raven BS API • local Java files • visual, rotation and packet callbacks
+Raycast
+Re-press
+Re-press Delay (ms)
+Reach
+Reach Extension
+Reading Microsoft cookie export...
+Reading Microsoft session cookies...
+Ready
+Ready to deploy
+Rebel captain
+Rebel field hospital
+Rebel heavy
+Rebel medic
+Rebel pathfinder
+Rebel ranger armory
+Recent playtime
+Recon contract / five supply caches recovered / +300 CR
+Recon expedition
+Recon harness
+Reconnect
+Recovered backup; damaged save retained as .corrupt
+Recovered campaign from backup.
+Recovered encrypted currency backup
+Rectangle
+Red
+Red to move
+Redstone Chests
+Redstone Fill
+Redstone Outline
+Reduce received knockback
+Redwood valleys, an Ewok village and the shield bunker
+Reflection.frag
+Reflection.vert
+Refraction
+Refresh
+Refreshed
+Refreshing Microsoft sign-in...
+Region
+Reinforced plates
+Reinforced plating
+Reinsertion in 
+Release
+Release Delay (ms)
+Release Distance
+Release Mode
+Release a component on a side of the box to reposition it
+Release and re-press forward after a selected hit
+Reliable service rifle
+Reload / jump. Beskar flight rig: hold jump in the air to fly.
+Reloaded §b
+Reloading AK47...
+RelyingParty
+Remove
+Remove 
+Removed 
+Removed friend §c
+Removed priority target §7
+Removes the vanilla jump delay
+Removing saved account...
+Rename selected script
+Renamed friend alias to §b
+Renamed profile to §b
+Renamed §b
+Render
+Render Server Position
+Render Target
+Render animated player skeletons
+Render the selected local and friend cosmetic presets
+Repair droid
+Repel
+Replace
+Replace Scoreboard Server
+Replace this backup?
+Reports nearby S08 position corrections
+Republic command post
+Republic forward armory
+Request Move
+Request player
+Request sent to 
+Requesting Microsoft sign-in code...
+Require Ground
+Require Mouse Down
+Require Sneak
+Reserve garrison
+Reset
+Reset XZ
+Reset Y
+Resizing 
+Respect Targets
+Restore Delay (ticks)
+Restore original session
+Restored launcher account: 
+Restoring a previously locked Book of Vibe spin
+Restoring a previously locked Vibe Case
+Retro emulator
+RetroArch
+RetroArch Core
+RetroArch Executable
+RetroArch was not found. Set its executable in the module settings.
+RetroArch/cores
+RetroArch/retroarch.exe
+Reveal safe tiles and cash out before finding a mine.
+Reverse
+Reverse Spin
+Reverse Strength
+Ribbon
+Rifle
+Rift
+Right
+Right Down
+Right Up
+Ring
+Robot
+Robot played 
+Robot • strength 
+Rod
+Role service weapon
+Role trained. All soldiers of this role benefit.
+Romanian
+Rose
+Rose Cards
+Rotate
+Rotate Back Speed
+Rotation
+Rotation Acceleration
+Rotation Mode
+Rotation Speed
+Round is unfinished
+Rounded Corners
+Rounded HUD blur unavailable
+Rounded White
+Rounding
+Rows
+RpsTicket
+Rules preview
+Rules: Wild substitutes. Rift scatters pay anywhere. Configured return: 
+Run
+Running 
+Russian
+S
+S T A R  W A R S  /  C O M M A N D  D E C K
+S256
+SAVE & BACK
+SAVE & EXIT
+SCOREBOARD
+SCOUT
+SE
+SECURED
+SELECT  Shift     START  Enter
+SELECT DOCTRINE / FREE
+SHA-256
+SHA-256 unavailable
+SHERIFF OFFICE
+SHIFT
+SHOULDER
+SNES
+SPACE  Climb / SHIFT  Descend
+STORMTROOPER BARRACKS
+STUDIO 07
+SUPPLIES RECOVERED
+SUPPORT
+SV
+SW
+Safe
+Safe Distance
+Safe Server Distance
+Safe tile • cash out or continue
+Safe tiles: 
+SafeWalk
+Safely buffers target movement updates
+SandboxId
+Sans
+Sans Bold
+Save
+Save an encrypted copy
+Save authentication failed
+Saved
+Saved sign-in
+Saved sign-in expired or was revoked. Add this Microsoft account again.
+Saved §b
+Saving offline profile...
+Scale
+Scan Rate (ms)
+Scene
+Schizoid
+Scout trooper
+Script management
+Script name contains invalid characters.
+Script name is invalid.
+Scripts
+Scroll Long Titles
+Scroll for more
+Scroll to browse shaders
+Scroll | Click color to enter #RRGGBBAA
+Search
+Search accounts...
+Search called off. Keep a low profile.
+Search five for +300 CR
+Search vanilla items and add the weapon signatures to watch
+Secondary Color
+Secret Agent
+Secure Microsoft sign-in is unavailable.
+Secure RNG required
+Secure sign-in connection failed. Use an up-to-date Java 8 runtime.
+Sega 32X
+Sega CD
+Sega Genesis
+Segoe UI
+Select
+Select Hits
+Select a bet, then spin
+Select a configuration to inspect it.
+Select a friend
+Select a player from the list
+Select a saved account
+Select a script to toggle or manage it.
+Select an element
+Select an element to see its resize handle
+Select another player first
+Select local game
+Select the best hotbar tool for the current vanilla action
+Selected account
+Selected number: 
+Selected preset
+Selected weapons
+Selection
+Sensitivity
+Separatist Alliance
+Server
+Server Position Color
+Server playtime
+Service pistol
+Service record
+Servo assistance
+Session
+Session  00:12:34
+Session 00:12:34 | Kills 3
+Set Walk to player
+Set a custom client field of view
+Set-Cookie
+Settings
+Settle blackjack
+Settle showdown
+Shader could not compile
+Shader settings
+Shader unavailable on this OpenGL profile
+Shaders
+Shadow
+Shield generator bunker
+Shield relay annex
+Shield relay clearing
+Shock assault
+Shock trooper
+Shoulder gear
+Shovel
+Shovels
+Show
+Show In
+Show Landing Block
+Show Landing Box
+Show Landing Cross
+Show a custom image in the ClickGUI
+Show skin
+Show your Vibe gamertag instead of the account name
+ShowSkin
+Showdown
+Showdown has not finished
+Showdown ready
+Shows blocks you place or break for a short time
+Sigma
+Sigma Color 1
+Sigma Color 2
+Sign in
+Sign in again
+Sign in with Microsoft cookies (Netscape format)
+Sign-in code expired. Please try again.
+Sign-in code expired. Start Microsoft sign-in again.
+Sign-in connection timed out. Check your connection and try again.
+Sign-in response is too large.
+Sign-in returned an unusable response. Try Cookie login for details, then move the export back to retry.
+Sign-in service returned an unreadable response.
+Signal lost. Reinserting in 5 seconds.
+Signal relay
+Signing in as 
+Signing in to Xbox Live...
+Signing in with Microsoft session cookies...
+Silent
+Silent Slot Color
+Silent murderer
+Simple
+Simple client flight
+Simplex noise used by the visual effects.
+Sims
+Sims Color 1
+Sims Color 2
+Singleplayer
+Singleplayer & local servers
+SiteName
+Six-deck blackjack • dealer stands on 17 • blackjack pays 3:2
+Size
+Skeet
+Skeletal
+Skeletal 
+Skeletal / Pose
+Skeletal Color
+Skeletal Depth Backplate
+Skeletal Line Width
+Skeletal Only Targets
+Skeletal Rainbow
+Skeletal Through Walls
+Skin
+Skin  ♥  Armor  Item  12m
+Skin (fallback: xHeist_)
+Skin preview
+Skin response too large
+Skin texture unavailable
+Skin: %s
+Skip Cooldown
+Skip Fire On Burning Targets
+Slabs
+Slide
+Slot
+Slot bets must be positive and ascending
+Slots
+Slots currency is not encrypted
+Slots requires at least one bet
+Slots save authentication failed
+Slots symbol weights must be positive
+Slow Away
+Smart
+Smooth
+Smooth Bold
+Smoothly aims at the best Vibe target
+Sneak at unsupported block edges
+Snowballs/Eggs
+Snowflake
+Soft Neon Patch
+Sol
+Solar Mantle
+Solid
+Sort
+Sort Delay (ms)
+Sort tools, armour and supplies into the Inventory Editor layout
+Sound
+Source
+Source code
+Source link copied
+Southern relay station
+Southern supply lodge
+Space
+Spanish
+Spawn
+Spearhead wedge
+Speed
+Speed (cycles / sec)
+Speed Multiplier
+Spin
+Spin Book of Vibe
+Spin selected bet
+Spiral
+Split
+Spotify,Chrome,Firefox
+Spread out to reduce losses from area attacks.
+Sprint
+Sprint while moving forward
+Squad order: 
+Square
+Squares   Enterable buildings
+Stack order
+Stairs
+Stalemate
+Stalgasin reactor hall
+Stalker  Friend / Target
+Stand
+Stand inside an 8m ring to capture. Enemy presence contests it.
+Standard
+Standard Arabic
+Standard faction armor
+Standard health, damage, movement and capture weight.
+Star
+Stars
+Start
+Start / restart
+Start Delay (ms)
+Start Distance
+Start Mines
+Start a match
+Start your demo world again
+Static
+Static Sticker
+Station ended the stream
+Station redirect has no destination
+Station returned HTTP 
+Statistics
+Steal
+Steal Delay (ms)
+Step
+Steps
+Steve
+Stones
+Stop
+Stop 
+Stormtrooper
+Strafe
+Strafe Increase
+Straight
+Straight flush
+StreamTitle='(.*?)';
+Street
+Strength
+Style
+Sun
+Sunset
+Supply cache recovered / +85 CR / power cell and bacta
+Supply caches: 
+Supply network
+Support training also improves nearby healing by 15%.
+Supremacy
+Sustained suppression / drum cell
+Swahili
+Swap to hotbar enchantments at the vanilla attack point
+Swedish
+Swimming Tire
+Switch
+Switch Back
+Switch Back Delay (ms)
+Sword
+Swords
+System
+System Media
+System audio
+System media and system audio require Windows 10/11
+T RAMP
+T SPAWN
+TAB
+TAB / M / ESC / F1
+TAB army orders  /  M tactical atlas  /  Z minimap zoom
+TAB cycles orders: advance / follow / hold position. Support heals within 7m.
+TACTIC
+TACTICAL ATLAS / 
+TACTICS
+THE ARCANE CIRCLE
+THIRD-PERSON AIM
+THREAT TIER  
+TNT
+TRUE
+Tab  %s
+Tactical academy
+Tactical visor, backpack and kama
+Tagalog
+Tamil
+Target Area
+Target Color
+Target Mode
+Target eliminated  +
+TargetESP
+Targets
+Targets 
+Team
+Team Color
+Teammate Detection
+Telugu
+Temporary offline session: 
+Test
+Tests MoveFix with a fake server rotation
+Tex0
+Tex1
+Texas Hold'em
+Texas Hold'em 
+Texas Hold'em showdown pending
+Texas Hold'em: house 
+Texas Hold'em: split pot
+Texas Hold'em: your 
+Texel
+TexelSize
+Text
+Texture
+Thai
+That move is not legal
+The current session stays active. Closing this screen keeps the import running.
+The license texts and credits are available here without an internet connection.
+The local account key is invalid.
+The local account key is missing.
+The murderer is probably %s with a %s
+The real accessories are rendered in-game
+The signed-in Minecraft account does not match the saved account.
+Theme
+Themes
+Thermal regulators
+Thick plates / blast protection
+Thickness
+This Minecraft runtime does not allow account switching.
+This document is missing. Obtain the complete build from its distributor.
+This is not a Vibe account backup.
+This run: 
+This supply cache has already been recovered.
+This upgrade is fully researched.
+Threat
+Threat tiers raise enemy strength and payouts. All 8 tiers unlock through victories.
+Three of a kind
+Three-bolt spread per trigger pull
+Through
+Through Walls
+Thrower
+Thunder
+Tic Tac Toe
+TickBase
+Ticks
+Time
+Time Mode
+Time Speed
+Timer Range > hit on target
+TimerRange
+Tint
+Tint.frag
+Tire Color 1
+Tire Color 2
+Title Check
+To
+Token
+TokenType
+Too many Microsoft cookies in this export.
+Too many Microsoft sign-in redirects. Use Microsoft login.
+Too many nested playlists
+Too many station redirects
+Too much transaction history
+Tool
+Tools
+Top
+Torus
+Torus Delay (ms)
+Torus Depth
+Torus Lifetime
+Torus Noise
+Torus Scale
+Torus renderer unavailable
+Tracer
+Tracer Color 1
+Tracer Color 2
+Track Progress
+Tracking
+Tracking Time (ms)
+Trail
+Trail Fade
+Trail Length
+Trail Mode
+Trail Only Third Person
+Trail Width
+Training needs credits; maximum level is five.
+Trajectories
+Trajectories   Basic
+Transport capacity
+Transport full. Upgrade capacity in the Armory.
+Triangles   Deployment bases
+Trigger
+Trigger Mode
+Truncated ICY metadata
+Try a different name.
+Try another search or category.
+Tune local block placement delay
+Tune the normal block-damage controller
+Turkish
+Twin stripes
+Two pair
+Type a display name or item ID, for example sword, shears, blaze rod
+Types
+UNBIND ALL
+UNDERPASS
+UNIT EQUIPMENT
+UNIT HOLOGRAM
+UNLIMITED LEVELS
+UNLOCK & EQUIP
+UPGRADES
+UTF-8
+Ukrainian
+Unable to deal Blackjack
+Unable to deal Hold'em
+Unable to open Vibe Case
+Unable to place that virtual bet
+Unable to record Blackjack
+Unable to record Mines result
+Unable to record showdown
+Unable to settle Mines
+Unable to settle Vibe Case
+Unable to settle the recorded round
+Unable to settle the virtual round
+Unable to spin roulette
+Unable to start Mines
+Unencrypted saves are no longer accepted
+Unequip
+Unit colors
+Unknown
+Unknown Battlefront icon: 
+Unknown artist
+Unknown command or module. Use §b.help§7 for available commands.
+Unknown key §c
+Unknown title
+Unowned equipped skin
+Unreleased
+Unsneak
+Unsneak Delay
+Unsneak Range
+Unsupported GTA7 save version
+Unsupported Microsoft sign-in address.
+Unsupported Microsoft sign-in redirect. Use Microsoft login.
+Unsupported Slots currency version
+Unsupported account file version.
+Unsupported authored SVG primitive: 
+Up
+Updated 
+Uppercase
+Urdu
+Usage: §b.
+Usage: §b.bind <module> <key|none>
+Usage: §b.config <save|load|list|delete|rename|openFolder> [name]
+Usage: §b.friend <add <ign> [alias]|remove <ign>|rename <ign> <alias>|list>
+Usage: §b.script <create|reload|load|list|errors|enable|disable|rename|delete|openFolder> [name]
+Usage: §b.target <add|remove|list> [ign]
+Usage: §b.toggle <module>
+Use 1-16 letters, numbers, or underscores.
+Use 3-16 letters, numbers, or underscores.
+Use Default Text
+Use account
+Use an HTTP(S) MP3 stream or playlist
+Use letters, numbers or underscores.
+Use letters, numbers, - or _
+Use player defaults
+Use the .vibeaccounts extension for account backups.
+User-Agent
+UserTokens
+Username
+Using Players appearance
+V
+VETERAN
+VETERAN 
+VIBE / ESP EDITOR
+VIBE HUD LAYOUT
+VIBE RECORDS
+VIBEAC01
+VIBESLOTS1
+VIBE_LAUNCH_READY_FILE
+VICTORIES
+VICTORY
+Vanilla
+Vector Charm
+Velocity
+Versatile frontline infantry
+Version
+Vertical
+Vertical Offset
+Vertical Speed
+Veteran chevrons
+Vibe
+Vibe 
+Vibe              8
+Vibe         8
+Vibe  8
+Vibe / GPLv3 
+Vibe Book
+Vibe Case requires a virtual house edge
+Vibe Case: 
+Vibe Cases
+Vibe Client
+Vibe Launcher bridge - no credentials
+Vibe Singularity
+Vibe Tokens cannot be bought, sold or withdrawn.
+Vibe User
+Vibe account backup (*.vibeaccounts)
+Vibe accounts
+Vibe combines GPLv3 code with AGPLv3 components. Each component keeps its license.
+Vibe game table preferences
+Vibe local identity
+Vibe menu colours
+Vibe skin preview
+Vibe source repository (local builds may differ)
+Vibe statistics vault
+Vibe's Augustus ClickGUI theme is inspired by the Augustus Client.
+Vibe-1.8.9-
+Vibe-Account-Manager/1.0
+Vibe-Cosmetica-Catalog
+Vibe-Girlfriend-Audio
+Vibe-Media-Session
+Vibe-Music
+Vibe-Music-Shutdown
+Vibe-Music/1.0
+Vibe-NES
+Vibe-Radio
+Vibe-Radio-Close
+Vibe-SkinPreview/1.0
+Vibe-System-Audio
+Vibe-accounts.vibeaccounts
+Vibe/0.0.5 Cosmetica catalog renderer
+Vibe: GPLv3. Schizoid Fog, Torus and media HUD: AGPLv3. Open Licenses & credits in the main or pause menu.
+Vietnamese
+View
+View Distance
+View encrypted client and account activity
+Violet squadron
+Virtual Boy
+Virtual dealer table with automatic hit/stand resolution.
+Virtual poker showdown with a virtual rake built into payouts.
+Virtual wallet
+Visibility overrides
+Visible
+Visible surfaces
+Visual
+Volume
+Volume Display
+W
+W-Tab
+WANTED
+WANTED 
+WANTED / Police are responding. Break their line of sight.
+WASTED
+WATERMARK
+WAYPOINT
+WEAPON / 
+WEAPON SKINS
+WEAPONS
+WEDGE
+WELCOME TO VIBE
+WINDIR
+WINDOW / JUNGLE
+WIZARD COTTAGE
+WIZARDS
+WORKSPACE
+Wager locked • stopping reels
+Waifu
+Wait for 
+Waiting for 
+Waiting for a path to 
+Waiting for media
+Waiting for respawn
+Waiting for system audio
+Waiting for the previous chat message
+Walk speed
+Walk to player
+Walked
+Walking
+Walking Backwards
+Wall
+Wall Hit
+Watch out, %s has a %s
+Water Bucket
+Watermark Details
+Watermark Outline
+Watermark Text
+Wave
+Wave Color
+Wave Color Mode
+Wave Detail
+Wave Height
+Wave Layers
+Wave Line Width
+Wave Opacity
+Wave Rainbow Speed
+Wave Second Color
+Wave Smoothing
+Wave Style
+Wave Width
+Waves
+Weapon
+Weapon Warmup (ticks)
+Weapon supply
+Weapons use balanced squad fire rates. Army armor trades speed for protection.
+Weather Mode
+Weather Strength
+Western Punjabi
+Western excavation depot
+When
+When sharing a build, provide its matching source and preserve the license and copyright notices.
+White
+White   Your character
+White to move
+Whitelist
+Wide ranks keep overlapping fields of fire.
+Width
+Wild
+Windows media helper stopped; toggle Music to retry
+Windows media unavailable: 
+Won
+Won by 
+WonderSwan
+Wood
+Wood Fill
+Wood Outline
+Woods
+Wookiee bowcaster
+Wool
+Wool Alpha
+Wool Outline
+Working on your account
+World
+Wrong roulette coverage
+Wtap
+X
+X offset
+XBL3.0 x=
+XErr
+XP 
+XP BANK
+XP collected
+XYZ 
+XYZ   0 / 64 / 0
+XYZ 0 / 64 / 0
+Xanax
+Xbox Live
+Xbox Live is unavailable for this account's region.
+Xbox authorization
+Xbox returned an invalid account identity.
+Xbox returned mismatching account identities.
+XboxLive.signin XboxLive.offline_access
+Y
+Y Offset
+YOUR CHARACTER
+YOUR SERVICE RECORD
+Yaw
+Yaw Aimpoint
+Yaw Deadzone
+Yellow
+Yellow to move
+You
+You broke even • 
+You lost 
+You may use, modify and share covered code under its license terms. No warranty is provided; see the full licenses.
+You start
+You start as first player
+You won 
+Your accounts appear here
+Your army
+Your army must capture all three posts in sequence.
+Your battle and all cooldowns are paused.
+Your campaign saves automatically.
+Your hole cards
+Your music, in Vibe
+Your worlds, ready to explore
+Z
+Z  
+Z Offset
+Zulu
+[ E ]  Search supply cache
+[ R ]  Power cell
+[ R ]  Reload
+[ ][ ][ ][ ][ ][ ][ ][ ][ ]
+[!#$%&'*+.^_`|~0-9A-Za-z-]+
+[8 | 2]
+[Vibe Scripts] 
+[Vibe] Augustus ImGui unavailable: 
+[Vibe] Could not fully stop the music service
+[Vibe] ESP gradient shader unavailable: 
+[Vibe] Music disabled after a media service failure
+[^A-Za-z0-9.]
+[^A-Za-z0-9._-]
+[^A-Za-z0-9_.-]
+[^a-z0-9]
+[^a-z0-9]+
+[a-c][1-3]
+[x]
+[x] 
+__vibeNes.loadROM(vibeRomData);
+adult-only • virtual currency only
+application/json; charset=utf-8
+are discarded.
+blink to give you reach and move you out of target reach
+blockBreaking/
+blockBreaking/BreakingBed/
+clock
+colors[
+connection error
+cpsgraph
+d=
+dd MMM  HH:mm
+drag category • right click clears
+eliminations this life
+error: check failed; move the export back to retry.
+forced click on new target
+game over
+gettingDamaged/
+hit delayed target 
+import java.awt.Color; import java.util.*; import java.util.concurrent.*; 
+import java.util.concurrent.atomic.*; import java.util.regex.*; 
+import keystrokesmod.script.model.*; 
+import keystrokesmod.script.packet.clientbound.*; 
+import keystrokesmod.script.packet.serverbound.*; 
+innocents win
+iron_sword,stone_sword,golden_sword,diamond_sword,wooden_sword,shears
+light blue
+loaded source exceeds 1 MiB
+local ROMs • built-in NES or installed RetroArch
+local source not found
+minecraft:anvil
+minecraft:chest
+minecraft:crafting_table
+minecraft:ender_chest
+minecraft:obsidian
+minecraft:tnt
+motiongraph
+ms
+murderer has won
+murderer was
+nnJcd0hdAQz2CJn1b410Y61GNJlM/JMjH/76fzn2qOQfZQAA
+presets • local and friend looks
+profiles • metadata • authors
+public class 
+public static final String scriptName = "
+public static final keystrokesmod.script.ScriptDefaults.modules modules = new keystrokesmod.script.ScriptDefaults.modules("
+re-pressed forward
+released forward
+select a key • click modules to add or remove
+selected
+service::user.auth.xboxlive.com::MBI_SSL
+sessioninfo
+stalker
+stops[
+t=
+teleports to player to give you reach
+texture(
+texture2D(
+textures/font/unicode_page_%02x.png
+their move
+then click the ROM row to select one.
+uniform sampler2D image; uniform int textured; uniform int count; uniform int rainbow;
+uniform vec4 colors[8]; uniform float stops[8]; uniform vec2 direction; uniform float phase;
+uniform vec4 viewport; uniform vec2 screen; uniform vec4 region; uniform float opacity; uniform float saturation;
+valid: verified and saved. invalid: rejected or expired export.
+vec2 q=p-region.xy; float t=.5+dot(q-region.zw*.5,direction)/max(.001,dot(abs(direction),region.zw));
+virtual tokens only
+you died
+your move
+yyyy-MM-dd HH:mm:ss
+~ Alt Manager replaces Realms; Discord and shaders now sit inside the menu
+~ Centred main menu with smooth rounded corners and subtle buttons
+~ Cleaner account screens, active-profile badges and a separate More menu
+~ Correct profile skins after account switching, with square skin heads
+~ Cosmetic rendering, skin previews and catalogue scrolling rebuilt for 1.8.9
+~ Main-menu shader performance and kick-screen backdrop fixes
+~ NES runtime, HUD defaults and packet-order handling
+~ No vanilla-menu flash when returning from another screen
+~ Prestige shader enabled by default on the first launch
+~ Startup logging, first-run profile migration, themes, scoreboard and blur rendering refined
+~ W-Tab timing recode
+§7, §b
+§7disabled
+§8Press Tab in chat for completion.
+§8[§bVibe Debug§8] §7
+§8[§bVibe§8] §fflag detected: §b
+§8[§cTarget§8] §f
+§8[§dVibe§8] §fMurderer detected: §c
+§[0-9A-FK-ORa-fk-or]
+§a
+§aChanged §f
+§aNo script diagnostics.
+§aenabled
+§b
+§b.<module> <min|max> <value>§7 — set the only range, or name the range first
+§b.<module> <multi-select option>§7 — toggle an option; name its setting if ambiguous
+§b.<module> <setting> <value>§7 — change a module setting (names may contain spaces)
+§b.b <module> <key|none>§7 — set a module keybind
+§b.binds§7 — display all active keybinds
+§b.c <save|load|list|delete|rename|openFolder>§7 — manage JSON profiles
+§b.f <add|remove|rename|list>§7 — manage friends and aliases
+§b.ign§7 — copy your in-game name to the clipboard
+§b.script <create|reload|load|list|errors|enable|disable|rename|delete|openFolder>§7 — manage local Raven scripts
+§b.t <module>§7 — toggle a module
+§b.target <add|remove|list>§7 — manage priority targets
+§c
+§c.
+§cCould not access the system clipboard.
+§cCould not create script.
+§cCould not delete profile.
+§cCould not open folder: 
+§cCould not open scripts folder: 
+§cCould not rename profile.
+§cCould not rename script.
+§cCould not save profile.
+§cExpected #RRGGBB or #RRGGBBAA for 
+§cExpected a finite number for 
+§cExpected true/false, on/off, or toggle for 
+§cFriend is invalid or already saved.
+§cFriend not found.
+§cFriend or alias is invalid.
+§cMissing value for 
+§cModule is unavailable.
+§cNo in-game name is available.
+§cProfile not found or invalid.
+§cScript not found.
+§cScript runtime is not available yet.
+§cSetting changed, but the active profile could not be saved.
+§cSeveral ranges exist. Use §b.
+§cTarget is invalid or already saved.
+§cTarget not found.
+§cThat option belongs to multiple settings. Use §b.
+§cThis setting cannot be changed with a chat command.
+§cUnknown mode for 
+§cUnknown option for 
+§cUnknown setting or option for 
+§cdisabled
+§cerror
+§d
+§e
+§eNo change: §f
+§f
+§l
+×
+‹
+‹ ›
+›
+−
+⌫
+╱╲╱╲╱╲
+▁▂▅▃▆▇▅▂▃▅
+✎
+✓

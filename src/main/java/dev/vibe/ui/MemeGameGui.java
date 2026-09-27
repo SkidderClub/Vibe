@@ -102,7 +102,7 @@ public final class MemeGameGui extends GuiScreen {
                     SkeetEditorStyle.row(x, y, x + cardWidth, y + 34, selected, hit(x, y, x + cardWidth, y + 34, mouseX, mouseY));
                     SkinHeads.draw(profile.getId(), name, x + 6, y + 6, 22);
                     fontRendererObj.drawStringWithShadow(trim(name, cardWidth - 41), x + 35, y + 8, selected ? SkeetEditorStyle.accent(.15F) : SkeetEditorStyle.TEXT);
-                    fontRendererObj.drawStringWithShadow(isSelf(name) ? "You" : selected ? "Selected" : "Click to select", x + 35, y + 21, SkeetEditorStyle.MUTED);
+                    fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate(isSelf(name) ? "You" : selected ? "Selected" : "Click to select"), x + 35, y + 21, SkeetEditorStyle.MUTED);
                 }
             }
             if (maxScroll > 0) drawScrollBar(listRight - 6, listTop, listBottom - 4, playerScroll, maxScroll, viewportHeight);

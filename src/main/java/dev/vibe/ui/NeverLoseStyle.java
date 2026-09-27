@@ -17,9 +17,9 @@ final class NeverLoseStyle {
     static void surface(int x, int y, int w, int h, int radius, int fill) {
         rect(x, y, w, h, radius, BORDER); rect(x + 1, y + 1, w - 2, h - 2, radius - 1, fill);
     }
-    static void text(String label, float x, float y, int color) { NeverLoseFont.REGULAR.draw(label, x, y, color); }
+    static void text(String label, float x, float y, int color) { NeverLoseFont.REGULAR.draw(dev.vibe.language.LanguageManager.translate(label), x, y, color); }
     static void label(String label, float x, float y, float available, int color) {
-        text(NeverLoseFont.REGULAR.fit(label, available), x, y, color);
+        text(NeverLoseFont.REGULAR.fit(dev.vibe.language.LanguageManager.translate(label), available), x, y, color);
     }
     static void small(String label, int x, int y, int color) {
         GlStateManager.pushMatrix(); GlStateManager.translate(x, y, 0); GlStateManager.scale(.8F, .8F, 1);

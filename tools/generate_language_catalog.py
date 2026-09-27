@@ -23,6 +23,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "src/main/java"
 BASE = ROOT / "src/main/resources/assets/vibe/lang/interface.tsv"
 OUTPUT = ROOT / "src/main/resources/assets/vibe/lang/complete.tsv"
+MANIFEST = ROOT / "src/main/resources/assets/vibe/lang/visible-keys.txt"
 
 LANGUAGES = [
     ("Chinese", "zh-CN"), ("Russian", "ru"), ("Japanese", "ja"), ("Bavarian", "de"),
@@ -43,6 +44,10 @@ DIRECT = re.compile(r'(?:LanguageManager\.(?:translate|format)|AccountScreenStyl
                     r'SkeetEditorStyle\.(?:button|window|panel)|drawString(?:WithShadow)?|rawText|text|title|fit|'
                     r'label|button|window|panel|center(?:ed)?|small|heading|subtitle|setText)\s*\(\s*"((?:\\.|[^"\\])*)"')
 STRING = re.compile(r'"((?:\\.|[^"\\])*)"')
+# Everything outside the bootstrapping and language implementation packages can
+# contribute client-facing copy.  Keeping this as a deny-list makes a new GUI
+# package covered automatically instead of depending on a hand-maintained list.
+NON_VISIBLE_SOURCE_DIRECTORIES = {"core", "language"}
 
 
 def java_string(value: str) -> str:
@@ -81,6 +86,32 @@ def strings_in(value: str) -> list[str]:
     return [java_string(match.group(1)) for match in STRING.finditer(value) if match.group(1)]
 
 
+def is_visible_literal(value: str) -> bool:
+    """Retain readable client copy while excluding paths, protocols, and syntax."""
+    value = value.strip()
+    if not value or len(value) > 260 or not any(char.isalpha() for char in value):
+        return False
+    if value.startswith(("/", "\\", "http:", "https:", "assets/", "vibe/", "minecraft:", "net.minecraft")):
+        return False
+    # Embedded profiles and texture data are not interface copy.  Treat a long
+    # base64-looking value as data before considering the normal literal rules.
+    if len(value) > 64 and re.fullmatch(r"[A-Za-z0-9+/=]+", value):
+        return False
+    if "\\" in value or re.search(r"\\{\\d|\\[A-Za-z|\\[0-9|\\(\\?[:=!<]|[{}]|^#version", value):
+        return False
+    # Lower-case identifiers, resource paths, and serialized keys are never
+    # drawn as interface copy.  Titles such as "HUD" and "AES" remain so a
+    # visible acronym can still be localized or deliberately preserved.
+    if re.fullmatch(r"[a-z_][a-z0-9_./:-]*", value):
+        return False
+    if re.fullmatch(r"[A-Za-z0-9_.-]+", value):
+        # Single title words are common in enum-backed game menus and normal
+        # GuiButton constructors (for example, "Operations" or "Global").
+        # Include them; low-case identifiers were filtered immediately above.
+        return value[0].isupper()
+    return True
+
+
 def collect_keys() -> tuple[list[str], dict[str, dict[str, str]]]:
     keys: set[str] = set()
     curated: dict[str, dict[str, str]] = {language: {} for language in CURATED}
@@ -109,6 +140,19 @@ def collect_keys() -> tuple[list[str], dict[str, dict[str, str]]]:
         source = path.read_text(encoding="utf-8")
         for match in DIRECT.finditer(source):
             keys.add(java_string(match.group(1)))
+
+    # UI text often reaches a renderer through a button constructor, an enum
+    # choice, or an array.  Those values are not direct render arguments, so
+    # collect all readable literals from user-facing client packages as well.
+    for path in (SOURCE / "dev/vibe").rglob("*.java"):
+        relative = path.relative_to(SOURCE / "dev/vibe")
+        if relative.parts and relative.parts[0] in NON_VISIBLE_SOURCE_DIRECTORIES:
+            continue
+        source = path.read_text(encoding="utf-8")
+        for match in STRING.finditer(source):
+            value = java_string(match.group(1))
+            if is_visible_literal(value):
+                keys.add(value)
 
     # Keys implemented by the catalog itself or passed dynamically through the
     # shared themed widgets are still ordinary user-facing UI text.
@@ -143,22 +187,43 @@ def existing_values() -> dict[str, dict[str, str]]:
     return result
 
 
+def script_substitution(value: str, alphabet: dict[str, str]) -> str:
+    """Transliterate text while leaving Minecraft formatting controls intact."""
+    result: list[str] = []
+    index = 0
+    while index < len(value):
+        char = value[index]
+        if char == "\u00a7" and index + 1 < len(value):
+            result.extend((char, value[index + 1]))
+            index += 2
+            continue
+        result.append(alphabet.get(char.lower(), char))
+        index += 1
+    return "".join(result)
+
+
 def galactic(value: str) -> str:
+    # Standard Galactic Alphabet is the 1:1 English substitution seen on
+    # Minecraft enchanting tables. The bundled Sga Regular font renders the
+    # canonical glyphs in themed interfaces; these Unicode forms are the
+    # compatible fallback for vanilla's bitmap renderer.
     alphabet = {
         "a": "ᔑ", "b": "ʖ", "c": "ᓵ", "d": "↸", "e": "ᒷ", "f": "⎓", "g": "⊣", "h": "⍑", "i": "╎",
         "j": "⋮", "k": "ꖌ", "l": "ꖎ", "m": "ᒲ", "n": "リ", "o": "𝙹", "p": "!¡", "q": "ᑑ", "r": "∷",
         "s": "ᓭ", "t": "ℸ", "u": "⚍", "v": "⍊", "w": "∴", "x": "·/", "y": "||", "z": "⨅",
     }
-    return "".join(alphabet.get(char.lower(), char) for char in value)
+    return script_substitution(value, alphabet)
 
 
 def aurebesh(value: str) -> str:
+    # Aurebesh has no Unicode block. These well-supported symbols are kept as
+    # a legible fallback, while themed Vibe UI uses the bundled Aurebesh font.
     alphabet = {
         "a": "ꓮ", "b": "ꓐ", "c": "Ↄ", "d": "ꓓ", "e": "ꓰ", "f": "ꓝ", "g": "ꓖ", "h": "ꓧ", "i": "ꓲ",
         "j": "ꓙ", "k": "ꓗ", "l": "ꓡ", "m": "ꓟ", "n": "ꓠ", "o": "ꓳ", "p": "ꓑ", "q": "Ϙ", "r": "ꓣ",
         "s": "ꓢ", "t": "ꓔ", "u": "ꓴ", "v": "ꓦ", "w": "ꓪ", "x": "ჯ", "y": "ꓬ", "z": "ꓜ",
     }
-    return "".join(alphabet.get(char.lower(), char) for char in value)
+    return script_substitution(value, alphabet)
 
 
 def pidgin(value: str) -> str:
@@ -225,6 +290,7 @@ def write_catalog(keys: list[str], values: dict[str, dict[str, str]]) -> None:
         stream.write("\t".join(["key"] + [language for language, _ in LANGUAGES]) + "\n")
         for key in keys:
             stream.write("\t".join([cell(key)] + [cell(values[key].get(language, "")) for language, _ in LANGUAGES]) + "\n")
+    MANIFEST.write_text("\n".join(keys) + "\n", encoding="utf-8")
 
 
 def main() -> None:
