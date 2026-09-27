@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added GTA8: Los Vibes in the Meme category, a standalone 1.6 km open city with an HDR shader renderer (cascaded shadows, physical sky, weather, wet roads, bloom), Pacejka tyre driving physics, lane and traffic-light traffic, pedestrians, a witness-based police search, six weapons, jobs, shops and encrypted saves. See [docs/GTA8.md](GTA8.md); `./gradlew verifyGta8Rendering` renders offscreen checks.
 - Moved the changelog into `docs/` and documented the project layout; Windows build/run launchers remain in the project root.
 - Added Licenses & credits in the main and pause menus, with Schizoid attribution, offline license texts, scrolling and source links. Consolidated license texts, THIRD_PARTY_NOTICES.md and review evidence in LICENSES/.
 - Added Schizoid-derived Fog with depth-based Kawase/Gaussian blur, custom colors, animated rainbow and sky controls; Fog and CustomCrosshair also render in GTA7.

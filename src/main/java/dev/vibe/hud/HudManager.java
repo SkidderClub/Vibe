@@ -106,7 +106,7 @@ public final class HudManager {
 
     public void draw() {
         KawaseBlur.beginHudFrame();
-        if (!(minecraft.currentScreen instanceof dev.vibe.ui.Gta7Gui)) drawMusic(false);
+        if (!(minecraft.currentScreen instanceof dev.vibe.ui.Gta7Gui) && !(minecraft.currentScreen instanceof dev.vibe.ui.Gta8Gui)) drawMusic(false);
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         if (hud == null || !hud.isEnabled() || minecraft.thePlayer == null) {
             return;

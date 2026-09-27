@@ -478,6 +478,7 @@ public final class ClientEvents {
                 || screen instanceof dev.vibe.ui.EspEditorGui
                 || screen instanceof dev.vibe.ui.NesEmulatorGui
                 || screen instanceof dev.vibe.ui.Gta7Gui
+                || screen instanceof dev.vibe.ui.Gta8Gui
                 || screen instanceof dev.vibe.ui.Battlefront3Gui
                 || screen instanceof dev.vibe.ui.MemeGameGui
                 || screen instanceof dev.vibe.ui.SlotsGui

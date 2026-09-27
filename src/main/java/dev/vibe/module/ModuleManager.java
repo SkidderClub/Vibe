@@ -24,6 +24,7 @@ import dev.vibe.module.impl.TestModule;
 import dev.vibe.module.impl.KillAuraModule;
 import dev.vibe.module.impl.ItemEspModule;
 import dev.vibe.module.impl.Gta7Module;
+import dev.vibe.module.impl.Gta8Module;
 import dev.vibe.module.impl.Battlefront3Module;
 import dev.vibe.module.impl.GirlfriendModule;
 import dev.vibe.module.impl.TargetsModule;
@@ -126,6 +127,7 @@ public final class ModuleManager {
         register(new WaifuModule());
         register(new NesEmulatorModule());
         register(new Gta7Module());
+        register(new Gta8Module());
         register(new Battlefront3Module());
         register(new GirlfriendModule());
         register(new ChessModule());

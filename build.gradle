@@ -44,6 +44,29 @@ tasks.register('verifyGta7Rendering', JavaExec) {
     }
 }
 
+// GTA8: native offscreen screenshots of every district, weather and time of day, plus frame timings.
+// Pass -Pgta8Only=<name fragment> to capture a single view.
+tasks.register('verifyGta8Rendering', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.game.gta8.Gta8RenderCheck'
+    workingDir project.projectDir
+    maxHeapSize = '2g'
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    systemProperty 'gta8.only', project.findProperty('gta8Only') ?: ''
+    doFirst {
+        def osName = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+        def platform = osName.contains('win') ? 'windows' : osName.contains('mac') ? 'osx' : 'linux'
+        def nativeJar = sourceSets.main.runtimeClasspath.files.find { it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar') }
+        if (nativeJar == null) throw new GradleException('LWJGL native library archive not found for ' + platform)
+        def nativeDir = project.layout.buildDirectory.dir('gta8-render-check/natives').get().asFile
+        project.copy { from project.zipTree(nativeJar); include '*.dll', '*.so', '*.dylib', '*.jnilib'; into nativeDir }
+        systemProperty 'org.lwjgl.librarypath', nativeDir.absolutePath
+        setArgs([project.layout.buildDirectory.dir('gta8-render-check').get().asFile.absolutePath])
+    }
+}
+
 // Offscreen regression checks for inventory and GUI rendering state.
 tasks.register('verifyBattlefrontRendering', JavaExec) {
     dependsOn tasks.named('testClasses')

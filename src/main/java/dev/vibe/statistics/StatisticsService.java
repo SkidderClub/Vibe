@@ -124,7 +124,7 @@ public final class StatisticsService {
             lastTick += seconds * 1000L;
             addProfile("playtime", seconds);
             String screen = minecraft.currentScreen == null ? "" : minecraft.currentScreen.getClass().getName();
-            if (screen.endsWith("Gta7Gui")) addGlobal("gtaPlaytime", seconds);
+            if (screen.endsWith("Gta7Gui") || screen.endsWith("Gta8Gui")) addGlobal("gtaPlaytime", seconds);
             if (screen.endsWith("Battlefront3Gui")) addGlobal("battlefrontPlaytime", seconds);
         }
         if (dirty && now - lastSaved >= 10000L) saveNow();
