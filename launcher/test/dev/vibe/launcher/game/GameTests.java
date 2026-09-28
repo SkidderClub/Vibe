@@ -103,6 +103,8 @@ public final class GameTests {
             // cmd.exe's code pages make the UTF-8 check meaningful only for the POSIX script.
             if (!System.getProperty("os.name", "").toLowerCase().contains("win")) {
                 Check.isTrue(recorder.lines.contains("[Client thread/INFO]: M\u00fcnchen \u2713"), "UTF-8 output: " + recorder.lines);
+                Check.isTrue(recorder.lines.contains("2% (2/3)") && recorder.lines.contains("100% (3/3)"), "carriage returns split lines: " + recorder.lines);
+                Check.isTrue(recorder.stages.contains(GameSession.Stage.ASSETS), "asset stage: " + recorder.stages);
             }
             Check.isTrue(recorder.lines.contains("-PvibeMaxMemory=2048"), "memory argument passed: " + recorder.lines);
         });
@@ -160,7 +162,9 @@ public final class GameTests {
                     ? "echo 'FAILURE: Build failed with an exception.'\necho '* What went wrong:'\n"
                         + "echo \"Execution failed for task ':compileJava'.\"\n"
                         + "echo '> Compilation failed; see the compiler error output for details.'\necho ''\necho '* Try:'\nexit 1\n"
-                    : "echo '> Task :runClient'\n"
+                    : "echo '> Task :preRunClient'\n"
+                        + "printf '1%% (1/3)\\r2%% (2/3)\\r100%% (3/3)\\r\\n'\n"
+                        + "echo '> Task :runClient'\n"
                         + "for arg in \"$@\"; do echo \"$arg\"; done\n"
                         + "printf 'ok' > \"$VIBE_LAUNCH_READY_FILE\"\n"
                         + "sleep 1\n"

@@ -324,6 +324,8 @@ public final class I18n {
         de("Up to date.", "Aktuell.");
         de("installed on first launch", "wird beim ersten Start installiert");
         de("Home", "Start");
+        de("Downloading Minecraft assets", "Lade Minecraft-Assets herunter");
+        de("Only needed once", "Nur beim ersten Mal nötig");
         de("Game mode", "Spielmodus");
         de("Mods queued", "Mods vorgemerkt");
         de("They are added as soon as the current step has finished.", "Sie werden hinzugefügt, sobald der aktuelle Schritt abgeschlossen ist.");

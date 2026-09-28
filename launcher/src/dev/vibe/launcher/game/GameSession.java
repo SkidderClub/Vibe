@@ -28,7 +28,7 @@ import java.util.Properties;
  * screen is drawn, which is how the launcher knows the game window is up.</p>
  */
 public final class GameSession {
-    public enum Stage { CONFIGURING, COMPILING, PACKAGING, OPTIFINE, STARTING, RUNNING }
+    public enum Stage { CONFIGURING, COMPILING, PACKAGING, OPTIFINE, ASSETS, STARTING, RUNNING }
 
     public interface Listener {
         void output(List<String> lines);
@@ -42,7 +42,7 @@ public final class GameSession {
         public int memoryMb;
     }
 
-    private final Path logFile, readyFile, sessionFile;
+    private final Path logFile, readyFile, sessionFile, projectRoot;
     private final Listener listener;
     private final Process process;
     private final long pid;
@@ -52,7 +52,8 @@ public final class GameSession {
     private final List<String> failure = new ArrayList<String>();
     private boolean collectingFailure;
 
-    private GameSession(Path logFile, Path readyFile, Path sessionFile, Listener listener, Process process, long pid) {
+    private GameSession(Path projectRoot, Path logFile, Path readyFile, Path sessionFile, Listener listener, Process process, long pid) {
+        this.projectRoot = projectRoot;
         this.logFile = logFile;
         this.readyFile = readyFile;
         this.sessionFile = sessionFile;
@@ -104,7 +105,7 @@ public final class GameSession {
         long offset = Files.exists(request.logFile) ? Files.size(request.logFile) : 0;
         Process process = builder.start();
         long pid = Platform.pid(process);
-        GameSession session = new GameSession(request.logFile, request.readyFile, request.sessionFile, listener, process, pid);
+        GameSession session = new GameSession(request.projectRoot, request.logFile, request.readyFile, request.sessionFile, listener, process, pid);
         session.writeSessionFile();
         session.startThreads(offset);
         return session;
@@ -130,7 +131,7 @@ public final class GameSession {
         }
         Path log = new File(values.getProperty("log", "")).toPath();
         Path ready = new File(values.getProperty("ready", "")).toPath();
-        GameSession session = new GameSession(log, ready, sessionFile, listener, null, pid);
+        GameSession session = new GameSession(null, log, ready, sessionFile, listener, null, pid);
         session.reachedGame = Files.exists(ready);
         long offset = 0;
         try { offset = Files.exists(log) ? Math.max(0, Files.size(log) - 64 * 1024) : 0; } catch (IOException ignored) { /* start at 0 */ }
@@ -146,6 +147,8 @@ public final class GameSession {
         stopping = true;
         if (process != null) Platform.destroyTree(process);
         else Platform.destroyTree(pid);
+        // Without the Java 9 process API only cmd.exe/sh would stop; find Gradle and Minecraft by path.
+        if (!Platform.processApiAvailable() && projectRoot != null) Platform.destroyGameProcesses(projectRoot);
     }
 
     public boolean isStopping() { return stopping; }
@@ -199,8 +202,9 @@ public final class GameSession {
         else if (trimmed.startsWith("> Task :")) {
             String task = trimmed.substring(8).split("\\s+")[0].toLowerCase(Locale.ROOT);
             if (task.equals("runclient")) setStage(Stage.STARTING);
+            else if (task.equals("prerunclient") || task.contains("assets") || task.contains("natives")) setStage(Stage.ASSETS);
             else if (task.equals("prepareoptifine")) setStage(Stage.OPTIFINE);
-            else if (task.contains("jar") || task.contains("license") || task.contains("remap")) setStage(Stage.PACKAGING);
+            else if (task.endsWith("jar") || task.startsWith("remap")) setStage(Stage.PACKAGING);
             else if (task.contains("compile") || task.contains("resources") || task.contains("classes") || task.startsWith("generate")) setStage(Stage.COMPILING);
             else if (stage == null) setStage(Stage.CONFIGURING);
         }
@@ -228,6 +232,7 @@ public final class GameSession {
         private final ByteBuffer bytes = ByteBuffer.allocate(64 * 1024);
         private final CharBuffer chars = CharBuffer.allocate(64 * 1024);
         private final StringBuilder partial = new StringBuilder();
+        private boolean afterCarriageReturn;
 
         Tailer(long offset) { this.position = offset; }
 
@@ -275,10 +280,15 @@ public final class GameSession {
                         chars.flip();
                         while (chars.hasRemaining()) {
                             char c = chars.get();
-                            if (c == '\n') {
+                            // A lone \r redraws a progress line in a terminal; treat it as a line of its own.
+                            if (c == '\n' && afterCarriageReturn) {
+                                afterCarriageReturn = false;
+                            } else if (c == '\n' || c == '\r') {
                                 lines.add(partial.toString());
                                 partial.setLength(0);
-                            } else if (c != '\r') {
+                                afterCarriageReturn = c == '\r';
+                            } else {
+                                afterCarriageReturn = false;
                                 if (partial.length() < 8192) partial.append(c);
                             }
                         }

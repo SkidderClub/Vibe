@@ -68,6 +68,8 @@ public final class LauncherController {
     private static final java.util.regex.Pattern DOWNLOAD_FAILURE = java.util.regex.Pattern.compile(
             "Could not (resolve|download|GET|HEAD)|status code (4\\d\\d|5\\d\\d)|timed out|UnknownHost|Connection reset|Network is unreachable");
 
+    private static final java.util.regex.Pattern PROGRESS_LINE = java.util.regex.Pattern.compile("\\d{1,3}% \\(\\d+/\\d+\\)|[.\\d%]+");
+
     private final AppPaths paths;
     private final Settings settings;
     private final AppLog log;
@@ -446,7 +448,10 @@ public final class LauncherController {
     private GameSession.Listener sessionListener() {
         return new GameSession.Listener() {
             @Override public void output(List<String> lines) {
-                console.append(lines);
+                // Download counters ("16% (119/734)") only feed the status line, not the console.
+                List<String> shown = new ArrayList<String>(lines.size());
+                for (String line : lines) if (!PROGRESS_LINE.matcher(line.trim()).matches() || line.trim().startsWith("100%")) shown.add(line);
+                if (!shown.isEmpty()) console.append(shown);
                 if (state != State.BUILDING) return;
                 // Long first builds stay on one stage for minutes; the latest line shows they move.
                 for (int index = lines.size() - 1; index >= 0; index--) {
@@ -468,6 +473,7 @@ public final class LauncherController {
                     case COMPILING: setState(State.BUILDING, I18n.t("Compiling Vibe"), "", 0.4); break;
                     case PACKAGING: setState(State.BUILDING, I18n.t("Packaging Vibe"), "", 0.62); break;
                     case OPTIFINE: setState(State.BUILDING, I18n.t("Preparing OptiFine"), "", 0.72); break;
+                    case ASSETS: setState(State.BUILDING, I18n.t("Downloading Minecraft assets"), I18n.t("Only needed once"), 0.78); break;
                     case STARTING: setState(State.BUILDING, I18n.t("Starting Minecraft"), I18n.t("Forge is loading mods"), 0.85); break;
                     case RUNNING:
                         setState(State.RUNNING, I18n.t("Vibe is running"), "", 1);

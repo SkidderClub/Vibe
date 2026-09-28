@@ -178,6 +178,75 @@ public final class Platform {
         }
     }
 
+    /**
+     * Java 8 fallback for {@link #destroyTree}, which cannot see child processes
+     * there. Stops only Java processes of this checkout: the Minecraft JVM (its
+     * {@code --gameDir} is {@code run/client}) and the Gradle wrapper. The
+     * single-use Gradle daemon then ends the build by itself.
+     */
+    public static void destroyGameProcesses(Path checkout) {
+        String game = normalizeCommand(checkout.resolve("run").resolve("client").toString());
+        String root = normalizeCommand(checkout.toString());
+        long self = currentPid();
+        for (String[] process : listProcesses()) {
+            String pid = process[0], name = process[1].toLowerCase(Locale.ROOT), command = normalizeCommand(process[2]);
+            if (pid.equals(Long.toString(self))) continue;
+            boolean java = name.equals("java") || name.equals("java.exe") || name.equals("javaw.exe");
+            if (!java) continue;
+            boolean minecraft = command.contains(game);
+            boolean gradle = command.contains(root) && command.contains("gradle-wrapper.jar");
+            if (!minecraft && !gradle) continue;
+            try {
+                ProcessBuilder kill = windows() ? new ProcessBuilder("taskkill", "/PID", pid, "/T", "/F") : new ProcessBuilder("kill", pid);
+                kill.redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.appendTo(nullDevice())).start().waitFor();
+            } catch (Exception ignored) {
+                // The process may have exited meanwhile.
+            }
+        }
+    }
+
+    /** pid, executable name and full command line of every process; empty if unavailable. */
+    private static List<String[]> listProcesses() {
+        List<String[]> result = new ArrayList<String[]>();
+        try {
+            ProcessBuilder builder;
+            if (windows()) {
+                String script = "[Console]::OutputEncoding = [Text.Encoding]::UTF8; Get-CimInstance Win32_Process | "
+                        + "ForEach-Object { '{0}`t{1}`t{2}' -f $_.ProcessId, $_.Name, $_.CommandLine }";
+                String encoded = java.util.Base64.getEncoder().encodeToString(script.getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
+                builder = new ProcessBuilder("powershell.exe", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded);
+            } else {
+                builder = new ProcessBuilder("ps", "-eo", "pid=,comm=,args=");
+            }
+            Process list = builder.redirectErrorStream(true).redirectInput(ProcessBuilder.Redirect.from(nullDevice())).start();
+            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(list.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));
+            try {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = windows() ? line.split("\t", 3) : line.trim().split("\\s+", 3);
+                    if (parts.length == 3 && parts[0].trim().matches("\\d+")) result.add(new String[] { parts[0].trim(), parts[1].trim(), parts[2] });
+                }
+            } finally {
+                reader.close();
+            }
+            list.waitFor();
+        } catch (Exception ignored) {
+            // No process listing: nothing is stopped.
+        }
+        return result;
+    }
+
+    /** Collapses repeated path separators (gradlew.bat produces "source\\gradle") and case on Windows. */
+    private static String normalizeCommand(String value) {
+        String text = value == null ? "" : value.replace('\\', '/').replaceAll("/+", "/");
+        return windows() ? text.toLowerCase(Locale.ROOT) : text;
+    }
+
+    public static long currentPid() {
+        String name = ManagementFactory.getRuntimeMXBean().getName();
+        try { return Long.parseLong(name.substring(0, name.indexOf('@'))); } catch (Exception ignored) { return -1; }
+    }
+
     private static Object handle(long pid) {
         if (pid <= 0) return null;
         try {
