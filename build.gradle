@@ -417,6 +417,17 @@ if (providers.gradleProperty('vibePersistentRun').isPresent()) {
     }
 }
 
+// The Vibe Launcher passes its memory setting (in MB) for the game JVM.
+if (providers.gradleProperty('vibeMaxMemory').isPresent()) {
+    String requestedMemory = providers.gradleProperty('vibeMaxMemory').get().trim()
+    if (!(requestedMemory ==~ /\d{3,6}/) || requestedMemory.toInteger() < 512) {
+        throw new GradleException('vibeMaxMemory must be a size in megabytes (at least 512), got: ' + requestedMemory)
+    }
+    tasks.named('runClient').configure {
+        maxHeapSize = requestedMemory + 'm'
+    }
+}
+
 // Keep the JAR contents and the generated legal inventory on the same selection.
 def bundledLibraries = providers.provider {
     def runtimeLibraries = configurations.runtimeClasspath.files

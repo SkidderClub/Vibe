@@ -1,0 +1,302 @@
+package dev.vibe.launcher.core;
+
+import java.awt.Desktop;
+import java.io.File;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.reflect.Method;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * Operating-system specifics. The launcher is compiled for Java 8 but uses the
+ * Java 9+ process API through reflection when it is available, so a running
+ * game can be stopped together with the Gradle process that started it.
+ */
+public final class Platform {
+    public enum Os { WINDOWS, MAC, LINUX }
+
+    private static final Os OS = detectOs();
+
+    private Platform() { }
+
+    public static Os os() { return OS; }
+    public static boolean windows() { return OS == Os.WINDOWS; }
+
+    private static Os detectOs() {
+        String name = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+        if (name.contains("win")) return Os.WINDOWS;
+        if (name.contains("mac") || name.contains("darwin")) return Os.MAC;
+        return Os.LINUX;
+    }
+
+    /** Architecture name as used by the Adoptium API. */
+    public static String architecture() {
+        String arch = System.getProperty("os.arch", "").toLowerCase(Locale.ROOT);
+        if (arch.equals("aarch64") || arch.equals("arm64")) return "aarch64";
+        return "x64";
+    }
+
+    public static String adoptiumOs() {
+        switch (OS) {
+            case WINDOWS: return "windows";
+            case MAC: return "mac";
+            default: return "linux";
+        }
+    }
+
+    public static Path javaExecutable(Path home, boolean windowless) {
+        if (windows()) return home.resolve("bin").resolve(windowless ? "javaw.exe" : "java.exe");
+        return home.resolve("bin").resolve("java");
+    }
+
+    public static Path javacExecutable(Path home) {
+        return home.resolve("bin").resolve(windows() ? "javac.exe" : "javac");
+    }
+
+    /** The Java runtime running this launcher, preferring javaw on Windows. */
+    public static Path currentJava(boolean windowless) {
+        Path home = Paths.get(System.getProperty("java.home"));
+        Path candidate = javaExecutable(home, windowless);
+        return Files.isRegularFile(candidate) ? candidate : javaExecutable(home, false);
+    }
+
+    /** The launcher JAR itself, or {@code null} when running from class folders. */
+    public static Path currentJar() {
+        try {
+            Path location = Paths.get(Platform.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+            return Files.isRegularFile(location) && location.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar") ? location : null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    public static File nullDevice() { return new File(windows() ? "NUL" : "/dev/null"); }
+
+    public static void openFolder(Path folder) throws IOException {
+        Files.createDirectories(folder);
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+            try { Desktop.getDesktop().open(folder.toFile()); return; } catch (Exception ignored) { /* fall through */ }
+        }
+        run(windows() ? new String[] { "explorer.exe", folder.toString() }
+                : OS == Os.MAC ? new String[] { "open", folder.toString() } : new String[] { "xdg-open", folder.toString() });
+    }
+
+    public static void browse(String url) throws IOException {
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+            try { Desktop.getDesktop().browse(URI.create(url)); return; } catch (Exception ignored) { /* fall through */ }
+        }
+        run(windows() ? new String[] { "rundll32", "url.dll,FileProtocolHandler", url }
+                : OS == Os.MAC ? new String[] { "open", url } : new String[] { "xdg-open", url });
+    }
+
+    private static void run(String[] command) throws IOException {
+        ProcessBuilder builder = new ProcessBuilder(command);
+        builder.redirectErrorStream(true);
+        builder.redirectOutput(ProcessBuilder.Redirect.appendTo(nullDevice()));
+        builder.start();
+    }
+
+    /** Moves a file to the recycle bin when the platform supports it, otherwise deletes it. */
+    public static void trashOrDelete(Path file) throws IOException {
+        try {
+            Method moveToTrash = Desktop.class.getMethod("moveToTrash", File.class);
+            if (Desktop.isDesktopSupported() && (Boolean) moveToTrash.invoke(Desktop.getDesktop(), file.toFile())) return;
+        } catch (Exception ignored) {
+            // Java 8, or no trash on this desktop.
+        }
+        Files.deleteIfExists(file);
+    }
+
+    public static long totalMemoryMb() {
+        try {
+            Object bean = ManagementFactory.getOperatingSystemMXBean();
+            // Resolve through the exported interface: the implementation class is not accessible on Java 16+.
+            Class<?> type = Class.forName("com.sun.management.OperatingSystemMXBean");
+            if (!type.isInstance(bean)) return 8192;
+            return ((Number) type.getMethod("getTotalPhysicalMemorySize").invoke(bean)).longValue() / (1024L * 1024L);
+        } catch (Exception ignored) {
+            return 8192;
+        }
+    }
+
+    // ---- process tree handling (Java 9+ via reflection) --------------------
+
+    public static long pid(Process process) {
+        try { return ((Number) Process.class.getMethod("pid").invoke(process)).longValue(); }
+        catch (Exception ignored) { return -1; }
+    }
+
+    public static boolean processApiAvailable() {
+        try { Class.forName("java.lang.ProcessHandle"); return true; } catch (ClassNotFoundException ignored) { return false; }
+    }
+
+    /** Whether a process started by an earlier launcher run is still alive. {@code false} on Java 8. */
+    public static boolean isAlive(long pid) {
+        Object handle = handle(pid);
+        if (handle == null) return false;
+        try { return (Boolean) Class.forName("java.lang.ProcessHandle").getMethod("isAlive").invoke(handle); }
+        catch (Exception ignored) { return false; }
+    }
+
+    /** Stops a process and all its descendants: Gradle, its daemon and the Minecraft JVM. */
+    public static void destroyTree(Process process) {
+        if (process == null) return;
+        long pid = pid(process);
+        if (pid > 0) destroyTree(pid);
+        process.destroy();
+    }
+
+    public static void destroyTree(long pid) {
+        Object handle = handle(pid);
+        if (handle == null) {
+            if (windows() && pid > 0) {
+                try { new ProcessBuilder("taskkill", "/PID", Long.toString(pid), "/T", "/F").redirectErrorStream(true)
+                        .redirectOutput(ProcessBuilder.Redirect.appendTo(nullDevice())).start().waitFor(); }
+                catch (Exception ignored) { /* best effort */ }
+            }
+            return;
+        }
+        try {
+            // Methods come from the public interface; the implementation class is not accessible.
+            Class<?> type = Class.forName("java.lang.ProcessHandle");
+            Method destroy = type.getMethod("destroy");
+            List<Object> children = new ArrayList<Object>();
+            Iterator<?> iterator = ((java.util.stream.Stream<?>) type.getMethod("descendants").invoke(handle)).iterator();
+            while (iterator.hasNext()) children.add(iterator.next());
+            // Deepest descendants come last: stop the Minecraft JVM before Gradle.
+            for (int index = children.size() - 1; index >= 0; index--) destroy.invoke(children.get(index));
+            destroy.invoke(handle);
+        } catch (Exception ignored) {
+            // The process may already have exited.
+        }
+    }
+
+    /**
+     * Java 8 fallback for {@link #destroyTree}, which cannot see child processes
+     * there. Stops only Java processes of this checkout: the Minecraft JVM (its
+     * {@code --gameDir} is {@code run/client}) and the Gradle wrapper. The
+     * single-use Gradle daemon then ends the build by itself.
+     */
+    public static void destroyGameProcesses(Path checkout) {
+        String game = normalizeCommand(checkout.resolve("run").resolve("client").toString());
+        String root = normalizeCommand(checkout.toString());
+        long self = currentPid();
+        for (String[] process : listProcesses()) {
+            String pid = process[0], name = process[1].toLowerCase(Locale.ROOT), command = normalizeCommand(process[2]);
+            if (pid.equals(Long.toString(self))) continue;
+            boolean java = name.equals("java") || name.equals("java.exe") || name.equals("javaw.exe");
+            if (!java) continue;
+            boolean minecraft = command.contains(game);
+            boolean gradle = command.contains(root) && command.contains("gradle-wrapper.jar");
+            if (!minecraft && !gradle) continue;
+            try {
+                ProcessBuilder kill = windows() ? new ProcessBuilder("taskkill", "/PID", pid, "/T", "/F") : new ProcessBuilder("kill", pid);
+                kill.redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.appendTo(nullDevice())).start().waitFor();
+            } catch (Exception ignored) {
+                // The process may have exited meanwhile.
+            }
+        }
+    }
+
+    /** pid, executable name and full command line of every process; empty if unavailable. */
+    private static List<String[]> listProcesses() {
+        try {
+            if (!windows()) return unixProcesses();
+            String script = "[Console]::OutputEncoding = [Text.Encoding]::UTF8; Get-CimInstance Win32_Process | "
+                    + "ForEach-Object { '{0}`t{1}`t{2}' -f $_.ProcessId, $_.Name, $_.CommandLine }";
+            String encoded = java.util.Base64.getEncoder().encodeToString(script.getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
+            List<String[]> result = new ArrayList<String[]>();
+            for (String line : capture("powershell.exe", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded)) {
+                String[] parts = line.split("\t", 3);
+                if (parts.length == 3 && parts[0].trim().matches("\\d+")) result.add(new String[] { parts[0].trim(), parts[1].trim(), parts[2] });
+            }
+            return result;
+        } catch (Exception ignored) {
+            // No process listing: nothing is stopped.
+            return new ArrayList<String[]>();
+        }
+    }
+
+    /**
+     * macOS prints the full executable path as {@code comm}, and runtimes live under
+     * "Application Support", so names and arguments are read separately, keyed by pid.
+     */
+    private static List<String[]> unixProcesses() throws IOException, InterruptedException {
+        java.util.Map<String, String> names = new java.util.HashMap<String, String>();
+        for (String line : capture("ps", "-eo", "pid=,comm=")) {
+            String trimmed = line.trim();
+            int space = trimmed.indexOf(' ');
+            if (space <= 0) continue;
+            String executable = trimmed.substring(space + 1).trim();
+            names.put(trimmed.substring(0, space), executable.substring(executable.lastIndexOf('/') + 1));
+        }
+        List<String[]> result = new ArrayList<String[]>();
+        for (String line : capture("ps", "-eo", "pid=,args=")) {
+            String trimmed = line.trim();
+            int space = trimmed.indexOf(' ');
+            if (space <= 0) continue;
+            String pid = trimmed.substring(0, space);
+            String name = names.get(pid);
+            if (name != null) result.add(new String[] { pid, name, trimmed.substring(space + 1) });
+        }
+        return result;
+    }
+
+    private static List<String> capture(String... command) throws IOException, InterruptedException {
+        Process process = new ProcessBuilder(command).redirectErrorStream(true).redirectInput(ProcessBuilder.Redirect.from(nullDevice())).start();
+        List<String> lines = new ArrayList<String>();
+        java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));
+        try {
+            String line;
+            while ((line = reader.readLine()) != null) lines.add(line);
+        } finally {
+            reader.close();
+        }
+        process.waitFor();
+        return lines;
+    }
+
+    /** Collapses repeated path separators (gradlew.bat produces "source\\gradle") and case on Windows. */
+    private static String normalizeCommand(String value) {
+        String text = value == null ? "" : value.replace('\\', '/').replaceAll("/+", "/");
+        return windows() ? text.toLowerCase(Locale.ROOT) : text;
+    }
+
+    public static long currentPid() {
+        String name = ManagementFactory.getRuntimeMXBean().getName();
+        try { return Long.parseLong(name.substring(0, name.indexOf('@'))); } catch (Exception ignored) { return -1; }
+    }
+
+    /** When the process started, in epoch milliseconds; -1 on Java 8 or if unknown. */
+    public static long startTime(long pid) {
+        Object handle = handle(pid);
+        if (handle == null) return -1;
+        try {
+            Class<?> type = Class.forName("java.lang.ProcessHandle");
+            Object info = type.getMethod("info").invoke(handle);
+            java.util.Optional<?> start = (java.util.Optional<?>) Class.forName("java.lang.ProcessHandle$Info").getMethod("startInstant").invoke(info);
+            if (!start.isPresent()) return -1;
+            return (Long) Class.forName("java.time.Instant").getMethod("toEpochMilli").invoke(start.get());
+        } catch (Exception ignored) {
+            return -1;
+        }
+    }
+
+    private static Object handle(long pid) {
+        if (pid <= 0) return null;
+        try {
+            Class<?> type = Class.forName("java.lang.ProcessHandle");
+            java.util.Optional<?> optional = (java.util.Optional<?>) type.getMethod("of", long.class).invoke(null, pid);
+            return optional.isPresent() ? optional.get() : null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+}
