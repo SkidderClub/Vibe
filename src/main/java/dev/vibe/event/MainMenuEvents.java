@@ -64,6 +64,9 @@ public final class MainMenuEvents {
             LauncherBridge.clearGta7Request(mc.mcDataDir);
             event.gui = new dev.vibe.ui.Gta7Gui(Vibe.getInstance().getModuleManager()
                     .getModule(dev.vibe.module.impl.Gta7Module.class));
+        } else if (LauncherBridge.consumeGta8Request(mc.mcDataDir)) {
+            event.gui = new dev.vibe.ui.Gta8Gui(Vibe.getInstance().getModuleManager()
+                    .getModule(dev.vibe.module.impl.Gta8Module.class));
         }
     }
 

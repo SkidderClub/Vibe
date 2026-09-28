@@ -38,6 +38,11 @@ public final class LauncherBridge {
         return consume(minecraftDirectory, "gta7");
     }
 
+    /** One-shot request from the launcher's "GTA8: Los Vibes" mode. */
+    public static boolean consumeGta8Request(File minecraftDirectory) {
+        return consume(minecraftDirectory, "gta8");
+    }
+
     /** Clear only the one-shot game route after GTA7 accepts it. */
     public static void clearGta7Request(File minecraftDirectory) {
         consume(minecraftDirectory, "gta7");

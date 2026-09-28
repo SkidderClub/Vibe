@@ -42,14 +42,14 @@ The installable JAR is written to `build/libs/Vibe-1.8.9-<version>.jar`.
 
 ## Desktop launcher
 
-Build the separate Vibe Launcher with `launcher\buildLauncher.bat`. Its executable
-JAR is written to `launcher\VibeLauncher.jar`. Starting that JAR downloads and
-updates the managed Vibe source from `SkidderClub/Vibe`, installs private runtimes
-when required, then builds Vibe before starting the persistent Forge 1.8.9 profile
-with OptiFine. It accepts dropped custom mods, shares Vibe's menu themes, opens the
-native Alt Manager for Microsoft/offline sign-in, and can route a world launch into
-GTA7. See [launcher/README.md](launcher/README.md) for automatic updates, runtime
-repair and log locations.
+`launcher/VibeLauncher.jar` is the easiest way to play: start it and press **Play**.
+It downloads Vibe from `SkidderClub/Vibe` (later updates fetch only changed files),
+installs private Java 8/21 runtimes, builds Vibe and starts the persistent Forge 1.8.9
+profile with OptiFine. It picks the account from Vibe's encrypted vault, opens the
+Alt Manager for new sign-ins, manages custom mods, shares the menu themes, can start
+straight into GTA7 or GTA8, and shows the build and game output in its console.
+Rebuild it with `launcher\buildLauncher.bat` (Windows) or `launcher/buildLauncher.sh`.
+See [launcher/README.md](launcher/README.md) for details, data locations and releases.
 
 `./gradlew verifyNeverLoseRendering` checks NeverLose controls and clipping in an
 offscreen OpenGL context, writing screenshots to `build/neverlose-render-check/`.
