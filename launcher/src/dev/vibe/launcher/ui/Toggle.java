@@ -31,6 +31,7 @@ public final class Toggle extends JComponent {
         });
         addKeyListener(new KeyAdapter() {
             @Override public void keyPressed(KeyEvent event) {
+                if (event.getModifiersEx() != 0) return;
                 if (event.getKeyCode() == KeyEvent.VK_SPACE || event.getKeyCode() == KeyEvent.VK_ENTER) flip();
             }
         });

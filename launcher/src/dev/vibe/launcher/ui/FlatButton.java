@@ -55,6 +55,8 @@ public class FlatButton extends JComponent {
         });
         addKeyListener(new KeyAdapter() {
             @Override public void keyPressed(KeyEvent event) {
+                // Ctrl+Enter and friends are window shortcuts, not a press of the focused button.
+                if (event.getModifiersEx() != 0 || event.isConsumed()) return;
                 if (event.getKeyCode() == KeyEvent.VK_SPACE || event.getKeyCode() == KeyEvent.VK_ENTER) click();
             }
         });

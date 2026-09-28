@@ -31,7 +31,7 @@ import javax.swing.Timer;
  */
 final class PlayBar extends Stack.Panel {
     private static final long serialVersionUID = 1L;
-    static final int HEIGHT = 92;
+    static final int BAR_HEIGHT = 92;
     private final LauncherController controller;
     private final Chip account, mode;
     private final Status status;
@@ -77,6 +77,9 @@ final class PlayBar extends Stack.Panel {
         revalidate();
         repaint();
     }
+
+    /** Keyboard users land on Play first, not on a sidebar link. */
+    void focusPlay() { play.requestFocusInWindow(); }
 
     private void refresh() {
         State state = controller.state();
@@ -161,7 +164,7 @@ final class PlayBar extends Stack.Panel {
         Menu.show(account, items, true, 290);
     }
 
-    @Override public Dimension getPreferredSize() { return new Dimension(600, HEIGHT); }
+    @Override public Dimension getPreferredSize() { return new Dimension(600, BAR_HEIGHT); }
 
     @Override protected void paintComponent(Graphics graphics) {
         Graphics2D g = Style.prepare(graphics);
@@ -327,6 +330,7 @@ final class PlayBar extends Stack.Panel {
             });
             addKeyListener(new java.awt.event.KeyAdapter() {
                 @Override public void keyPressed(java.awt.event.KeyEvent event) {
+                    if (event.getModifiersEx() != 0) return;
                     if (event.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER || event.getKeyCode() == java.awt.event.KeyEvent.VK_SPACE) activate();
                 }
             });

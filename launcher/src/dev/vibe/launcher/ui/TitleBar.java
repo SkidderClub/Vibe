@@ -13,7 +13,7 @@ import javax.swing.JComponent;
 /** Custom window title bar: drag to move, double-click to maximise, window controls on the right. */
 final class TitleBar extends Stack.Panel {
     private static final long serialVersionUID = 1L;
-    static final int HEIGHT = 46;
+    static final int BAR_HEIGHT = 46;
     private final LauncherFrame frame;
     private final WindowButton maximize;
     private Point dragOffset;
@@ -59,7 +59,7 @@ final class TitleBar extends Stack.Panel {
 
     void updateMaximized(boolean maximized) { maximize.icon = maximized ? Icons.RESTORE : Icons.MAXIMIZE; maximize.repaint(); }
 
-    @Override public Dimension getPreferredSize() { return new Dimension(400, HEIGHT); }
+    @Override public Dimension getPreferredSize() { return new Dimension(400, BAR_HEIGHT); }
 
     @Override protected void paintComponent(Graphics graphics) {
         Graphics2D g = Style.prepare(graphics);
@@ -76,7 +76,7 @@ final class TitleBar extends Stack.Panel {
     /** The Vibe mark and word mark. */
     private static final class Brand extends JComponent {
         private static final long serialVersionUID = 1L;
-        @Override public Dimension getPreferredSize() { return new Dimension(190, HEIGHT); }
+        @Override public Dimension getPreferredSize() { return new Dimension(190, BAR_HEIGHT); }
         @Override protected void paintComponent(Graphics graphics) {
             Graphics2D g = Style.prepare(graphics);
             try {
@@ -112,7 +112,7 @@ final class TitleBar extends Stack.Panel {
             setFocusable(false);
         }
 
-        @Override public Dimension getPreferredSize() { return new Dimension(48, HEIGHT); }
+        @Override public Dimension getPreferredSize() { return new Dimension(48, BAR_HEIGHT); }
 
         @Override protected void paintComponent(Graphics graphics) {
             Graphics2D g = Style.prepare(graphics);

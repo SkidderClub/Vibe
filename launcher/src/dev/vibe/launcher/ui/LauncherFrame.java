@@ -156,6 +156,13 @@ public final class LauncherFrame extends JFrame {
         restoreBounds();
         show(Page.HOME);
         SwingUtilities.invokeLater(this::responsive);
+        addWindowFocusListener(new java.awt.event.WindowAdapter() {
+            private boolean first = true;
+            @Override public void windowGainedFocus(WindowEvent event) {
+                if (first) playBar.focusPlay();
+                first = false;
+            }
+        });
     }
 
     // ---- navigation ------------------------------------------------------
@@ -254,7 +261,7 @@ public final class LauncherFrame extends JFrame {
         int content = width - (width < 1100 ? Sidebar.COMPACT : Sidebar.WIDE) - Pages.PADDING * 2;
         ((AppearancePage) pages.get(Page.APPEARANCE)).setColumns(content < 720 ? 2 : 3);
         ((SettingsPage) pages.get(Page.SETTINGS)).setColumns(content < 700 ? 2 : 3);
-        toasts.setBottomOffset(PlayBar.HEIGHT);
+        toasts.setBottomOffset(PlayBar.BAR_HEIGHT);
         dropOverlay.setBounds(0, 0, getLayeredPane().getWidth(), getLayeredPane().getHeight());
         getRootPane().revalidate();
     }

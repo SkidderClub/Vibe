@@ -490,6 +490,9 @@ public final class LauncherController {
     private void sessionEnded(Integer code, boolean reachedGame, String failure) {
         GameSession ended = session;
         boolean stopped = ended != null && ended.isStopping();
+        // Once runClient has started, a failure is Minecraft's, not the build's.
+        boolean gameStarted = reachedGame || (ended != null && ended.currentStage() != null
+                && ended.currentStage().ordinal() >= GameSession.Stage.STARTING.ordinal());
         session = null;
         runningMode = null;
         console.append("[Launcher] " + (stopped ? "Stopped." : "Game process ended" + (code == null ? "." : " with exit code " + code + ".")));
@@ -503,7 +506,7 @@ public final class LauncherController {
             fire(Event.THEME);
         }
         if (stopped || code == null || code == 0) return;
-        if (!reachedGame) {
+        if (!gameStarted) {
             // Gradle nests causes; the first line says what failed, the last one why.
             String[] lines = failure.isEmpty() ? new String[0] : failure.split("\n");
             String cause = lines.length == 0 ? "" : lines[lines.length - 1];
@@ -692,7 +695,8 @@ public final class LauncherController {
         String text = line.trim();
         if (text.isEmpty() || text.startsWith("Picked up ") || text.contains("Adding mappings") || text.startsWith("at ")) return null;
         if (text.startsWith("> Task :")) return text.substring(2);
-        if (text.startsWith("[") && text.indexOf("] ") > 0 && text.indexOf("] ") < 60) text = text.substring(text.indexOf("] ") + 2).trim();
+        // "[17:31:52] [Client thread/INFO]: Setting user" -> "Setting user"
+        text = text.replaceFirst("^(\\[[^\\]]{1,60}\\]:?\\s*)+", "").trim();
         if (text.length() < 4 || text.startsWith("{") || text.matches("[.\\d% ]+")) return null;
         return Text.shorten(text, 90);
     }

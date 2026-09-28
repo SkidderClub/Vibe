@@ -19,7 +19,7 @@ import javax.swing.Timer;
 
 /** Notifications stacked in the bottom-right corner, above the play bar. */
 final class Toasts {
-    private static final int WIDTH = 360, MARGIN = 18;
+    private static final int TOAST_WIDTH = 360, MARGIN = 18;
     private final JLayeredPane layer;
     private final List<View> views = new ArrayList<View>();
     private final Runnable showConsole;
@@ -56,7 +56,7 @@ final class Toasts {
         for (View view : views) {
             int height = view.preferredHeight();
             y -= height;
-            view.setBounds(layer.getWidth() - WIDTH - MARGIN, y, WIDTH, height);
+            view.setBounds(layer.getWidth() - TOAST_WIDTH - MARGIN, y, TOAST_WIDTH, height);
             y -= 10;
         }
         layer.repaint();
@@ -127,7 +127,7 @@ final class Toasts {
 
         int preferredHeight() {
             FontMetrics metrics = getFontMetrics(Style.small());
-            int lines = notice.message == null || notice.message.isEmpty() ? 0 : Style.wrap(metrics, notice.message, WIDTH - 86, 5).size();
+            int lines = notice.message == null || notice.message.isEmpty() ? 0 : Style.wrap(metrics, notice.message, TOAST_WIDTH - 86, 5).size();
             return 44 + lines * (metrics.getHeight() + 1) + (notice.actionLabel != null ? 28 : 0);
         }
 
