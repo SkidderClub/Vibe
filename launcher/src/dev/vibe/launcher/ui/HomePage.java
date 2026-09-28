@@ -95,7 +95,7 @@ final class HomePage extends JPanel {
             switch (event) {
                 case SKIN: case ACCOUNTS: refreshPlayer(); break;
                 case SOURCE: refreshChips(); rebuildNews(); break;
-                case STATE: case SETTINGS: refreshMotion(); refreshChips(); break;
+                case STATE: case SETTINGS: refreshMotion(); break;
                 default: break;
             }
         });

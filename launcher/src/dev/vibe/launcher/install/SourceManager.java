@@ -100,6 +100,10 @@ public final class SourceManager {
      */
     public void update(Remote remote, Progress progress) throws IOException {
         if (remote == null) {
+            if (settings.sourceIncomplete()) {
+                // A half-applied update would build a mix of two versions.
+                throw new IOException(I18n.t("The last Vibe update did not finish. Connect to the internet so it can be repaired."));
+            }
             if (isInstalled()) return;
             throw new IOException(I18n.t("Vibe could not be downloaded. Check your internet connection and try again."));
         }
@@ -229,26 +233,27 @@ public final class SourceManager {
         if (Files.exists(active)) {
             previous = paths.root().resolve("source-old-" + System.currentTimeMillis());
             try {
-                Files.move(active, previous);
+                move(active, previous);
             } catch (IOException error) {
                 throw new IOException(I18n.t("The Vibe folder is in use. Close programs that have files open in it and try again."), error);
             }
         }
         try {
-            Files.move(candidate, active);
+            move(candidate, active);
         } catch (IOException error) {
-            if (previous != null) Files.move(previous, active);
+            if (previous != null) move(previous, active);
             throw error;
         }
         if (previous == null) return;
         Path oldRun = previous.resolve("run");
         if (Files.exists(oldRun)) {
             try {
-                Files.move(oldRun, active.resolve("run"));
+                move(oldRun, active.resolve("run"));
             } catch (IOException error) {
                 // Never lose the profile: put the old checkout back as it was.
-                Files.move(active, candidate);
-                Files.move(previous, active);
+                // If even that fails, recoverProfile() finds it on the next start.
+                move(active, candidate);
+                move(previous, active);
                 throw new IOException("The game profile could not be carried over to the new Vibe version.", error);
             }
         }
@@ -264,8 +269,53 @@ public final class SourceManager {
         if (!FileUtil.deleteTreeQuietly(previous)) log.warn("Could not remove the previous Vibe source at " + previous + "; it will be cleaned up later.");
     }
 
+    /**
+     * Directory renames on Windows fail briefly while a virus scanner or the search
+     * indexer holds a file, so they are retried for a moment before giving up.
+     */
+    private static void move(Path source, Path target) throws IOException {
+        for (int attempt = 1; ; attempt++) {
+            try {
+                Files.move(source, target);
+                return;
+            } catch (java.nio.file.FileSystemException error) {
+                if (attempt >= 8 || error instanceof java.nio.file.FileAlreadyExistsException || error instanceof java.nio.file.NoSuchFileException) throw error;
+                try { Thread.sleep(250L * attempt); } catch (InterruptedException interrupted) {
+                    // Finish the move anyway: stopping halfway could strand the profile.
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+    }
+
+    /**
+     * Puts a game profile back if an interrupted update left it in a {@code source-old-*}
+     * folder (for example after a power cut in the middle of the swap).
+     */
+    public void recoverProfile() {
+        List<Path> leftovers = new ArrayList<Path>();
+        for (Path child : FileUtil.children(paths.root())) if (child.getFileName().toString().startsWith("source-old-")) leftovers.add(child);
+        Collections.sort(leftovers, Collections.reverseOrder());
+        Path active = paths.source();
+        for (Path leftover : leftovers) {
+            try {
+                if (!Files.exists(active)) {
+                    move(leftover, active);
+                    settings.setSourceIncomplete(true);
+                    log.warn("Restored the Vibe checkout from " + leftover.getFileName() + " after an interrupted update.");
+                } else if (Files.exists(leftover.resolve("run")) && !Files.exists(active.resolve("run"))) {
+                    move(leftover.resolve("run"), active.resolve("run"));
+                    log.warn("Restored the game profile from " + leftover.getFileName() + " after an interrupted update.");
+                }
+            } catch (IOException error) {
+                log.error("Could not restore the game profile from " + leftover, error);
+            }
+        }
+    }
+
     /** Removes leftovers of earlier updates, never touching a folder that still holds a profile. */
     public void cleanLeftovers() {
+        recoverProfile();
         FileUtil.deleteTreeQuietly(paths.staging());
         for (Path child : FileUtil.children(paths.root())) {
             String name = child.getFileName().toString();

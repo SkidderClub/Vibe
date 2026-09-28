@@ -121,8 +121,10 @@ public final class RuntimeManager {
         }
     }
 
+    /** Also requires the class library, so a half-deleted runtime is downloaded again. */
     private static boolean isHome(Path home, boolean requireJdk) {
-        return Files.isRegularFile(Platform.javaExecutable(home, false)) && (!requireJdk || Files.isRegularFile(Platform.javacExecutable(home)));
+        boolean library = Files.isRegularFile(home.resolve("lib").resolve("modules")) || Files.isRegularFile(home.resolve("lib").resolve("rt.jar"));
+        return library && Files.isRegularFile(Platform.javaExecutable(home, false)) && (!requireJdk || Files.isRegularFile(Platform.javacExecutable(home)));
     }
 
     /** Finds the Java home inside an extracted archive, including macOS's Contents/Home layout. */

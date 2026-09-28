@@ -93,7 +93,13 @@ public final class LauncherController {
     private volatile double progress = -1;
     private volatile String lastError = "";
     private volatile boolean launchQueued;
+    /** Guards the hand-off between a queued Play click and the preparing task. */
+    private final Object queueLock = new Object();
+    private boolean queueOpen;
     private volatile Future<?> task;
+    private volatile Runnable exit = () -> System.exit(0);
+    private volatile boolean installedCache;
+    private volatile String vibeVersionCache = "";
     private volatile GameSession session;
     private volatile LaunchMode runningMode;
     private volatile long lastActivity;
@@ -137,13 +143,18 @@ public final class LauncherController {
         changelog = source.changelog();
         console.append("[Launcher] " + VibeLauncher.PRODUCT + " " + VibeLauncher.VERSION + " · Java " + System.getProperty("java.version")
                 + " · " + System.getProperty("os.name"));
+        refreshSourceInfo();
         GameSession attached = GameSession.reattach(paths.sessionFile(), sessionListener());
         if (attached != null) {
             session = attached;
-            setState(State.RUNNING, I18n.t("Vibe is running"), "", 1);
+            if (attached.reachedGame()) setState(State.RUNNING, I18n.t("Vibe is running"), "", 1);
+            else setState(State.BUILDING, I18n.t("Building Vibe"), "", 0.05);
             console.append("[Launcher] Reconnected to the running game.");
         }
-        worker.execute(() -> source.cleanLeftovers());
+        worker.execute(() -> {
+            source.cleanLeftovers();
+            updater.cleanUp();
+        });
         boolean setupNeeded = !source.isInstalled() || !runtimes.isReady();
         // Never touch the checkout while a game started earlier is still using it.
         if (attached == null && (setupNeeded || settings.autoUpdate())) {
@@ -154,7 +165,18 @@ public final class LauncherController {
         worker.execute(this::checkLauncherUpdate);
     }
 
-    public void shutdown() { worker.shutdownNow(); }
+    /**
+     * Stops background work. Downloads are interrupted at once; a checkout swap that is
+     * already moving folders is allowed to finish so the game profile is never stranded.
+     */
+    public void shutdown() {
+        worker.shutdownNow();
+        try { worker.awaitTermination(20, java.util.concurrent.TimeUnit.SECONDS); }
+        catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+    }
+
+    /** How the launcher exits after a self-update; the window saves its bounds first. */
+    public void setExit(Runnable exit) { this.exit = exit; }
 
     // ---- listeners -------------------------------------------------------
 
@@ -184,6 +206,8 @@ public final class LauncherController {
     public double progress() { return progress; }
     public String lastError() { return lastError; }
     public boolean launchQueued() { return launchQueued; }
+    /** Whether Play would queue a launch behind the running installation or update. */
+    public boolean canQueueLaunch() { synchronized (queueLock) { return queueOpen && !launchQueued; } }
     public LaunchMode runningMode() { return runningMode; }
     public Theme theme() { return theme; }
     public LaunchMode mode() { return mode; }
@@ -195,10 +219,19 @@ public final class LauncherController {
     public List<ChangelogSection> changelog() { return changelog; }
     public LauncherUpdater.Release launcherUpdate() { return launcherUpdate; }
     public String launcherUpdateStatus() { return launcherUpdateStatus; }
-    public boolean sourceInstalled() { return source.isInstalled(); }
+    public boolean sourceInstalled() { return installedCache; }
     public String installedRevision() { return source.installedRevision(); }
-    public String vibeVersion() { return source.vibeVersion(); }
-    public boolean sourceUpdateAvailable() { SourceManager.Remote known = remote; return known != null && source.isInstalled() && source.needsUpdate(known); }
+    public String vibeVersion() { return vibeVersionCache; }
+
+    /** Cached so painting never reads build.gradle or stats the checkout. */
+    private void refreshSourceInfo() {
+        installedCache = source.isInstalled();
+        vibeVersionCache = source.vibeVersion();
+    }
+    public boolean sourceUpdateAvailable() {
+        SourceManager.Remote known = remote;
+        return known != null && installedCache && (settings.sourceIncomplete() || !known.head.equals(settings.sourceRevision()));
+    }
     public Path logFile() { return log.file(); }
 
     /** The account that will be used, or {@code null} for Vibe's own auto-login. */
@@ -346,11 +379,13 @@ public final class LauncherController {
     public void play() { launch(mode); }
 
     private void launch(LaunchMode requested) {
-        if (state == State.PREPARING && task != null && !task.isDone()) {
-            launchQueued = true;
-            runningMode = requested;
-            fire(Event.STATE);
-            return;
+        synchronized (queueLock) {
+            if (queueOpen) {
+                launchQueued = true;
+                runningMode = requested;
+                fire(Event.STATE);
+                return;
+            }
         }
         if (state != State.IDLE) return;
         runningMode = requested;
@@ -361,18 +396,25 @@ public final class LauncherController {
     /** Runs installation/update and, if a launch is queued, starts the game afterwards. */
     private void submit(final String title, final boolean forLaunch, final boolean forceUpdate) {
         lastError = "";
+        synchronized (queueLock) { queueOpen = true; }
         setState(State.PREPARING, title, "", -1);
         task = worker.submit(() -> {
             try {
                 prepare(forLaunch, forceUpdate);
-                if (launchQueued) startGame();
+                boolean start;
+                synchronized (queueLock) {
+                    start = launchQueued;
+                    launchQueued = false;
+                    queueOpen = false;
+                }
+                if (start) startGame();
                 else setState(State.IDLE, "", "", -1);
             } catch (InterruptedIOException | InterruptedException cancelled) {
-                launchQueued = false;
+                closeQueue();
                 setState(State.IDLE, "", "", -1);
                 console.append("[Launcher] Cancelled.");
             } catch (Exception error) {
-                launchQueued = false;
+                closeQueue();
                 if (Thread.currentThread().isInterrupted()) {
                     setState(State.IDLE, "", "", -1);
                     return;
@@ -383,6 +425,13 @@ public final class LauncherController {
                 notice(Notice.Level.ERROR, I18n.t("{0} failed", title), lastError, I18n.t("Show console"), Notice.SHOW_CONSOLE);
             }
         });
+    }
+
+    private void closeQueue() {
+        synchronized (queueLock) {
+            launchQueued = false;
+            queueOpen = false;
+        }
     }
 
     private void prepare(boolean forLaunch, boolean forceUpdate) throws Exception {
@@ -398,6 +447,7 @@ public final class LauncherController {
             boolean wasInstalled = installed;
             String before = source.installedRevision();
             source.update(known, progress.range(0, 1));
+            refreshSourceInfo();
             changelog = source.changelog();
             fire(Event.SOURCE);
             if (wasInstalled && !before.equals(source.installedRevision())) {
@@ -421,7 +471,6 @@ public final class LauncherController {
 
     private void startGame() throws Exception {
         final LaunchMode launchMode = runningMode == null ? LaunchMode.VIBE : runningMode;
-        launchQueued = false;
         RuntimeManager.Runtimes installedRuntimes = runtimes.ensure(Progress.NONE);
         writeBridge(launchMode);
         try { profile.writeTheme(theme); } catch (IOException error) { log.warn("Could not share the theme with Vibe", error); }
@@ -538,7 +587,7 @@ public final class LauncherController {
 
     /** Cancels installation or a queued launch. A running build is stopped like the game. */
     public void cancel() {
-        launchQueued = false;
+        closeQueue();
         Future<?> current = task;
         if (state == State.PREPARING && current != null) current.cancel(true);
         else if (state == State.BUILDING) stop();
@@ -649,7 +698,7 @@ public final class LauncherController {
             try {
                 Path staged = updater.download(release, (message, detail, fraction) -> setProgress(message, detail, fraction));
                 updater.installOnExit(staged);
-                SwingUtilities.invokeLater(() -> System.exit(0));
+                SwingUtilities.invokeLater(exit);
             } catch (Exception error) {
                 log.error("Launcher update failed", error);
                 lastError = Text.describe(error);

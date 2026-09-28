@@ -61,12 +61,14 @@ changed files; large or rewritten histories download the full source archive,
 which replaces the checkout in one move. `run/` and the cached OptiFine JAR are
 carried over, so the profile is never touched.
 
-**Launch.** The launcher runs `gradlew runClient -PvibeOptifine -PvibePersistentRun
--PvibeMaxMemory=<MB>` with JDK 21 for Gradle and Java 8 for Minecraft, passed as
-toolchains through environment variables. Output goes to a log file that the
-console follows, so Minecraft keeps running if the launcher is closed. Vibe writes
+**Launch.** The launcher starts the Gradle wrapper itself, like `gradlew runClient
+-PvibeOptifine -PvibePersistentRun -PvibeMaxMemory=<MB>` but without a shell in
+between, with JDK 21 for Gradle and Java 8 for Minecraft passed as toolchains through
+environment variables. Output goes to a log file that the console follows, so
+Minecraft keeps running if the launcher is closed. Vibe writes
 `VIBE_LAUNCH_READY_FILE` when its first screen is drawn, which marks the game as
-running. On Java 9+ a restarted launcher reconnects to a running game.
+running. On Java 9+ a restarted launcher reconnects to a running game; Stop ends
+Gradle and Minecraft on every Java version.
 
 **Bridge.** Before each launch the launcher writes
 `run/client/vibe/launcher.properties` (`mode` = `vibe`, `gta7`, `gta8` or
@@ -80,7 +82,8 @@ A release counts when it has an asset named `VibeLauncher.jar` (or
 `VibeLauncher-<version>.jar`) and the matching `.sha256` file from
 `launcher/build/`; the version comes from the asset name or a tag such as
 `launcher-v2.1.0`. Mod releases without these assets are ignored. The update is
-downloaded, checked against the checksum and installed after the launcher exits.
+downloaded, checked against the checksum and installed by a small helper once the
+launcher has exited; the launcher then starts again, even if the replacement failed.
 
 ## Troubleshooting
 

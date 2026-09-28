@@ -126,6 +126,7 @@ public final class LauncherFrame extends JFrame {
 
         toasts = new Toasts(getLayeredPane(), () -> show(Page.CONSOLE));
         controller.setNotifier(toasts::show);
+        controller.setExit(this::exit);
         getLayeredPane().add(dropOverlay, JLayeredPane.DRAG_LAYER);
         dropOverlay.setVisible(false);
         installDrop(root);
@@ -193,7 +194,7 @@ public final class LauncherFrame extends JFrame {
             private static final long serialVersionUID = 1L;
             @Override public void actionPerformed(ActionEvent event) {
                 // Same as the play button: during installation this queues the launch.
-                if (controller.state() == State.IDLE || (controller.state() == State.PREPARING && !controller.launchQueued())) controller.play();
+                if (controller.state() == State.IDLE || controller.canQueueLaunch()) controller.play();
             }
         });
         // Focus rings appear after keyboard navigation and disappear on the next click.
@@ -246,7 +247,27 @@ public final class LauncherFrame extends JFrame {
 
     private void exit() {
         saveBounds();
+        setVisible(false);
         controller.shutdown();
+        dispose();
+        System.exit(0);
+    }
+
+    /** Restarts the launcher, e.g. to apply another language. */
+    void restart() {
+        if (controller.state() == State.PREPARING) {
+            toasts.show(new LauncherController.Notice(LauncherController.Notice.Level.WARNING, I18n.t("Please wait"),
+                    I18n.t("Restart once the current download has finished."), null, null));
+            return;
+        }
+        saveBounds();
+        setVisible(false);
+        controller.shutdown();
+        try {
+            dev.vibe.launcher.install.LauncherUpdater.restart();
+        } catch (java.io.IOException error) {
+            controller.log().warn("Restart failed", error);
+        }
         dispose();
         System.exit(0);
     }
@@ -256,7 +277,9 @@ public final class LauncherFrame extends JFrame {
     private void responsive() {
         int width = getWidth();
         sidebar.setCompact(width < 1100);
-        playBar.setCompact(width < 1020);
+        // Account 250 + mode 236 + stop ~145 + play 212 + gaps and padding leave the status too little below this.
+        int main = width - (width < 1100 ? Sidebar.COMPACT : Sidebar.WIDE);
+        playBar.setCompact(main < 1100);
         ((HomePage) pages.get(Page.HOME)).setCompact(width < 1180);
         int content = width - (width < 1100 ? Sidebar.COMPACT : Sidebar.WIDE) - Pages.PADDING * 2;
         ((AppearancePage) pages.get(Page.APPEARANCE)).setColumns(content < 720 ? 2 : 3);

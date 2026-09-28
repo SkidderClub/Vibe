@@ -324,6 +324,10 @@ public final class I18n {
         de("Up to date.", "Aktuell.");
         de("installed on first launch", "wird beim ersten Start installiert");
         de("Home", "Start");
+        de("The last Vibe update did not finish. Connect to the internet so it can be repaired.",
+                "Das letzte Vibe-Update wurde nicht abgeschlossen. Verbinde dich mit dem Internet, damit es repariert werden kann.");
+        de("Please wait", "Bitte warten");
+        de("Restart once the current download has finished.", "Starte neu, sobald der aktuelle Download fertig ist.");
         de("Downloading Minecraft assets", "Lade Minecraft-Assets herunter");
         de("Only needed once", "Nur beim ersten Mal nötig");
         de("Game mode", "Spielmodus");

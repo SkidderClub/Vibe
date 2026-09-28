@@ -3,7 +3,6 @@ package dev.vibe.launcher.ui;
 import dev.vibe.launcher.app.LauncherController;
 import dev.vibe.launcher.core.I18n;
 import dev.vibe.launcher.game.Theme;
-import dev.vibe.launcher.install.LauncherUpdater;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Container;
@@ -61,12 +60,8 @@ final class AppearancePage extends JPanel {
         Segmented language = new Segmented(languages, "en".equals(current) ? 1 : "de".equals(current) ? 2 : 0, index -> {
             controller.settings().setLanguage(index == 1 ? "en" : index == 2 ? "de" : "auto");
             if (Dialogs.confirm(this, I18n.t("Restart the launcher?"), I18n.t("The new language is used after a restart."), I18n.t("Restart now"), false)) {
-                try {
-                    LauncherUpdater.restart();
-                    System.exit(0);
-                } catch (Exception error) {
-                    controller.log().warn("Restart failed", error);
-                }
+                java.awt.Window window = javax.swing.SwingUtilities.getWindowAncestor(this);
+                if (window instanceof LauncherFrame) ((LauncherFrame) window).restart();
             }
         });
         preferences.add(Pages.setting(I18n.t("Language"), I18n.t("Automatic follows the language chosen in Vibe, then your system."), language));

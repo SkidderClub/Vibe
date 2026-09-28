@@ -337,8 +337,7 @@ final class PlayBar extends Stack.Panel {
         }
 
         private void activate() {
-            State state = controller.state();
-            if (state == State.IDLE || (state == State.PREPARING && !controller.launchQueued())) controller.play();
+            if (controller.state() == State.IDLE || controller.canQueueLaunch()) controller.play();
         }
 
         @Override public Dimension getPreferredSize() { return new Dimension(212, 58); }
@@ -350,7 +349,7 @@ final class PlayBar extends Stack.Panel {
                 State state = controller.state();
                 double inset = pressed ? 1.5 : 0;
                 String label, sub;
-                boolean active = state == State.IDLE || (state == State.PREPARING && !controller.launchQueued());
+                boolean active = state == State.IDLE || controller.canQueueLaunch();
                 if (state == State.RUNNING) { label = I18n.t("RUNNING"); sub = controller.displayName(); }
                 else if (state == State.STOPPING) { label = I18n.t("STOPPING"); sub = ""; }
                 else if (state == State.BUILDING || (state == State.PREPARING && controller.launchQueued())) {
@@ -394,9 +393,14 @@ final class PlayBar extends Stack.Panel {
                 if (isFocusOwner() && FlatButton.FocusStyle.keyboard) Style.stroke(g, 0, 0, w, h, 15, Style.text(), 2f);
 
                 Color text = active ? Style.onAccent() : state == State.RUNNING ? Style.success() : Style.text();
-                Font big = Style.font(Font.BOLD, 17f);
-                FontMetrics metrics = g.getFontMetrics(big);
                 int iconSize = active ? 18 : 0;
+                // Long labels ("INSTALLIEREN & SPIELEN") step down in size instead of overflowing.
+                Font big = Style.font(Font.BOLD, 17f);
+                for (float size = 17f; size >= 12f; size -= 1f) {
+                    big = Style.font(Font.BOLD, size);
+                    if (g.getFontMetrics(big).stringWidth(label) + (iconSize > 0 ? iconSize + 10 : 0) <= w - 28) break;
+                }
+                FontMetrics metrics = g.getFontMetrics(big);
                 int content = metrics.stringWidth(label) + (iconSize > 0 ? iconSize + 10 : 0);
                 double x = (w - content) / 2.0;
                 double labelTop = sub.isEmpty() ? (h - metrics.getHeight()) / 2.0 : h / 2.0 - metrics.getHeight() + 3;

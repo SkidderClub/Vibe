@@ -3,10 +3,12 @@ package dev.vibe.launcher.game;
 import dev.vibe.launcher.Check;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,6 +17,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.crypto.Cipher;
@@ -43,6 +47,16 @@ public final class GameTests {
             Files.write(directory.resolve("accounts.key"), key);
             IOException error = Check.fails(IOException.class, () -> AccountVault.read(directory));
             Check.isTrue(!String.valueOf(error.getMessage()).contains("SECRET"), "no content in error");
+        });
+
+        check.test("environment keys are replaced regardless of case", () -> {
+            java.util.Map<String, String> environment = new java.util.HashMap<String, String>();
+            environment.put("Path", "C:\\Windows");
+            environment.put("OTHER", "x");
+            Check.equal("C:\\Windows", GameSession.get(environment, "PATH"));
+            GameSession.put(environment, "PATH", "C:\\jdk\\bin;C:\\Windows");
+            Check.equal(2, environment.size());
+            Check.equal("C:\\jdk\\bin;C:\\Windows", environment.get("Path"));
         });
 
         check.test("missing vault means no accounts", () -> Check.equal(0, AccountVault.read(temp.resolve("nowhere")).size()));
@@ -93,25 +107,28 @@ public final class GameTests {
 
         check.test("session follows stages, readiness and exit code", () -> {
             Path project = Files.createDirectories(temp.resolve("project-ok"));
-            fakeGradle(project, false);
+            fakeWrapper(project);
             Recorder recorder = runSession(project, temp.resolve("ok"));
             Check.equal(Integer.valueOf(0), recorder.code);
             Check.isTrue(recorder.reachedGame, "ready file seen");
             Check.isTrue(recorder.stages.contains(GameSession.Stage.COMPILING), "compile stage: " + recorder.stages);
+            Check.isTrue(recorder.stages.contains(GameSession.Stage.ASSETS), "asset stage: " + recorder.stages);
             Check.isTrue(recorder.stages.contains(GameSession.Stage.STARTING), "start stage: " + recorder.stages);
             Check.equal(GameSession.Stage.RUNNING, recorder.stages.get(recorder.stages.size() - 1));
-            // cmd.exe's code pages make the UTF-8 check meaningful only for the POSIX script.
-            if (!System.getProperty("os.name", "").toLowerCase().contains("win")) {
-                Check.isTrue(recorder.lines.contains("[Client thread/INFO]: M\u00fcnchen \u2713"), "UTF-8 output: " + recorder.lines);
-                Check.isTrue(recorder.lines.contains("2% (2/3)") && recorder.lines.contains("100% (3/3)"), "carriage returns split lines: " + recorder.lines);
-                Check.isTrue(recorder.stages.contains(GameSession.Stage.ASSETS), "asset stage: " + recorder.stages);
-            }
-            Check.isTrue(recorder.lines.contains("-PvibeMaxMemory=2048"), "memory argument passed: " + recorder.lines);
+            Check.isTrue(recorder.lines.contains("runClient") && recorder.lines.contains("-PvibeMaxMemory=2048"), "Gradle arguments: " + recorder.lines);
+            Check.isTrue(recorder.lines.contains("[Client thread/INFO]: M\u00fcnchen \u2713"), "UTF-8 output: " + recorder.lines);
+            Check.isTrue(recorder.lines.contains("2% (2/3)") && recorder.lines.contains("100% (3/3)"), "carriage returns split lines: " + recorder.lines);
+            Path jdk = Paths.get(System.getProperty("java.home"));
+            Check.isTrue(recorder.lines.contains("JAVA_HOME=" + jdk), "JAVA_HOME: " + recorder.lines);
+            String inherited = System.getenv("PATH");
+            String expectedPath = "PATH=" + jdk.resolve("bin") + File.pathSeparator + (inherited == null ? "" : inherited);
+            Check.isTrue(recorder.lines.contains(expectedPath), "PATH keeps the system entries: " + recorder.lines);
         });
 
         check.test("failed build reports what went wrong", () -> {
             Path project = Files.createDirectories(temp.resolve("project-fail"));
-            fakeGradle(project, true);
+            fakeWrapper(project);
+            Files.write(project.resolve("fail.marker"), new byte[0]);
             Recorder recorder = runSession(project, temp.resolve("fail"));
             Check.equal(Integer.valueOf(1), recorder.code);
             Check.isTrue(!recorder.reachedGame, "never reached the game");
@@ -141,7 +158,7 @@ public final class GameTests {
         GameSession.Request request = new GameSession.Request();
         request.projectRoot = project;
         request.java8 = work.resolve("java8");
-        request.jdk21 = work.resolve("jdk21");
+        request.jdk21 = Paths.get(System.getProperty("java.home"));
         request.memoryMb = 2048;
         request.logFile = work.resolve("game.log");
         request.readyFile = work.resolve("ready");
@@ -153,39 +170,24 @@ public final class GameTests {
         return recorder;
     }
 
-    /** A gradlew that behaves like Vibe's runClient: tasks, then the ready file, then game output. */
-    private static void fakeGradle(Path project, boolean fail) throws IOException {
-        String shell = "#!/bin/sh\n"
-                + "echo '> Configure project :'\n"
-                + "echo '> Task :compileJava'\n"
-                + (fail
-                    ? "echo 'FAILURE: Build failed with an exception.'\necho '* What went wrong:'\n"
-                        + "echo \"Execution failed for task ':compileJava'.\"\n"
-                        + "echo '> Compilation failed; see the compiler error output for details.'\necho ''\necho '* Try:'\nexit 1\n"
-                    : "echo '> Task :preRunClient'\n"
-                        + "printf '1%% (1/3)\\r2%% (2/3)\\r100%% (3/3)\\r\\n'\n"
-                        + "echo '> Task :runClient'\n"
-                        + "for arg in \"$@\"; do echo \"$arg\"; done\n"
-                        + "printf 'ok' > \"$VIBE_LAUNCH_READY_FILE\"\n"
-                        + "sleep 1\n"
-                        + "printf '[Client thread/INFO]: M\\303\\274nchen \\342\\234\\223\\n'\n"
-                        + "exit 0\n");
-        Files.write(project.resolve("gradlew"), shell.getBytes(StandardCharsets.UTF_8));
-        String batch = "@echo off\r\n"
-                + "echo ^> Configure project :\r\n"
-                + "echo ^> Task :compileJava\r\n"
-                + (fail
-                    ? "echo FAILURE: Build failed with an exception.\r\necho * What went wrong:\r\n"
-                        + "echo Execution failed for task ':compileJava'.\r\n"
-                        + "echo ^> Compilation failed; see the compiler error output for details.\r\necho.\r\necho * Try:\r\nexit /b 1\r\n"
-                    : "echo ^> Task :runClient\r\n"
-                        + ":args\r\nif \"%~1\"==\"\" goto done\r\necho %~1\r\nshift\r\ngoto args\r\n:done\r\n"
-                        + "echo ok> \"%VIBE_LAUNCH_READY_FILE%\"\r\n"
-                        + "ping -n 2 127.0.0.1 >nul\r\n"
-                        + "chcp 65001 >nul\r\n"
-                        + "echo [Client thread/INFO]: M\u00fcnchen \u2713\r\n"
-                        + "exit /b 0\r\n");
-        Files.write(project.resolve("gradlew.bat"), batch.getBytes(StandardCharsets.UTF_8));
+    /** Installs the test's GradleWrapperMain as the project's gradle/wrapper/gradle-wrapper.jar. */
+    private static void fakeWrapper(Path project) throws IOException {
+        String entry = org.gradle.wrapper.GradleWrapperMain.class.getName().replace('.', '/') + ".class";
+        Path wrapper = Files.createDirectories(project.resolve("gradle").resolve("wrapper")).resolve("gradle-wrapper.jar");
+        JarOutputStream jar = new JarOutputStream(Files.newOutputStream(wrapper));
+        try {
+            jar.putNextEntry(new JarEntry(entry));
+            InputStream input = GameTests.class.getResourceAsStream("/" + entry);
+            try {
+                byte[] buffer = new byte[8192];
+                int count;
+                while ((count = input.read(buffer)) != -1) jar.write(buffer, 0, count);
+            } finally {
+                input.close();
+            }
+        } finally {
+            jar.close();
+        }
     }
 
     private static File jar(Path file, String entry, String content) throws IOException {

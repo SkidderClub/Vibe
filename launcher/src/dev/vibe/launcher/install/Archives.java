@@ -119,14 +119,9 @@ final class Archives {
                 if (type == '5') {
                     Files.createDirectories(output);
                 } else if (type == '2') {
-                    // Symbolic links may only point inside the extracted runtime.
-                    Path resolved = output.getParent().resolve(link).normalize();
-                    if (resolved.startsWith(root) && !link.startsWith("/")) {
-                        Files.createDirectories(output.getParent());
-                        Files.deleteIfExists(output);
-                        try { Files.createSymbolicLink(output, output.getParent().relativize(resolved)); }
-                        catch (UnsupportedOperationException | IOException ignored) { /* not needed for Java to start */ }
-                    }
+                    // Symbolic links are skipped: a runtime starts without them, and chained
+                    // links could otherwise let later entries write outside the target.
+                    skip(input, size);
                 } else if (type == '1') {
                     Path source = safe(root, link);
                     if (Files.isRegularFile(source)) {

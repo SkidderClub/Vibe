@@ -55,6 +55,8 @@ public final class InstallTests {
             entry(tar, "short-name-ignored", '0', "pax".getBytes(StandardCharsets.UTF_8), 0644);
             entry(tar, "jdk-21/bin/", '5', new byte[0], 0755);
             entry(tar, "jdk-21/bin/java", '0', "#!/bin/sh".getBytes(StandardCharsets.UTF_8), 0755);
+            entry(tar, "jdk-21/lib/modules", '0', new byte[] { 1 }, 0644);
+            entry(tar, "jdk-21/legal/link", '2', new byte[0], 0777);
             tar.write(new byte[1024]);
             Path archive = temp.resolve("runtime.tar.gz");
             OutputStream gzip = new GZIPOutputStream(Files.newOutputStream(archive));
@@ -66,6 +68,32 @@ public final class InstallTests {
             Check.equal("pax", new String(Files.readAllBytes(out.resolve(paxPath)), StandardCharsets.UTF_8));
             Check.isTrue(Files.isExecutable(out.resolve("jdk-21/bin/java")) || isWindows(), "mode applied");
             if (!isWindows()) Check.equal(out.resolve("jdk-21"), RuntimeManager.findHome(out, false));
+            Check.isTrue(!Files.exists(out.resolve("jdk-21/legal/link"), java.nio.file.LinkOption.NOFOLLOW_LINKS), "symbolic links are skipped");
+        });
+
+        check.test("self-update helper replaces the launcher JAR", () -> {
+            Path staged = Files.write(temp.resolve("VibeLauncher-9.9.9.jar"), "new".getBytes(StandardCharsets.UTF_8));
+            Path current = Files.write(Files.createDirectories(temp.resolve("Vibe Spiele")).resolve("VibeLauncher.jar"), "old".getBytes(StandardCharsets.UTF_8));
+            Path lock = temp.resolve("launcher.lock");
+            // "java -version" stands in for starting the launcher again.
+            String executable = java.nio.file.Paths.get(System.getProperty("java.home"), "bin", isWindows() ? "java.exe" : "java").toString();
+            SelfUpdate.main(new String[] { staged.toString(), current.toString(), executable, lock.toString() });
+            Check.equal("new", new String(Files.readAllBytes(current), StandardCharsets.UTF_8));
+        });
+
+        check.test("an interrupted update's profile is put back", () -> {
+            Path root = Files.createDirectories(temp.resolve("launcher-home"));
+            System.setProperty("vibe.launcher.home", root.toString());
+            dev.vibe.launcher.core.AppPaths paths = dev.vibe.launcher.core.AppPaths.detect();
+            System.clearProperty("vibe.launcher.home");
+            Files.createDirectories(root.resolve("source").resolve("src"));
+            Path world = Files.createDirectories(root.resolve("source-old-123").resolve("run").resolve("client").resolve("saves"));
+            Files.write(world.resolve("level.dat"), new byte[] { 7 });
+            dev.vibe.launcher.core.AppLog log = new dev.vibe.launcher.core.AppLog(root.resolve("logs"));
+            SourceManager manager = new SourceManager(paths, new dev.vibe.launcher.core.Settings(root.resolve("s.properties"), log), log);
+            manager.cleanLeftovers();
+            Check.isTrue(Files.isRegularFile(root.resolve("source/run/client/saves/level.dat")), "profile restored");
+            Check.isTrue(!Files.exists(root.resolve("source-old-123")), "empty leftover removed");
         });
 
         check.test("changelog sections become plain text", () -> {

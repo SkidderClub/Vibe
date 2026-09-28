@@ -36,6 +36,12 @@ public final class AccountVault {
 
     private static final byte[] MAGIC = "VIBEAC01".getBytes(StandardCharsets.US_ASCII);
 
+    /** An error whose message is known to contain no vault content. */
+    private static final class SafeException extends IOException {
+        private static final long serialVersionUID = 1L;
+        SafeException(String message) { super(message); }
+    }
+
     private AccountVault() { }
 
     public static List<Account> read(Path directory) throws IOException {
@@ -50,7 +56,7 @@ public final class AccountVault {
         char[] text = null;
         try {
             if (data.length < MAGIC.length + 12 + 16 || !Arrays.equals(MAGIC, Arrays.copyOf(data, MAGIC.length)) || key.length != 16) {
-                throw new IOException("The account vault is not a Vibe vault.");
+                throw new SafeException("The account vault is not a Vibe vault.");
             }
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"),
@@ -74,7 +80,7 @@ public final class AccountVault {
                 if (result.size() >= 1000) break;
             }
             return result;
-        } catch (IOException error) {
+        } catch (SafeException error) {
             throw error;
         } catch (Exception error) {
             // Never attach the cause: cipher and parser messages could echo vault content.

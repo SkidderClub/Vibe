@@ -11,10 +11,8 @@ import dev.vibe.launcher.core.Progress;
 import dev.vibe.launcher.core.Version;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -95,43 +93,30 @@ public final class LauncherUpdater {
 
     /**
      * Replaces the running JAR once this process has exited, then starts it again.
+     * The work is done by {@link SelfUpdate} in a new JVM that runs from a copy of
+     * this JAR, so it neither depends on the downloaded version nor locks either file.
      * The caller must exit the JVM right after this returns.
      */
     public void installOnExit(Path staged) throws IOException {
         Path current = Platform.currentJar();
         if (current == null) throw new IOException(I18n.t("Automatic updates only work when the launcher runs from VibeLauncher.jar."));
+        Path helper = paths.root().resolve("launcher-updater.jar");
+        Files.copy(current, helper, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         String java = Platform.currentJava(true).toString();
-        if (Platform.windows()) {
-            Path script = paths.root().resolve("update-launcher.cmd");
-            String text = "@echo off\r\n"
-                    + "set tries=0\r\n"
-                    + ":retry\r\n"
-                    // ping instead of timeout: timeout refuses to run without a console.
-                    + "ping -n 2 127.0.0.1 >nul\r\n"
-                    + "copy /y \"" + staged + "\" \"" + current + "\" >nul 2>&1\r\n"
-                    + "if not errorlevel 1 goto started\r\n"
-                    + "set /a tries+=1\r\n"
-                    + "if %tries% lss 30 goto retry\r\n"
-                    + "exit /b 1\r\n"
-                    + ":started\r\n"
-                    + "del /q \"" + staged + "\" >nul 2>&1\r\n"
-                    + "start \"\" \"" + java + "\" -jar \"" + current + "\" --wait-for-lock\r\n";
-            Files.write(script, text.getBytes(StandardCharsets.UTF_8));
-            start(new ProcessBuilder("cmd.exe", "/c", script.toString()));
-        } else {
-            Path script = paths.root().resolve("update-launcher.sh");
-            String text = "#!/bin/sh\n"
-                    + "for i in $(seq 1 30); do\n"
-                    + "  sleep 1\n"
-                    + "  if cp -f " + quote(staged) + " " + quote(current) + "; then\n"
-                    + "    rm -f " + quote(staged) + "\n"
-                    + "    exec " + quote(Paths.get(java)) + " -jar " + quote(current) + " --wait-for-lock\n"
-                    + "  fi\n"
-                    + "done\n";
-            Files.write(script, text.getBytes(StandardCharsets.UTF_8));
-            start(new ProcessBuilder("/bin/sh", script.toString()));
+        start(new ProcessBuilder(java, "-cp", helper.toString(), SelfUpdate.class.getName(),
+                staged.toString(), current.toString(), java, paths.lockFile().toString()));
+        log.info("Launcher update " + staged.getFileName() + " staged; restarting.");
+    }
+
+    /** Deletes files a finished self-update leaves in the data folder. */
+    public void cleanUp() {
+        for (Path file : dev.vibe.launcher.core.FileUtil.children(paths.root())) {
+            String name = file.getFileName().toString();
+            boolean leftover = name.equals("launcher-updater.jar") || name.equals("update-launcher.cmd") || name.equals("update-launcher.sh")
+                    || name.equals("replace-launcher.cmd") || (name.startsWith("VibeLauncher-") && name.endsWith(".jar"));
+            if (!leftover || file.equals(Platform.currentJar())) continue;
+            try { Files.deleteIfExists(file); } catch (IOException ignored) { /* still in use; next time */ }
         }
-        log.info("Launcher update staged; restarting.");
     }
 
     /** Starts this launcher again after the current process has exited. */
@@ -147,8 +132,6 @@ public final class LauncherUpdater {
         builder.redirectInput(ProcessBuilder.Redirect.from(Platform.nullDevice()));
         builder.start();
     }
-
-    private static String quote(Path path) { return "'" + path.toString().replace("'", "'\\''") + "'"; }
 
     private static String trusted(String url) {
         try {

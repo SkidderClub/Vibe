@@ -207,33 +207,60 @@ public final class Platform {
 
     /** pid, executable name and full command line of every process; empty if unavailable. */
     private static List<String[]> listProcesses() {
-        List<String[]> result = new ArrayList<String[]>();
         try {
-            ProcessBuilder builder;
-            if (windows()) {
-                String script = "[Console]::OutputEncoding = [Text.Encoding]::UTF8; Get-CimInstance Win32_Process | "
-                        + "ForEach-Object { '{0}`t{1}`t{2}' -f $_.ProcessId, $_.Name, $_.CommandLine }";
-                String encoded = java.util.Base64.getEncoder().encodeToString(script.getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
-                builder = new ProcessBuilder("powershell.exe", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded);
-            } else {
-                builder = new ProcessBuilder("ps", "-eo", "pid=,comm=,args=");
+            if (!windows()) return unixProcesses();
+            String script = "[Console]::OutputEncoding = [Text.Encoding]::UTF8; Get-CimInstance Win32_Process | "
+                    + "ForEach-Object { '{0}`t{1}`t{2}' -f $_.ProcessId, $_.Name, $_.CommandLine }";
+            String encoded = java.util.Base64.getEncoder().encodeToString(script.getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
+            List<String[]> result = new ArrayList<String[]>();
+            for (String line : capture("powershell.exe", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded)) {
+                String[] parts = line.split("\t", 3);
+                if (parts.length == 3 && parts[0].trim().matches("\\d+")) result.add(new String[] { parts[0].trim(), parts[1].trim(), parts[2] });
             }
-            Process list = builder.redirectErrorStream(true).redirectInput(ProcessBuilder.Redirect.from(nullDevice())).start();
-            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(list.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));
-            try {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = windows() ? line.split("\t", 3) : line.trim().split("\\s+", 3);
-                    if (parts.length == 3 && parts[0].trim().matches("\\d+")) result.add(new String[] { parts[0].trim(), parts[1].trim(), parts[2] });
-                }
-            } finally {
-                reader.close();
-            }
-            list.waitFor();
+            return result;
         } catch (Exception ignored) {
             // No process listing: nothing is stopped.
+            return new ArrayList<String[]>();
+        }
+    }
+
+    /**
+     * macOS prints the full executable path as {@code comm}, and runtimes live under
+     * "Application Support", so names and arguments are read separately, keyed by pid.
+     */
+    private static List<String[]> unixProcesses() throws IOException, InterruptedException {
+        java.util.Map<String, String> names = new java.util.HashMap<String, String>();
+        for (String line : capture("ps", "-eo", "pid=,comm=")) {
+            String trimmed = line.trim();
+            int space = trimmed.indexOf(' ');
+            if (space <= 0) continue;
+            String executable = trimmed.substring(space + 1).trim();
+            names.put(trimmed.substring(0, space), executable.substring(executable.lastIndexOf('/') + 1));
+        }
+        List<String[]> result = new ArrayList<String[]>();
+        for (String line : capture("ps", "-eo", "pid=,args=")) {
+            String trimmed = line.trim();
+            int space = trimmed.indexOf(' ');
+            if (space <= 0) continue;
+            String pid = trimmed.substring(0, space);
+            String name = names.get(pid);
+            if (name != null) result.add(new String[] { pid, name, trimmed.substring(space + 1) });
         }
         return result;
+    }
+
+    private static List<String> capture(String... command) throws IOException, InterruptedException {
+        Process process = new ProcessBuilder(command).redirectErrorStream(true).redirectInput(ProcessBuilder.Redirect.from(nullDevice())).start();
+        List<String> lines = new ArrayList<String>();
+        java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));
+        try {
+            String line;
+            while ((line = reader.readLine()) != null) lines.add(line);
+        } finally {
+            reader.close();
+        }
+        process.waitFor();
+        return lines;
     }
 
     /** Collapses repeated path separators (gradlew.bat produces "source\\gradle") and case on Windows. */
@@ -245,6 +272,21 @@ public final class Platform {
     public static long currentPid() {
         String name = ManagementFactory.getRuntimeMXBean().getName();
         try { return Long.parseLong(name.substring(0, name.indexOf('@'))); } catch (Exception ignored) { return -1; }
+    }
+
+    /** When the process started, in epoch milliseconds; -1 on Java 8 or if unknown. */
+    public static long startTime(long pid) {
+        Object handle = handle(pid);
+        if (handle == null) return -1;
+        try {
+            Class<?> type = Class.forName("java.lang.ProcessHandle");
+            Object info = type.getMethod("info").invoke(handle);
+            java.util.Optional<?> start = (java.util.Optional<?>) Class.forName("java.lang.ProcessHandle$Info").getMethod("startInstant").invoke(info);
+            if (!start.isPresent()) return -1;
+            return (Long) Class.forName("java.time.Instant").getMethod("toEpochMilli").invoke(start.get());
+        } catch (Exception ignored) {
+            return -1;
+        }
     }
 
     private static Object handle(long pid) {

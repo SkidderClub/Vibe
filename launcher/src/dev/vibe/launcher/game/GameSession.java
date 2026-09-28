@@ -67,16 +67,18 @@ public final class GameSession {
         Files.createDirectories(request.readyFile.getParent());
         Files.deleteIfExists(request.readyFile);
 
+        // Start the Gradle wrapper directly, as gradlew(.bat) would: no cmd.exe or sh in between
+        // means no shell quoting, no LF-only batch file quirks, and destroy() reaches Gradle itself.
+        Path wrapper = request.projectRoot.resolve("gradle").resolve("wrapper").resolve("gradle-wrapper.jar");
+        if (!Files.isRegularFile(wrapper)) throw new IOException("The Vibe source has no Gradle wrapper (" + wrapper + ").");
         List<String> command = new ArrayList<String>();
-        if (Platform.windows()) {
-            // A relative script name avoids cmd.exe's quoting rules for paths with spaces.
-            command.add("cmd.exe");
-            command.add("/c");
-            command.add("gradlew.bat");
-        } else {
-            command.add("/bin/sh");
-            command.add("gradlew");
-        }
+        command.add(Platform.javaExecutable(request.jdk21, false).toString());
+        command.add("-Xmx64m");
+        command.add("-Xms64m");
+        command.add("-Dorg.gradle.appname=gradlew");
+        command.add("-classpath");
+        command.add(wrapper.toString());
+        command.add("org.gradle.wrapper.GradleWrapperMain");
         command.add("runClient");
         command.add("-PvibeOptifine");
         command.add("-PvibePersistentRun");
@@ -90,9 +92,9 @@ public final class GameSession {
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.directory(request.projectRoot.toFile());
         Map<String, String> environment = builder.environment();
-        environment.put("JAVA_HOME", request.jdk21.toString());
-        String path = environment.get("PATH");
-        environment.put("PATH", request.jdk21.resolve("bin") + File.pathSeparator + (path == null ? "" : path));
+        put(environment, "JAVA_HOME", request.jdk21.toString());
+        String path = get(environment, "PATH");
+        put(environment, "PATH", request.jdk21.resolve("bin") + File.pathSeparator + (path == null ? "" : path));
         environment.put("VIBE_JAVA8", request.java8.toString());
         environment.put("VIBE_JAVA8_HOME", request.java8.toString());
         environment.put("VIBE_JDK21_HOME", request.jdk21.toString());
@@ -111,6 +113,25 @@ public final class GameSession {
         return session;
     }
 
+    /**
+     * ProcessBuilder's environment is a case-sensitive map even on Windows, where the
+     * variable is usually spelled "Path"; adding "PATH" next to it would hide it.
+     */
+    static String get(Map<String, String> environment, String name) {
+        for (Map.Entry<String, String> entry : environment.entrySet()) if (entry.getKey().equalsIgnoreCase(name)) return entry.getValue();
+        return null;
+    }
+
+    static void put(Map<String, String> environment, String name, String value) {
+        String key = name;
+        for (String existing : new ArrayList<String>(environment.keySet())) {
+            if (!existing.equalsIgnoreCase(name)) continue;
+            if (key.equals(name)) key = existing;
+            else environment.remove(existing);
+        }
+        environment.put(key, value);
+    }
+
     /** Picks up a game started by an earlier launcher run (Java 9+ only). */
     public static GameSession reattach(Path sessionFile, Listener listener) {
         if (!Files.isRegularFile(sessionFile)) return null;
@@ -123,9 +144,14 @@ public final class GameSession {
             pid = -1;
             started = 0;
         }
-        // Older than a day: the PID has most likely been reused by an unrelated process.
+        // The recorded start time must match: Windows reuses PIDs quickly, and an unrelated
+        // process with the same PID must never be shown as Vibe or stopped by the launcher.
+        long processStart;
+        try { processStart = Long.parseLong(values.getProperty("processStart", "-1")); } catch (NumberFormatException ignored) { processStart = -1; }
+        long actualStart = Platform.startTime(pid);
+        boolean same = processStart > 0 && actualStart > 0 && Math.abs(actualStart - processStart) < 2000;
         boolean stale = System.currentTimeMillis() - started > 24L * 60L * 60L * 1000L;
-        if (pid <= 0 || stale || !Platform.isAlive(pid)) {
+        if (pid <= 0 || stale || !same || !Platform.isAlive(pid)) {
             try { Files.deleteIfExists(sessionFile); } catch (IOException ignored) { /* stale marker */ }
             return null;
         }
@@ -133,6 +159,8 @@ public final class GameSession {
         Path ready = new File(values.getProperty("ready", "")).toPath();
         GameSession session = new GameSession(null, log, ready, sessionFile, listener, null, pid);
         session.reachedGame = Files.exists(ready);
+        // Replaying the log tail must not move a running game back to a build stage.
+        if (session.reachedGame) session.stage = Stage.RUNNING;
         long offset = 0;
         try { offset = Files.exists(log) ? Math.max(0, Files.size(log) - 64 * 1024) : 0; } catch (IOException ignored) { /* start at 0 */ }
         session.startThreads(offset);
@@ -145,10 +173,10 @@ public final class GameSession {
 
     public void stop() {
         stopping = true;
+        // Java 8 cannot see child processes: find Minecraft by path first, while the session is still open.
+        if (!Platform.processApiAvailable() && projectRoot != null) Platform.destroyGameProcesses(projectRoot);
         if (process != null) Platform.destroyTree(process);
         else Platform.destroyTree(pid);
-        // Without the Java 9 process API only cmd.exe/sh would stop; find Gradle and Minecraft by path.
-        if (!Platform.processApiAvailable() && projectRoot != null) Platform.destroyGameProcesses(projectRoot);
     }
 
     public boolean isStopping() { return stopping; }
@@ -160,6 +188,7 @@ public final class GameSession {
         values.setProperty("log", logFile.toString());
         values.setProperty("ready", readyFile.toString());
         values.setProperty("started", Long.toString(System.currentTimeMillis()));
+        values.setProperty("processStart", Long.toString(Platform.startTime(pid)));
         try { FileUtil.writeProperties(sessionFile, values, "Running Vibe session"); } catch (IOException ignored) { /* optional */ }
     }
 
@@ -237,9 +266,9 @@ public final class GameSession {
         Tailer(long offset) { this.position = offset; }
 
         void finish() {
-            finished = true;
-            if (!reachedGame && Files.exists(readyFile)) reachedGame = true;
             synchronized (this) {
+                finished = true;
+                if (!reachedGame && Files.exists(readyFile)) reachedGame = true;
                 poll();
                 if (partial.length() > 0) {
                     List<String> last = new ArrayList<String>();
@@ -252,10 +281,14 @@ public final class GameSession {
 
         @Override public void run() {
             while (!finished) {
-                synchronized (this) { poll(); }
-                if (!reachedGame && Files.exists(readyFile)) {
-                    reachedGame = true;
-                    setStage(Stage.RUNNING);
+                synchronized (this) {
+                    // Under the lock, so a game that already exited is never reported as running.
+                    if (finished) return;
+                    poll();
+                    if (!reachedGame && Files.exists(readyFile)) {
+                        reachedGame = true;
+                        setStage(Stage.RUNNING);
+                    }
                 }
                 try { Thread.sleep(120); } catch (InterruptedException ignored) { return; }
             }
