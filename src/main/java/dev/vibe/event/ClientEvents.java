@@ -12,6 +12,7 @@ import dev.vibe.module.impl.ClickGuiModule;
 import dev.vibe.module.impl.EagleModule;
 import dev.vibe.module.impl.EspModule;
 import dev.vibe.module.impl.FastPlaceModule;
+import dev.vibe.module.impl.ScaffoldModule;
 import dev.vibe.module.impl.FovChangerModule;
 import dev.vibe.module.impl.FullBrightModule;
 import dev.vibe.module.impl.ReachModule;
@@ -58,6 +59,7 @@ import dev.vibe.input.ClickStats;
 import dev.vibe.network.PacketDelayService;
 import dev.vibe.script.ScriptRuntime;
 import dev.vibe.ui.ChestEspRenderer;
+import dev.vibe.ui.ScaffoldCountRenderer;
 import dev.vibe.ui.EspRenderer;
 import dev.vibe.ui.TargetEspRenderer;
 import dev.vibe.ui.SkeletalRenderer;
@@ -137,6 +139,7 @@ public final class ClientEvents {
     private final TrajectoriesRenderer trajectoriesRenderer = new TrajectoriesRenderer();
     private final ItemEspRenderer itemEspRenderer = new ItemEspRenderer();
     private final CustomCosmeticsRenderer customCosmeticsRenderer = new CustomCosmeticsRenderer();
+    private final ScaffoldCountRenderer scaffoldCountRenderer = new ScaffoldCountRenderer();
     private Scoreboard suppressedScoreboard;
     private ScoreObjective suppressedSidebar;
     private ScoreObjective suppressedTeamSidebar;
@@ -186,6 +189,9 @@ public final class ClientEvents {
             if (test != null) test.tick();
             KillAuraModule killaura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
             if (killaura != null) killaura.tickStart();
+            // Scaffold's rotation must win: it keeps the player on the bridge.
+            ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
+            if (scaffold != null) scaffold.tickStart();
             if (moveFix != null) {
                 moveFix.tick();
                 moveFix.installInputHook();
@@ -257,6 +263,8 @@ public final class ClientEvents {
         if (event.phase == TickEvent.Phase.END) {
             KillAuraModule killaura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
             if (killaura != null) killaura.tickEnd();
+            ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
+            if (scaffold != null) scaffold.tickEnd();
         }
         if (event.phase != TickEvent.Phase.END) {
             return;
@@ -277,7 +285,8 @@ public final class ClientEvents {
         FullBrightModule fullBright = Vibe.getInstance().getModuleManager().getModule(FullBrightModule.class);
         if (fullBright != null) fullBright.tick();
         SprintModule sprint = Vibe.getInstance().getModuleManager().getModule(SprintModule.class);
-        if (sprint != null && sprint.isEnabled() && minecraft.thePlayer.movementInput.moveForward > 0.0F
+        // Scaffold's own Sprint setting decides while it is enabled.
+        if (sprint != null && sprint.isEnabled() && !ScaffoldModule.isActive() && minecraft.thePlayer.movementInput.moveForward > 0.0F
                 && !minecraft.thePlayer.isSneaking() && !minecraft.thePlayer.isCollidedHorizontally) {
             minecraft.thePlayer.setSprinting(true);
         }
@@ -372,6 +381,7 @@ public final class ClientEvents {
                     Vibe.getInstance().getHudManager().draw();
                     espRenderer.renderOverlay();
                     hitmarkerRenderer.renderOverlay();
+                    scaffoldCountRenderer.render();
                     if (deferredCrosshair) customCrosshairRenderer.render();
                 }
                 if (hypixel != null) hypixel.renderPitBotBanner();

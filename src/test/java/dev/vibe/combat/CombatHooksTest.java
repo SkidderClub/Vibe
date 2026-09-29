@@ -25,12 +25,15 @@ import static org.junit.Assert.*;
 public class CombatHooksTest {
     private static final String MC = "net.minecraft.client.Minecraft";
     private static final String PLAYER = "net.minecraft.client.entity.EntityPlayerSP";
+    private static final String LIVING = "net.minecraft.entity.EntityLivingBase";
+    private static final String SCAFFOLD = "dev/vibe/module/impl/ScaffoldModule";
     private static final String RENDERER = "net.minecraft.client.renderer.entity.RenderPlayer";
     private static final String AUTO_TOOL = "dev/vibe/module/impl/AutoToolModule";
 
     @Test public void developmentInputAndRenderHooksHaveValidStacksAndCorrectOrder() throws Exception {
         verifyInput(transform(MC, MC, resource(MC)), false);
         verifyPlayer(transform(PLAYER, PLAYER, resource(PLAYER)), false);
+        verifyJump(transform(LIVING, LIVING, resource(LIVING)), false);
         verifyRenderer(transform(RENDERER, RENDERER, resource(RENDERER)), false);
         String living = "net.minecraft.client.renderer.entity.RendererLivingEntity";
         verifyInvisible(transform(living, living, resource(living)), false);
@@ -42,6 +45,7 @@ public class CombatHooksTest {
         try (JarFile jar = officialJar()) {
             verifyInput(transform("ave", MC, read(jar.getInputStream(jar.getJarEntry("ave.class")))), true);
             verifyPlayer(transform("bew", PLAYER, read(jar.getInputStream(jar.getJarEntry("bew.class")))), true);
+            verifyJump(transform("pr", LIVING, read(jar.getInputStream(jar.getJarEntry("pr.class")))), true);
             verifyRenderer(transform("bln", RENDERER, read(jar.getInputStream(jar.getJarEntry("bln.class")))), true);
             verifyInvisible(transform("bjl", "net.minecraft.client.renderer.entity.RendererLivingEntity", read(jar.getInputStream(jar.getJarEntry("bjl.class")))), true);
             verifyTool(transform("bda", "net.minecraft.client.multiplayer.PlayerControllerMP", read(jar.getInputStream(jar.getJarEntry("bda.class")))), true);
@@ -87,6 +91,15 @@ public class CombatHooksTest {
         assertTrue(hook > callIndex(method, obfuscated ? "a" : "getMouseOver", obfuscated ? "bfk" : "net/minecraft/client/renderer/EntityRenderer"));
         assertTrue(hook < callIndex(method, obfuscated ? "bS" : "isUsingItem"));
         assertTrue(hook < callIndex(method, obfuscated ? "aw" : "clickMouse", node.name));
+        // Scaffold restores the visible slot after the click pass, before the
+        // renderer samples the held item for the first-person equip animation.
+        assertEquals(1, calls(method, "finishInputHook", SCAFFOLD));
+        int finish = callIndex(method, "finishInputHook", SCAFFOLD);
+        assertTrue(finish > callIndex(method, obfuscated ? "aw" : "clickMouse", node.name));
+        assertTrue(finish > callIndex(method, obfuscated ? "b" : "sendClickBlockToController", node.name));
+        AbstractInsnNode renderer = method.instructions.get(finish).getNext();
+        assertTrue(renderer instanceof MethodInsnNode);
+        assertEquals(obfuscated ? "e" : "updateRenderer", ((MethodInsnNode) renderer).name);
         AbstractInsnNode next = method.instructions.get(hook).getNext();
         assertTrue(next instanceof MethodInsnNode);
         assertEquals(obfuscated ? "bS" : "isUsingItem", ((MethodInsnNode) next).name);
@@ -100,6 +113,17 @@ public class CombatHooksTest {
         verify(node, method);
         assertEquals(1, calls(method, "beginPacketRotationHook"));
         assertTrue(calls(method, "endPacketRotationHook") >= 1);
+    }
+
+    private void verifyJump(ClassNode node, boolean obfuscated) throws Exception {
+        MethodNode jump = method(node, obfuscated ? "bF" : "jump", "()V");
+        verify(node, jump);
+        assertEquals(1, calls(jump, "jumpMotionHook", SCAFFOLD));
+        assertTrue("The yaw correction must survive the chained visitor", calls(jump, "movementYawHook") >= 1);
+        int motion = callIndex(jump, obfuscated ? "bE" : "getJumpUpwardsMotion");
+        AbstractInsnNode load = jump.instructions.get(motion).getNext();
+        assertEquals(Opcodes.ALOAD, load.getOpcode());
+        assertEquals(jump.instructions.indexOf(load) + 1, callIndex(jump, "jumpMotionHook", SCAFFOLD));
     }
 
     private void verifyRenderer(ClassNode node, boolean obfuscated) throws Exception {

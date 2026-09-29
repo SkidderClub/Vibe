@@ -20,6 +20,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
     private static final String AURA_HOOK = "dev/vibe/module/impl/KillAuraModule";
     private static final String INPUT = "net/minecraft/util/MovementInput";
     private static final String HOOK = "dev/vibe/module/impl/MoveFixModule";
+    private static final String SCAFFOLD_HOOK = "dev/vibe/module/impl/ScaffoldModule";
 
     @Override
     public byte[] transform(String name, String transformedName, byte[] bytes) {
@@ -73,7 +74,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
                         return new YawVisitor(delegate);
                     }
                     if (target == 2 && isJump(method, descriptor)) {
-                        return new YawVisitor(delegate);
+                        return new JumpMotionVisitor(new YawVisitor(delegate));
                     }
                     if (target == 3 && isWalkingPacket(method, descriptor)) {
                         return new PacketVisitor(delegate);
@@ -151,6 +152,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
     /** Runs after getMouseOver and physical input, before attack/use dispatch. */
     private static final class InputVisitor extends MethodVisitor {
         private boolean prepared;
+        private boolean finished;
 
         private InputVisitor(MethodVisitor delegate) { super(Opcodes.ASM5, delegate); }
 
@@ -161,6 +163,14 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
                     && ("isUsingItem".equals(name) || "func_71039_bw".equals(name) || "bS".equals(name))) {
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, AURA_HOOK, "prepareInputHook", "()V", false);
                 prepared = true;
+            }
+            // The click/use section is over before the renderer samples the
+            // held item for this tick's first-person equip animation.
+            if (prepared && !finished && opcode == Opcodes.INVOKEVIRTUAL && "()V".equals(descriptor)
+                    && (ENTITY_RENDERER.equals(owner) || "bfk".equals(owner))
+                    && ("updateRenderer".equals(name) || "func_78464_a".equals(name) || "e".equals(name))) {
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, SCAFFOLD_HOOK, "finishInputHook", "()V", false);
+                finished = true;
             }
             super.visitMethodInsn(opcode, owner, name, descriptor, itf);
         }
@@ -255,6 +265,24 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
                 return;
             }
             super.visitFieldInsn(opcode, owner, field, descriptor);
+        }
+    }
+
+    /** Lets a tower mode replace the jump's upward motion before it is applied. */
+    private static final class JumpMotionVisitor extends MethodVisitor {
+        private JumpMotionVisitor(MethodVisitor delegate) {
+            super(Opcodes.ASM5, delegate);
+        }
+
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean itf) {
+            super.visitMethodInsn(opcode, owner, name, descriptor, itf);
+            if ("()F".equals(descriptor) && (LIVING.equals(owner) || "pr".equals(owner))
+                    && ("getJumpUpwardsMotion".equals(name) || "func_175134_bD".equals(name) || "bE".equals(name))) {
+                // [float] -> [float, entity] -> [float]
+                super.visitVarInsn(Opcodes.ALOAD, 0);
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, SCAFFOLD_HOOK, "jumpMotionHook", "(FLjava/lang/Object;)F", false);
+            }
         }
     }
 
