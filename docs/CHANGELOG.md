@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added Token login to the Account Manager: paste a Minecraft access token (`eyJra...`, usable until it expires, with the remaining time shown in the list) or a Microsoft refresh token (`M.C...`, stays signed in and renews itself). Tokens are stored encrypted in the account vault and only shown as a short preview.
 - Rebuilt the Vibe Launcher: a play bar with live download/build progress and Stop, Vibe/GTA7/GTA8 modes, account choice with skin heads, a rotating 3D skin preview with Vibe's ESP, mod management from `mcmod.info`, shared themes, settings for memory and updates, a console, delta source updates and German/English text. The client adds the `gta8` launcher route and the `vibeMaxMemory` Gradle property for `runClient`.
 - Added GTA8: Los Vibes in the Meme category, a standalone 1.6 km open city with an HDR shader renderer (cascaded shadows, physical sky, weather, wet roads, bloom), Pacejka tyre driving physics, lane and traffic-light traffic, pedestrians, a witness-based police search, six weapons, jobs, shops and encrypted saves. See [docs/GTA8.md](GTA8.md); `./gradlew verifyGta8Rendering` renders offscreen checks.
 - Moved the changelog into `docs/` and documented the project layout; Windows build/run launchers remain in the project root.
