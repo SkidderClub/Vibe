@@ -120,7 +120,8 @@ public final class TimerRangeModule extends Module {
         if (target == null) { resetTimer(); return false; }
         if (CombatRangeSupport.distanceToBox(target) > range.getDouble()) { target = null; resetTimer(); return false; }
         KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
-        if (((aura == null || !aura.isEnabled()) && onlyKillAura.isEnabled()) || minecraft.thePlayer.ticksExisted < 10
+        if (((aura == null || !aura.isEnabled()) && onlyKillAura.isEnabled()) || ScaffoldModule.isActive()
+                || minecraft.thePlayer.ticksExisted < 10
                 || (onlyOnGround.isEnabled() && !minecraft.thePlayer.onGround) || CombatRangeSupport.isInWeb(minecraft.thePlayer)
                 || minecraft.thePlayer.isInLava() || minecraft.thePlayer.isInWater() || minecraft.thePlayer.isCollidedHorizontally
                 || !minecraft.gameSettings.keyBindForward.isKeyDown() || minecraft.thePlayer.hurtTime > 0) {

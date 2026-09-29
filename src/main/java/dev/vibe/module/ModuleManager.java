@@ -8,6 +8,7 @@ import dev.vibe.module.impl.ClickGuiModule;
 import dev.vibe.module.impl.EagleModule;
 import dev.vibe.module.impl.EspModule;
 import dev.vibe.module.impl.FastPlaceModule;
+import dev.vibe.module.impl.ScaffoldModule;
 import dev.vibe.module.impl.FovChangerModule;
 import dev.vibe.module.impl.FullBrightModule;
 import dev.vibe.module.impl.HudEditorModule;
@@ -144,6 +145,7 @@ public final class ModuleManager {
         register(new NoJumpDelayModule());
         register(new EagleModule());
         register(new FastPlaceModule());
+        register(new ScaffoldModule());
         register(new InventoryManagerModule());
         register(new ChestStealerModule());
         register(new AutoToolModule());

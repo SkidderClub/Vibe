@@ -228,12 +228,13 @@ public final class AutoToolModule extends Module {
     }
     public static int serverSlotHook(int vanilla) {
         AutoToolModule module = active();
-        return PickenSwitchModule.serverSlotHook(module != null && module.hasSilentSlot() ? module.spoofedSlot : vanilla);
+        return PickenSwitchModule.serverSlotHook(module != null && module.hasSilentSlot() ? module.spoofedSlot
+                : ScaffoldModule.serverSlotHook(vanilla));
     }
     public static int beginActionHook() {
         int picken=PickenSwitchModule.beginActionHook();if(picken>=0)return picken;
         AutoToolModule module = active();
-        if (module == null || !module.hasSilentSlot() || module.minecraft.thePlayer == null) return -1;
+        if (module == null || !module.hasSilentSlot() || module.minecraft.thePlayer == null) return ScaffoldModule.beginActionHook();
         int visible = module.minecraft.thePlayer.inventory.currentItem;
         module.minecraft.thePlayer.inventory.currentItem = module.spoofedSlot;
         return visible;

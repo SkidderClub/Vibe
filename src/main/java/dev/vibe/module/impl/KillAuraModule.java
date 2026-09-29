@@ -96,7 +96,8 @@ public final class KillAuraModule extends Module {
             blockOwned = false;
             sessionPlayer = minecraft.thePlayer;
         }
-        if (!canOperate() || isBreakingBlock()) { clear(); return; }
+        // Scaffold owns the server rotation and the held slot while enabled.
+        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive()) { clear(); return; }
         EntityLivingBase selected = chooseTarget();
         if (selected == null) { clear(); return; }
         if (target != selected) {
@@ -121,7 +122,7 @@ public final class KillAuraModule extends Module {
     private void prepareInput() {
         if (inputPrepared) return;
         inputPrepared = true;
-        if (!canOperate() || target == null || !validTarget(target) || isBreakingBlock()) {
+        if (!canOperate() || target == null || !validTarget(target) || isBreakingBlock() || ScaffoldModule.isActive()) {
             clear();
             releaseOwnedBlock();
             return;
@@ -401,6 +402,7 @@ public final class KillAuraModule extends Module {
     public boolean isVisualBlocking() { return isEnabled() && visualBlocking && swordHeld(); }
 
     public static void prepareInputHook() {
+        ScaffoldModule.prepareInputHook();
         AutoClickerModule.prepareInputHook();
         KillAuraModule aura = module();
         if (aura != null) aura.prepareInput();

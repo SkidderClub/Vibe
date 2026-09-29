@@ -43,6 +43,9 @@ public final class MoveFixModule extends Module {
     private volatile FakeRotation fakeRotation;
     private FakeRotation previousRenderRotation;
     private volatile String rotationOwner;
+    // A producer may pin the movement policy for its own rotation. The pin
+    // lasts through the rotate-back and ends with the fake rotation itself.
+    private volatile String correctionOverride;
     // A pathing module can supply a movement vector in server-rotation space.
     // This is deliberately separate from the user's movement policy: a bot
     // must still walk toward its target when MoveFix is configured as Off.
@@ -98,12 +101,40 @@ public final class MoveFixModule extends Module {
 
     /** Supplies a fake rotation from one producer, such as the Test module. */
     public void setFakeRotation(String owner, float yaw, float pitch) {
+        setFakeRotation(owner, yaw, pitch, null);
+    }
+
+    /**
+     * Supplies a fake rotation whose movement is corrected with the given
+     * Correct Movement mode instead of the configured one; null follows the
+     * module setting.
+     */
+    public void setFakeRotation(String owner, float yaw, float pitch, String correction) {
         if (owner == null || !Float.isFinite(yaw) || !Float.isFinite(pitch)) {
             return;
         }
         float continuousYaw = RotationMath.nearest(yaw, getRotationYaw());
         rotationOwner = owner;
+        correctionOverride = correctionMode(correction);
         fakeRotation = new FakeRotation(continuousYaw, RotationMath.clamp(pitch, -90.0F, 90.0F));
+    }
+
+    private String correctionMode(String mode) {
+        if (mode == null) return null;
+        for (String candidate : correctMovement.getModes()) {
+            if (candidate.equalsIgnoreCase(mode)) return candidate;
+        }
+        return null;
+    }
+
+    /** The Correct Movement mode applied to the active fake rotation. */
+    public String getEffectiveCorrection() {
+        String override = correctionOverride;
+        return override != null && activeRotation() != null ? override : correctMovement.getValue();
+    }
+
+    private boolean correctionIs(String mode) {
+        return getEffectiveCorrection().equalsIgnoreCase(mode);
     }
 
     /** Snapshot once before any producer changes this tick's rotation. */
@@ -121,6 +152,7 @@ public final class MoveFixModule extends Module {
             fakeRotation = null;
             previousRenderRotation = null;
             rotationOwner = null;
+            correctionOverride = null;
             clearForcedMovement(null);
             transported = false;
         }
@@ -174,11 +206,13 @@ public final class MoveFixModule extends Module {
         EntityPlayerSP player = Minecraft.getMinecraft().thePlayer;
         if (player == null) {
             fakeRotation = null;
+            correctionOverride = null;
             return;
         }
         float speed = rotateBackSpeed();
         if (speed <= 0.0F) {
             fakeRotation = null;
+            correctionOverride = null;
             return;
         }
         FakeRotation current = fakeRotation;
@@ -187,6 +221,7 @@ public final class MoveFixModule extends Module {
         if (Math.abs(net.minecraft.util.MathHelper.wrapAngleTo180_float(player.rotationYaw - yaw)) < 0.001F
                 && Math.abs(player.rotationPitch - pitch) < 0.001F) {
             fakeRotation = null;
+            correctionOverride = null;
         } else {
             fakeRotation = new FakeRotation(yaw, pitch);
         }
@@ -233,7 +268,7 @@ public final class MoveFixModule extends Module {
     }
 
     private boolean usesDirectYaw() {
-        return forcedMovementOwner != null || correctMovement.is("Direct") || correctMovement.is("Silent");
+        return forcedMovementOwner != null || correctionIs("Direct") || correctionIs("Silent");
     }
 
     /**
@@ -247,7 +282,7 @@ public final class MoveFixModule extends Module {
         // This wrapper is the player's keyboard input even when another Vibe
         // wrapper (for example NoSlow) sits outside it.  No other input can
         // call this private wrapper method.
-        if (rotation == null || !correctMovement.is("Silent")) {
+        if (rotation == null || !correctionIs("Silent")) {
             return;
         }
         if (input.moveForward == 0.0F && input.moveStrafe == 0.0F) {
@@ -386,7 +421,7 @@ public final class MoveFixModule extends Module {
         // Forced vectors already use the server yaw. Comparing them to the
         // camera yaw incorrectly prevents a bot from sprinting sideways/backwards.
         if (forcedMovementOwner != null && entity == Minecraft.getMinecraft().thePlayer) return vanillaForward;
-        if (rotation == null || !correctMovement.is("Prevent Backwards Sprinting")
+        if (rotation == null || !correctionIs("Prevent Backwards Sprinting")
                 || entity != Minecraft.getMinecraft().thePlayer) {
             return vanillaForward;
         }
@@ -459,6 +494,7 @@ public final class MoveFixModule extends Module {
         fakeRotation = null;
         previousRenderRotation = null;
         rotationOwner = null;
+        correctionOverride = null;
         clearForcedMovement(null);
         if (packetPlayer != null) {
             packetPlayer.rotationYaw = packetYaw;
@@ -473,6 +509,8 @@ public final class MoveFixModule extends Module {
     public static void beginPacketRotationHook(Object entity) {
         MoveFixModule module = module();
         if (module != null) {
+            ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
+            if (scaffold != null) scaffold.beforeWalkingUpdate(entity);
             module.beginPacketRotation(entity);
         }
     }
@@ -614,10 +652,13 @@ public final class MoveFixModule extends Module {
             } else {
                 module.correctKeyboardInput(this);
             }
+            if (Vibe.getInstance() == null) return;
+            // Scaffold edits the corrected keys (sneak, jump, god-bridge strafe).
+            ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
+            if (scaffold != null) scaffold.applyMoveInput(this);
             // Gothaj's Jump velocity mode listens to the finalized movement
             // input, after physical keys and MoveFix correction are known.
-            VelocityModule velocity = Vibe.getInstance() == null ? null
-                    : Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
+            VelocityModule velocity = Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
             if (velocity != null) velocity.applyJumpInput(this);
         }
     }
