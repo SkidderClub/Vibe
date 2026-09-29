@@ -2,7 +2,11 @@
 
 ## Unreleased
 
+<<<<<<< Updated upstream
 - Added Scaffold (World): Normal and Telly modes, Intave, Polar and God Bridge rotations, Sideways, Keep Y, NCP/Timer/Intave tower, Always/Off/Legit sprint, timed Sneak, Safe Walk, Jump, Drag Click, Swing, Smooth Speed and a Render Count panel. Rotations go through MoveFix, whose Correct Movement mode applies to them (Scaffold's Move Fix option uses Silent when MoveFix is set to Off, and Off when the option is disabled); blocks are only placed when the ray of the rotation actually sent hits the chosen face. Spoof Slot keeps the visible hotbar slot while the server holds the blocks. KillAura, LagRange, TimerRange and Sprint pause while Scaffold is enabled.
+=======
+- Redesigned the HUD editor in the main-menu and Account Manager style, following the selected menu theme: an element list with visibility switches, a live preview with snap guides, scale and theme controls, and compact setting cards with sliders, dropdowns and a draggable colour picker. Changes still save automatically, now confirmed in the status bar.
+>>>>>>> Stashed changes
 - Added Token login to the Account Manager: paste a Minecraft access token (`eyJra...`, usable until it expires, with the remaining time shown in the list) or a Microsoft refresh token (`M.C...`, stays signed in and renews itself). Tokens are stored encrypted in the account vault and only shown as a short preview.
 - Rebuilt the Vibe Launcher: a play bar with live download/build progress and Stop, Vibe/GTA7/GTA8 modes, account choice with skin heads, a rotating 3D skin preview with Vibe's ESP, mod management from `mcmod.info`, shared themes, settings for memory and updates, a console, delta source updates and German/English text. The client adds the `gta8` launcher route and the `vibeMaxMemory` Gradle property for `runClient`.
 - Added GTA8: Los Vibes in the Meme category, a standalone 1.6 km open city with an HDR shader renderer (cascaded shadows, physical sky, weather, wet roads, bloom), Pacejka tyre driving physics, lane and traffic-light traffic, pedestrians, a witness-based police search, six weapons, jobs, shops and encrypted saves. See [docs/GTA8.md](GTA8.md); `./gradlew verifyGta8Rendering` renders offscreen checks.

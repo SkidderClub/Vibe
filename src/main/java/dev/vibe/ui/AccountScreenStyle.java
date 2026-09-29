@@ -4,12 +4,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.renderer.GlStateManager;
 
-/** Shared presentation for account screens and the main menu. */
-final class AccountScreenStyle {
-    static int BACKGROUND, SURFACE, BORDER, MUTED, ACCENT, TINT, HOVER;
-    static final int TEXT = 0xFFF3F1FA;
-    static final int SUCCESS = 0xFF7DDDC3;
-    static final int ERROR = 0xFFFF969F;
+/** Shared presentation for the main menu, account screens and the HUD editor. */
+public final class AccountScreenStyle {
+    public static int BACKGROUND, SURFACE, BORDER, MUTED, ACCENT, TINT, HOVER;
+    public static final int TEXT = 0xFFF3F1FA;
+    public static final int SUCCESS = 0xFF7DDDC3;
+    public static final int ERROR = 0xFFFF969F;
 
     static { applyTheme(MenuThemes.current()); }
 
@@ -25,36 +25,36 @@ final class AccountScreenStyle {
 
     private AccountScreenStyle() { }
 
-    static void panel(int x, int y, int width, int height, int fill, int border) {
+    public static void panel(int x, int y, int width, int height, int fill, int border) {
         MenuRoundedRenderer.rect(x, y, width, height, 10, border);
         MenuRoundedRenderer.rect(x + 1, y + 1, width - 2, height - 2, 9, fill);
     }
 
-    static void window(int x, int y, int width, int height) {
+    public static void window(int x, int y, int width, int height) {
         MenuRoundedRenderer.rect(x - 3, y + 4, width + 6, height + 1, 16, 0x55000000);
         MenuRoundedRenderer.rect(x, y, width, height, 14, BORDER);
         MenuRoundedRenderer.rect(x + 1, y + 1, width - 2, height - 2, 13, BACKGROUND);
     }
 
-    static void text(String value, int x, int y, int color) {
+    public static void text(String value, int x, int y, int color) {
         value = dev.vibe.language.LanguageManager.translate(value);
         rawText(value, x, y, color);
     }
 
-    static void rawText(String value, int x, int y, int color) {
+    public static void rawText(String value, int x, int y, int color) {
         Minecraft.getMinecraft().fontRendererObj.drawString(value, x, y, color);
     }
 
-    static String fit(String value, int width) {
+    public static String fit(String value, int width) {
         value = dev.vibe.language.LanguageManager.translate(value);
         return fitRaw(value, width);
     }
 
-    static String fitRaw(String value, int width) {
+    public static String fitRaw(String value, int width) {
         return Minecraft.getMinecraft().fontRendererObj.trimStringToWidth(value, Math.max(0, width));
     }
 
-    static void title(String value, int x, int y) {
+    public static void title(String value, int x, int y) {
         GlStateManager.pushMatrix();
         GlStateManager.translate(x, y, 0);
         GlStateManager.scale(1.5F, 1.5F, 1);
@@ -62,12 +62,12 @@ final class AccountScreenStyle {
         GlStateManager.popMatrix();
     }
 
-    static class Button extends GuiButton {
+    public static class Button extends GuiButton {
         private final String subtitle;
         private final boolean primary;
         private final boolean danger;
 
-        Button(int id, int x, int y, int width, int height, String label, String subtitle, boolean primary, boolean danger) {
+        public Button(int id, int x, int y, int width, int height, String label, String subtitle, boolean primary, boolean danger) {
             super(id, x, y, width, height, label);
             this.subtitle = subtitle;
             this.primary = primary;
