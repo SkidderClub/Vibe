@@ -66,14 +66,17 @@ public final class AccountStore {
             try {
                 JsonObject root = new JsonParser().parse(new String(plain, StandardCharsets.UTF_8)).getAsJsonObject();
                 int version = root.get("version").getAsInt();
-                if (version != 1 && version != 2) throw new IOException("Unsupported account file version.");
+                if (version < 1 || version > 3) throw new IOException("Unsupported account file version.");
                 JsonArray entries = root.getAsJsonArray("accounts");
                 if (entries.size() > 1000) throw new IOException("Account file is too large.");
                 List<Account> result = new ArrayList<>();
                 for (JsonElement entry : entries) {
                     JsonObject value = entry.getAsJsonObject();
-                    Account account = new Account(value.get("name").getAsString(),
-                            UUID.fromString(value.get("uuid").getAsString()), value.get("refreshToken").getAsString(),
+                    String name = value.get("name").getAsString();
+                    UUID uuid = UUID.fromString(value.get("uuid").getAsString());
+                    Account account = version >= 3 && value.has("accessToken")
+                            ? Account.token(name, uuid, value.get("accessToken").getAsString())
+                            : new Account(name, uuid, value.get("refreshToken").getAsString(),
                             version == 1 ? MicrosoftApplication.IAS : MicrosoftApplication.valueOf(value.get("application").getAsString()));
                     if (result.stream().noneMatch(account::sameIdentity)) result.add(account);
                 }
@@ -90,14 +93,19 @@ public final class AccountStore {
     public void write(Path target, List<Account> accounts) throws IOException {
         if (accounts.size() > 1000) throw new IOException("Account limit reached (1000).");
         JsonObject root = new JsonObject();
-        root.addProperty("version", 2);
+        // Only access-token accounts need version 3; other files stay readable by older builds.
+        root.addProperty("version", accounts.stream().anyMatch(Account::isToken) ? 3 : 2);
         JsonArray entries = new JsonArray();
         for (Account account : accounts) {
             JsonObject entry = new JsonObject();
             entry.addProperty("name", account.getName());
             entry.addProperty("uuid", account.getUuid().toString());
-            entry.addProperty("refreshToken", account.refreshToken());
-            entry.addProperty("application", account.application().name());
+            if (account.isToken()) {
+                entry.addProperty("accessToken", account.token().value());
+            } else {
+                entry.addProperty("refreshToken", account.refreshToken());
+                entry.addProperty("application", account.application().name());
+            }
             entries.add(entry);
         }
         root.add("accounts", entries);

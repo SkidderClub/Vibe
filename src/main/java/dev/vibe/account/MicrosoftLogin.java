@@ -18,9 +18,10 @@ import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.function.Consumer;
 
-/** Java 8 Microsoft device and Minecraft cookie authorization. */
+/** Java 8 Microsoft device, Minecraft cookie, refresh-token and Minecraft access-token authorization. */
 public final class MicrosoftLogin {
     // Public application identifier, not a client secret. Consent identifies In-Game Account Switcher.
+    static final String PROFILE = "https://api.minecraftservices.com/minecraft/profile";
     static final String CLIENT_ID = MicrosoftApplication.IAS.clientId;
     static final String MS_BASE = "https://login.microsoftonline.com/consumers/oauth2/v2.0/";
     static final String SCOPE = MicrosoftApplication.IAS.scope;
@@ -96,6 +97,31 @@ public final class MicrosoftLogin {
         throw new IOException("Sign-in code expired. Start Microsoft sign-in again.");
     }
 
+    /** Signs in with a pasted "M.C..." refresh token; these belong to the Minecraft launcher application. */
+    public Result fromRefreshToken(MicrosoftRefreshToken token, Consumer<String> progress) throws IOException {
+        checkCancelled();
+        progress.accept("Refreshing Microsoft sign-in...");
+        MicrosoftApplication application = MicrosoftApplication.MINECRAFT;
+        JsonObject tokens = checked(transport.send(application.tokenEndpoint, "application/x-www-form-urlencoded",
+                form("client_id", application.clientId, "grant_type", "refresh_token", "refresh_token", token.value(),
+                        "scope", application.scope), null), "Microsoft");
+        String refresh = optional(tokens, "refresh_token");
+        return minecraft(string(tokens, "access_token"), refresh.isEmpty() ? token.value() : refresh, application, progress);
+    }
+
+    /** Checks a pasted access token with Minecraft; the token itself becomes the session token. */
+    public Result fromAccessToken(MinecraftToken token, Consumer<String> progress) throws IOException {
+        checkCancelled();
+        if (token.isExpired(System.currentTimeMillis()))
+            throw new IOException("This access token has expired. Paste a new one with Token login.");
+        progress.accept("Checking Minecraft Java profile...");
+        Response response = transport.send(PROFILE, null, null, token.value());
+        if (response.status == 401 || response.status == 403)
+            throw new IOException("Minecraft rejected this access token. It may have expired or been revoked.");
+        JsonObject profile = checked(response, "Minecraft profile");
+        return new Result(Account.token(string(profile, "name"), profileId(profile), token.value()), token.value());
+    }
+
     public Result refresh(Account account, Consumer<Account> rotated, Consumer<String> progress) throws IOException {
         checkCancelled();
         progress.accept("Refreshing Microsoft sign-in...");
@@ -141,12 +167,14 @@ public final class MicrosoftLogin {
                 "application/json", payload.toString(), null), "Minecraft");
         String access = string(minecraft, "access_token");
         checkCancelled();
-        JsonObject profile = checked(transport.send("https://api.minecraftservices.com/minecraft/profile", null, null, access),
-                "Minecraft profile");
+        JsonObject profile = checked(transport.send(PROFILE, null, null, access), "Minecraft profile");
+        return new Result(new Account(string(profile, "name"), profileId(profile), refresh, application), access);
+    }
+
+    private static UUID profileId(JsonObject profile) throws IOException {
         String id = string(profile, "id");
         if (!id.matches("[a-fA-F0-9]{32}")) throw new IOException("Minecraft returned an invalid profile ID.");
-        UUID uuid = UUID.fromString(id.replaceFirst("(........)(....)(....)(....)(............)", "$1-$2-$3-$4-$5"));
-        return new Result(new Account(string(profile, "name"), uuid, refresh, application), access);
+        return UUID.fromString(id.replaceFirst("(........)(....)(....)(....)(............)", "$1-$2-$3-$4-$5"));
     }
 
     private static JsonObject xboxRequest(JsonObject properties, String relyingParty) {

@@ -36,7 +36,7 @@ public final class AccountManagerGui extends GuiScreen {
     private int scroll;
     private int left, top, panelWidth, panelHeight, innerLeft, innerWidth;
     private int bodyTop, contentBottom, statusTop, listWidth, searchY, listTop, visibleRows, rowHeight;
-    private int railLeft;
+    private int railLeft, loginHeight;
     private boolean wide;
     private long lastClick;
     private volatile boolean choosingFile;
@@ -63,6 +63,7 @@ public final class AccountManagerGui extends GuiScreen {
         bodyTop = top + (wide ? 64 : 48);
         statusTop = top + panelHeight - 37;
         contentBottom = statusTop - 10;
+        loginHeight = contentBottom - bodyTop >= 290 ? 40 : 30;
         railLeft = innerLeft + innerWidth - 190;
         listWidth = wide ? innerWidth - 208 : innerWidth;
         searchY = wide ? bodyTop : bodyTop + 38;
@@ -118,15 +119,19 @@ public final class AccountManagerGui extends GuiScreen {
         } else {
             addButton(12, left + panelWidth - 123, top + 15, 55, 24, "More", "", false);
             if (wide) {
-                addButton(10, railLeft, bodyTop + 18, 190, 40, "Cookie login", "Choose a .txt file", true);
-                addButton(1, railLeft, bodyTop + 66, 190, 40, "Microsoft login", "Continue in your browser", false);
+                boolean details = loginHeight >= 40;
+                addButton(10, railLeft, bodyTop + 18, 190, loginHeight, "Cookie login", details ? "Choose a .txt file" : "", true);
+                addButton(1, railLeft, bodyTop + 26 + loginHeight, 190, loginHeight, "Microsoft login", details ? "Continue in your browser" : "", false);
+                addButton(20, railLeft, bodyTop + 34 + 2 * loginHeight, 190, loginHeight, "Token login", details ? "Paste an access token" : "", false);
                 addButton(3, railLeft, contentBottom - 28, 119, 28, "Use account", "", true);
                 addButton(4, railLeft + 127, contentBottom - 28, 63, 28, "Remove", "", false);
                 addButton(19, railLeft, contentBottom - 62, 190, 28, "Auto Login", "", false);
             } else {
-                int w = (innerWidth - 8) / 2;
-                addButton(10, innerLeft, bodyTop, w, 30, "Cookie login", "", true);
-                addButton(1, innerLeft + w + 8, bodyTop, innerWidth - w - 8, 30, "Microsoft login", "", false);
+                int w = (innerWidth - 16) / 3;
+                boolean compact = w < 100;
+                addButton(10, innerLeft, bodyTop, w, 30, compact ? "Cookies" : "Cookie login", "", true);
+                addButton(1, innerLeft + w + 8, bodyTop, w, 30, compact ? "Microsoft" : "Microsoft login", "", false);
+                addButton(20, innerLeft + 2 * (w + 8), bodyTop, innerWidth - 2 * (w + 8), 30, compact ? "Token" : "Token login", "", false);
                 int useWidth = Math.max(60, (innerWidth - 16) / 3);
                 addButton(3, innerLeft, contentBottom - 24, useWidth, 24, "Use account", "", true);
                 addButton(4, innerLeft + innerWidth - 68, contentBottom - 24, 68, 24, "Remove", "", false);
@@ -156,7 +161,7 @@ public final class AccountManagerGui extends GuiScreen {
     }
 
     private boolean canActivate(Account account) {
-        return account != null && (!isActive(account) || account.isMicrosoft());
+        return account != null && (!isActive(account) || account.isOnline());
     }
 
     private void updateButtons() {
@@ -169,7 +174,7 @@ public final class AccountManagerGui extends GuiScreen {
                 button.enabled = !choosingFile && available && (!busy || code);
             } else if (button.id == 3) {
                 Account account = selectedAccount();
-                button.displayString = code ? "Copy code" : isActive(account) ? account.isMicrosoft() ? "Sign in again" : "Active account" : "Use account";
+                button.displayString = code ? "Copy code" : isActive(account) ? account.isOnline() ? "Sign in again" : "Active account" : "Use account";
                 button.enabled = !choosingFile && available && (code || (!busy && canActivate(account)));
             } else if (button.id == 4) button.enabled &= selectedAccount() != null;
             else if (button.id == 5 || button.id == 6 || button.id == 12 || button.id == 15) button.enabled = !choosingFile;
@@ -192,6 +197,7 @@ public final class AccountManagerGui extends GuiScreen {
                 } else accounts.addMicrosoft();
                 break;
             case 2: mc.displayGuiScreen(new OfflineAccountGui(this, shaders, accounts)); break;
+            case 20: mc.displayGuiScreen(new TokenAccountGui(this, shaders, accounts)); break;
             case 3:
                 if (code != null) { setClipboardString(code.userCode); copiedUntil = System.currentTimeMillis() + 4000; }
                 else accounts.login(selectedAccount());
@@ -296,7 +302,7 @@ public final class AccountManagerGui extends GuiScreen {
             int tagLeft = innerLeft + listWidth - tagWidth - 14;
             AccountScreenStyle.rawText(AccountScreenStyle.fitRaw(account.getName(), listWidth - avatarSize - 34 - tagWidth),
                     textLeft, y + (wide ? 8 : 4), AccountScreenStyle.TEXT);
-            AccountScreenStyle.text(AccountScreenStyle.fit(account.isMicrosoft() ? "Microsoft" : "Offline profile", listWidth - avatarSize - 34 - tagWidth), textLeft, y + (wide ? 23 : 16), AccountScreenStyle.MUTED);
+            AccountScreenStyle.text(AccountScreenStyle.fit(kind(account), listWidth - avatarSize - 34 - tagWidth), textLeft, y + (wide ? 23 : 16), AccountScreenStyle.MUTED);
             if (active) {
                 accountTag(activeLabel, tagLeft, y + 3, tagWidth, rowHeight >= 32 ? 12 : 9, AccountScreenStyle.SUCCESS);
             }
@@ -311,16 +317,26 @@ public final class AccountManagerGui extends GuiScreen {
         }
         if (wide) {
             AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("ADD ACCOUNT"), railLeft, bodyTop + 3, AccountScreenStyle.MUTED);
-            int y = bodyTop + 127;
+            int y = bodyTop + 55 + 3 * loginHeight;
+            // Short windows leave no room between the login buttons and Auto Login.
+            if (y + 50 > contentBottom - 66) return;
             AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("SELECTED ACCOUNT"), railLeft, y, AccountScreenStyle.MUTED);
             Account account = selectedAccount();
             if (account != null) {
                 SkinHeads.draw(account.getUuid(), account.getName(), railLeft, y + 18, 32);
                 AccountScreenStyle.rawText(AccountScreenStyle.fitRaw(account.getName(), 147), railLeft + 42, y + 21, AccountScreenStyle.TEXT);
-                AccountScreenStyle.text(isActive(account) ? "Currently playing" : account.isMicrosoft() ? "Minecraft Java" : "Offline profile",
+                AccountScreenStyle.text(isActive(account) ? "Currently playing" : account.isMicrosoft() ? "Minecraft Java" : kind(account),
                         railLeft + 42, y + 37, isActive(account) ? AccountScreenStyle.SUCCESS : AccountScreenStyle.MUTED);
             } else AccountScreenStyle.rawText(account == null ? dev.vibe.language.LanguageManager.translate("Select a saved account") : account.getName(), railLeft, y + 17, AccountScreenStyle.MUTED);
         }
+    }
+
+    private static String kind(Account account) {
+        if (account.isMicrosoft()) return "Microsoft";
+        if (!account.isToken()) return "Offline profile";
+        long expiry = account.getTokenExpiry();
+        return expiry == 0 ? "Access token" : expiry <= System.currentTimeMillis() ? "Access token, expired"
+                : "Access token, " + TokenAccountGui.remaining(expiry) + " left";
     }
 
     private void centered(String value, int centerX, int y, int color) {
@@ -426,7 +442,17 @@ public final class AccountManagerGui extends GuiScreen {
             }
         }
         ensureButtons();
-        super.mouseClicked(x, y, mouseButton);
+        // Actions can rebuild this screen's button list. Vanilla keeps iterating
+        // that list and can send the same click to a newly displayed button.
+        if (mouseButton == 0) {
+            for (GuiButton button : buttonList) {
+                if (button.mousePressed(mc, x, y)) {
+                    button.playPressSound(mc.getSoundHandler());
+                    actionPerformed(button);
+                    return;
+                }
+            }
+        }
     }
 
     @Override public void handleMouseInput() throws IOException {
