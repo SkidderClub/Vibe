@@ -6,9 +6,9 @@ import org.objectweb.asm.tree.*;
 
 /** Wrap vanilla tool actions in a finally scope, keeping the displayed slot untouched between calls. */
 final class ToolActionTransformer implements Opcodes {
-    private static final String HOOK = "dev/vibe/module/impl/AutoToolModule";
-    private static final String PICKEN = "dev/vibe/module/impl/PickenSwitchModule";
-    private static final String HYPIXEL = "dev/vibe/module/impl/HypixelModule";
+    private static final String HOOK = "dev/vibe/module/impl/world/AutoToolModule";
+    private static final String PICKEN = "dev/vibe/module/impl/combat/PickenSwitchModule";
+    private static final String HYPIXEL = "dev/vibe/module/impl/meme/HypixelModule";
     private ToolActionTransformer() { }
 
     static byte[] transform(byte[] bytes) {
@@ -20,7 +20,7 @@ final class ToolActionTransformer implements Opcodes {
                     || original.name.equals("func_78767_c") || original.name.equals("c"))) {
                 InsnList guard = new InsnList();
                 LabelNode resume = new LabelNode();
-                guard.add(new MethodInsnNode(INVOKESTATIC, "dev/vibe/module/impl/BedAuraModule", "keepBreakingHook", "()Z", false));
+                guard.add(new MethodInsnNode(INVOKESTATIC, "dev/vibe/module/impl/world/BedAuraModule", "keepBreakingHook", "()Z", false));
                 guard.add(new JumpInsnNode(IFEQ, resume));
                 guard.add(new InsnNode(RETURN));
                 guard.add(resume);

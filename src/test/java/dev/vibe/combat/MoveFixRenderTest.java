@@ -1,6 +1,6 @@
 package dev.vibe.combat;
 
-import dev.vibe.module.impl.MoveFixModule;
+import dev.vibe.module.impl.movement.MoveFixModule;
 import java.lang.reflect.Field;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;

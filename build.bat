@@ -31,57 +31,19 @@ if defined JAVA_HOME (
     )
 )
 
-if not defined VIBE_JAVA (
-    for /d %%D in ("C:\Program Files\Java\jdk-21*") do (
-        if not defined VIBE_JAVA if exist "%%~fD\bin\java.exe" (
-            "%%~fD\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
-            if not errorlevel 1 set "VIBE_JAVA=%%~fD"
-        )
-    )
-)
-
-if not defined VIBE_JAVA (
-    for /d %%D in ("C:\Program Files\BellSoft\LibericaJDK-21*") do (
-        if not defined VIBE_JAVA if exist "%%~fD\bin\java.exe" (
-            "%%~fD\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
-            if not errorlevel 1 set "VIBE_JAVA=%%~fD"
-        )
-    )
-)
-
-if not defined VIBE_JAVA (
-    for /d %%D in ("C:\Program Files\Eclipse Adoptium\jdk-21*") do (
-        if not defined VIBE_JAVA if exist "%%~fD\bin\java.exe" (
-            "%%~fD\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
-            if not errorlevel 1 set "VIBE_JAVA=%%~fD"
-        )
-    )
-)
-
-if not defined VIBE_JAVA (
-    for /d %%D in ("C:\Program Files\Microsoft\jdk-21*") do (
-        if not defined VIBE_JAVA if exist "%%~fD\bin\java.exe" (
-            "%%~fD\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
-            if not errorlevel 1 set "VIBE_JAVA=%%~fD"
-        )
-    )
-)
-
-if not defined VIBE_JAVA (
-    for /d %%D in ("C:\Program Files\Zulu\zulu-21*") do (
-        if not defined VIBE_JAVA if exist "%%~fD\bin\java.exe" (
-            "%%~fD\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
-            if not errorlevel 1 set "VIBE_JAVA=%%~fD"
-        )
-    )
-)
-
-if not defined VIBE_JAVA (
-    for /d %%D in ("%USERPROFILE%\.jdks\*") do (
-        if not defined VIBE_JAVA if exist "%%~fD\bin\javac.exe" (
-            "%%~fD\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
-            if not errorlevel 1 set "VIBE_JAVA=%%~fD"
-        )
+rem Common JDK installation folders. A plain FOR treats * as a file pattern, so the
+rem wildcard is appended only in the inner FOR /D, which matches directories.
+for %%P in (
+    "%ProgramFiles%\Java\jdk-21"
+    "%ProgramFiles%\BellSoft\LibericaJDK-21"
+    "%ProgramFiles%\Eclipse Adoptium\jdk-21"
+    "%ProgramFiles%\Microsoft\jdk-21"
+    "%ProgramFiles%\Zulu\zulu-21"
+    "%USERPROFILE%\.jdks\"
+) do if not defined VIBE_JAVA for /d %%D in ("%%~P*") do (
+    if not defined VIBE_JAVA if exist "%%~fD\bin\javac.exe" (
+        "%%~fD\bin\java.exe" -version 2>&1 | findstr /r /c:"21\.[0-9][0-9]*" >nul
+        if not errorlevel 1 set "VIBE_JAVA=%%~fD"
     )
 )
 

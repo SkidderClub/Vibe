@@ -4,7 +4,7 @@ import dev.vibe.Vibe;
 import dev.vibe.core.MoveFixTransformer;
 import dev.vibe.module.Module;
 import dev.vibe.module.ModuleManager;
-import dev.vibe.module.impl.AutoToolModule;
+import dev.vibe.module.impl.world.AutoToolModule;
 import java.lang.reflect.*;
 import java.util.*;
 import net.minecraft.client.Minecraft;
@@ -82,7 +82,7 @@ public class AutoToolHooksTest implements Opcodes {
     }
 
     @Test public void bedAuraSuppressesOnlyItsOwnIdleMiningReset() throws Exception {
-        dev.vibe.module.impl.BedAuraModule bed = new dev.vibe.module.impl.BedAuraModule();
+        dev.vibe.module.impl.world.BedAuraModule bed = new dev.vibe.module.impl.world.BedAuraModule();
         set(Module.class, bed, "enabled", true);
         set(bed.getClass(), bed, "owner", minecraft.thePlayer);
         set(bed.getClass(), bed, "ready", true);

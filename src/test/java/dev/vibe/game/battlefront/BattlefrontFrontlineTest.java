@@ -1,6 +1,6 @@
 package dev.vibe.game.battlefront;
 
-import dev.vibe.ui.BattlefrontIcons;
+import dev.vibe.ui.game.BattlefrontIcons;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.util.*;

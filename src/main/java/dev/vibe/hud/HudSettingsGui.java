@@ -1,7 +1,7 @@
 package dev.vibe.hud;
 
 import dev.vibe.Vibe;
-import dev.vibe.module.impl.HudModule;
+import dev.vibe.module.impl.client.HudModule;
 import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ModeSetting;
 import dev.vibe.setting.MultiSelectSetting;
@@ -33,7 +33,7 @@ public final class HudSettingsGui extends GuiScreen {
         this.element = element;
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         if (HudManager.MUSIC.equals(element)) {
-            dev.vibe.module.impl.MusicModule music = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.MusicModule.class);
+            dev.vibe.module.impl.client.MusicModule music = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.MusicModule.class);
             if (music != null) {
                 settings.add(music.hudWidth); settings.add(music.hudScale); settings.add(music.cover);
                 settings.add(music.coverBackground); settings.add(music.progress); settings.add(music.scroll); settings.add(music.hideIdle);
@@ -131,7 +131,7 @@ public final class HudSettingsGui extends GuiScreen {
                         editing = (StringSetting) setting; editBuffer = editing.getValue();
                     }
                     Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
-                    dev.vibe.ui.ArrayListRenderer.applyPreset(Vibe.getInstance().getModuleManager().getModule(HudModule.class));
+                    dev.vibe.hud.ArrayListRenderer.applyPreset(Vibe.getInstance().getModuleManager().getModule(HudModule.class));
                     return;
                 }
                 y += rowHeight;

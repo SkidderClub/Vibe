@@ -5,10 +5,10 @@ import com.google.gson.JsonParser;
 import dev.vibe.Vibe;
 import dev.vibe.language.LanguageManager;
 import dev.vibe.module.Module;
-import dev.vibe.module.impl.HudModule;
-import dev.vibe.module.impl.NameProtectModule;
-import dev.vibe.module.impl.BlurModule;
-import dev.vibe.module.impl.EspModule;
+import dev.vibe.module.impl.client.HudModule;
+import dev.vibe.module.impl.client.NameProtectModule;
+import dev.vibe.module.impl.client.BlurModule;
+import dev.vibe.module.impl.visual.EspModule;
 import dev.vibe.friend.FriendManager;
 import dev.vibe.target.TargetManager;
 import dev.vibe.ui.RenderUtils;
@@ -83,8 +83,8 @@ public final class HudManager {
     private final HudElement cpsGraph = new HudElement(CPS_GRAPH, 9, 190, true, false);
     public static final String MUSIC = "Music";
     private final HudElement music = new HudElement(MUSIC, 12, 88, true, true);
-    private final dev.vibe.ui.MusicHudRenderer musicRenderer = new dev.vibe.ui.MusicHudRenderer();
-    private final dev.vibe.ui.MusicVisualizer musicVisualizer = new dev.vibe.ui.MusicVisualizer();
+    private final dev.vibe.hud.MusicHudRenderer musicRenderer = new dev.vibe.hud.MusicHudRenderer();
+    private final dev.vibe.hud.MusicVisualizer musicVisualizer = new dev.vibe.hud.MusicVisualizer();
     private final long sessionStarted = System.currentTimeMillis();
     private final LiquidGlassRenderer liquidGlass = new LiquidGlassRenderer();
     private final float[] motionSamples = new float[96];
@@ -106,7 +106,7 @@ public final class HudManager {
 
     public void draw() {
         KawaseBlur.beginHudFrame();
-        if (!(minecraft.currentScreen instanceof dev.vibe.ui.Gta7Gui) && !(minecraft.currentScreen instanceof dev.vibe.ui.Gta8Gui)) drawMusic(false);
+        if (!(minecraft.currentScreen instanceof dev.vibe.ui.game.Gta7Gui) && !(minecraft.currentScreen instanceof dev.vibe.ui.game.Gta8Gui)) drawMusic(false);
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         if (hud == null || !hud.isEnabled() || minecraft.thePlayer == null) {
             return;
@@ -189,14 +189,14 @@ public final class HudManager {
 
     /** Music owns its visibility; it can render even when the general HUD module is disabled. */
     public void drawMusic(boolean preview) {
-        dev.vibe.module.impl.MusicModule m = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.MusicModule.class);
+        dev.vibe.module.impl.client.MusicModule m = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.MusicModule.class);
         if (m == null || !m.isEnabled()) { musicRenderer.close(); musicVisualizer.clear(); return; }
         ScaledResolution resolution = new ScaledResolution(minecraft);
         dev.vibe.media.MusicService service = m.service();
         if (!m.hud.isEnabled()) { musicRenderer.close(); return; }
         dev.vibe.media.MediaTrack track = service == null ? dev.vibe.media.MediaTrack.idle("Waiting for media") : service.track();
         if (!preview && m.hideIdle.isEnabled() && !track.playing) return;
-        float scale = dev.vibe.ui.MusicHudRenderer.effectiveScale(m, resolution.getScaledWidth(), resolution.getScaledHeight()) * music.getScale();
+        float scale = dev.vibe.hud.MusicHudRenderer.effectiveScale(m, resolution.getScaledWidth(), resolution.getScaledHeight()) * music.getScale();
         int width = Math.round(m.hudWidth.getFloat()*scale), height = Math.round(64*scale);
         music.ensureOnScreen(resolution, width, height);
         int left = Math.max(0, music.left(resolution, width)), top = Math.max(0, music.top(resolution, height));
@@ -235,14 +235,14 @@ public final class HudManager {
         watermark.setBounds(left, top, width, 26);
     }
 
-    private final dev.vibe.ui.ArrayListRenderer arrayRenderer = new dev.vibe.ui.ArrayListRenderer();
+    private final dev.vibe.hud.ArrayListRenderer arrayRenderer = new dev.vibe.hud.ArrayListRenderer();
     private void drawArrayList(HudModule hud, ScaledResolution resolution, FontRenderer font) {
         arrayRenderer.draw(hud,arrayList,resolution,false);
     }
 
     /** Draw before Minecraft begins its overlay sequence, keeping the wave behind health, hotbar and item slots. */
     public void drawMusicVisualizer() {
-        dev.vibe.module.impl.MusicModule module = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.MusicModule.class);
+        dev.vibe.module.impl.client.MusicModule module = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.MusicModule.class);
         if (module == null || !module.isEnabled() || !module.visualizer.isEnabled() || module.service() == null) return;
         ScaledResolution resolution = new ScaledResolution(minecraft);
         musicVisualizer.draw(module, module.service().spectrum(), resolution.getScaledWidth(), resolution.getScaledHeight());
@@ -840,7 +840,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     public boolean isEnabled(String id) {
         if (MUSIC.equals(id)) {
-            dev.vibe.module.impl.MusicModule m = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.MusicModule.class);
+            dev.vibe.module.impl.client.MusicModule m = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.MusicModule.class);
             return m != null && m.isEnabled() && m.hud.isEnabled();
         }
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);

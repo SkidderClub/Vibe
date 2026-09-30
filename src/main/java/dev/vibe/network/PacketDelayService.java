@@ -1,14 +1,14 @@
 package dev.vibe.network;
 
 import dev.vibe.Vibe;
-import dev.vibe.module.impl.BacktrackModule;
-import dev.vibe.module.impl.GirlfriendModule;
-import dev.vibe.module.impl.LagRangeModule;
-import dev.vibe.module.impl.MoveFixModule;
-import dev.vibe.module.impl.CuteVisualsModule;
-import dev.vibe.module.impl.VelocityModule;
-import dev.vibe.module.impl.NoFallModule;
-import dev.vibe.module.impl.KillAuraModule;
+import dev.vibe.module.impl.combat.BacktrackModule;
+import dev.vibe.module.impl.meme.GirlfriendModule;
+import dev.vibe.module.impl.combat.LagRangeModule;
+import dev.vibe.module.impl.movement.MoveFixModule;
+import dev.vibe.module.impl.visual.CuteVisualsModule;
+import dev.vibe.module.impl.combat.VelocityModule;
+import dev.vibe.module.impl.movement.NoFallModule;
+import dev.vibe.module.impl.combat.KillAuraModule;
 import dev.vibe.script.ScriptRuntime;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
@@ -130,7 +130,7 @@ public final class PacketDelayService {
             final S08PacketPlayerPosLook correction = (S08PacketPlayerPosLook) packet;
             minecraft.addScheduledTask(new Runnable() {
                 @Override public void run() {
-                    dev.vibe.module.impl.FlagDetectorModule module = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.FlagDetectorModule.class);
+                    dev.vibe.module.impl.client.FlagDetectorModule module = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.FlagDetectorModule.class);
                     if (module != null) module.observe(correction);
                 }
             });

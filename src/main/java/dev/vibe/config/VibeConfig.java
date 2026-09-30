@@ -6,8 +6,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import dev.vibe.Vibe;
-import dev.vibe.module.impl.HudModule;
-import dev.vibe.module.impl.NameProtectModule;
+import dev.vibe.module.impl.client.HudModule;
+import dev.vibe.module.impl.client.NameProtectModule;
 import dev.vibe.module.Module;
 import dev.vibe.module.ModuleManager;
 import dev.vibe.setting.BooleanSetting;
@@ -439,7 +439,7 @@ public final class VibeConfig {
                 if (module == null) continue;
                 if (withKeybinds && data.has("key")) module.setKey(getInt(data, "key", module.getKey()));
                 if (!withVisuals && (module.getCategory() == dev.vibe.module.Category.VISUAL
-                        || module instanceof HudModule || module instanceof dev.vibe.module.impl.ClickGuiModule)) continue;
+                        || module instanceof HudModule || module instanceof dev.vibe.module.impl.client.ClickGuiModule)) continue;
                 JsonObject settings = data.has("settings") && data.get("settings").isJsonObject()
                         ? data.getAsJsonObject("settings") : new JsonObject();
                 for (Setting<?> setting : module.getSettings()) {

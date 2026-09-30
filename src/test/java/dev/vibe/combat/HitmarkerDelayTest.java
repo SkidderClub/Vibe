@@ -1,7 +1,7 @@
 package dev.vibe.combat;
 
 import dev.vibe.module.Module;
-import dev.vibe.module.impl.HitmarkerModule;
+import dev.vibe.module.impl.visual.HitmarkerModule;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.LinkedHashSet;

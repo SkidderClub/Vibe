@@ -1,7 +1,7 @@
 package dev.vibe.language;
 
 import dev.vibe.Vibe;
-import dev.vibe.module.impl.LanguageModule;
+import dev.vibe.module.impl.client.LanguageModule;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;

@@ -53,7 +53,7 @@ Minecraft, GTA7 and the editor share the same 2D renderer and layout. GTA7 retai
 With the project's Gradle build configured, run:
 
 ```text
-gradle test --tests "dev.vibe.ui.Esp*Test" --tests "dev.vibe.config.EspConfigMigrationTest"
+gradle test --tests "dev.vibe.ui.render.esp.Esp*Test" --tests "dev.vibe.config.EspConfigMigrationTest"
 gradle verifyEspRendering
 gradle verifyChamsRendering verifyGta7Rendering
 ```

@@ -5,7 +5,7 @@
 package dev.vibe.ui.effect;
 
 import dev.vibe.Vibe;
-import dev.vibe.module.impl.FogModule;
+import dev.vibe.module.impl.visual.FogModule;
 import java.nio.IntBuffer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.OpenGlHelper;
@@ -23,7 +23,7 @@ public final class FogRenderer implements AutoCloseable {
     private boolean failed;
     private final long started = System.nanoTime();
     public static FogModule module() {
-        if (dev.vibe.module.impl.HypixelModule.visualsSuppressed()) return null;
+        if (dev.vibe.module.impl.meme.HypixelModule.visualsSuppressed()) return null;
         return Vibe.getInstance() == null || Vibe.getInstance().getModuleManager() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(FogModule.class);
     }

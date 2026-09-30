@@ -106,9 +106,7 @@ explicit in the index.
 | --- | --- | --- | --- |
 | Janino and Commons Compiler | 3.1.12 | Compile local Java scripts | [BSD-3-Clause](https://github.com/janino-compiler/janino/blob/master/LICENSE) |
 | WebP ImageIO (Sejda/Luciad) | 0.1.6 | Read WebP images, including native decoding | [Apache-2.0](https://github.com/sejda-pdf/webp-imageio/blob/master/LICENSE) |
-| Nashorn Core (OpenJDK) | 15.4 | JavaScript runtime for the NES emulator | [GPL-2.0 with Classpath Exception](https://github.com/openjdk/nashorn/blob/main/LICENSE) |
-| Rhino and Rhino Engine (Mozilla) | 1.7.15 | Alternative JavaScript runtime | [MPL-2.0](https://github.com/mozilla/rhino/blob/Rhino1_7_15_Release/LICENSE.txt) |
-| ASM (OW2) | Resolved by Gradle | Bytecode support for bundled runtimes and Forge | [BSD-3-Clause](https://asm.ow2.io/license.html) |
+| Rhino and Rhino Engine (Mozilla) | 1.7.15 | JavaScript runtime for the NES emulator | [MPL-2.0](https://github.com/mozilla/rhino/blob/Rhino1_7_15_Release/LICENSE.txt) |
 | imgui-java bindings and Windows/Linux/macOS natives (SpaiR) | 1.86.11 | Augustus interface | [Apache-2.0](https://github.com/SpaiR/imgui-java/blob/v1.86.11/LICENSE) |
 | JLayer (JavaZoom) | 1.0.1 | MP3 playback | [LGPL, as declared in the published POM](https://repo.maven.apache.org/maven2/javazoom/jlayer/1.0.1/jlayer-1.0.1.pom) |
 

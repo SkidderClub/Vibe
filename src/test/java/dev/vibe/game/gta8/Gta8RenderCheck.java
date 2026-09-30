@@ -24,8 +24,8 @@ public class Gta8RenderCheck {
     static Gta8Renderer renderer;
     static Gta8Game game;
     static Minecraft minecraft;
-    static dev.vibe.module.impl.Gta8Module gtaModule;
-    static dev.vibe.ui.Gta8Gui gui;
+    static dev.vibe.module.impl.meme.Gta8Module gtaModule;
+    static dev.vibe.ui.game.Gta8Gui gui;
 
     static void set(Class<?> c, Object o, String n, Object v) throws Exception { Field f = c.getDeclaredField(n); f.setAccessible(true); f.set(o, v); }
 
@@ -56,7 +56,7 @@ public class Gta8RenderCheck {
             dev.vibe.Vibe vibe = new dev.vibe.Vibe();
             set(dev.vibe.Vibe.class, null, "instance", vibe);
             dev.vibe.module.ModuleManager modules = (dev.vibe.module.ModuleManager) unsafeType.getMethod("allocateInstance", Class.class).invoke(unsafe, dev.vibe.module.ModuleManager.class);
-            gtaModule = new dev.vibe.module.impl.Gta8Module();
+            gtaModule = new dev.vibe.module.impl.meme.Gta8Module();
             set(dev.vibe.module.ModuleManager.class, modules, "modules", new java.util.ArrayList<dev.vibe.module.Module>(java.util.Arrays.asList(gtaModule)));
             set(dev.vibe.Vibe.class, vibe, "moduleManager", modules);
             minecraft = mc;
@@ -193,11 +193,11 @@ public class Gta8RenderCheck {
     /** HUD and menus, drawn through the real Gta8Gui methods like in the game. */
     static void interfaceShots(String only) throws Exception {
         if (!only.isEmpty() && !only.startsWith("h")) return;
-        gui = new dev.vibe.ui.Gta8Gui(gtaModule);
+        gui = new dev.vibe.ui.game.Gta8Gui(gtaModule);
         gui.mc = minecraft;
         set(net.minecraft.client.gui.GuiScreen.class, gui, "fontRendererObj", minecraft.fontRendererObj);
         gui.width = W / 2; gui.height = H / 2;
-        Class<?> g = dev.vibe.ui.Gta8Gui.class;
+        Class<?> g = dev.vibe.ui.game.Gta8Gui.class;
         set(g, gui, "world", game.world); set(g, gui, "game", game); set(g, gui, "renderer", renderer);
         set(g, gui, "mapImage", Gta8MapImage.render(game.world));
         Class<?> fontType = Class.forName("dev.vibe.ui.NeverLoseFont");
@@ -236,7 +236,7 @@ public class Gta8RenderCheck {
         net.minecraft.client.renderer.GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
         net.minecraft.client.renderer.GlStateManager.disableDepth();
         net.minecraft.client.renderer.GlStateManager.enableTexture2D();
-        java.lang.reflect.Method m = method.equals("hud") ? dev.vibe.ui.Gta8Gui.class.getDeclaredMethod("hud") : dev.vibe.ui.Gta8Gui.class.getDeclaredMethod(method, int.class, int.class);
+        java.lang.reflect.Method m = method.equals("hud") ? dev.vibe.ui.game.Gta8Gui.class.getDeclaredMethod("hud") : dev.vibe.ui.game.Gta8Gui.class.getDeclaredMethod(method, int.class, int.class);
         m.setAccessible(true);
         if (method.equals("hud")) m.invoke(gui); else m.invoke(gui, 0, 0);
         net.minecraft.client.renderer.GlStateManager.enableDepth();

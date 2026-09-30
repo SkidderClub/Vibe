@@ -1,29 +1,34 @@
 package dev.vibe;
 
-import dev.vibe.config.VibeConfig;
 import dev.vibe.account.AccountManager;
+import dev.vibe.combat.CombatTimerAccess;
 import dev.vibe.command.CommandManager;
-import dev.vibe.event.ClientEvents;
-import dev.vibe.event.MainMenuEvents;
-import dev.vibe.hud.HudManager;
-import dev.vibe.identity.ClientIdentity;
-import dev.vibe.module.ModuleManager;
-import dev.vibe.module.impl.LanguageModule;
-import dev.vibe.friend.FriendManager;
+import dev.vibe.config.VibeConfig;
 import dev.vibe.cosmetic.CosmeticPresetManager;
 import dev.vibe.cosmetic.CosmeticaCatalogService;
-import dev.vibe.target.TargetManager;
-import dev.vibe.ui.VibeClickGui;
-import dev.vibe.ui.AnimationItemRenderer;
+import dev.vibe.event.ClientEvents;
+import dev.vibe.event.GuiButtonLocalizationEvents;
+import dev.vibe.event.MainMenuEvents;
+import dev.vibe.event.ReconnectEvents;
+import dev.vibe.friend.FriendManager;
+import dev.vibe.hud.HudManager;
+import dev.vibe.identity.ClientIdentity;
+import dev.vibe.module.Module;
+import dev.vibe.module.ModuleManager;
+import dev.vibe.module.impl.client.ClickGuiModule;
+import dev.vibe.module.impl.client.LanguageModule;
 import dev.vibe.script.ScriptRuntime;
 import dev.vibe.statistics.StatisticsService;
+import dev.vibe.target.TargetManager;
+import dev.vibe.ui.clickgui.VibeClickGui;
+import dev.vibe.ui.render.AnimationItemRenderer;
+import java.io.File;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.Display;
 
 @Mod(modid = Vibe.MOD_ID, name = Vibe.FORGE_NAME, version = Vibe.VERSION, clientSideOnly = true, acceptedMinecraftVersions = "[1.8.9]")
@@ -32,7 +37,7 @@ public final class Vibe {
     public static final String MOD_ID = "clientcore";
     public static final String NAME = "Vibe";
     public static final String FORGE_NAME = "Client Core";
-    public static final String VERSION = "0.0.6";
+    public static final String VERSION = BuildInfo.VERSION;
 
     private static Vibe instance;
 
@@ -62,9 +67,9 @@ public final class Vibe {
         // A timer-owned combat module can be enabled in the active profile.
         // Restore vanilla timing before config restoration and before a world
         // exists so a previous session can never start the client frozen.
-        dev.vibe.module.impl.CombatTimerAccess.resetVanillaTimer();
-        accountManager = new AccountManager(minecraft, new java.io.File(minecraft.mcDataDir, "vibe/accounts").toPath());
-        statistics = new StatisticsService(minecraft, new java.io.File(minecraft.mcDataDir, "vibe/statistics").toPath());
+        CombatTimerAccess.resetVanillaTimer();
+        accountManager = new AccountManager(minecraft, new File(minecraft.mcDataDir, "vibe/accounts").toPath());
+        statistics = new StatisticsService(minecraft, new File(minecraft.mcDataDir, "vibe/statistics").toPath());
         statistics.recordLaunch();
         config = new VibeConfig(event.getModConfigurationDirectory());
         identity = new ClientIdentity(minecraft.mcDataDir);
@@ -86,8 +91,8 @@ public final class Vibe {
         ClientEvents events = new ClientEvents();
         MinecraftForge.EVENT_BUS.register(events);
         MinecraftForge.EVENT_BUS.register(new MainMenuEvents());
-        MinecraftForge.EVENT_BUS.register(new dev.vibe.event.GuiButtonLocalizationEvents());
-        dev.vibe.event.ReconnectEvents reconnect = new dev.vibe.event.ReconnectEvents();
+        MinecraftForge.EVENT_BUS.register(new GuiButtonLocalizationEvents());
+        ReconnectEvents reconnect = new ReconnectEvents();
         MinecraftForge.EVENT_BUS.register(reconnect);
         FMLCommonHandler.instance().bus().register(reconnect);
         FMLCommonHandler.instance().bus().register(events);
@@ -105,8 +110,8 @@ public final class Vibe {
     }
 
     public void openClickGui() {
-        dev.vibe.module.impl.ClickGuiModule clickGui = moduleManager == null ? null
-                : moduleManager.getModule(dev.vibe.module.impl.ClickGuiModule.class);
+        ClickGuiModule clickGui = moduleManager == null ? null
+                : moduleManager.getModule(ClickGuiModule.class);
         if (clickGui != null) clickGui.setEnabled(true);
         minecraft.displayGuiScreen(new VibeClickGui());
     }
@@ -151,7 +156,7 @@ public final class Vibe {
         if (moduleManager == null) { loadedModuleCount = loadedSettingCount = 0; return; }
         loadedModuleCount = moduleManager.getModules().size();
         int settings = 0;
-        for (dev.vibe.module.Module module : moduleManager.getModules()) settings += module.getSettings().size();
+        for (Module module : moduleManager.getModules()) settings += module.getSettings().size();
         loadedSettingCount = settings;
     }
 
