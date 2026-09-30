@@ -4,80 +4,80 @@ import dev.vibe.Vibe;
 import dev.vibe.launcher.LauncherBridge;
 import dev.vibe.command.VibeChatGui;
 import dev.vibe.module.Module;
-import dev.vibe.module.impl.AutoClickerModule;
-import dev.vibe.module.impl.AimAssistModule;
-import dev.vibe.module.impl.SprintModule;
-import dev.vibe.module.impl.ChestEspModule;
-import dev.vibe.module.impl.ClickGuiModule;
-import dev.vibe.module.impl.EagleModule;
-import dev.vibe.module.impl.EspModule;
-import dev.vibe.module.impl.FastPlaceModule;
-import dev.vibe.module.impl.ScaffoldModule;
-import dev.vibe.module.impl.FovChangerModule;
-import dev.vibe.module.impl.FullBrightModule;
-import dev.vibe.module.impl.ReachModule;
-import dev.vibe.module.impl.NameProtectModule;
-import dev.vibe.module.impl.NoJumpDelayModule;
-import dev.vibe.module.impl.NoSlowModule;
-import dev.vibe.module.impl.MoveFixModule;
-import dev.vibe.module.impl.TestModule;
-import dev.vibe.module.impl.KillAuraModule;
-import dev.vibe.module.impl.ItemEspModule;
-import dev.vibe.module.impl.GirlfriendModule;
-import dev.vibe.module.impl.Gta7Module;
-import dev.vibe.module.impl.QolModule;
-import dev.vibe.module.impl.VelocityModule;
-import dev.vibe.module.impl.FlyModule;
-import dev.vibe.module.impl.SpeedModule;
-import dev.vibe.module.impl.LongJumpModule;
-import dev.vibe.module.impl.NoFallModule;
-import dev.vibe.module.impl.WaifuModule;
-import dev.vibe.module.impl.HudModule;
-import dev.vibe.module.impl.CustomCrosshairModule;
-import dev.vibe.module.impl.HitmarkerModule;
-import dev.vibe.module.impl.InventoryManagerModule;
-import dev.vibe.module.impl.ChestStealerModule;
-import dev.vibe.module.impl.InventoryEditorModule;
-import dev.vibe.module.impl.AutoToolModule;
-import dev.vibe.module.impl.BedAuraModule;
-import dev.vibe.module.impl.FastBreakModule;
-import dev.vibe.module.impl.AmbienceModule;
-import dev.vibe.module.impl.NesEmulatorModule;
-import dev.vibe.module.impl.WTapModule;
-import dev.vibe.module.impl.BacktrackModule;
-import dev.vibe.module.impl.LagRangeModule;
-import dev.vibe.module.impl.TickBaseModule;
-import dev.vibe.module.impl.TimerRangeModule;
-import dev.vibe.module.impl.BedEspModule;
-import dev.vibe.module.impl.BlockChangeEspModule;
-import dev.vibe.module.impl.BlockOverlayModule;
-import dev.vibe.module.impl.CuteVisualsModule;
-import dev.vibe.module.impl.TrajectoriesModule;
-import dev.vibe.module.impl.MemeGameModule;
-import dev.vibe.module.impl.FlagDetectorModule;
+import dev.vibe.module.impl.combat.AutoClickerModule;
+import dev.vibe.module.impl.combat.AimAssistModule;
+import dev.vibe.module.impl.movement.SprintModule;
+import dev.vibe.module.impl.visual.ChestEspModule;
+import dev.vibe.module.impl.client.ClickGuiModule;
+import dev.vibe.module.impl.movement.EagleModule;
+import dev.vibe.module.impl.visual.EspModule;
+import dev.vibe.module.impl.world.FastPlaceModule;
+import dev.vibe.module.impl.world.ScaffoldModule;
+import dev.vibe.module.impl.visual.FovChangerModule;
+import dev.vibe.module.impl.visual.FullBrightModule;
+import dev.vibe.module.impl.combat.ReachModule;
+import dev.vibe.module.impl.client.NameProtectModule;
+import dev.vibe.module.impl.movement.NoJumpDelayModule;
+import dev.vibe.module.impl.movement.NoSlowModule;
+import dev.vibe.module.impl.movement.MoveFixModule;
+import dev.vibe.module.impl.movement.TestModule;
+import dev.vibe.module.impl.combat.KillAuraModule;
+import dev.vibe.module.impl.visual.ItemEspModule;
+import dev.vibe.module.impl.meme.GirlfriendModule;
+import dev.vibe.module.impl.meme.Gta7Module;
+import dev.vibe.module.impl.client.QolModule;
+import dev.vibe.module.impl.combat.VelocityModule;
+import dev.vibe.module.impl.movement.FlyModule;
+import dev.vibe.module.impl.movement.SpeedModule;
+import dev.vibe.module.impl.movement.LongJumpModule;
+import dev.vibe.module.impl.movement.NoFallModule;
+import dev.vibe.module.impl.client.WaifuModule;
+import dev.vibe.module.impl.client.HudModule;
+import dev.vibe.module.impl.visual.CustomCrosshairModule;
+import dev.vibe.module.impl.visual.HitmarkerModule;
+import dev.vibe.module.impl.world.InventoryManagerModule;
+import dev.vibe.module.impl.world.ChestStealerModule;
+import dev.vibe.module.impl.client.InventoryEditorModule;
+import dev.vibe.module.impl.world.AutoToolModule;
+import dev.vibe.module.impl.world.BedAuraModule;
+import dev.vibe.module.impl.world.FastBreakModule;
+import dev.vibe.module.impl.visual.AmbienceModule;
+import dev.vibe.module.impl.meme.NesEmulatorModule;
+import dev.vibe.module.impl.combat.WTapModule;
+import dev.vibe.module.impl.combat.BacktrackModule;
+import dev.vibe.module.impl.combat.LagRangeModule;
+import dev.vibe.module.impl.combat.TickBaseModule;
+import dev.vibe.module.impl.combat.TimerRangeModule;
+import dev.vibe.module.impl.visual.BedEspModule;
+import dev.vibe.module.impl.visual.BlockChangeEspModule;
+import dev.vibe.module.impl.visual.BlockOverlayModule;
+import dev.vibe.module.impl.visual.CuteVisualsModule;
+import dev.vibe.module.impl.visual.TrajectoriesModule;
+import dev.vibe.module.impl.meme.MemeGameModule;
+import dev.vibe.module.impl.client.FlagDetectorModule;
 import dev.vibe.input.ClickStats;
 import dev.vibe.network.PacketDelayService;
 import dev.vibe.script.ScriptRuntime;
-import dev.vibe.ui.ChestEspRenderer;
-import dev.vibe.ui.ScaffoldCountRenderer;
-import dev.vibe.ui.EspRenderer;
-import dev.vibe.ui.TargetEspRenderer;
-import dev.vibe.ui.SkeletalRenderer;
-import dev.vibe.ui.CosmeticsRenderer;
+import dev.vibe.ui.render.esp.ChestEspRenderer;
+import dev.vibe.ui.render.ScaffoldCountRenderer;
+import dev.vibe.ui.render.esp.EspRenderer;
+import dev.vibe.ui.render.esp.TargetEspRenderer;
+import dev.vibe.ui.render.esp.SkeletalRenderer;
+import dev.vibe.ui.render.CosmeticsRenderer;
 import dev.vibe.ui.RenderUtils;
-import dev.vibe.ui.CustomCrosshairRenderer;
-import dev.vibe.ui.ParticlesRenderer;
-import dev.vibe.ui.QolRenderer;
-import dev.vibe.ui.HitmarkerRenderer;
-import dev.vibe.ui.BedEspRenderer;
-import dev.vibe.ui.BlockChangeEspRenderer;
-import dev.vibe.ui.BlockOverlayRenderer;
-import dev.vibe.ui.BedAuraRenderer;
-import dev.vibe.ui.BacktrackRenderer;
-import dev.vibe.ui.CuteVisualsRenderer;
-import dev.vibe.ui.TrajectoriesRenderer;
-import dev.vibe.ui.ItemEspRenderer;
-import dev.vibe.ui.CustomCosmeticsRenderer;
+import dev.vibe.ui.render.CustomCrosshairRenderer;
+import dev.vibe.ui.render.ParticlesRenderer;
+import dev.vibe.ui.render.QolRenderer;
+import dev.vibe.ui.render.HitmarkerRenderer;
+import dev.vibe.ui.render.esp.BedEspRenderer;
+import dev.vibe.ui.render.esp.BlockChangeEspRenderer;
+import dev.vibe.ui.render.BlockOverlayRenderer;
+import dev.vibe.ui.render.BedAuraRenderer;
+import dev.vibe.ui.render.BacktrackRenderer;
+import dev.vibe.ui.render.CuteVisualsRenderer;
+import dev.vibe.ui.render.TrajectoriesRenderer;
+import dev.vibe.ui.render.esp.ItemEspRenderer;
+import dev.vibe.ui.render.CustomCosmeticsRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiChat;
@@ -101,7 +101,7 @@ import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
-import dev.vibe.ui.WaifuRenderer;
+import dev.vibe.ui.render.WaifuRenderer;
 import dev.vibe.ui.DebugOverlay;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent;
@@ -178,7 +178,7 @@ public final class ClientEvents {
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase == TickEvent.Phase.START) {
-            dev.vibe.module.impl.MusicModule music = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.MusicModule.class);
+            dev.vibe.module.impl.client.MusicModule music = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.MusicModule.class);
             if (music != null) music.tick();
             MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
             if (moveFix != null) moveFix.beginRotationTick();
@@ -215,9 +215,9 @@ public final class ClientEvents {
             // attack key, not at the end of the tick after a break action has
             // already begun.
             AutoToolModule autoTool = Vibe.getInstance().getModuleManager().getModule(AutoToolModule.class);
-            dev.vibe.module.impl.PickenSwitchModule picken=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.PickenSwitchModule.class);
+            dev.vibe.module.impl.combat.PickenSwitchModule picken=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.PickenSwitchModule.class);
             if(picken!=null)picken.tick();
-            dev.vibe.module.impl.CustomCosmeticsModule customCosmetics = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.CustomCosmeticsModule.class);
+            dev.vibe.module.impl.visual.CustomCosmeticsModule customCosmetics = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.CustomCosmeticsModule.class);
             if (customCosmetics != null) customCosmetics.tick();
             if (autoTool != null) autoTool.tick();
             BedAuraModule bedAura = Vibe.getInstance().getModuleManager().getModule(BedAuraModule.class);
@@ -230,7 +230,7 @@ public final class ClientEvents {
             }
             // Pathing sets its server rotation and forced movement before
             // Minecraft samples MovementInput for this tick.
-            dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+            dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
             if (hypixel != null) hypixel.tick();
             // A normal GuiContainer click is handled before the player update
             // for this client tick.  Keeping automated container input here
@@ -280,7 +280,7 @@ public final class ClientEvents {
             if (module instanceof MemeGameModule) ((MemeGameModule) module).tick();
         }
         if (minecraft.thePlayer == null) return;
-        dev.vibe.module.impl.TargetsModule targets = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.TargetsModule.class);
+        dev.vibe.module.impl.combat.TargetsModule targets = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.TargetsModule.class);
         if (targets != null) targets.tickWarnings();
         FullBrightModule fullBright = Vibe.getInstance().getModuleManager().getModule(FullBrightModule.class);
         if (fullBright != null) fullBright.tick();
@@ -374,7 +374,7 @@ public final class ClientEvents {
                     debugText.left, debugText.right, minecraft.fontRendererObj::getStringWidth);
         }
         try {
-            dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+            dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
             boolean pitBot = hypixel != null && hypixel.suppressVisuals();
             if (event.type == RenderGameOverlayEvent.ElementType.TEXT) {
                 if (!pitBot) {
@@ -418,7 +418,7 @@ public final class ClientEvents {
         if (event.gui != null) LauncherBridge.markGameVisible(minecraft.mcDataDir);
         // VibeClickGui draws particles between its backdrop and panels. Other
         // vanilla GUIs still receive their post-content particle layer here.
-        if (!(event.gui instanceof dev.vibe.ui.VibeClickGui) && !isSkeetEditor(event.gui)) {
+        if (!(event.gui instanceof dev.vibe.ui.clickgui.VibeClickGui) && !isSkeetEditor(event.gui)) {
             particlesRenderer.draw(event.gui);
         }
         WaifuRenderer.draw(event.gui);
@@ -481,18 +481,18 @@ public final class ClientEvents {
      * their Skeet window. Do not add a second foreground particle pass here.
      */
     private boolean isSkeetEditor(net.minecraft.client.gui.GuiScreen screen) {
-        return screen instanceof dev.vibe.ui.InventoryEditorGui
-                || screen instanceof dev.vibe.ui.ConfigEditorGui
-                || screen instanceof dev.vibe.ui.FriendEditorGui
-                || screen instanceof dev.vibe.ui.KeybindEditorGui
-                || screen instanceof dev.vibe.ui.EspEditorGui
-                || screen instanceof dev.vibe.ui.NesEmulatorGui
-                || screen instanceof dev.vibe.ui.Gta7Gui
-                || screen instanceof dev.vibe.ui.Gta8Gui
-                || screen instanceof dev.vibe.ui.Battlefront3Gui
-                || screen instanceof dev.vibe.ui.MemeGameGui
-                || screen instanceof dev.vibe.ui.SlotsGui
-                || screen instanceof dev.vibe.ui.ScriptsEditorGui;
+        return screen instanceof dev.vibe.ui.screen.InventoryEditorGui
+                || screen instanceof dev.vibe.ui.screen.ConfigEditorGui
+                || screen instanceof dev.vibe.ui.screen.FriendEditorGui
+                || screen instanceof dev.vibe.ui.screen.KeybindEditorGui
+                || screen instanceof dev.vibe.ui.screen.EspEditorGui
+                || screen instanceof dev.vibe.ui.game.NesEmulatorGui
+                || screen instanceof dev.vibe.ui.game.Gta7Gui
+                || screen instanceof dev.vibe.ui.game.Gta8Gui
+                || screen instanceof dev.vibe.ui.game.Battlefront3Gui
+                || screen instanceof dev.vibe.ui.game.MemeGameGui
+                || screen instanceof dev.vibe.ui.game.SlotsGui
+                || screen instanceof dev.vibe.ui.screen.ScriptsEditorGui;
     }
 
     private void drawInventoryCursor(net.minecraft.client.gui.GuiScreen screen) {
@@ -559,7 +559,7 @@ public final class ClientEvents {
     @SubscribeEvent
     public void onPreAll(RenderGameOverlayEvent.Pre event) {
         if (event.type != RenderGameOverlayEvent.ElementType.ALL) return;
-        dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+        dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
         if (hypixel != null && hypixel.suppressVisuals()) {
             restoreVanillaScoreboard();
             debugText = null;
@@ -642,7 +642,7 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onWorldRender(RenderWorldLastEvent event) {
-        dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+        dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
         if (hypixel != null && hypixel.suppressVisuals()) return;
         fogRenderer.renderMinecraft();
         ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
@@ -757,7 +757,7 @@ public final class ClientEvents {
             return;
         }
         EspModule esp = Vibe.getInstance().getModuleManager().getModule(EspModule.class);
-        dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+        dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
         if (hypixel != null && hypixel.suppressVisuals()) return;
         if (esp != null && esp.isEnabled() && esp.getModes().isSelected("2D") && esp.get2D(esp.resolvedProfile(esp.profileFor(event.entity))).name.enabled.isEnabled()) {
             event.setCanceled(true);
@@ -766,7 +766,7 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onGuiOpen(GuiOpenEvent event) {
-        dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+        dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
         if (hypixel != null && hypixel.blockEscapeMenu() && event.gui instanceof net.minecraft.client.gui.GuiIngameMenu) {
             event.setCanceled(true);
             return;
@@ -784,7 +784,7 @@ public final class ClientEvents {
             // Read the original plain text before Name Protect changes its
             // presentation. Board state continues to update when closed.
             String raw = event.message.getUnformattedText();
-            dev.vibe.module.impl.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.HypixelModule.class);
+            dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
             if (hypixel != null) hypixel.receiveChat(raw);
             for (Module module : Vibe.getInstance().getModuleManager().getModules()) {
                 if (module instanceof MemeGameModule) ((MemeGameModule) module).receiveChat(raw);

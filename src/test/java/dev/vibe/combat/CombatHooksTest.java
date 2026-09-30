@@ -26,9 +26,9 @@ public class CombatHooksTest {
     private static final String MC = "net.minecraft.client.Minecraft";
     private static final String PLAYER = "net.minecraft.client.entity.EntityPlayerSP";
     private static final String LIVING = "net.minecraft.entity.EntityLivingBase";
-    private static final String SCAFFOLD = "dev/vibe/module/impl/ScaffoldModule";
+    private static final String SCAFFOLD = "dev/vibe/module/impl/world/ScaffoldModule";
     private static final String RENDERER = "net.minecraft.client.renderer.entity.RenderPlayer";
-    private static final String AUTO_TOOL = "dev/vibe/module/impl/AutoToolModule";
+    private static final String AUTO_TOOL = "dev/vibe/module/impl/world/AutoToolModule";
 
     @Test public void developmentInputAndRenderHooksHaveValidStacksAndCorrectOrder() throws Exception {
         verifyInput(transform(MC, MC, resource(MC)), false);
@@ -57,7 +57,7 @@ public class CombatHooksTest {
         verify(node, render);
         assertEquals(1, calls(render, "isInvisibleToPlayer"));
         assertEquals(1, calls(render, "alpha"));
-        assertTrue(callIndex(render, "isInvisibleToPlayer", "dev/vibe/ui/InvisibleModelHooks") < callIndex(render, "alpha"));
+        assertTrue(callIndex(render, "isInvisibleToPlayer", "dev/vibe/ui/render/esp/InvisibleModelHooks") < callIndex(render, "alpha"));
     }
 
     private void verifyTool(ClassNode node, boolean obfuscated) throws Exception {

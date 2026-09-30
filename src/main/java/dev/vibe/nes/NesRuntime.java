@@ -14,7 +14,7 @@ import javax.script.ScriptEngineManager;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 
 /**
- * Runs the supplied ES5 NES core in the bundled Nashorn engine. The emulator
+ * Runs the supplied ES5 NES core in the bundled Rhino engine. The emulator
  * thread never touches OpenGL; it publishes completed RGB frames for the GUI
  * thread to upload into Minecraft's DynamicTexture safely.
  */
@@ -40,7 +40,7 @@ public final class NesRuntime {
     /**
      * Forge's LaunchClassLoader can deliberately hide third-party packages
      * added inside a mod JAR. Keep a private loader fallback for the bundled
-     * Nashorn/ASM classes in that environment.
+     * Rhino classes in that environment.
      */
     private URLClassLoader engineLoader;
     private Thread worker;
@@ -53,7 +53,7 @@ public final class NesRuntime {
         }
         try {
             engine = createEngine();
-            if (engine == null) throw new IllegalStateException("Nashorn runtime is unavailable");
+            if (engine == null) throw new IllegalStateException("No JavaScript runtime is available");
             if (!(engine instanceof Invocable)) throw new IllegalStateException("Bundled JavaScript runtime cannot invoke functions");
             invocable = (Invocable) engine;
             synchronized (engineLock) {
@@ -196,8 +196,8 @@ public final class NesRuntime {
         if (created != null) return created;
 
         // Forge's LaunchClassLoader may decline classes which live in the
-        // mod archive but are outside a mod namespace (such as Nashorn and
-        // Rhino).  Give the bundled archive a normal JDK parent instead of
+        // mod archive but are outside a mod namespace (such as Rhino).
+        // Give the bundled archive a normal JDK parent instead of
         // LaunchClassLoader: the engine only needs JDK APIs and can still
         // invoke the public FrameSink object supplied through script bindings.
         URL archive = NesRuntime.class.getProtectionDomain().getCodeSource() == null ? null
@@ -215,18 +215,12 @@ public final class NesRuntime {
     }
 
     private ScriptEngine createEngine(ClassLoader loader) {
-        String[] factories = {
-                "org.openjdk.nashorn.api.scripting.NashornScriptEngineFactory",
-                "org.mozilla.javascript.engine.RhinoScriptEngineFactory"
-        };
-        for (String name : factories) {
-            try {
-                Class<?> type = Class.forName(name, true, loader);
-                Object factory = type.newInstance();
-                Object created = type.getMethod("getScriptEngine").invoke(factory);
-                if (created instanceof ScriptEngine) return (ScriptEngine) created;
-            } catch (Throwable ignored) { }
-        }
+        try {
+            Class<?> type = Class.forName("org.mozilla.javascript.engine.RhinoScriptEngineFactory", true, loader);
+            Object created = type.getMethod("getScriptEngine").invoke(type.newInstance());
+            if (created instanceof ScriptEngine) return (ScriptEngine) created;
+        } catch (Throwable ignored) { }
+        // Otherwise any registered engine, such as the Nashorn built into Java 8.
         try {
             ScriptEngineManager manager = new ScriptEngineManager(loader);
             ScriptEngine engine = manager.getEngineByName("nashorn");

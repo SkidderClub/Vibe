@@ -5,9 +5,22 @@ import dev.vibe.Vibe;
 import dev.vibe.game.meme.ConnectFourState;
 import dev.vibe.game.meme.GameType;
 import dev.vibe.game.meme.TicTacToeState;
+import dev.vibe.hud.ArrayListRenderer;
+import dev.vibe.hud.MusicHudRenderer;
 import dev.vibe.module.Module;
 import dev.vibe.module.ModuleManager;
-import dev.vibe.module.impl.*;
+import dev.vibe.module.impl.client.BlurModule;
+import dev.vibe.module.impl.client.ClickGuiModule;
+import dev.vibe.module.impl.client.HudModule;
+import dev.vibe.module.impl.client.MusicModule;
+import dev.vibe.module.impl.meme.ChessModule;
+import dev.vibe.module.impl.meme.HypixelModule;
+import dev.vibe.module.impl.meme.MemeGameModule;
+import dev.vibe.module.impl.visual.TrajectoriesModule;
+import dev.vibe.ui.account.SkinHeads;
+import dev.vibe.ui.clickgui.VibeClickGui;
+import dev.vibe.ui.game.MemeGameGui;
+import dev.vibe.ui.render.TrajectoriesRenderer;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.lang.reflect.*;
@@ -131,20 +144,20 @@ public final class ClientChangesRenderCheck {
                 prepareHeads(players);
                 render(gui,"lobby-"+dimensions[0]+".png");
                 int x = integer(gui,"listRight")-5, bottom = integer(gui,"listBottom")-5;
-                gui.mouseClicked(scaled(gui,x),scaled(gui,bottom),0);
-                gui.mouseClickMove(scaled(gui,x),scaled(gui,bottom+1000),0,1); gui.mouseReleased(0,0,0);
+                GuiInput.mouseClicked(gui,scaled(gui,x),scaled(gui,bottom),0);
+                GuiInput.mouseClickMove(gui,scaled(gui,x),scaled(gui,bottom+1000),0,1); GuiInput.mouseReleased(gui,0,0,0);
                 if (integer(gui,"playerScroll") < 1000) throw new AssertionError("Player list cannot reach the last row");
                 prepareHeads(players);
                 render(gui,"lobby-end-"+dimensions[0]+".png");
                 // Select the last player in the scrolled viewport, exercising transformed mouse coordinates.
                 int rowX = integer(gui,"listLeft")+30;
-                gui.mouseClicked(scaled(gui,rowX),scaled(gui,bottom-16),0);
+                GuiInput.mouseClicked(gui,scaled(gui,rowX),scaled(gui,bottom-16),0);
                 if (!"Player100".equals(get(MemeGameGui.class,gui,"selectedPlayer"))) throw new AssertionError("Last player not clickable");
                 set(MemeGameModule.class,chess,"pendingOpponent","Player100");
                 render(gui,"invite-"+dimensions[0]+".png");
                 x=integer(gui,"contentRight")-5;
-                gui.mouseClicked(scaled(gui,x),scaled(gui,integer(gui,"listBottom")-40),0);
-                gui.mouseClickMove(scaled(gui,x),scaled(gui,bottom+1000),0,1); gui.mouseReleased(0,0,0);
+                GuiInput.mouseClicked(gui,scaled(gui,x),scaled(gui,integer(gui,"listBottom")-40),0);
+                GuiInput.mouseClickMove(gui,scaled(gui,x),scaled(gui,bottom+1000),0,1); GuiInput.mouseReleased(gui,0,0,0);
                 render(gui,"invite-end-"+dimensions[0]+".png");
                 set(MemeGameModule.class,chess,"pendingOpponent",null);
             }
@@ -157,7 +170,7 @@ public final class ClientChangesRenderCheck {
             MemeGameModule four = new MemeGameModule("Four", "", GameType.CONNECT_FOUR, new ConnectFourState()){};
             four.startRobot(true); gui = new MemeGameGui(four); gui.setWorldAndResolution(mc,960,540);
             int x=integer(gui,"left")+24, y=integer(gui,"top")+45+240;
-            gui.mouseClicked(x,y,0);
+            GuiInput.mouseClicked(gui,x,y,0);
             if (((ConnectFourState)four.getGame()).get(5,0) != 'R') throw new AssertionError("Lower column click was ignored");
             render(gui,"connect-four.png");
             testImpacts();
@@ -174,7 +187,7 @@ public final class ClientChangesRenderCheck {
     @SuppressWarnings("unchecked") private static void prepareHeads(Map<UUID,NetworkPlayerInfo> players) throws Exception {
         // Offline fixture heads: never query external skin services from a rendering check.
         Map<UUID,Object> heads = (Map<UUID,Object>)get(SkinHeads.class,null,"HEADS");
-        Class<?> headType = Class.forName("dev.vibe.ui.SkinHeads$Head");
+        Class<?> headType = Class.forName("dev.vibe.ui.account.SkinHeads$Head");
         Constructor<?> ctor = headType.getDeclaredConstructor(ResourceLocation.class); ctor.setAccessible(true);
         for (UUID id : players.keySet()) {
             Object head = ctor.newInstance(new ResourceLocation("textures/entity/steve.png"));
@@ -419,16 +432,16 @@ public final class ClientChangesRenderCheck {
                 draw.setAccessible(true);
                 frame(960,540);
                 draw.invoke(gui,hypixel.getPitTarget(),500,740,160,0xFF00CCFF,name.equals("Futuristic"),name.equals("Skeet"));
-                gui.mouseClicked(625,168,0);
-                for(char ch:"Player_123".toCharArray())gui.keyTyped(ch,0);
+                GuiInput.mouseClicked(gui,625,168,0);
+                for(char ch:"Player_123".toCharArray())GuiInput.keyTyped(gui,ch,0);
                 if(!hypixel.getPitTarget().getValue().equals("Player_123"))throw new AssertionError(name+" cannot type PitBot name");
-                gui.keyTyped('\0',org.lwjgl.input.Keyboard.KEY_LEFT);
-                gui.keyTyped('\0',org.lwjgl.input.Keyboard.KEY_BACK);
+                GuiInput.keyTyped(gui,'\0',org.lwjgl.input.Keyboard.KEY_LEFT);
+                GuiInput.keyTyped(gui,'\0',org.lwjgl.input.Keyboard.KEY_BACK);
                 if(!hypixel.getPitTarget().getValue().equals("Player_13"))throw new AssertionError(name+" cursor/backspace failed");
-                gui.keyTyped('\0',org.lwjgl.input.Keyboard.KEY_END);
-                for(int i=0;i<30;i++)gui.keyTyped('x',0);
+                GuiInput.keyTyped(gui,'\0',org.lwjgl.input.Keyboard.KEY_END);
+                for(int i=0;i<30;i++)GuiInput.keyTyped(gui,'x',0);
                 if(hypixel.getPitTarget().getValue().length()!=16)throw new AssertionError(name+" ignores player-name limit");
-                gui.keyTyped('\0',org.lwjgl.input.Keyboard.KEY_RETURN);
+                GuiInput.keyTyped(gui,'\0',org.lwjgl.input.Keyboard.KEY_RETURN);
                 if(get(VibeClickGui.class,gui,"editing")!=null)throw new AssertionError(name+" did not finish editing");
             }
         } finally { set(org.lwjgl.input.Keyboard.class,null,"created",keyboardCreated); }

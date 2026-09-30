@@ -15,9 +15,9 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 import org.lwjgl.opengl.GL11;
 
 /** Lazy glyph pages, rasterized at twice the GUI resolution. No per-label textures. */
-final class NeverLoseFont {
-    static final NeverLoseFont REGULAR = new NeverLoseFont(Font.PLAIN);
-    static final NeverLoseFont BOLD = new NeverLoseFont(Font.BOLD);
+public final class NeverLoseFont {
+    public static final NeverLoseFont REGULAR = new NeverLoseFont(Font.PLAIN);
+    public static final NeverLoseFont BOLD = new NeverLoseFont(Font.BOLD);
     private static final int CELL = 32, SIZE = CELL * 16;
     private final Font font;
     private Font activeFont;
@@ -31,11 +31,11 @@ final class NeverLoseFont {
         this(style, 20);
     }
 
-    NeverLoseFont(int style, int rasterSize) {
+    public NeverLoseFont(int style, int rasterSize) {
         this(Font.SANS_SERIF, style, rasterSize);
     }
 
-    NeverLoseFont(String family, int style, int rasterSize) {
+    public NeverLoseFont(String family, int style, int rasterSize) {
         font = new Font(family, style, rasterSize);
         activeFont = font;
         metrics = metrics(font);
@@ -50,15 +50,15 @@ final class NeverLoseFont {
         return result;
     }
 
-    float width(String text) {
+    public float width(String text) {
         prepareScript();
         text = LanguageManager.scriptFontText(text);
         float width = 0;
         for (int i = 0; i < text.length(); i++) width += advance(text.charAt(i));
         return width;
     }
-    float inkTop(String text){return inkBounds(text)[0];}
-    float inkHeight(String text){float[] bounds=inkBounds(text);return Math.max(1,bounds[1]-bounds[0]);}
+    public float inkTop(String text){return inkBounds(text)[0];}
+    public float inkHeight(String text){float[] bounds=inkBounds(text);return Math.max(1,bounds[1]-bounds[0]);}
     private float[] inkBounds(String text){
         prepareScript();
         text = LanguageManager.scriptFontText(text);
@@ -75,9 +75,9 @@ final class NeverLoseFont {
         }
         return top==Float.POSITIVE_INFINITY?new float[]{0,1}:new float[]{top,bottom};
     }
-    void close(){clearPages();}
+    public void close(){clearPages();}
 
-    String fit(String text, float available) {
+    public String fit(String text, float available) {
         prepareScript();
         text = LanguageManager.scriptFontText(text);
         if (width(text) <= available) return text;
@@ -92,7 +92,7 @@ final class NeverLoseFont {
         return activeFont.canDisplay(c) ? metrics.charWidth(c) * .5F : page(c >> 8).advances[c & 255];
     }
 
-    void draw(String text, float x, float y, int color) {
+    public void draw(String text, float x, float y, int color) {
         prepareScript();
         text = LanguageManager.scriptFontText(text);
         if (text.isEmpty()) return;

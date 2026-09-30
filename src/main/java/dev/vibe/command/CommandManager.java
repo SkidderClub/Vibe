@@ -36,7 +36,7 @@ public final class CommandManager {
             copyIgn();
         } else if (".waifu".equals(command)) {
             if (parts.length > 1 && "openfolder".equalsIgnoreCase(parts[1])) {
-                dev.vibe.module.impl.WaifuModule waifu = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.WaifuModule.class);
+                dev.vibe.module.impl.client.WaifuModule waifu = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.WaifuModule.class);
                 waifu.getFolder().mkdirs();
                 try {
                     if (java.awt.Desktop.isDesktopSupported()) {
@@ -44,7 +44,7 @@ public final class CommandManager {
                     }
                 } catch (Exception ignored) {
                 }
-            } else moduleSetting(Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.WaifuModule.class), parts, 1);
+            } else moduleSetting(Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.WaifuModule.class), parts, 1);
         } else if (".friend".equals(command) || ".f".equals(command)) {
             friend(parts);
         } else if (".target".equals(command)) {
@@ -53,10 +53,10 @@ public final class CommandManager {
             script(parts);
         } else if (".source".equals(command)) {
             say("Vibe: GPLv3. Schizoid Fog, Torus and media HUD: AGPLv3. Open Licenses & credits in the main or pause menu.");
-            say("Matching source: " + dev.vibe.ui.LicenseDocuments.sourceArchive() + ", supplied beside this build by its distributor.");
+            say("Matching source: " + dev.vibe.ui.menu.LicenseDocuments.sourceArchive() + ", supplied beside this build by its distributor.");
             ChatComponentText link = new ChatComponentText("Vibe source repository (local builds may differ)");
             link.getChatStyle().setUnderlined(true).setChatClickEvent(new net.minecraft.event.ClickEvent(
-                    net.minecraft.event.ClickEvent.Action.OPEN_URL, dev.vibe.ui.LicenseDocuments.REPOSITORY));
+                    net.minecraft.event.ClickEvent.Action.OPEN_URL, dev.vibe.ui.menu.LicenseDocuments.REPOSITORY));
             if (Minecraft.getMinecraft().thePlayer != null) Minecraft.getMinecraft().thePlayer.addChatMessage(link);
         } else if (".help".equals(command)) {
             help();

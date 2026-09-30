@@ -1,0 +1,160 @@
+// Opt-in checks that are not part of `build`. The render checks draw real frames in an
+// offscreen OpenGL context: no Minecraft window is opened and no user profile is touched.
+// Screenshots and timings are written below build/<output directory>/.
+
+def lwjglPlatform = {
+    def osName = System.getProperty('os.name').toLowerCase(Locale.ROOT)
+    osName.contains('win') ? 'windows' : osName.contains('mac') ? 'osx' : 'linux'
+}
+
+/**
+ * Registers a JavaExec task that runs a test-source main class on Java 8 with LWJGL natives.
+ * outputDirectory: folder below build/ for natives and results.
+ * passOutput: whether the main class receives that folder as its first argument.
+ */
+def registerRenderCheck = { String name, String mainClassName, String outputDirectory, String purpose,
+                            boolean passOutput = false, Closure extra = null ->
+    tasks.register(name, JavaExec) {
+        group = 'verification'
+        description = purpose
+        dependsOn tasks.named('testClasses')
+        javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+        classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+        mainClass = mainClassName
+        workingDir project.projectDir
+        systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+        def output = layout.buildDirectory.dir(outputDirectory)
+        doFirst {
+            def platform = lwjglPlatform()
+            def natives = sourceSets.main.runtimeClasspath.files.find {
+                it.name.startsWith('lwjgl-platform-') && it.name.endsWith('-natives-' + platform + '.jar')
+            }
+            if (natives == null) throw new GradleException('LWJGL native library archive not found for ' + platform)
+            def nativeDirectory = new File(output.get().asFile, 'natives')
+            project.copy {
+                from project.zipTree(natives)
+                include '*.dll', '*.so', '*.dylib', '*.jnilib'
+                into nativeDirectory
+            }
+            systemProperty 'org.lwjgl.librarypath', nativeDirectory.absolutePath
+            if (passOutput) setArgs([output.get().asFile.absolutePath] + (args ?: []))
+        }
+        if (extra != null) {
+            extra.delegate = delegate
+            extra.resolveStrategy = Closure.DELEGATE_FIRST
+            extra.call()
+        }
+    }
+}
+
+registerRenderCheck('verifyGta7Rendering', 'dev.vibe.game.gta.Gta7RenderCheck', 'gta7-render-check',
+        'Renders GTA7 scenes offscreen.', true)
+// Pass -Pgta8Only=<name fragment> to capture a single view.
+registerRenderCheck('verifyGta8Rendering', 'dev.vibe.game.gta8.Gta8RenderCheck', 'gta8-render-check',
+        'Renders every GTA8 district, weather and time of day, plus frame timings.', true) {
+    maxHeapSize = '2g'
+    systemProperty 'gta8.only', project.findProperty('gta8Only') ?: ''
+}
+registerRenderCheck('verifyBattlefrontRendering', 'dev.vibe.game.battlefront.BattlefrontRenderCheck',
+        'battlefront-render-check', 'Renders Battlefront 3 scenes offscreen.', true)
+registerRenderCheck('verifyVisualRendering', 'dev.vibe.ui.VisualRenderCheck', 'visual-render-check',
+        'Checks inventory and GUI rendering state.')
+registerRenderCheck('verifyVisualEffects', 'dev.vibe.ui.VisualEffectsRenderCheck', 'visual-effects-check',
+        'Checks Fog, Torus and the other shader effects.')
+registerRenderCheck('verifyChamsRendering', 'dev.vibe.ui.render.esp.ChamsRenderCheck', 'chams-render-check',
+        'Checks Chams materials, occlusion, opacity and OpenGL state restoration.')
+registerRenderCheck('verifyEspRendering', 'dev.vibe.ui.render.esp.EspRenderCheck', 'esp-render-check',
+        'Checks ESP rendering and the ESP editor.')
+registerRenderCheck('verifyLicensesRendering', 'dev.vibe.ui.menu.LicensesRenderCheck', 'licenses-render-check',
+        'Checks offline license reading, scrolling and menu layout.')
+registerRenderCheck('verifyClientChanges', 'dev.vibe.ui.ClientChangesRenderCheck', 'client-changes-check',
+        'Checks recent client screens, including a muted live radio smoke test.')
+registerRenderCheck('verifyPitMediaRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'pit-media-check',
+        'Checks the PitBot editor, ArrayList and media covers.', false) {
+    args 'pit-media-array'
+}
+registerRenderCheck('verifyAugustusRendering', 'dev.vibe.ui.clickgui.AugustusRenderCheck', 'augustus-render-check',
+        'Checks the Augustus ClickGUI.')
+registerRenderCheck('verifyNeverLoseRendering', 'dev.vibe.ui.clickgui.NeverLoseRenderCheck',
+        'neverlose-render-check', 'Checks NeverLose controls and clipping.')
+registerRenderCheck('verifyXanaxRendering', 'dev.vibe.ui.clickgui.XanaxRenderCheck', 'xanax-render-check',
+        'Checks Xanax rendering, controls, profiles and small-screen layouts.')
+
+tasks.register('verifyMusicIntegration', JavaExec) {
+    group = 'verification'
+    description = 'Checks the music service against live stations.'
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.media.MusicIntegrationCheck'
+    workingDir project.projectDir
+}
+
+// Compatibility check for an external Raven script folder:
+// .\gradlew.bat verifyRavenScripts -PvibeScriptDir=C:\path\to\scripts
+tasks.register('verifyRavenScripts') {
+    group = 'verification'
+    description = 'Compiles every script in -PvibeScriptDir against Vibe\'s Raven script API.'
+    dependsOn tasks.named('classes')
+    doLast {
+        if (!project.hasProperty('vibeScriptDir')) {
+            logger.lifecycle('Skipping Raven script verification (set -PvibeScriptDir=<folder>).')
+            return
+        }
+        File scriptDir = file(project.property('vibeScriptDir'))
+        if (!scriptDir.isDirectory()) throw new GradleException('Script directory not found: ' + scriptDir)
+        java.net.URL[] classpath = sourceSets.main.runtimeClasspath.files.collect { it.toURI().toURL() } as java.net.URL[]
+        java.net.URLClassLoader parent = new java.net.URLClassLoader(classpath, ClassLoader.systemClassLoader)
+        def compile = { String source ->
+            Object compiler = parent.loadClass('org.codehaus.janino.SimpleCompiler').newInstance()
+            compiler.getClass().getMethod('setParentClassLoader', ClassLoader).invoke(compiler, parent)
+            compiler.getClass().getMethod('cook', String).invoke(compiler, source)
+        }
+        try {
+            List<String> failures = new ArrayList<>()
+            fileTree(scriptDir) { include '**/*.java' }.files.sort { a, b -> a.name <=> b.name }.eachWithIndex { File script, int index ->
+                String scriptName = script.name.substring(0, script.name.length() - 5)
+                String simpleName = 'vibe_script_verify_' + scriptName.toLowerCase(Locale.ROOT).replaceAll('[^a-z0-9]', '') + '_' + index
+                String source = String.format('''import java.awt.Color;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+import java.util.regex.*;
+import keystrokesmod.script.model.*;
+import keystrokesmod.script.packet.clientbound.*;
+import keystrokesmod.script.packet.serverbound.*;
+public class %s extends keystrokesmod.script.ScriptDefaults {
+public static final keystrokesmod.script.ScriptDefaults.modules modules = new keystrokesmod.script.ScriptDefaults.modules("%s");
+public static final String scriptName = "%s";
+'''.stripIndent(), simpleName, scriptName, scriptName) + script.getText('UTF-8') + '\n}'
+                try {
+                    compile(source)
+                    logger.lifecycle('Raven script API OK: ' + script.name)
+                } catch (Throwable ignored) {
+                    // Janino on the legacy client erases the type of a small number of
+                    // otherwise-valid javac generic expressions. Mirror ScriptRuntime's
+                    // compatibility retry so this task verifies what runs inside the game.
+                    String compatible = source
+                            .replaceAll(/(?m)(ItemStack\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*)([A-Za-z_][A-Za-z0-9_]*)\.get\(([^;]+)\);/, '$1(ItemStack) $2.get($3);')
+                            .replaceAll(/(?m)(Map<String,\s*Object>\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*)([A-Za-z_][A-Za-z0-9_]*)\.(get|remove)\(([^;]+)\);/, '$1(Map<String,Object>) $2.$3($4);')
+                            .replaceAll(/([A-Za-z_][A-Za-z0-9_]*\.get\([^;\n]+\))\.get\(/, '((Map)$1).get(')
+                            .replaceAll(/for\s*\(\s*Map<String,\s*Object>\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)\s*\{/, 'for (Object __ravenEntry : $2) { Map<String,Object> $1 = (Map<String,Object>) __ravenEntry;')
+                            .replace('for (Map<String, Object> entry : packets) {', 'for (Object __ravenEntry : packets) { Map<String,Object> entry = (Map<String,Object>) __ravenEntry;')
+                    try {
+                        compile(compatible)
+                        logger.lifecycle('Raven script API OK (legacy compiler compatibility): ' + script.name)
+                    } catch (Throwable retryFailure) {
+                        Throwable root = retryFailure
+                        while (root.cause != null) root = root.cause
+                        String detail = root.message == null ? root.class.name : root.message
+                        failures.add(script.name + ': ' + detail)
+                        logger.error('Raven script API failed for ' + script.name + ': ' + detail)
+                    }
+                }
+            }
+            if (!failures.isEmpty()) throw new GradleException('Raven script API failures (' + failures.size() + '):\n - ' + failures.join('\n - '))
+        } finally {
+            parent.close()
+        }
+    }
+}

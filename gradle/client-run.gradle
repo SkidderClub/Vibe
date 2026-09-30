@@ -1,0 +1,94 @@
+// Launch options for runClient. run.bat and the Vibe Launcher pass these as -P properties:
+//   -PvibePersistentRun   one game directory, run/client/, for every launch
+//   -PvibeFreshRun        a new empty game directory in run/first-start/session-*/ (run-fresh.bat)
+//   -PvibeMaxMemory=<MB>  maximum heap of the game JVM (Vibe Launcher memory setting)
+//   -PvibeOptifine        start the remapped JAR together with OptiFine (gradle/optifine.gradle)
+
+def persistentRun = providers.gradleProperty('vibePersistentRun').isPresent()
+def freshRun = providers.gradleProperty('vibeFreshRun').isPresent()
+if (persistentRun && freshRun) {
+    throw new GradleException('vibePersistentRun and vibeFreshRun cannot be combined.')
+}
+
+def optionFiles = { File directory ->
+    File[] files = directory.listFiles()
+    files == null ? [] : files.findAll { it.isFile() && it.name.startsWith('options') && it.name.endsWith('.txt') }
+}
+
+// Moves a runClient launch into its own game directory. RunConfig resolves these placeholders
+// relative to workingDir at execution time, so the prepared natives, libraries and assets are
+// anchored to their original directories first.
+def useGameDirectory = { JavaExec client, File gameDirectory ->
+    File originalDirectory = client.workingDir
+    ['natives_directory', 'library_directory', 'assets_root', 'game_assets'].each { name ->
+        def provider = client.getProperties().get(name)
+        if (provider != null) {
+            def originalPath = new File(provider.invoke())
+            def resolved = (originalPath.isAbsolute() ? originalPath : new File(originalDirectory, originalPath.path)).absolutePath
+            client.setProperty(name, { resolved })
+        }
+    }
+    List<String> arguments = client.args.collect { String.valueOf(it) }
+    int position = arguments.indexOf('--gameDir')
+    if (position >= 0 && position + 1 < arguments.size()) {
+        arguments.set(position + 1, gameDirectory.absolutePath)
+    } else {
+        arguments.addAll(['--gameDir', gameDirectory.absolutePath])
+    }
+    client.setArgs(arguments)
+    client.workingDir = gameDirectory
+}
+
+if (persistentRun) {
+    // Worlds and settings must survive native crashes, which skip Gradle's doLast actions.
+    tasks.named('runClient', JavaExec).configure { client ->
+        doFirst {
+            File gameDirectory = project.file('run/client').canonicalFile
+            if (!gameDirectory.isDirectory() && !gameDirectory.mkdirs()) {
+                throw new GradleException('Could not create Vibe client directory: ' + gameDirectory)
+            }
+            useGameDirectory(client, gameDirectory)
+            logger.lifecycle('[Vibe] Using persistent client settings: ' + gameDirectory)
+        }
+    }
+}
+
+if (freshRun) {
+    // Worlds and Vibe data stay isolated; vanilla display options are shared with run/client
+    // in both directions so fresh launches do not reset video settings.
+    tasks.named('runClient', JavaExec).configure { client ->
+        File freshGameDirectory = null
+        doFirst {
+            def freshRoot = project.file('run/first-start').toPath().toAbsolutePath().normalize()
+            java.nio.file.Files.createDirectories(freshRoot)
+            freshGameDirectory = java.nio.file.Files.createTempDirectory(freshRoot, 'session-').toFile()
+            File baseline = project.file('run/client').canonicalFile
+            optionFiles(baseline).each { source -> project.copy { from source; into freshGameDirectory } }
+            useGameDirectory(client, freshGameDirectory)
+            logger.lifecycle('[Vibe] Fresh first-start profile: ' + freshGameDirectory.absolutePath)
+        }
+        doLast {
+            if (freshGameDirectory == null || !freshGameDirectory.isDirectory()) return
+            File baseline = project.file('run/client').canonicalFile
+            if (!baseline.isDirectory() && !baseline.mkdirs()) return
+            optionFiles(freshGameDirectory).each { source -> project.copy { from source; into baseline } }
+            logger.lifecycle('[Vibe] Saved fresh-launch display options for the next run.')
+        }
+    }
+}
+
+if (providers.gradleProperty('vibeMaxMemory').isPresent()) {
+    String requestedMemory = providers.gradleProperty('vibeMaxMemory').get().trim()
+    if (!(requestedMemory ==~ /\d{3,6}/) || requestedMemory.toInteger() < 512) {
+        throw new GradleException('vibeMaxMemory must be a size in megabytes (at least 512), got: ' + requestedMemory)
+    }
+    tasks.named('runClient', JavaExec).configure { client ->
+        maxHeapSize = requestedMemory + 'm'
+        // Unimined keeps Mojang's default -Xmx2G in jvmArgs and re-applies that list when
+        // the game starts, which would replace maxHeapSize again. Drop it just before.
+        doFirst {
+            client.setJvmArgs(client.jvmArgs.findAll { !it.startsWith('-Xmx') })
+            client.maxHeapSize = requestedMemory + 'm'
+        }
+    }
+}

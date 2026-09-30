@@ -10,7 +10,7 @@ import dev.vibe.config.VibeConfig;
 import dev.vibe.module.Category;
 import dev.vibe.module.Module;
 import dev.vibe.module.ModuleManager;
-import dev.vibe.module.impl.HudModule;
+import dev.vibe.module.impl.client.HudModule;
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;

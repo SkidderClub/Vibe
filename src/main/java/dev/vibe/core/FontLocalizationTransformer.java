@@ -37,7 +37,9 @@ public final class FontLocalizationTransformer implements IClassTransformer, Opc
         try {
             ClassNode node = new ClassNode();
             new ClassReader(basicClass).accept(node, 0);
-            for (MethodNode method : node.methods) {
+            // Forge's ASM 5 exposes ClassNode.methods as a raw List.
+            for (Object entry : node.methods) {
+                MethodNode method = (MethodNode) entry;
                 if ((method.access & ACC_STATIC) != 0 || !method.desc.startsWith("(Ljava/lang/String;")) {
                     continue;
                 }

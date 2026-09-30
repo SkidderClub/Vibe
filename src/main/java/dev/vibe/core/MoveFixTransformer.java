@@ -17,10 +17,10 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
     private static final String ENTITY_RENDERER = "net/minecraft/client/renderer/EntityRenderer";
     private static final String MINECRAFT = "net/minecraft/client/Minecraft";
     private static final String PLAYER_RENDERER = "net/minecraft/client/renderer/entity/RenderPlayer";
-    private static final String AURA_HOOK = "dev/vibe/module/impl/KillAuraModule";
+    private static final String AURA_HOOK = "dev/vibe/module/impl/combat/KillAuraModule";
     private static final String INPUT = "net/minecraft/util/MovementInput";
-    private static final String HOOK = "dev/vibe/module/impl/MoveFixModule";
-    private static final String SCAFFOLD_HOOK = "dev/vibe/module/impl/ScaffoldModule";
+    private static final String HOOK = "dev/vibe/module/impl/movement/MoveFixModule";
+    private static final String SCAFFOLD_HOOK = "dev/vibe/module/impl/world/ScaffoldModule";
 
     @Override
     public byte[] transform(String name, String transformedName, byte[] bytes) {
@@ -195,7 +195,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
         @Override public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
             if (("isInvisibleToPlayer".equals(name) || "func_98034_c".equals(name) || "f".equals(name))
                     && ("(Lnet/minecraft/entity/player/EntityPlayer;)Z".equals(desc) || "(Lwn;)Z".equals(desc))) {
-                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/ui/InvisibleModelHooks", "isInvisibleToPlayer",
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/ui/render/esp/InvisibleModelHooks", "isInvisibleToPlayer",
                         "(Ljava/lang/Object;Ljava/lang/Object;)Z", false);
             } else super.visitMethodInsn(opcode, owner, name, desc, itf);
         }
@@ -203,7 +203,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
             super.visitLdcInsn(value);
             if (Float.valueOf(.15F).equals(value)) {
                 super.visitVarInsn(Opcodes.ALOAD, 1);
-                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/ui/InvisibleModelHooks", "alpha", "(FLjava/lang/Object;)F", false);
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/ui/render/esp/InvisibleModelHooks", "alpha", "(FLjava/lang/Object;)F", false);
             }
         }
     }
@@ -214,7 +214,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
             super.visitFieldInsn(opcode, owner, name, desc);
             if (opcode == Opcodes.GETFIELD && "I".equals(desc)
                     && ("currentItem".equals(name) || "field_70461_c".equals(name) || ("wm".equals(owner) && "c".equals(name)))) {
-                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/module/impl/AutoToolModule", "serverSlotHook", "(I)I", false);
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/module/impl/world/AutoToolModule", "serverSlotHook", "(I)I", false);
             }
         }
     }
@@ -224,12 +224,12 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
         @Override public void visitFieldInsn(int opcode, String owner, String name, String desc) {
             if (opcode == Opcodes.PUTFIELD && "I".equals(desc)
                     && ("leftClickCounter".equals(name) || "field_71429_W".equals(name) || "ag".equals(name))) {
-                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/module/impl/AutoClickerModule", "missCooldownHook", "(I)I", false);
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/module/impl/combat/AutoClickerModule", "missCooldownHook", "(I)I", false);
             }
             super.visitFieldInsn(opcode, owner, name, desc);
             if (opcode == Opcodes.GETFIELD && "I".equals(desc)
                     && ("leftClickCounter".equals(name) || "field_71429_W".equals(name) || "ag".equals(name))) {
-                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/module/impl/AutoClickerModule", "missCooldownHook", "(I)I", false);
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/module/impl/combat/AutoClickerModule", "missCooldownHook", "(I)I", false);
             }
         }
     }
@@ -242,7 +242,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
             if (opcode == Opcodes.RETURN) {
                 super.visitVarInsn(Opcodes.ALOAD, 0);
                 super.visitVarInsn(Opcodes.ALOAD, 1);
-                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/ui/AuraBlockVisual", "applyThirdPerson",
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/ui/render/AuraBlockVisual", "applyThirdPerson",
                         "(Ljava/lang/Object;Ljava/lang/Object;)V", false);
             }
             super.visitInsn(opcode);

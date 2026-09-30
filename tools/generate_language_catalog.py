@@ -131,7 +131,7 @@ def collect_keys() -> tuple[list[str], dict[str, dict[str, str]]]:
         for match in SETTING.finditer(source):
             keys.update(strings_in(expression(source, match.end() - 1)))
 
-    for path in (SOURCE / "dev/vibe/module/impl").glob("*.java"):
+    for path in (SOURCE / "dev/vibe/module/impl").rglob("*.java"):
         source = path.read_text(encoding="utf-8")
         for match in SUPER.finditer(source):
             keys.update(strings_in(expression(source, match.end() - 1))[:2])

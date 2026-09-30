@@ -1,0 +1,24 @@
+# Text files are stored with LF and checked out with the platform's line endings.
+* text=auto
+
+# cmd.exe misreads labels and GOTO targets in batch files with LF-only line endings.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+# Shell scripts must keep LF to run on Linux and macOS.
+*.sh text eol=lf
+gradlew text eol=lf
+
+*.jar binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.mp3 binary
+*.ogg binary
+*.wav binary
+*.ttf binary
+*.otf binary
+*.nes binary
+*.zip binary

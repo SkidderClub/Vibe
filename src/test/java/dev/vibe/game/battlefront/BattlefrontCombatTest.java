@@ -1,6 +1,6 @@
 package dev.vibe.game.battlefront;
 
-import dev.vibe.ui.BattlefrontMapTexture;
+import dev.vibe.ui.game.BattlefrontMapTexture;
 import java.awt.image.BufferedImage;
 import org.junit.Test;
 import org.junit.Rule;
