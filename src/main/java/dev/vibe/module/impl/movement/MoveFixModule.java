@@ -515,12 +515,16 @@ public final class MoveFixModule extends Module {
             ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
             if (scaffold != null) scaffold.beforeWalkingUpdate(entity);
             module.beginPacketRotation(entity);
+            VelocityModule velocity = Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
+            if (velocity != null) velocity.beforeWalkingUpdate(entity);
         }
     }
 
     public static void endPacketRotationHook(Object entity) {
         MoveFixModule module = module();
         if (module != null) {
+            VelocityModule velocity = Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
+            if (velocity != null) velocity.afterWalkingUpdate(entity);
             module.endPacketRotation(entity);
             BedAuraModule bedAura = Vibe.getInstance().getModuleManager().getModule(BedAuraModule.class);
             if (bedAura != null) bedAura.afterWalkingUpdate(entity);

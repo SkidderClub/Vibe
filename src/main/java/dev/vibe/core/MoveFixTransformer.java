@@ -3,6 +3,7 @@ package dev.vibe.core;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
@@ -21,6 +22,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
     private static final String INPUT = "net/minecraft/util/MovementInput";
     private static final String HOOK = "dev/vibe/module/impl/movement/MoveFixModule";
     private static final String SCAFFOLD_HOOK = "dev/vibe/module/impl/world/ScaffoldModule";
+    private static final String VELOCITY_HOOK = "dev/vibe/module/impl/combat/VelocityModule";
 
     @Override
     public byte[] transform(String name, String transformedName, byte[] bytes) {
@@ -82,6 +84,9 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
                     if (target == 3 && isLivingUpdate(method, descriptor)) {
                         return new SprintVisitor(delegate);
                     }
+                    if (target == 3 && isUpdate(method, descriptor)) {
+                        return new UpdateVisitor(delegate, reader.getClassName());
+                    }
                     if (target == 4 && isMouseOver(method, descriptor)) {
                         return new RaycastVisitor(delegate);
                     }
@@ -119,6 +124,11 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
     private static boolean isLivingUpdate(String method, String descriptor) {
         return "()V".equals(descriptor) && ("onLivingUpdate".equals(method)
                 || "func_70636_d".equals(method) || "m".equals(method));
+    }
+
+    private static boolean isUpdate(String method, String descriptor) {
+        return "()V".equals(descriptor) && ("onUpdate".equals(method)
+                || "func_70071_h_".equals(method) || "t_".equals(method));
     }
 
     private static boolean isMouseOver(String method, String descriptor) {
@@ -305,6 +315,37 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
                 visitMethodInsn(Opcodes.INVOKESTATIC, HOOK, "endPacketRotationHook", "(Ljava/lang/Object;)V", false);
             }
             super.visitInsn(opcode);
+        }
+    }
+
+    private static final class UpdateVisitor extends MethodVisitor {
+        private final String player;
+        private boolean hooked;
+
+        private UpdateVisitor(MethodVisitor delegate, String player) {
+            super(Opcodes.ASM5, delegate);
+            this.player = player;
+        }
+
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean itf) {
+            if (hooked || opcode != Opcodes.INVOKESPECIAL || !isUpdate(name, descriptor)) {
+                super.visitMethodInsn(opcode, owner, name, descriptor, itf);
+                return;
+            }
+            hooked = true;
+            Label skip = new Label();
+            Label resume = new Label();
+            super.visitVarInsn(Opcodes.ALOAD, 0);
+            super.visitMethodInsn(Opcodes.INVOKESTATIC, VELOCITY_HOOK, "freezeUpdateHook", "(Ljava/lang/Object;)Z", false);
+            super.visitJumpInsn(Opcodes.IFNE, skip);
+            super.visitMethodInsn(opcode, owner, name, descriptor, itf);
+            super.visitJumpInsn(Opcodes.GOTO, resume);
+            super.visitLabel(skip);
+            super.visitFrame(Opcodes.F_SAME1, 0, null, 1, new Object[] {player});
+            super.visitInsn(Opcodes.POP);
+            super.visitLabel(resume);
+            super.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
         }
     }
 
