@@ -101,6 +101,31 @@ public final class ClientChangesRenderCheck {
                 editor.setWorldAndResolution(mc,683,384);
                 editor.drawScreen(320,190,0);
                 save("hud-editor-compact.png");
+                // Every widget is drawn by its in-game renderer; without a world the ones lacking data show samples.
+                // Armor is left out: this fixture has no item renderer.
+                MusicModule music = new MusicModule();
+                set(Module.class,music,"enabled",true);
+                set(ModuleManager.class,modules,"modules",new ArrayList<Module>(Arrays.asList(hud,music)));
+                for (String id : hud.getHudElements().getOptions())
+                    if (!id.equals(dev.vibe.hud.HudManager.ARMOR) && !hud.getHudElements().isSelected(id)) hud.getHudElements().toggle(id);
+                hud.getHealthHideFull().setEnabled(true);
+                mc.displayWidth=1280; mc.displayHeight=720;
+                frame(1280,720);
+                editor.setWorldAndResolution(mc,1280,720);
+                editor.drawScreen(630,330,0);
+                save("hud-editor-all.png");
+                for (String id : manager.getElementIds()) {
+                    dev.vibe.hud.HudManager.HudElement element = manager.getElement(id);
+                    if (manager.isEnabled(id) && (element.getWidth() <= 1 || element.getHeight() <= 1))
+                        throw new AssertionError("HUD editor preview is missing " + id);
+                }
+                // Without framebuffers the editor draws the HUD directly into the scaled canvas.
+                mc.gameSettings.fboEnable = false;
+                frame(1280,720);
+                editor.drawScreen(630,330,0);
+                save("hud-editor-unbuffered.png");
+                mc.gameSettings.fboEnable = true;
+                if (GL11.glIsEnabled(GL11.GL_SCISSOR_TEST)) throw new AssertionError("HUD editor leaked clipping state");
                 dev.vibe.hud.HudManager.HudElement anchored = manager.getElement(dev.vibe.hud.HudManager.ARMOR);
                 anchored.setScale(1.5F);
                 net.minecraft.client.gui.ScaledResolution resolution = new net.minecraft.client.gui.ScaledResolution(mc);

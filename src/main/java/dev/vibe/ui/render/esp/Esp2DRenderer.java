@@ -39,20 +39,29 @@ public final class Esp2DRenderer {
     private final Minecraft mc=Minecraft.getMinecraft();
     public Frame measure(Esp2DSettings settings,Actor actor,EspLayout.Rect box) {
         float scale=EspLayout.scale(box.h,settings.distanceScaling.getFloat());
+        // The stroke is centred on the projected edge, so half of it and the outline lie outside the box.
+        Element b=settings.box;
+        float boxPad=b.enabled.isEnabled()?(b.width.getFloat()/2+(b.outline.isEnabled()?b.outlineWidth.getFloat():0))*scale*b.scale.getFloat():0;
+        EspLayout.Rect drawn=box.expand(boxPad);
         List<EspLayout.Request> requests=new ArrayList<EspLayout.Request>();
         for(Element e:settings.elements) {
             if(!e.enabled.isEnabled() || e.kind==Kind.BOX || !available(e,settings,actor))continue;
-            float s=scale*e.scale.getFloat(),w,h;
-            if(e.kind==Kind.BAR){w=e.vertical()?e.width.getFloat()*s:box.w;h=e.vertical()?box.h:e.width.getFloat()*s;}
+            float s=scale*e.scale.getFloat(),w,h,offset=e.offset.getFloat()*box.h/180f;
+            float outline=e.outline.isEnabled()?e.outlineWidth.getFloat()*s:0;
+            if(e.kind==Kind.BAR){
+                // Bars run along the drawn box, outlines included, so both silhouettes start and end on the same pixel.
+                float along=Math.max(0,(e.vertical()?drawn.h:drawn.w)-2*outline);
+                w=e.vertical()?e.width.getFloat()*s:along;h=e.vertical()?along:e.width.getFloat()*s;
+                if(e.vertical())offset+=outline;
+            }
             else if(e.kind==Kind.TEXT){TextStyle t=e.resolvedText();float size=t.size.getFloat()/9*s;String text=label(e,settings,actor);w=textWidth(t,text)*size;h=textHeight(t,text)*size;}
             else {int count=e.kind==Kind.ARMOR?equipmentCount(actor):1;w=16*s*(e.kind==Kind.ARMOR&&!e.vertical()?count:1);h=16*s*(e.kind==Kind.ARMOR&&e.vertical()?count:1);}
-            float pad=e.outline.isEnabled()?e.outlineWidth.getFloat()*s:0;
+            float pad=outline;
             if(e.kind==Kind.TEXT && e.resolvedText().shadow.isEnabled())pad=Math.max(pad,s*e.resolvedText().size.getFloat()/9);
             if(e.backgroundEnabled.isEnabled())pad=Math.max(pad,2*s);
-            requests.add(new EspLayout.Request(e.title,e.position.getValue(),w,h,e.order.getFloat(),e.offset.getFloat()*box.h/180f,pad));
+            requests.add(new EspLayout.Request(e.title,e.position.getValue(),w,h,e.order.getFloat(),offset,pad));
         }
-        float boxPad=settings.box.enabled.isEnabled()?(settings.box.width.getFloat()+ (settings.box.outline.isEnabled()?settings.box.outlineWidth.getFloat():0))*scale*settings.box.scale.getFloat():0;
-        Map<String,EspLayout.Rect> result=EspLayout.arrange(box.expand(boxPad),requests,settings.gap.getFloat()*scale);
+        Map<String,EspLayout.Rect> result=EspLayout.arrange(drawn,requests,settings.gap.getFloat()*scale);
         return new Frame(box,result,scale);
     }
     private boolean available(Element e,Esp2DSettings s,Actor a) {
