@@ -87,6 +87,7 @@ public final class HudManager {
     private final dev.vibe.hud.MusicVisualizer musicVisualizer = new dev.vibe.hud.MusicVisualizer();
     private final long sessionStarted = System.currentTimeMillis();
     private final LiquidGlassRenderer liquidGlass = new LiquidGlassRenderer();
+    private ItemStack[] sampleArmor;
     private final float[] motionSamples = new float[96];
     private int motionSampleIndex;
     private long lastMotionSample;
@@ -213,7 +214,8 @@ public final class HudManager {
         if (hud.getWatermarkDetails().isSelected("Version")) text += " §r| §fv" + Vibe.VERSION;
         if (hud.getWatermarkDetails().isSelected("Username")) {
             NameProtectModule protect = Vibe.getInstance().getModuleManager().getModule(NameProtectModule.class);
-            text += " §r| " + (protect == null ? minecraft.thePlayer.getName() : protect.getDisplayName(minecraft.thePlayer.getName()));
+            String name = playerName();
+            text += " §r| " + (protect == null ? name : protect.getDisplayName(name));
         }
         int width = font.getStringWidth(text) + 20;
         watermark.ensureOnScreen(resolution, width, 26);
@@ -345,9 +347,10 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     private void drawCoordinates(HudModule hud, ScaledResolution resolution, FontRenderer font) {
-        int x = net.minecraft.util.MathHelper.floor_double(minecraft.thePlayer.posX);
-        int y = net.minecraft.util.MathHelper.floor_double(minecraft.thePlayer.posY);
-        int z = net.minecraft.util.MathHelper.floor_double(minecraft.thePlayer.posZ);
+        EntityPlayer player = minecraft.thePlayer;
+        int x = player == null ? 0 : net.minecraft.util.MathHelper.floor_double(player.posX);
+        int y = player == null ? 64 : net.minecraft.util.MathHelper.floor_double(player.posY);
+        int z = player == null ? 0 : net.minecraft.util.MathHelper.floor_double(player.posZ);
         String text = "XYZ " + x + " / " + y + " / " + z;
         int width = font.getStringWidth(text) + 20;
         coordinates.ensureOnScreen(resolution, width, 24);
@@ -399,9 +402,9 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     private void drawMotionGraph(HudModule hud, ScaledResolution resolution, FontRenderer font) {
         long now = System.currentTimeMillis();
-        if (lastMotionSample == 0L || now - lastMotionSample >= 50L) {
-            double horizontalSpeed = Math.sqrt(minecraft.thePlayer.motionX * minecraft.thePlayer.motionX
-                    + minecraft.thePlayer.motionZ * minecraft.thePlayer.motionZ) * 20.0D;
+        EntityPlayer player = minecraft.thePlayer;
+        if (player != null && (lastMotionSample == 0L || now - lastMotionSample >= 50L)) {
+            double horizontalSpeed = Math.sqrt(player.motionX * player.motionX + player.motionZ * player.motionZ) * 20.0D;
             motionSamples[motionSampleIndex] = (float) Math.min(12.0D, horizontalSpeed);
             motionSampleIndex = (motionSampleIndex + 1) % motionSamples.length;
             lastMotionSample = now;
@@ -418,8 +421,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         drawHudSurface(hud, motionGraph, left, top, right, bottom);
         drawHudOutline(motionGraph, hud, left, top, right, bottom, hudOutlineColor(hud, 0.34F));
         font.drawStringWithShadow(LanguageManager.translate("MOTION GRAPH"), left + 7, top + 5, RenderUtils.TEXT);
-        double speed = Math.sqrt(minecraft.thePlayer.motionX * minecraft.thePlayer.motionX
-                + minecraft.thePlayer.motionZ * minecraft.thePlayer.motionZ) * 20.0D;
+        double speed = player == null ? 0.0D : Math.sqrt(player.motionX * player.motionX + player.motionZ * player.motionZ) * 20.0D;
         String speedText = String.format(java.util.Locale.ROOT, "%.2f b/s", speed);
         font.drawStringWithShadow(speedText, right - 7 - font.getStringWidth(speedText), top + 5, 0xFF8FE8FF);
         int graphLeft = left + 7;
@@ -449,56 +451,72 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         List<EntityPlayer> tracked = new ArrayList<EntityPlayer>();
         FriendManager friends = Vibe.getInstance().getFriendManager();
         TargetManager targets = Vibe.getInstance().getTargetManager();
-        for (Object value : minecraft.theWorld.playerEntities) {
+        if (minecraft.theWorld != null) for (Object value : minecraft.theWorld.playerEntities) {
             if (!(value instanceof EntityPlayer) || value == minecraft.thePlayer) continue;
             EntityPlayer player = (EntityPlayer) value;
             if ((friends != null && friends.isFriend(player)) || (targets != null && targets.isTarget(player))) tracked.add(player);
         }
         int visible = Math.min(8, tracked.size());
+        // The editor shows one sample row while nobody is tracked, so the list keeps its real size and look.
+        int rows = visible == 0 && previewingHud ? 1 : visible;
         int width = 212;
-        int height = Math.max(18, visible * 50);
+        int height = Math.max(18, rows * 50);
         stalker.ensureOnScreen(resolution, width, height);
         int left = stalker.left(resolution, width);
         int top = stalker.top(resolution, height);
-        if (visible == 0) {
+        if (rows == 0) {
             stalker.setBounds(left, top, width, 0);
             return;
         }
         if (hideForDebug(stalker, left, top, width, height, 1)) return;
         if (blurEnabled(STALKER)) KawaseBlur.drawRegion(left, top, left + width, top + height, 3, 0.0F);
+        if (visible == 0) drawStalkerRow(hud, font, null, "Player §a[F]", 0xFF5BE8A6, 20.0F, 20.0F, 12, left, top, width);
         for (int index = 0; index < visible; index++) {
             EntityPlayer player = tracked.get(index);
-            int rowTop = top + index * 50;
             FriendManager.Friend friend = friends == null ? null : friends.find(player.getName());
             boolean isTarget = targets != null && targets.isTarget(player);
             int accent = isTarget ? 0xFFFF5B6E : (friend != null ? 0xFF5BE8A6 : 0xFF8FA5C4);
-            if ("LiquidGlass".equalsIgnoreCase(theme(stalker, hud))) drawHudSurface(hud, stalker, left, rowTop, left + width, rowTop + 48);
-            else Gui.drawRect(left, rowTop, left + width, rowTop + 48, RenderUtils.alpha(hud.getBackground().getArgb(), 188));
-            drawHudOutline(stalker, hud, left, rowTop, left + width, rowTop + 48, accent);
-            drawPlayerFace(player, left + 4, rowTop + 4);
             NameProtectModule protect = Vibe.getInstance().getModuleManager().getModule(NameProtectModule.class);
             String name = protect == null ? player.getName() : protect.protectText(player.getName());
             if (friend != null) name = friend.getAlias();
             String label = name + (isTarget ? " §c[T]" : " §a[F]");
-            font.drawStringWithShadow(label, left + 41, rowTop + 5, accent);
-            String healthText = String.format(java.util.Locale.ROOT, "%.1f HP", player.getHealth());
-            font.drawStringWithShadow(healthText, left + 41, rowTop + 17, RenderUtils.TEXT);
-            float healthRatio = Math.max(0.0F, Math.min(1.0F, player.getHealth() / Math.max(1.0F, player.getMaxHealth())));
-            Gui.drawRect(left + 41, rowTop + 30, left + 109, rowTop + 34, 0xAA18283D);
-            Gui.drawRect(left + 41, rowTop + 30, left + 41 + Math.round(68.0F * healthRatio), rowTop + 34,
-                    RenderUtils.blend(0xFFFF5B6E, 0xFF5BE8A6, healthRatio));
             int distance = (int) Math.round(minecraft.thePlayer.getDistanceToEntity(player));
-        font.drawStringWithShadow(LanguageManager.format("%sm", distance), left + 41, rowTop + 36, 0xFFB8C9DF);
-            drawPlayerItems(player, left + 112, rowTop + 14);
+            drawStalkerRow(hud, font, player, label, accent, player.getHealth(), player.getMaxHealth(), distance, left, top + index * 50, width);
         }
-        stalker.setBounds(left, top, width, visible * 50);
+        stalker.setBounds(left, top, width, rows * 50);
+    }
+
+    /** One tracked player; without a player it draws the default skin and no equipment. */
+    private void drawStalkerRow(HudModule hud, FontRenderer font, EntityPlayer player, String label, int accent,
+            float healthValue, float maximumHealth, int distance, int left, int rowTop, int width) {
+        if ("LiquidGlass".equalsIgnoreCase(theme(stalker, hud))) drawHudSurface(hud, stalker, left, rowTop, left + width, rowTop + 48);
+        else Gui.drawRect(left, rowTop, left + width, rowTop + 48, RenderUtils.alpha(hud.getBackground().getArgb(), 188));
+        drawHudOutline(stalker, hud, left, rowTop, left + width, rowTop + 48, accent);
+        if (player != null) drawPlayerFace(player, left + 4, rowTop + 4);
+        else drawFace(net.minecraft.client.resources.DefaultPlayerSkin.getDefaultSkinLegacy(), left + 4, rowTop + 4);
+        font.drawStringWithShadow(label, left + 41, rowTop + 5, accent);
+        String healthText = String.format(java.util.Locale.ROOT, "%.1f HP", healthValue);
+        font.drawStringWithShadow(healthText, left + 41, rowTop + 17, RenderUtils.TEXT);
+        float healthRatio = Math.max(0.0F, Math.min(1.0F, healthValue / Math.max(1.0F, maximumHealth)));
+        Gui.drawRect(left + 41, rowTop + 30, left + 109, rowTop + 34, 0xAA18283D);
+        Gui.drawRect(left + 41, rowTop + 30, left + 41 + Math.round(68.0F * healthRatio), rowTop + 34,
+                RenderUtils.blend(0xFFFF5B6E, 0xFF5BE8A6, healthRatio));
+        font.drawStringWithShadow(LanguageManager.format("%sm", distance), left + 41, rowTop + 36, 0xFFB8C9DF);
+        if (player != null) drawPlayerItems(player, left + 112, rowTop + 14);
     }
 
     private void drawPlayerFace(EntityPlayer player, int x, int y) {
         if (minecraft.getNetHandler() == null) return;
         NetworkPlayerInfo info = minecraft.getNetHandler().getPlayerInfo(player.getUniqueID());
         if (info == null || info.getLocationSkin() == null) return;
-        minecraft.getTextureManager().bindTexture(info.getLocationSkin());
+        drawFace(info.getLocationSkin(), x, y);
+    }
+
+    private void drawFace(net.minecraft.util.ResourceLocation skin, int x, int y) {
+        // Gui.drawRect leaves the outline colour current, which would tint the skin.
+        GlStateManager.enableTexture2D();
+        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+        minecraft.getTextureManager().bindTexture(skin);
         Gui.drawScaledCustomSizeModalRect(x, y, 8.0F, 8.0F, 8, 8, 32, 32, 64.0F, 64.0F);
     }
 
@@ -542,11 +560,19 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         int top = armor.top(resolution, widgetHeight);
         if (hideForDebug(armor, left, top, widgetWidth, widgetHeight, isSkeet() ? 0 : 1)) return;
         drawHudPanel(ARMOR, left, top, widgetWidth, widgetHeight, hud, 0.14F);
+        ItemStack[] pieces = new ItemStack[4];
+        boolean armoured = false;
+        for (int index = 0; index < 4 && minecraft.thePlayer != null; index++) {
+            pieces[index] = minecraft.thePlayer.getCurrentArmor(3 - index);
+            armoured |= pieces[index] != null;
+        }
+        // An empty frame would be hard to place, so the editor fills it with a sample set.
+        if (!armoured && previewingHud) pieces = sampleArmor();
         net.minecraft.client.renderer.entity.RenderItem renderer = minecraft.getRenderItem();
         net.minecraft.client.renderer.RenderHelper.enableGUIStandardItemLighting();
         GlStateManager.enableDepth();
         for (int index = 0; index < 4; index++) {
-            ItemStack stack = minecraft.thePlayer.getCurrentArmor(3 - index);
+            ItemStack stack = pieces[index];
             if (stack == null) continue;
             int itemX = left + 5 + (vertical ? 0 : index * 18);
             int itemY = top + 5 + (vertical ? index * 18 : 0);
@@ -557,6 +583,15 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         net.minecraft.client.renderer.RenderHelper.disableStandardItemLighting();
         GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
         armor.setBounds(left, top, widgetWidth, widgetHeight);
+    }
+
+    private ItemStack[] sampleArmor() {
+        if (sampleArmor == null) {
+            sampleArmor = new ItemStack[] {new ItemStack(net.minecraft.init.Items.diamond_helmet),
+                    new ItemStack(net.minecraft.init.Items.diamond_chestplate), new ItemStack(net.minecraft.init.Items.diamond_leggings),
+                    new ItemStack(net.minecraft.init.Items.diamond_boots)};
+        }
+        return sampleArmor;
     }
 
     /** A compact 3x9 read-only view of main inventory slots; hotbar slots are deliberately excluded. */
@@ -588,7 +623,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
                 int slot = 9 + row * columns + column;
                 int itemX = left + 5 + column * 18;
                 int itemY = top + 5 + row * 18;
-                ItemStack stack = minecraft.thePlayer.inventory.mainInventory[slot];
+                ItemStack stack = minecraft.thePlayer == null ? null : minecraft.thePlayer.inventory.mainInventory[slot];
                 if (stack == null) continue;
                 renderer.renderItemAndEffectIntoGUI(stack, itemX, itemY);
                 renderer.renderItemOverlayIntoGUI(font, stack, itemX, itemY, null);
@@ -602,10 +637,13 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     /** Health HUD with an actual min-to-max colour interpolation and optional absorption readout. */
     private void drawHealth(HudModule hud, ScaledResolution resolution, FontRenderer font) {
-        float healthValue = Math.max(0.0F, minecraft.thePlayer.getHealth());
-        float maximum = Math.max(1.0F, minecraft.thePlayer.getMaxHealth());
-        float absorption = Math.max(0.0F, minecraft.thePlayer.getAbsorptionAmount());
-        if (hud.getHealthHideFull().isEnabled() && healthValue >= maximum && (!hud.getHealthAbsorption().isEnabled() || absorption <= 0.0F)) {
+        EntityPlayer player = minecraft.thePlayer;
+        float healthValue = player == null ? 20.0F : Math.max(0.0F, player.getHealth());
+        float maximum = player == null ? 20.0F : Math.max(1.0F, player.getMaxHealth());
+        float absorption = player == null ? 0.0F : Math.max(0.0F, player.getAbsorptionAmount());
+        // The editor keeps a readout that is hidden at full health visible, so it can still be placed.
+        if (!previewingHud && hud.getHealthHideFull().isEnabled() && healthValue >= maximum
+                && (!hud.getHealthAbsorption().isEnabled() || absorption <= 0.0F)) {
             return;
         }
         float healthRatio = Math.max(0.0F, Math.min(1.0F, healthValue / maximum));
@@ -723,40 +761,25 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     private void drawScoreboardContents(float partialTicks, HudModule hud) {
-        Scoreboard board = minecraft.theWorld.getScoreboard();
-        ScoreObjective objective = null;
-        ScorePlayerTeam playerTeam = board.getPlayersTeam(minecraft.thePlayer.getName());
-        if (playerTeam != null && playerTeam.getChatFormat().getColorIndex() >= 0) {
-            objective = board.getObjectiveInDisplaySlot(3 + playerTeam.getChatFormat().getColorIndex());
+        List<String[]> rows = new ArrayList<String[]>();
+        String title = sidebar(rows);
+        if (title == null) {
+            if (!previewingHud) return;
+            // Without a server sidebar the editor shows a sample board with the real layout.
+            title = "§e§lVIBE";
+            rows.add(new String[] {"§7vibe.client", "1"});
+            rows.add(new String[] {"Kills: §a3", "2"});
+            rows.add(new String[] {"Players: §a12", "3"});
+            rows.add(new String[] {"Map: §aLobby", "4"});
         }
-        if (objective == null) {
-            objective = board.getObjectiveInDisplaySlot(1);
-        }
-        if (objective == null) {
-            return;
-        }
-        List<Score> visible = new ArrayList<Score>();
-        for (Score score : board.getSortedScores(objective)) {
-            if (!score.getPlayerName().startsWith("#")) {
-                visible.add(score);
-            }
-        }
-        if (visible.isEmpty()) {
-            return;
-        }
-        if (visible.size() > 15) {
-            visible = new ArrayList<Score>(visible.subList(visible.size() - 15, visible.size()));
-        }
+        if (hud.getReplaceScoreboardServer().isEnabled()) title = "bipas.gay";
         FontRenderer font = minecraft.fontRendererObj;
-        String title = hud.getReplaceScoreboardServer().isEnabled() ? "bipas.gay" : objective.getDisplayName();
         int contentWidth = font.getStringWidth(title);
-        for (Score score : visible) {
-            ScorePlayerTeam team = board.getPlayersTeam(score.getPlayerName());
-            String line = ScorePlayerTeam.formatPlayerName(team, score.getPlayerName()) + " " + EnumChatFormatting.RED + score.getScorePoints();
-            contentWidth = Math.max(contentWidth, font.getStringWidth(line));
+        for (String[] row : rows) {
+            contentWidth = Math.max(contentWidth, font.getStringWidth(row[0] + " " + EnumChatFormatting.RED + row[1]));
         }
         int width = contentWidth + 6;
-        int height = visible.size() * font.FONT_HEIGHT + font.FONT_HEIGHT + 3;
+        int height = rows.size() * font.FONT_HEIGHT + font.FONT_HEIGHT + 3;
         ScaledResolution resolution = new ScaledResolution(minecraft);
         scoreboard.ensureOnScreen(resolution, width + 2, height);
         int left = scoreboard.left(resolution, width);
@@ -771,18 +794,51 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         // Keep the scoreboard a single HUD surface. Per-row black rectangles
         // were painting over Vibe blur and LiquidGlass completely.
         drawHudSurface(hud, scoreboard, backgroundLeft, top, backgroundRight, backgroundBottom);
-        int y = top;
-        for (Score score : visible) {
-            ScorePlayerTeam team = board.getPlayersTeam(score.getPlayerName());
-            String player = ScorePlayerTeam.formatPlayerName(team, score.getPlayerName());
-            String points = EnumChatFormatting.RED + "" + score.getScorePoints();
-            font.drawString(player, left, y, 0xFFFFFFFF);
+        font.drawString(title, left + (contentWidth - font.getStringWidth(title)) / 2, top + 1, 0xFFFFFFFF);
+        // Scores are sorted ascending; as in vanilla, the highest one is the first row under the title.
+        int y = top + font.FONT_HEIGHT + 3;
+        for (int index = rows.size() - 1; index >= 0; index--) {
+            String[] row = rows.get(index);
+            String points = EnumChatFormatting.RED + row[1];
+            font.drawString(row[0], left, y, 0xFFFFFFFF);
             font.drawStringWithShadow(points, left + width - 3 - font.getStringWidth(points), y, 0xFFFFFFFF);
             y += font.FONT_HEIGHT;
         }
-        font.drawString(title, left + (contentWidth - font.getStringWidth(title)) / 2,
-                y + 2, 0xFFFFFFFF);
         scoreboard.setBounds(backgroundLeft, top, backgroundRight - backgroundLeft, height);
+    }
+
+    /** Collects the visible sidebar rows as formatted name and points; returns the title, or null without a sidebar. */
+    private String sidebar(List<String[]> rows) {
+        if (minecraft.theWorld == null || minecraft.thePlayer == null) return null;
+        Scoreboard board = minecraft.theWorld.getScoreboard();
+        ScoreObjective objective = null;
+        ScorePlayerTeam playerTeam = board.getPlayersTeam(minecraft.thePlayer.getName());
+        if (playerTeam != null && playerTeam.getChatFormat().getColorIndex() >= 0) {
+            objective = board.getObjectiveInDisplaySlot(3 + playerTeam.getChatFormat().getColorIndex());
+        }
+        if (objective == null) {
+            objective = board.getObjectiveInDisplaySlot(1);
+        }
+        if (objective == null) {
+            return null;
+        }
+        List<Score> visible = new ArrayList<Score>();
+        for (Score score : board.getSortedScores(objective)) {
+            if (!score.getPlayerName().startsWith("#")) {
+                visible.add(score);
+            }
+        }
+        if (visible.isEmpty()) {
+            return null;
+        }
+        if (visible.size() > 15) {
+            visible = new ArrayList<Score>(visible.subList(visible.size() - 15, visible.size()));
+        }
+        for (Score score : visible) {
+            ScorePlayerTeam team = board.getPlayersTeam(score.getPlayerName());
+            rows.add(new String[] {ScorePlayerTeam.formatPlayerName(team, score.getPlayerName()), Integer.toString(score.getScorePoints())});
+        }
+        return objective.getDisplayName();
     }
 
     public void openEditor() {
@@ -847,154 +903,39 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         return hud != null && hud.getHudElements().isSelectedIgnoreCase(id);
     }
 
+    /**
+     * Draws an element for the HUD editor with its in-game renderer, size and anchor. Widgets without live data
+     * (no world, nobody tracked, no sidebar, full health while hidden, no armour) show sample content instead.
+     */
     public void drawPreview(HudElement element, FontRenderer font) {
-        // In a world, show the real renderer with current module settings and
-        // game data. Sample content remains available in the main menu and for
-        // widgets that currently have no live data (such as an empty sidebar).
-        if (element != null && minecraft.thePlayer != null && minecraft.theWorld != null) {
-            HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
-            if (hud != null
-                    && (element != health || !hud.getHealthHideFull().isEnabled()
-                    || minecraft.thePlayer.getHealth() < minecraft.thePlayer.getMaxHealth())
-                    && (element != music || isEnabled(MUSIC))) {
-                previewingHud = true;
-                try { drawLivePreview(element, hud, new ScaledResolution(minecraft), font); }
-                finally { previewingHud = false; }
-                return;
-            }
-        }
-        // The editor must also work from the main menu, without a player.
-        if (element != null) {
-            if (element == watermark) previewCard(element, font, 132, 26, "Vibe client", "90 fps  •  v" + Vibe.VERSION);
-            else if (element == arrayList) previewCard(element, font, 142, 62, "Inventory manager   Greenly", "Block overlay   Fade", "Trajectories   Basic");
-            else if (element == coordinates) previewCard(element, font, 126, 24, "XYZ   0 / 64 / 0");
-            else if (element == clock) previewCard(element, font, 82, 22, "12:34:56");
-            else if (element == sessionInfo) previewCard(element, font, 144, 54, "Statistics", "Session  00:12:34", "Kills  3     Walked  128");
-            else if (element == motionGraph) previewCard(element, font, 196, 64, "Motion graph              2.35 b/s", "--/---/---/---/---/---/--");
-            else if (element == stalker) previewCard(element, font, 202, 48, "Player name                 12m", "20.0 HP    Armor    Item");
-            else if (element == armor) previewCard(element, font, 82, 28, "Armor   [ ] [ ] [ ] [ ]");
-            else if (element == inventory) previewCard(element, font, 172, 64, "Inventory", "[ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]", "[ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ] [ ]");
-            else if (element == health) previewCard(element, font, 54, 18, "20.0 HP");
-            else if (element == cps) previewCard(element, font, 46, 18, "[8 | 2]");
-            else if (element == cpsGraph) previewCard(element, font, 196, 64, "CPS graph     L 8  •  R 2", "/\\/\\/\\/\\/\\/\\/\\");
-            else if (element == music) previewCard(element, font, 162, 64, "Music", "No track playing", "0:00                     3:42");
-            else previewCard(element, font, 118, 42, "Scoreboard", "Vibe              8", "Player           12");
-            return;
-        }
+        if (element == null) return;
         if (element == music) { drawMusic(true); return; }
-        if (element == watermark) {
-            Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(110, element.getWidth()) + 2,
-                    element.getTop() + 22, 0xAA2DE2C2);
-            font.drawStringWithShadow(LanguageManager.translate("WATERMARK"), element.getLeft() + 4, element.getTop() + 6, 0xFFFFFFFF);
-        } else if (element == arrayList) {
-            arrayRenderer.draw(Vibe.getInstance().getModuleManager().getModule(HudModule.class), arrayList,
-                    new ScaledResolution(minecraft), true);
-        } else if (element == coordinates) {
-            Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(110, element.getWidth()) + 2,
-                    element.getTop() + 22, 0xAA60D5FF);
-            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("XYZ 0 / 64 / 0"), element.getLeft() + 4, element.getTop() + 6, 0xFFFFFFFF);
-        } else if (element == clock) {
-            Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(90, element.getWidth()) + 2,
-                    element.getTop() + 22, 0xAA76D7FF);
-            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("12:34:56"), element.getLeft() + 4, element.getTop() + 6, 0xFFFFFFFF);
-        } else if (element == sessionInfo) {
-            Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(145, element.getWidth()) + 2,
-                    element.getTop() + 22, 0xAAFFBD59);
-            font.drawStringWithShadow(LanguageManager.translate("Session 00:12:34 | Kills 3"), element.getLeft() + 4, element.getTop() + 6, 0xFFFFFFFF);
-        } else if (element == motionGraph) {
-            Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(196, element.getWidth()) + 2,
-                    element.getTop() + 64, 0xAA2DE2C2);
-            font.drawStringWithShadow(LanguageManager.translate("MOTION GRAPH"), element.getLeft() + 7, element.getTop() + 6, 0xFFFFFFFF);
-            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("▁▂▅▃▆▇▅▂▃▅"), element.getLeft() + 7, element.getTop() + 28, 0xFF8FE8FF);
-        } else if (element == stalker) {
-            Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(212, element.getWidth()) + 2,
-                    element.getTop() + 50, 0xAA2DE2C2);
-            font.drawStringWithShadow(LanguageManager.translate("Stalker  Friend / Target"), element.getLeft() + 7, element.getTop() + 6, 0xFFFFFFFF);
-            font.drawStringWithShadow(LanguageManager.translate("Skin  ♥  Armor  Item  12m"), element.getLeft() + 7, element.getTop() + 25, 0xFFD5E1F5);
-        } else if (element == armor) {
-            Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(82, element.getWidth()) + 2,
-                    element.getTop() + Math.max(28, element.getHeight()) + 2, 0xAA5BE8A6);
-            font.drawStringWithShadow(LanguageManager.translate("ARMOR  [ ][ ][ ][ ]"), element.getLeft() + 5, element.getTop() + 8, 0xFFFFFFFF);
-        } else if (element == inventory) {
-            Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + Math.max(172, element.getWidth()) + 2,
-                    element.getTop() + Math.max(64, element.getHeight()) + 2, 0xAA7EAEFF);
-            font.drawStringWithShadow(LanguageManager.translate("INVENTORY"), element.getLeft() + 5, element.getTop() + 5, 0xFFFFFFFF);
-            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("[ ][ ][ ][ ][ ][ ][ ][ ][ ]"), element.getLeft() + 5, element.getTop() + 24, 0xFFD5E1F5);
-            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("[ ][ ][ ][ ][ ][ ][ ][ ][ ]"), element.getLeft() + 5, element.getTop() + 39, 0xFFD5E1F5);
-        } else if (element == health) {
-            font.drawStringWithShadow(LanguageManager.translate("20.0 HP"), element.getLeft() + 2, element.getTop() + 6, 0xFF5BE8A6);
-        } else if (element == cps) {
-            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("[8 | 2]"), element.getLeft(), element.getTop() + 4, 0xFFFFFFFF);
-        } else if (element == cpsGraph) {
-            Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + 198,
-                    element.getTop() + 66, 0xAA2DE2C2);
-            font.drawStringWithShadow(LanguageManager.translate("CPS GRAPH"), element.getLeft() + 7, element.getTop() + 6, 0xFFFFFFFF);
-            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("╱╲╱╲╱╲"), element.getLeft() + 7, element.getTop() + 28, 0xFF55E8FF);
-        } else {
-            int previewWidth = Math.max(110, element.getWidth());
-            int previewHeight = Math.max(42, element.getHeight());
-            Gui.drawRect(element.getLeft() - 2, element.getTop() - 2, element.getLeft() + previewWidth + 2,
-                    element.getTop() + previewHeight + 2, 0xAAFF5B6E);
-            font.drawStringWithShadow(LanguageManager.translate("SCOREBOARD"), element.getLeft() + 4, element.getTop() + 5, 0xFFFFFFFF);
-            font.drawStringWithShadow(LanguageManager.translate("Player      12"), element.getLeft() + 4, element.getTop() + 17, 0xFFD5E1F5);
-            font.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Vibe         8"), element.getLeft() + 4, element.getTop() + 29, 0xFFD5E1F5);
-        }
-    }
-
-    private void drawLivePreview(HudElement element, HudModule hud, ScaledResolution resolution, FontRenderer font) {
-        if (element == arrayList) arrayRenderer.draw(hud, arrayList, resolution, true);
-        else if (element == music) drawMusic(true);
-        else if (element == watermark) renderScaled(element, resolution, () -> drawWatermark(hud, resolution, font));
-        else if (element == coordinates) renderScaled(element, resolution, () -> drawCoordinates(hud, resolution, font));
-        else if (element == clock) renderScaled(element, resolution, () -> drawClock(hud, resolution, font));
-        else if (element == sessionInfo) renderScaled(element, resolution, () -> drawSessionInfo(hud, resolution, font));
-        else if (element == motionGraph) renderScaled(element, resolution, () -> drawMotionGraph(hud, resolution, font));
-        else if (element == stalker) {
-            renderScaled(element, resolution, () -> drawStalker(hud, resolution, font));
-            if (element.getHeight() <= 1) previewCard(element, font, 202, 48, "Player name  12m", "20.0 HP  Armor  Item");
-        }
-        else if (element == armor) renderScaled(element, resolution, () -> drawArmor(hud, resolution, font));
-        else if (element == inventory) renderScaled(element, resolution, () -> drawInventory(hud, resolution, font));
-        else if (element == health) renderScaled(element, resolution, () -> drawHealth(hud, resolution, font));
-        else if (element == cps) renderScaled(element, resolution, () -> drawCps(resolution, font));
-        else if (element == cpsGraph) renderScaled(element, resolution, () -> drawCpsGraph(hud, resolution, font));
-        else if (element == scoreboard) {
-            long before = element.boundsRevision;
-            renderScaled(element, resolution, () -> drawScoreboardContents(0.0F, hud));
-            if (element.boundsRevision == before) previewCard(element, font, 118, 42, "Scoreboard", "Vibe  8", "Player  12");
-        }
-    }
-
-    private void previewCard(HudElement element, FontRenderer font, int contentWidth, int contentHeight, String... lines) {
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         if (hud == null) return;
         ScaledResolution resolution = new ScaledResolution(minecraft);
-        float scale = element.getScale();
-        int width = Math.max(1, Math.round(contentWidth * scale));
-        int height = Math.max(1, Math.round(contentHeight * scale));
-        element.ensureOnScreen(resolution, width, height);
-        int left = element.left(resolution, width);
-        int top = element.top(resolution, height);
-        GlStateManager.pushMatrix();
-        GlStateManager.translate(left, top, 0.0F);
-        GlStateManager.scale(scale, scale, 1.0F);
-        String widgetTheme = theme(element, hud);
-        if ("Skeet".equalsIgnoreCase(widgetTheme)) {
-            Gui.drawRect(0, 0, contentWidth, contentHeight, 0xF0111113);
-            Gui.drawRect(0, 0, contentWidth, 1, 0xFF3C4049);
-        } else if ("LiquidGlass".equalsIgnoreCase(widgetTheme)) {
-            float radius = Math.min(7.0F, contentHeight / 2.0F);
-            RenderUtils.roundedRect(0, 0, contentWidth, contentHeight, radius, 0x6FD5EBFF);
-            RenderUtils.roundedOutline(0, 0, contentWidth, contentHeight, radius, 1, 0xA8FFFFFF);
-        } else {
-            RenderUtils.roundedRect(0, 0, contentWidth, contentHeight, 4, RenderUtils.alpha(hud.getBackground().getArgb(), 162));
-            RenderUtils.roundedOutline(0, 0, contentWidth, contentHeight, 4, 1, RenderUtils.alpha(hud.getArrayPrimaryColor().getArgb(), 150));
+        previewingHud = true;
+        try {
+            if (element == arrayList) arrayRenderer.draw(hud, arrayList, resolution, true);
+            else if (element == watermark) renderScaled(element, resolution, () -> drawWatermark(hud, resolution, font));
+            else if (element == coordinates) renderScaled(element, resolution, () -> drawCoordinates(hud, resolution, font));
+            else if (element == clock) renderScaled(element, resolution, () -> drawClock(hud, resolution, font));
+            else if (element == sessionInfo) renderScaled(element, resolution, () -> drawSessionInfo(hud, resolution, font));
+            else if (element == motionGraph) renderScaled(element, resolution, () -> drawMotionGraph(hud, resolution, font));
+            else if (element == stalker) renderScaled(element, resolution, () -> drawStalker(hud, resolution, font));
+            else if (element == armor) renderScaled(element, resolution, () -> drawArmor(hud, resolution, font));
+            else if (element == inventory) renderScaled(element, resolution, () -> drawInventory(hud, resolution, font));
+            else if (element == health) renderScaled(element, resolution, () -> drawHealth(hud, resolution, font));
+            else if (element == cps) renderScaled(element, resolution, () -> drawCps(resolution, font));
+            else if (element == cpsGraph) renderScaled(element, resolution, () -> drawCpsGraph(hud, resolution, font));
+            else if (element == scoreboard) renderScaled(element, resolution, () -> drawScoreboardContents(0.0F, hud));
+        } finally {
+            previewingHud = false;
         }
-        for (int index = 0; index < lines.length; index++) {
-            font.drawStringWithShadow(lines[index], 7, 6 + index * 13, index == 0 ? RenderUtils.TEXT : 0xFFD2DAE5);
-        }
-        GlStateManager.popMatrix();
-        element.setBounds(left, top, width, height);
+    }
+
+    private String playerName() {
+        if (minecraft.thePlayer != null) return minecraft.thePlayer.getName();
+        return minecraft.getSession() == null ? "Player" : minecraft.getSession().getUsername();
     }
 
     public void save() {

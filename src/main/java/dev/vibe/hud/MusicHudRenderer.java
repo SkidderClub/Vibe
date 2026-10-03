@@ -79,10 +79,10 @@ public final class MusicHudRenderer {
             int available = width - textX - 14;
             int text = module.text.getArgb();
             marquee(TITLE, track.title.isEmpty() ? "Unknown title" : track.title, textX, 10, available, text,
-                    module.scroll.isEnabled(), left, top, scale);
+                    module.scroll.isEnabled());
             String artist = track.artist.isEmpty() ? track.owner : track.artist;
             marquee(ARTIST, artist.isEmpty() ? "Unknown artist" : artist, textX, 26, available, opacity(text, .68f),
-                    module.scroll.isEnabled(), left, top, scale);
+                    module.scroll.isEnabled());
             timeline(module, track, textX, available);
         } finally {
             GL11.glPopMatrix();
@@ -136,18 +136,15 @@ public final class MusicHudRenderer {
                 Math.min((width - 8f) / module.hudWidth.getFloat(), (height - 8f) / HEIGHT)));
     }
 
-    private void marquee(NeverLoseFont font, String text, int x, int y, int width, int color,
-                         boolean scroll, int left, int top, float scale) {
+    private void marquee(NeverLoseFont font, String text, int x, int y, int width, int color, boolean scroll) {
         float overflow = font.width(text) - width;
         if (overflow <= 0 || !scroll) { font.draw(font.fit(text, width), x, y, color); return; }
         double duration = Math.max(4, overflow / 22.0), cycle = (System.currentTimeMillis() - changedAt) / 1000.0;
         double t = cycle % (duration * 2 + 2);
         double offset = t < 1 ? 0 : t < 1 + duration ? (t - 1) / duration
                 : t < 2 + duration ? 1 : 1 - (t - 2 - duration) / duration;
-        int clipX = (int) Math.ceil(left + x * scale), clipY = (int) Math.floor(top + y * scale);
-        int clipRight = (int) Math.floor(left + (x + width) * scale);
-        int clipBottom = (int) Math.ceil(top + (y + 16) * scale);
-        try (GuiClip ignored = new GuiClip(clipX, clipY, clipRight - clipX, clipBottom - clipY)) {
+        // Clip in the card's own space: the HUD editor draws this card inside its scaled preview.
+        try (GuiClip ignored = GuiClip.local(x, y, width, 16)) {
             font.draw(text, x - (float) (Math.max(0, Math.min(1, offset)) * overflow), y, color);
         }
     }

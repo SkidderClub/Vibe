@@ -64,7 +64,8 @@ final float scale = s.scale.getFloat() * element.getScale();
         element.setBounds(left,top,w,rows.isEmpty()?0:h);
         if(rows.isEmpty() || !preview && DebugOverlay.overlaps(left-12,top-12,left+w+12,top+h+12))return;
         BlurModule blur = Vibe.getInstance().getModuleManager().getModule(BlurModule.class);
-        boolean blurred = blur!=null && blur.isEnabled() && blur.getElements().isSelected(BlurModule.ARRAY_LIST);
+        // The blur samples the screen at HUD coordinates; the editor's scaled preview would show the wrong region.
+        boolean blurred = !preview && blur!=null && blur.isEnabled() && blur.getElements().isSelected(BlurModule.ARRAY_LIST);
         long now=System.currentTimeMillis();
         for(int i=0;i<rows.size();i++){
             Row row=rows.get(i); row.x=right?left+w-row.width:left; row.y=top+i*(rh+gap);

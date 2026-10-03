@@ -38,6 +38,8 @@ import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.OpenGlHelper;
+import net.minecraft.client.shader.Framebuffer;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
@@ -81,6 +83,9 @@ public final class HudEditorGui extends GuiScreen {
     private ColorSetting editingColor;
     private float colorHue, colorSaturation, colorBrightness;
     private long savedAt;
+    /** The HUD at the game's own resolution; the canvas shows it scaled down. */
+    private Framebuffer preview;
+    private boolean previewUnavailable;
 
     public HudEditorGui(HudManager manager) {
         this.manager = manager;
@@ -201,17 +206,19 @@ public final class HudEditorGui extends GuiScreen {
         AccountScreenStyle.panel(stageLeft, areaTop, stageRight - stageLeft, stageBottom - areaTop, SURFACE, BORDER);
         MenuRoundedRenderer.rect(canvasX - 1, canvasY - 1, canvasWidth + 2, canvasHeight + 2, 4, BORDER);
         MenuRoundedRenderer.rect(canvasX, canvasY, canvasWidth, canvasHeight, 3, BACKGROUND);
-        int centre = RenderUtils.alpha(ACCENT, 0x20);
-        drawRect(canvasX + canvasWidth / 2, canvasY, canvasX + canvasWidth / 2 + 1, canvasY + canvasHeight, centre);
-        drawRect(canvasX, canvasY + canvasHeight / 2, canvasX + canvasWidth, canvasY + canvasHeight / 2 + 1, centre);
         try (GuiClip ignored = new GuiClip(canvasX, canvasY, canvasWidth, canvasHeight)) {
-            GlStateManager.pushMatrix();
-            GlStateManager.translate(canvasX, canvasY, 0.0F);
-            GlStateManager.scale(previewScale, previewScale, 1.0F);
-            for (String id : manager.getElementIds()) if (manager.isEnabled(id)) manager.drawPreview(manager.getElement(id), fontRendererObj);
-            GlStateManager.popMatrix();
+            if (!drawBufferedPreview()) {
+                GlStateManager.pushMatrix();
+                GlStateManager.translate(canvasX, canvasY, 0.0F);
+                GlStateManager.scale(previewScale, previewScale, 1.0F);
+                drawHud();
+                GlStateManager.popMatrix();
+            }
             GlStateManager.enableBlend();
             GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+            int centre = RenderUtils.alpha(ACCENT, 0x20);
+            drawRect(canvasX + canvasWidth / 2, canvasY, canvasX + canvasWidth / 2 + 1, canvasY + canvasHeight, centre);
+            drawRect(canvasX, canvasY + canvasHeight / 2, canvasX + canvasWidth, canvasY + canvasHeight / 2 + 1, centre);
             drawGuides();
             HudManager.HudElement hover = dragged == null && drag == null && insideCanvas(mouseX, mouseY)
                     ? elementAt(previewX(mouseX), previewY(mouseY)) : null;
@@ -231,6 +238,64 @@ public final class HudEditorGui extends GuiScreen {
             drawScale(stageLeft, middle, controlsTop, mouseX, mouseY);
             drawTheme(middle + GAP, stageRight, controlsTop, mouseX, mouseY);
         }
+    }
+
+    private void drawHud() {
+        for (String id : manager.getElementIds()) if (manager.isEnabled(id)) manager.drawPreview(manager.getElement(id), fontRendererObj);
+    }
+
+    /**
+     * Renders the HUD offscreen at the game's own resolution and shows it scaled into the canvas, so thin outlines,
+     * glyphs and screen-space clipping look as they do in game. Returns false where framebuffers are unavailable.
+     */
+    private boolean drawBufferedPreview() {
+        if (previewUnavailable || !OpenGlHelper.isFramebufferEnabled()) return false;
+        int previous = GL11.glGetInteger(0x8CA6); // GL_FRAMEBUFFER_BINDING
+        java.nio.IntBuffer viewport = org.lwjgl.BufferUtils.createIntBuffer(16);
+        GL11.glGetInteger(GL11.GL_VIEWPORT, viewport);
+        boolean scissor = GL11.glIsEnabled(GL11.GL_SCISSOR_TEST);
+        GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        try {
+            if (preview == null || preview.framebufferWidth != mc.displayWidth || preview.framebufferHeight != mc.displayHeight) {
+                if (preview != null) preview.deleteFramebuffer();
+                preview = null;
+                try {
+                    preview = new Framebuffer(mc.displayWidth, mc.displayHeight, true);
+                } catch (RuntimeException incomplete) {
+                    previewUnavailable = true;
+                    return false;
+                }
+                preview.setFramebufferFilter(GL11.GL_LINEAR);
+            }
+            // An opaque canvas colour keeps the HUD's partial alpha writes out of the composite.
+            preview.setFramebufferColor((BACKGROUND >> 16 & 255) / 255.0F, (BACKGROUND >> 8 & 255) / 255.0F, (BACKGROUND & 255) / 255.0F, 1.0F);
+            boolean depthMask = GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK);
+            GlStateManager.depthMask(true);
+            preview.framebufferClear();
+            GlStateManager.depthMask(depthMask);
+            preview.bindFramebuffer(true);
+            drawHud();
+        } finally {
+            OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER, previous);
+            GL11.glViewport(viewport.get(0), viewport.get(1), viewport.get(2), viewport.get(3));
+            if (scissor) GL11.glEnable(GL11.GL_SCISSOR_TEST);
+        }
+        float u = preview.framebufferWidth / (float) preview.framebufferTextureWidth;
+        float v = preview.framebufferHeight / (float) preview.framebufferTextureHeight;
+        GlStateManager.enableTexture2D();
+        GlStateManager.disableBlend();
+        GlStateManager.disableAlpha();
+        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+        preview.bindFramebufferTexture();
+        GL11.glBegin(GL11.GL_QUADS);
+        GL11.glTexCoord2f(0.0F, v); GL11.glVertex2f(canvasX, canvasY);
+        GL11.glTexCoord2f(0.0F, 0.0F); GL11.glVertex2f(canvasX, canvasY + canvasHeight);
+        GL11.glTexCoord2f(u, 0.0F); GL11.glVertex2f(canvasX + canvasWidth, canvasY + canvasHeight);
+        GL11.glTexCoord2f(u, v); GL11.glVertex2f(canvasX + canvasWidth, canvasY);
+        GL11.glEnd();
+        preview.unbindFramebufferTexture();
+        GlStateManager.enableAlpha();
+        return true;
     }
 
     private void drawGuides() {
@@ -659,6 +724,12 @@ public final class HudEditorGui extends GuiScreen {
     }
 
     @Override public boolean doesGuiPauseGame() { return false; }
+
+    @Override public void onGuiClosed() {
+        if (preview != null) preview.deleteFramebuffer();
+        preview = null;
+        super.onGuiClosed();
+    }
 
     private void close() {
         if (editingText != null) commitText();
