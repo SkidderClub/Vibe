@@ -1,9 +1,13 @@
 package dev.vibe.module.impl.world;
 
 import dev.vibe.Vibe;
+import dev.vibe.combat.RotationMath;
 import dev.vibe.module.Module;
 import dev.vibe.module.ModuleManager;
 import dev.vibe.module.impl.movement.MoveFixModule;
+import dev.vibe.setting.ModeSetting;
+import dev.vibe.setting.NumberSetting;
+import dev.vibe.setting.RangeSetting;
 import dev.vibe.setting.Setting;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -11,7 +15,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
@@ -19,6 +22,7 @@ import net.minecraft.client.multiplayer.PlayerControllerMP;
 import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.init.Blocks;
@@ -27,6 +31,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.MovementInput;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
@@ -85,6 +90,8 @@ public class ScaffoldModuleTest {
         moveFix = new MoveFixModule();
         scaffold = new ScaffoldModule();
         set(ModuleManager.class, manager, "modules", new ArrayList<Module>(Arrays.asList(moveFix, scaffold)));
+        // Most tests check where the rotation ends up; the speed tests set their own limits.
+        range("Rotation Speed").setRange(180.0D, 180.0D);
     }
 
     @After public void tearDown() throws Exception {
@@ -139,6 +146,8 @@ public class ScaffoldModuleTest {
         scaffold.setEnabled(true);
         scaffold.tickStart();
         assertEquals(EnumFacing.EAST, scaffold.getTargetFace());
+        assertEquals("Waits behind the player instead of turning toward the hidden face", 0.0F,
+                RotationMath.difference(moveFix.getRotationYaw(), 90.0F), 0.2F);
         ScaffoldModule.prepareInputHook();
         assertTrue("No placement may be sent with a ray that misses the face", controller.placements.isEmpty());
         ScaffoldModule.finishInputHook();
@@ -233,24 +242,185 @@ public class ScaffoldModuleTest {
         assertEquals(1 + 64 + 64, scaffold.getBlockCount());
     }
 
-    @Test public void smoothRotationLimitsSpeedSnapsToMouseStepsAndTakesTheShortWay() {
-        Random random = new Random(7L);
-        float factor = 0.5F * 0.6F + 0.2F;
-        float step = factor * factor * factor * 1.2F;
-        for (int i = 0; i < 200; i++) {
-            float[] next = ScaffoldModule.smoothRotation(170.0F, 10.0F, -170.0F, 80.0F, 30.0F, 15.0F, 0.5F, random);
-            float yawDelta = next[0] - 170.0F;
-            float pitchDelta = next[1] - 10.0F;
-            assertTrue("Wraps through 180 instead of turning 340 degrees", yawDelta > 0.0F && yawDelta <= 20.34F);
-            assertTrue(pitchDelta > 0.0F && pitchDelta <= 18.0F);
-            assertEquals(0.0F, remainder(yawDelta, step), 0.0005F);
-            assertEquals(0.0F, remainder(pitchDelta, step), 0.0005F);
+    @Test public void rotationsAreNamedNormalAndGodBridge() {
+        assertEquals(Arrays.asList("Normal", "GodBridge"), scaffold.getRotations().getModes());
+        assertEquals("Normal", scaffold.getRotations().getValue());
+    }
+
+    @Test public void rotationSpeedLimitsEveryTickAndAccelerationRampsUp() throws Exception {
+        world.blocks.put(new BlockPos(0, 63, 0), Blocks.stone.getDefaultState());
+        standAt(1.2D, 64.0D, 0.5D, -90.0F, 20.0F);
+        range("Rotation Speed").setRange(20.0D, 20.0D);
+        scaffold.setEnabled(true);
+        scaffold.tickStart();
+        float turned = Math.abs(RotationMath.difference(moveFix.getRotationYaw(), -90.0F));
+        assertTrue("Turned " + turned, turned > 19.8F && turned <= 20.0F);
+        ScaffoldModule.prepareInputHook();
+        ScaffoldModule.finishInputHook();
+        assertTrue(controller.placements.isEmpty());
+        for (int tick = 0; tick < 10; tick++) scaffold.tickStart();
+        ScaffoldModule.prepareInputHook();
+        ScaffoldModule.finishInputHook();
+        assertEquals("Placed once the limited turn reached the face", 1, controller.placements.size());
+
+        scaffold.setEnabled(false);
+        for (int tick = 0; tick < 100; tick++) moveFix.tick();
+        assertEquals("Back at the camera", -90.0F, moveFix.getRotationYaw(), 0.0F);
+        ((ModeSetting) find("Rotation Mode")).setValue("Acceleration");
+        range("Rotation Acceleration").setRange(2.0D, 2.0D);
+        scaffold.setEnabled(true);
+        scaffold.tickStart();
+        float first = Math.abs(RotationMath.difference(moveFix.getRotationYaw(), -90.0F));
+        scaffold.tickStart();
+        float second = Math.abs(RotationMath.difference(moveFix.getRotationYaw(), -90.0F)) - first;
+        assertTrue("First step " + first, first > 0.0F && first <= 2.0F);
+        assertTrue("Second step " + second, second > first && second <= 4.0F);
+    }
+
+    @Test public void jumpingNeverTurnsTheNormalRotationAhead() throws Exception {
+        world.blocks.put(new BlockPos(-1, 63, 0), Blocks.stone.getDefaultState());
+        world.blocks.put(new BlockPos(0, 63, 0), Blocks.stone.getDefaultState());
+        keys(true, false, false, false);
+        standAt(0.5D, 64.0D, 0.5D, -90.0F, 20.0F);
+        scaffold.setEnabled(true);
+        double x = 0.5D;
+        double y = 64.0D;
+        double motionY = 0.42D;
+        for (int tick = 0; tick < 12; tick++) {
+            scaffold.tickStart();
+            float fromBehind = RotationMath.difference(moveFix.getRotationYaw(), 90.0F);
+            assertTrue("Tick " + tick + " looked " + fromBehind + " degrees from behind", Math.abs(fromBehind) <= 90.0F);
+            x += 0.1D;
+            y += motionY;
+            motionY = (motionY - 0.08D) * 0.98D;
+            moveTo(x, Math.max(64.0D, y), 0.5D, y <= 64.0D);
         }
-        float[] held = ScaffoldModule.smoothRotation(30.0F, 60.0F, 30.0F, 60.0F, 180.0F, 180.0F, 0.5F, random);
-        assertEquals(30.0F, held[0], 0.0F);
-        assertEquals(60.0F, held[1], 0.0F);
-        float clamped = ScaffoldModule.smoothRotation(0.0F, 89.0F, 0.0F, 140.0F, 0.0F, 180.0F, 0.5F, random)[1];
-        assertTrue("Pitch never passes straight down", clamped > 89.0F && clamped <= 90.0F);
+    }
+
+    @Test public void sidewaysLooksPastWhicheverSideOfTheBlockThePlayerStandsOn() throws Exception {
+        world.blocks.put(new BlockPos(0, 63, 0), Blocks.stone.getDefaultState());
+        setting("Sideways").setValue(true);
+        keys(true, false, false, false);
+        // Walking east on the right (south) half: look back-left.
+        standAt(1.15D, 64.0D, 0.85D, -90.0F, 20.0F);
+        scaffold.setEnabled(true);
+        assertPlacesFrom(135.0F);
+        // Left (north) half: back-left would miss the face, so look back-right.
+        moveTo(1.15D, 64.0D, 0.15D, true);
+        assertPlacesFrom(45.0F);
+        // Diagonal bridges look straight back.
+        player.rotationYaw = -45.0F;
+        moveTo(1.2D, 64.0D, 0.9D, true);
+        assertPlacesFrom(135.0F);
+    }
+
+    @Test public void godBridgeHoldsASnappedDiagonalAndPlaces() throws Exception {
+        world.blocks.put(new BlockPos(0, 63, 0), Blocks.stone.getDefaultState());
+        scaffold.getRotations().setValue("GodBridge");
+        keys(true, false, false, false);
+        standAt(1.15D, 64.0D, 0.2D, -80.0F, 20.0F);
+        scaffold.setEnabled(true);
+        assertPlacesFrom(45.0F);
+        moveTo(1.15D, 64.0D, 0.8D, true);
+        assertPlacesFrom(135.0F);
+        KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindSneak.getKeyCode(), true);
+        assertPlacesFrom(135.0F);
+    }
+
+    @Test public void sneakOnlyAtTheBlockEndAndUnsneaksAfterTheDelay() throws Exception {
+        world.blocks.put(new BlockPos(0, 63, 0), Blocks.stone.getDefaultState());
+        setting("Sneak").setValue(true);
+        setting("Safe Walk").setValue(false);
+        setting("Randomize Unsneak").setValue(false);
+        number("Unsneak Delay").setValue(0.0D);
+        keys(true, false, false, false);
+        standAt(0.4D, 64.0D, 0.5D, -90.0F, 20.0F);
+        scaffold.setEnabled(true);
+        player.motionX = 0.1D;
+        assertFalse("Walking over the block never sneaks", moveInput(false).sneak);
+        moveTo(0.85D, 64.0D, 0.5D, true);
+        MovementInput atEnd = moveInput(false);
+        assertTrue(atEnd.sneak);
+        assertEquals(0.3F, atEnd.moveForward, 0.0F);
+        assertFalse("A jump never sneaks", moveInput(true).sneak);
+        assertTrue(moveInput(false).sneak);
+        world.blocks.put(new BlockPos(1, 63, 0), Blocks.stone.getDefaultState());
+        assertFalse("Released once a block supports the way ahead", moveInput(false).sneak);
+
+        number("Unsneak Delay").setValue(500.0D);
+        world.blocks.remove(new BlockPos(1, 63, 0));
+        assertTrue(moveInput(false).sneak);
+        world.blocks.put(new BlockPos(1, 63, 0), Blocks.stone.getDefaultState());
+        assertTrue("Still sneaking during the unsneak delay", moveInput(false).sneak);
+    }
+
+    @Test public void preventDoubleSneakingKeepsSneakingUntilTheCorner() throws Exception {
+        setting("Sneak").setValue(true);
+        setting("Safe Walk").setValue(false);
+        setting("Randomize Unsneak").setValue(false);
+        number("Unsneak Delay").setValue(0.0D);
+        keys(true, false, false, false);
+        for (boolean prevent : new boolean[] {true, false}) {
+            setting("Prevent Double Sneaking").setValue(prevent);
+            world.blocks.clear();
+            world.blocks.put(new BlockPos(0, 63, 0), Blocks.stone.getDefaultState());
+            // Walking south-east toward the corner of the block.
+            standAt(0.9D, 64.0D, 0.85D, -45.0F, 20.0F);
+            scaffold.setEnabled(true);
+            player.motionX = player.motionZ = 0.05D;
+            assertTrue(moveInput(false).sneak);
+            // Past the east edge, but not yet past the south one.
+            world.blocks.put(new BlockPos(1, 63, 0), Blocks.stone.getDefaultState());
+            moveTo(1.3D, 64.0D, 0.5D, true);
+            assertEquals(prevent, moveInput(false).sneak);
+            if (prevent) {
+                world.blocks.put(new BlockPos(1, 63, 1), Blocks.stone.getDefaultState());
+                moveTo(1.5D, 64.0D, 1.2D, true);
+                assertFalse("Unsneaks at the corner", moveInput(false).sneak);
+            }
+            scaffold.setEnabled(false);
+        }
+    }
+
+    @Test public void tellyNeverTurnsAroundForAJumpThatLandsOnBlocks() throws Exception {
+        for (int x = -3; x <= 8; x++) world.blocks.put(new BlockPos(x, 63, 0), Blocks.stone.getDefaultState());
+        scaffold.getMode().setValue("Telly");
+        range("Telly Ticks").setRange(0.0D, 0.0D);
+        keys(true, false, false, false);
+        standAt(0.6D, 64.0D, 0.5D, -90.0F, 30.0F);
+        scaffold.setEnabled(true);
+        jump(new Runnable() {
+            @Override public void run() {
+                assertEquals(-90.0F, moveFix.getRotationYaw(), 0.2F);
+            }
+        });
+        assertTrue(controller.placements.isEmpty());
+    }
+
+    @Test public void tellyTurnsAroundAfterItsTicksAndBridgesSeveralBlocksPerJump() throws Exception {
+        for (int x = -3; x <= 0; x++) world.blocks.put(new BlockPos(x, 63, 0), Blocks.stone.getDefaultState());
+        controller.build = true;
+        scaffold.getMode().setValue("Telly");
+        range("Telly Ticks").setRange(2.0D, 2.0D);
+        keys(true, false, false, false);
+        standAt(0.6D, 64.0D, 0.5D, -90.0F, 30.0F);
+        scaffold.setEnabled(true);
+        final boolean[] turned = new boolean[1];
+        final int[] tick = new int[1];
+        jump(new Runnable() {
+            @Override public void run() {
+                boolean back = Math.abs(RotationMath.difference(moveFix.getRotationYaw(), -90.0F)) > 90.0F;
+                if (tick[0]++ < 2) assertFalse("Forward on the ground and for the first Telly Ticks", back);
+                turned[0] |= back;
+            }
+        });
+        assertTrue(turned[0]);
+        assertTrue("Placed " + controller.placements.size(), controller.placements.size() >= 3);
+        for (int x = 1; x <= 3; x++) assertTrue("Column " + x, world.blocks.containsKey(new BlockPos(x, 63, 0)));
+        // Landed: forward again for the next run-up.
+        tick();
+        tick();
+        assertEquals(-90.0F, RotationMath.difference(moveFix.getRotationYaw(), 0.0F), 0.2F);
     }
 
     @Test public void movementYawAndDiagonalsFollowTheKeys() {
@@ -263,6 +433,10 @@ public class ScaffoldModuleTest {
         assertTrue(ScaffoldModule.goingDiagonally(496.0F));
         assertFalse(ScaffoldModule.goingDiagonally(90.0F));
         assertFalse(ScaffoldModule.goingDiagonally(30.0F));
+        assertTrue(ScaffoldModule.bridgingDiagonally(30.0F));
+        assertTrue(ScaffoldModule.bridgingDiagonally(-45.0F));
+        assertFalse(ScaffoldModule.bridgingDiagonally(-80.0F));
+        assertFalse(ScaffoldModule.bridgingDiagonally(200.0F));
     }
 
     @Test public void entryFaceReportsTheSideARayEntersThrough() {
@@ -276,6 +450,56 @@ public class ScaffoldModuleTest {
                 ScaffoldModule.entryFace(new Vec3(0.5D, 63.5D, 0.5D), ScaffoldModule.lookVector(0.0F, 0.0F), 4.5D, box));
     }
 
+    /** A few ticks at the current position must settle on {@code yaw} and place against the east face. */
+    private void assertPlacesFrom(float yaw) {
+        int before = controller.placements.size();
+        for (int i = 0; i < 3; i++) scaffold.tickStart();
+        assertEquals("Server yaw " + moveFix.getRotationYaw(), 0.0F, RotationMath.difference(moveFix.getRotationYaw(), yaw), 0.2F);
+        ScaffoldModule.prepareInputHook();
+        ScaffoldModule.finishInputHook();
+        assertEquals(before + 1, controller.placements.size());
+        assertEquals(EnumFacing.EAST, controller.placements.get(before)[2]);
+    }
+
+    /** A sprint jump east from the current position, one tick at a time, with a check after each rotation. */
+    private void jump(Runnable afterRotation) {
+        double x = player.posX;
+        double y = player.posY;
+        double motionY = 0.42D;
+        for (int tick = 0; tick < 12; tick++) {
+            tick();
+            afterRotation.run();
+            x += 0.3D;
+            y += motionY;
+            motionY = (motionY - 0.08D) * 0.98D;
+            moveTo(x, Math.max(64.0D, y), 0.5D, y <= 64.0D);
+            player.motionX = 0.3D;
+            player.motionY = y <= 64.0D ? -0.0784D : motionY;
+            scaffold.beforeWalkingUpdate(player);
+        }
+    }
+
+    private void tick() {
+        scaffold.tickStart();
+        ScaffoldModule.prepareInputHook();
+        ScaffoldModule.finishInputHook();
+    }
+
+    private MovementInput moveInput(boolean jumping) {
+        MovementInput input = new MovementInput();
+        input.moveForward = 1.0F;
+        input.jump = jumping;
+        scaffold.applyMoveInput(input);
+        return input;
+    }
+
+    private void keys(boolean forward, boolean back, boolean left, boolean right) {
+        KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindForward.getKeyCode(), forward);
+        KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindBack.getKeyCode(), back);
+        KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindLeft.getKeyCode(), left);
+        KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindRight.getKeyCode(), right);
+    }
+
     private MovingObjectPosition serverRay() {
         Vec3 eyes = player.getPositionEyes(1.0F);
         Vec3 look = ScaffoldModule.lookVector(moveFix.getRotationYaw(), moveFix.getRotationPitch());
@@ -284,26 +508,39 @@ public class ScaffoldModuleTest {
     }
 
     private void standAt(double x, double y, double z, float yaw, float pitch) {
+        moveTo(x, y, z, true);
+        player.rotationYaw = player.prevRotationYaw = yaw;
+        player.rotationPitch = player.prevRotationPitch = pitch;
+        player.motionX = player.motionZ = 0.0D;
+        player.motionY = -0.0784D;
+    }
+
+    private void moveTo(double x, double y, double z, boolean onGround) {
         player.posX = x;
         player.posY = y;
         player.posZ = z;
-        player.onGround = true;
-        player.rotationYaw = player.prevRotationYaw = yaw;
-        player.rotationPitch = player.prevRotationPitch = pitch;
+        player.onGround = onGround;
         player.setEntityBoundingBox(new AxisAlignedBB(x - 0.3D, y, z - 0.3D, x + 0.3D, y + 1.8D, z + 0.3D));
     }
 
-    @SuppressWarnings("unchecked")
-    private Setting<Boolean> setting(String name) {
+    private Setting<?> find(String name) {
         for (Setting<?> setting : scaffold.getSettings()) {
-            if (setting.getRawName().equals(name)) return (Setting<Boolean>) setting;
+            if (setting.getRawName().equals(name)) return setting;
         }
         throw new AssertionError("Missing setting " + name);
     }
 
-    private static float remainder(float value, float step) {
-        float rest = Math.abs(value % step);
-        return Math.min(rest, step - rest);
+    @SuppressWarnings("unchecked")
+    private Setting<Boolean> setting(String name) {
+        return (Setting<Boolean>) find(name);
+    }
+
+    private NumberSetting number(String name) {
+        return (NumberSetting) find(name);
+    }
+
+    private RangeSetting range(String name) {
+        return (RangeSetting) find(name);
     }
 
     private static void set(Class<?> type, Object object, String name, Object value) throws Exception {
@@ -327,11 +564,14 @@ public class ScaffoldModuleTest {
 
     public static final class Controller extends PlayerControllerMP {
         List<Object[]> placements;
+        /** Puts each placed block into the fake world. */
+        boolean build;
         private Controller() { super(null, null); }
         @Override public float getBlockReachDistance() { return 4.5F; }
         @Override public boolean onPlayerRightClick(EntityPlayerSP player, WorldClient world, ItemStack stack,
                 BlockPos pos, EnumFacing side, Vec3 hit) {
             placements.add(new Object[] {stack, pos, side, hit, player.inventory.currentItem});
+            if (build) ((FakeWorld) world).blocks.put(pos.offset(side), Blocks.stone.getDefaultState());
             return true;
         }
         @Override public boolean sendUseItem(EntityPlayer player, World world, ItemStack stack) { return false; }
@@ -345,5 +585,13 @@ public class ScaffoldModuleTest {
             return state == null ? Blocks.air.getDefaultState() : state;
         }
         @Override public boolean isAirBlock(BlockPos pos) { return getBlockState(pos).getBlock() == Blocks.air; }
+        @Override public List<AxisAlignedBB> getCollidingBoundingBoxes(Entity entity, AxisAlignedBB box) {
+            List<AxisAlignedBB> boxes = new ArrayList<AxisAlignedBB>();
+            for (Map.Entry<BlockPos, IBlockState> entry : blocks.entrySet()) {
+                AxisAlignedBB block = entry.getValue().getBlock().getCollisionBoundingBox(this, entry.getKey(), entry.getValue());
+                if (block != null && block.intersectsWith(box)) boxes.add(block);
+            }
+            return boxes;
+        }
     }
 }

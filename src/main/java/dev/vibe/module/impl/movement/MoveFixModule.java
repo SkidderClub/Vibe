@@ -40,8 +40,11 @@ public final class MoveFixModule extends Module {
             "Off", "Prevent Backwards Sprinting", "Direct", "Silent"));
     private final BooleanSetting adjustThirdPersonModel = addSetting(new BooleanSetting("Adjust Third Person Model", true));
     private final BooleanSetting raycast = addSetting(new BooleanSetting("Raycast", false));
+    // Off returns to the camera in one tick once a producer such as Scaffold
+    // or Killaura releases its rotation; on turns back at Rotate Back Speed.
+    private final BooleanSetting smoothBackRotate = addSetting(new BooleanSetting("Smooth Back Rotate", true));
     private final RangeSetting rotateBackSpeed = addSetting(new RangeSetting("Rotate Back Speed", 8.0D, 14.0D,
-            0.0D, 180.0D, 0.25D));
+            0.0D, 180.0D, 0.25D, smoothBackRotate::isEnabled));
 
     private volatile FakeRotation fakeRotation;
     private FakeRotation previousRenderRotation;
@@ -247,6 +250,10 @@ public final class MoveFixModule extends Module {
         return raycast;
     }
 
+    public BooleanSetting getSmoothBackRotate() {
+        return smoothBackRotate;
+    }
+
     public RangeSetting getRotateBackSpeed() {
         return rotateBackSpeed;
     }
@@ -256,6 +263,7 @@ public final class MoveFixModule extends Module {
     }
 
     private float rotateBackSpeed() {
+        if (!smoothBackRotate.isEnabled()) return 0.0F;
         double min = rotateBackSpeed.getMin();
         double max = rotateBackSpeed.getMax();
         return (float) (min + (max <= min ? 0.0D : rotationRandom.nextDouble() * (max - min)));

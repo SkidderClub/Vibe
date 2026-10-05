@@ -1,6 +1,7 @@
 package dev.vibe.module.impl.world;
 
 import dev.vibe.Vibe;
+import dev.vibe.combat.AuraRotation;
 import dev.vibe.combat.CombatTimerAccess;
 import dev.vibe.combat.RotationMath;
 import dev.vibe.input.VanillaClicks;
@@ -10,11 +11,10 @@ import dev.vibe.module.impl.movement.MoveFixModule;
 import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ModeSetting;
 import dev.vibe.setting.NumberSetting;
+import dev.vibe.setting.RangeSetting;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import net.minecraft.block.Block;
@@ -27,6 +27,7 @@ import net.minecraft.block.BlockLadder;
 import net.minecraft.block.BlockLiquid;
 import net.minecraft.block.BlockSkull;
 import net.minecraft.block.BlockSnow;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.settings.KeyBinding;
@@ -60,17 +61,49 @@ import org.lwjgl.input.Keyboard;
  * {@link #beforeWalkingUpdate} runs the tower before the movement packet.</p>
  */
 public final class ScaffoldModule extends Module {
-    private static final float GOD_BRIDGE_STEP = 0.22F;
+    /** Pitch range searched for a ray that enters the chosen face. */
+    private static final float MIN_PITCH = 55.0F;
+    private static final float MAX_PITCH = 90.0F;
+    /** Pitch held while the face is not yet in view, so the next hit is a short turn away. */
+    private static final float PRE_AIM_MIN = 75.0F;
+    private static final float PRE_AIM_MAX = 85.0F;
+    /** Normal rotations never turn further than this from the bridging yaw, so they never look ahead. */
+    private static final int MAX_TURN = 90;
+    private static final int YAW_STEP = 2;
+    /** Lateral distance from the block centre at which Sideways and GodBridge change the side they look past. */
+    private static final double SIDE_SWITCH = 0.1D;
+    /** A diagonal sneak held for the corner ends after this long, even when the corner was never reached. */
+    private static final long CORNER_TIMEOUT = 1500L;
+    private static final float TELLY_TURN_MIN = 140.0F;
+    private static final float TELLY_TURN_MAX = 180.0F;
+    private static final float TELLY_PRE_AIM = 80.0F;
 
     private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Normal", "Normal", "Telly"));
-    private final ModeSetting rotations = addSetting(new ModeSetting("Rotations", "Intave",
-            () -> mode.is("Normal"), "Intave", "Polar", "God Bridge"));
-    private final BooleanSetting sideways = addSetting(new BooleanSetting("Sideways", false, () -> mode.is("Normal")));
+    private final ModeSetting rotations = addSetting(new ModeSetting("Rotations", "Normal",
+            () -> mode.is("Normal"), "Normal", "GodBridge"));
+    private final ModeSetting rotationMode = addSetting(new ModeSetting("Rotation Mode", "Normal",
+            () -> mode.is("Normal"), "Normal", "Acceleration"));
+    private final RangeSetting rotationSpeed = addSetting(new RangeSetting("Rotation Speed", 45.0D, 60.0D, 1.0D, 180.0D, 0.5D,
+            () -> mode.is("Normal") && rotationMode.is("Normal")));
+    private final RangeSetting rotationAcceleration = addSetting(new RangeSetting("Rotation Acceleration", 5.0D, 10.0D,
+            0.25D, 40.0D, 0.25D, () -> mode.is("Normal") && rotationMode.is("Acceleration")));
+    private final RangeSetting tellyTicks = addSetting(new RangeSetting("Telly Ticks", 2.0D, 3.0D, 0.0D, 8.0D, 1.0D,
+            () -> mode.is("Telly")));
+    private final BooleanSetting sideways = addSetting(new BooleanSetting("Sideways", false,
+            () -> mode.is("Normal") && rotations.is("Normal")));
     private final ModeSetting sprint = addSetting(new ModeSetting("Sprint", "Always", "Always", "Off", "Legit"));
     private final ModeSetting tower = addSetting(new ModeSetting("Tower", "None", "None", "NCP", "Timer", "Intave"));
     private final BooleanSetting keepY = addSetting(new BooleanSetting("Keep Y", true));
     private final BooleanSetting sneak = addSetting(new BooleanSetting("Sneak", false, () -> mode.is("Normal")));
-    private final NumberSetting sneakDelay = addSetting(new NumberSetting("Sneak Delay (ms)", 400.0D, 100.0D, 2000.0D, 100.0D,
+    private final NumberSetting blockEndDistance = addSetting(new NumberSetting("Block End Distance", 0.1D, 0.0D, 0.6D, 0.01D,
+            () -> mode.is("Normal") && sneak.isEnabled()));
+    private final BooleanSetting randomizeUnsneak = addSetting(new BooleanSetting("Randomize Unsneak", true,
+            () -> mode.is("Normal") && sneak.isEnabled()));
+    private final RangeSetting unsneakRange = addSetting(new RangeSetting("Unsneak Range", 50.0D, 100.0D, 0.0D, 500.0D, 5.0D,
+            () -> mode.is("Normal") && sneak.isEnabled() && randomizeUnsneak.isEnabled()));
+    private final NumberSetting unsneakDelay = addSetting(new NumberSetting("Unsneak Delay", 50.0D, 0.0D, 500.0D, 5.0D,
+            () -> mode.is("Normal") && sneak.isEnabled() && !randomizeUnsneak.isEnabled()));
+    private final BooleanSetting preventDoubleSneak = addSetting(new BooleanSetting("Prevent Double Sneaking", true,
             () -> mode.is("Normal") && sneak.isEnabled()));
     private final BooleanSetting safeWalk = addSetting(new BooleanSetting("Safe Walk", true, () -> mode.is("Normal")));
     private final BooleanSetting movementFix = addSetting(new BooleanSetting("Move Fix", true, () -> mode.is("Normal")));
@@ -79,22 +112,29 @@ public final class ScaffoldModule extends Module {
     private final BooleanSetting jump = addSetting(new BooleanSetting("Jump", false, () -> mode.is("Normal")));
     private final BooleanSetting dragClick = addSetting(new BooleanSetting("Drag Click", false));
     private final BooleanSetting renderCount = addSetting(new BooleanSetting("Render Count", false));
-    private final NumberSetting smoothSpeed = addSetting(new NumberSetting("Smooth Speed", 30.0D, 10.0D, 180.0D, 10.0D));
 
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final Random random = new Random();
+    private final AuraRotation rotation = new AuraRotation();
     private EntityPlayerSP owner;
     private int targetY;
-    private int placed;
     private int offGroundTicks;
-    private float scaffoldYaw;
-    private float scaffoldPitch;
     private BlockPos blockPos;
     private EnumFacing facing;
     private AxisAlignedBB targetBox;
-    private boolean polarSneak;
-    private boolean polarState;
-    private long timerStart;
+    /** Direction of travel relative to the camera, kept while the movement keys are released. */
+    private float travelOffset;
+    /** +1 looks back-left past the block, -1 back-right. */
+    private int lookSide = 1;
+    private boolean tellyTurned;
+    private boolean tellyPlacing;
+    private int tellyDelay;
+    private boolean edgeSneaking;
+    private long unsneakAt;
+    private boolean cornerHold;
+    private int cornerX;
+    private int cornerZ;
+    private long cornerSince;
     private int blockSlot = -1;
     /** Hotbar slot the server holds while Spoof Slot keeps the visible slot. */
     private int serverSlot = -1;
@@ -103,8 +143,6 @@ public final class ScaffoldModule extends Module {
     /** Visible slot before Scaffold selected blocks without Spoof Slot. */
     private int restoreSlot = -1;
     private boolean rotating;
-    private boolean wasSneaking;
-    private boolean sneakOwned;
     private boolean sprintOwned;
     private boolean timerOwned;
     private static Field rightClickDelay;
@@ -115,20 +153,18 @@ public final class ScaffoldModule extends Module {
 
     @Override
     protected void onEnable() {
-        placed = 0;
         offGroundTicks = 0;
-        polarSneak = polarState = false;
         blockPos = null;
         facing = null;
         targetBox = null;
-        timerStart = System.currentTimeMillis();
+        travelOffset = 0.0F;
+        lookSide = 1;
+        tellyTurned = tellyPlacing = false;
+        resetEdgeSneak();
         EntityPlayerSP player = minecraft.thePlayer;
         owner = player;
         if (player == null) return;
         targetY = MathHelper.floor_double(player.posY - 1.0D);
-        MoveFixModule fix = moveFix();
-        scaffoldYaw = mode.is("Normal") ? player.rotationYaw + 180.0F : player.rotationYaw;
-        scaffoldPitch = fix == null ? player.rotationPitch : fix.getRotationPitch();
         applySprint(player);
     }
 
@@ -143,13 +179,11 @@ public final class ScaffoldModule extends Module {
         restoreSlot = -1;
         // The next syncCurrentPlayItem returns the server to the visible slot.
         serverSlot = blockSlot = -1;
-        if (minecraft.gameSettings != null) {
-            if (sneakOwned) VanillaClicks.restore(minecraft.gameSettings.keyBindSneak);
-            if (sprintOwned) VanillaClicks.restore(minecraft.gameSettings.keyBindSprint);
-        }
-        sneakOwned = sprintOwned = false;
+        if (minecraft.gameSettings != null && sprintOwned) VanillaClicks.restore(minecraft.gameSettings.keyBindSprint);
+        sprintOwned = false;
         setTowerTimer(false);
-        polarSneak = polarState = false;
+        tellyTurned = tellyPlacing = false;
+        resetEdgeSneak();
         blockPos = null;
         facing = null;
         targetBox = null;
@@ -166,7 +200,9 @@ public final class ScaffoldModule extends Module {
             blockPos = null;
             facing = null;
             targetBox = null;
-            placed = offGroundTicks = 0;
+            offGroundTicks = 0;
+            tellyTurned = tellyPlacing = false;
+            resetEdgeSneak();
             if (player != null) targetY = MathHelper.floor_double(player.posY - 1.0D);
         }
         if (!isEnabled() || player == null || minecraft.theWorld == null || minecraft.playerController == null) return;
@@ -195,17 +231,11 @@ public final class ScaffoldModule extends Module {
     // ----------------------------------------------------------------------------------------- target
 
     private void processBlockData(EntityPlayerSP player) {
-        boolean jumpKey = minecraft.gameSettings.keyBindJump.isKeyDown();
-        if (!keepY.isEnabled() || (!mode.is("Telly") && (jumpEnabled() || rotations.is("Polar"))) || jumpKey) {
+        if (!keepY.isEnabled() || jumpEnabled() || minecraft.gameSettings.keyBindJump.isKeyDown()) {
             targetY = MathHelper.floor_double(player.posY - 1.0D);
         }
-        int currentY = targetY;
-        if (!mode.is("Telly") && rotations.is("Polar") && !jumpKey && !player.onGround
-                && isValidBlock(new BlockPos(player.posX, targetY + 1, player.posZ))) {
-            currentY = targetY + 1;
-        }
-        blockPos = findSupport(player, player.posX, currentY, player.posZ);
-        if (blockPos != null) facing = findFace(player, player.posX, currentY, player.posZ);
+        blockPos = findSupport(player, player.posX, targetY, player.posZ);
+        facing = blockPos == null ? null : findFace(player, player.posX, targetY, player.posZ);
         targetBox = blockPos == null ? null : bounds(blockPos);
     }
 
@@ -245,7 +275,7 @@ public final class ScaffoldModule extends Module {
     /** The free side of the support block nearest the player's feet. */
     private EnumFacing findFace(EntityPlayerSP player, double posX, int posY, double posZ) {
         BlockPos feet = new BlockPos(posX, posY + 1.0D, posZ);
-        boolean holdHeight = keepY.isEnabled() && (mode.is("Telly") || (!jumpEnabled() && !rotations.is("Polar")))
+        boolean holdHeight = keepY.isEnabled() && (mode.is("Telly") || !jumpEnabled())
                 && !minecraft.gameSettings.keyBindJump.isKeyDown();
         EnumFacing best = null;
         double bestDistance = Double.MAX_VALUE;
@@ -280,71 +310,40 @@ public final class ScaffoldModule extends Module {
                 && !(block instanceof BlockChest) && !(block instanceof BlockFurnace);
     }
 
+    /** True when a block's collision box at {@code pos} lies under the point (x, z). */
+    private boolean supports(BlockPos pos, double x, double z) {
+        IBlockState state = minecraft.theWorld.getBlockState(pos);
+        AxisAlignedBB box = state.getBlock().getCollisionBoundingBox(minecraft.theWorld, pos, state);
+        return box != null && x >= box.minX && x <= box.maxX && z >= box.minZ && z <= box.maxZ;
+    }
+
     // -------------------------------------------------------------------------------------- rotations
 
     private void updateRotations(EntityPlayerSP player, MoveFixModule fix) {
-        float cameraYaw = player.rotationYaw;
-        float smooth = smoothSpeed.getFloat();
-        boolean moving = isMoving();
-        boolean instant = false;
-        float yaw;
-        float pitch;
-        float yawSpeed;
-        float pitchSpeed;
-        String correction;
-        if (mode.is("Normal")) {
-            if (moving && player.hurtTime == 0) {
-                scaffoldYaw = movementYaw(cameraYaw - (sideways.isEnabled() && !goingDiagonally(cameraYaw) ? 135.0F : 180.0F));
-                scaffoldPitch = 76.0F;
-            } else {
-                scaffoldYaw = fix.getRotationYaw();
-            }
-            if (rotations.is("Intave")) {
-                if (hasTarget()) {
-                    scaffoldPitch = yawBasedPitch(player, scaffoldYaw, scaffoldPitch, 84);
-                    if (lookingAt(player, scaffoldYaw, scaffoldPitch, true)) {
-                        instant = true;
-                    } else if (!lookingAt(player, scaffoldYaw, scaffoldPitch, false)) {
-                        instant = turnToFace(player, directionToBlock(player)[0]);
-                    }
-                }
-                yaw = scaffoldYaw;
-                pitch = scaffoldPitch;
-                yawSpeed = instant ? 180.0F : smooth;
-                pitchSpeed = instant ? 180.0F : smooth / 2.0F;
-            } else {
-                // Polar and God Bridge hold a snapped diagonal behind the camera.
-                yaw = Math.round((cameraYaw - (goingDiagonally(cameraYaw) ? 180.0F : 135.0F)) / 45.0F) * 45.0F;
-                if (hasTarget() && !lookingAt(player, yaw, scaffoldPitch, false)) {
-                    scaffoldPitch = yawBasedPitch(player, yaw, scaffoldPitch, 80);
-                }
-                pitch = scaffoldPitch;
-                yawSpeed = smooth;
-                pitchSpeed = smooth / 2.0F;
-            }
-            correction = movementFix.isEnabled() ? enabledCorrection(fix) : "Off";
-        } else {
-            if (player.hurtTime == 0 && player.onGround) scaffoldYaw = movementYaw(cameraYaw);
-            if (player.onGround && moving) {
-                // Walk and sprint normally; the block is placed after the jump.
-                scaffoldYaw = cameraYaw;
-                yawSpeed = pitchSpeed = 180.0F;
-            } else {
-                if (hasTarget()) {
-                    float[] toBlock = directionToBlock(player);
-                    scaffoldYaw = toBlock[0];
-                    scaffoldPitch = yawBasedPitch(player, scaffoldYaw, toBlock[1], 82);
-                }
-                yawSpeed = player.onGround ? 180.0F : offGroundTicks < 2 ? 120.0F : 40.0F;
-                pitchSpeed = 90.0F;
-            }
-            yaw = scaffoldYaw;
-            pitch = scaffoldPitch;
-            correction = enabledCorrection(fix);
+        float currentYaw = fix.getRotationYaw();
+        float currentPitch = fix.getRotationPitch();
+        // Continue from what MoveFix sends, keeping the acceleration momentum while nothing else moved it.
+        if (!rotating || Math.abs(RotationMath.difference(rotation.getYaw(), currentYaw)) > 0.01F
+                || Math.abs(rotation.getPitch() - currentPitch) > 0.01F) {
+            rotation.reset(currentYaw, currentPitch);
         }
-        float[] next = smoothRotation(fix.getRotationYaw(), fix.getRotationPitch(), yaw, pitch, yawSpeed, pitchSpeed,
-                sensitivity(), random);
-        fix.setFakeRotation(getId(), next[0], next[1], correction);
+        float[] target;
+        float speed;
+        boolean acceleration = false;
+        String correction;
+        if (mode.is("Telly")) {
+            target = tellyRotation(player, currentPitch);
+            speed = TELLY_TURN_MIN + random.nextFloat() * (TELLY_TURN_MAX - TELLY_TURN_MIN);
+            correction = enabledCorrection(fix);
+        } else {
+            target = rotations.is("GodBridge") ? godBridgeRotation(player, currentYaw, currentPitch)
+                    : normalRotation(player, currentYaw, currentPitch);
+            acceleration = rotationMode.is("Acceleration");
+            speed = (float) sample(acceleration ? rotationAcceleration : rotationSpeed);
+            correction = movementFix.isEnabled() ? enabledCorrection(fix) : "Off";
+        }
+        rotation.advance(target[0], target[1], speed, acceleration, sensitivity());
+        fix.setFakeRotation(getId(), rotation.getYaw(), rotation.getPitch(), correction);
         rotating = true;
     }
 
@@ -354,81 +353,180 @@ public final class ScaffoldModule extends Module {
     }
 
     /**
-     * One tick of mouse-like turning: limited per-axis speed with a little
-     * noise, then snapped to the sensitivity's smallest mouse step.
+     * Looks straight back along the direction of travel, or with Sideways 45
+     * degrees past whichever side of the block the player stands on. Diagonal
+     * bridges always look straight back.
      */
-    static float[] smoothRotation(float lastYaw, float lastPitch, float targetYaw, float targetPitch,
-            float yawSpeed, float pitchSpeed, float sensitivity, Random random) {
-        float yawNoise = targetPitch != lastPitch ? (float) ((random.nextDouble() - random.nextDouble()) / 3.0D) : 0.0F;
-        float pitchNoise = RotationMath.difference(targetYaw, lastYaw) != 0.0F
-                ? (float) ((random.nextDouble() - random.nextDouble()) / 3.0D) : 0.0F;
-        float yawLimit = Math.max(0.0F, yawSpeed + (float) ((random.nextDouble() - random.nextDouble()) * 3.0D));
-        float pitchLimit = Math.max(0.0F, pitchSpeed + (float) ((random.nextDouble() - random.nextDouble()) * 3.0D));
-        float deltaYaw = RotationMath.clamp(RotationMath.difference(targetYaw + yawNoise, lastYaw), -yawLimit, yawLimit);
-        float deltaPitch = RotationMath.clamp(RotationMath.clamp(targetPitch + pitchNoise, -90.0F, 90.0F) - lastPitch,
-                -pitchLimit, pitchLimit);
-        float factor = sensitivity * 0.6F + 0.2F;
-        float step = factor * factor * factor * 1.2F;
-        deltaYaw -= deltaYaw % step;
-        deltaPitch -= deltaPitch % step;
-        return new float[] {lastYaw + deltaYaw, RotationMath.clamp(lastPitch + deltaPitch, -90.0F, 90.0F)};
+    private float[] normalRotation(EntityPlayerSP player, float currentYaw, float currentPitch) {
+        // Knockback keeps the yaw so the movement correction stays stable.
+        if (player.hurtTime > 0) return aim(player, new float[] {currentYaw}, currentPitch, true);
+        float travel = travelYaw(player);
+        float back = travel + 180.0F;
+        if (!sideways.isEnabled() || bridgingDiagonally(travel)) return aim(player, new float[] {back}, currentPitch, true);
+        int side = lookSide(player, travel);
+        float[] yaws = {back + side * 45.0F, back - side * 45.0F};
+        float[] result = aim(player, yaws, currentPitch, true);
+        if (result[0] == yaws[1]) lookSide = -side;
+        return result;
+    }
+
+    /** Holds a yaw snapped to 45 degrees behind the player; only the pitch follows the face. */
+    private float[] godBridgeRotation(EntityPlayerSP player, float currentYaw, float currentPitch) {
+        if (player.hurtTime > 0) return aim(player, new float[] {currentYaw}, currentPitch, false);
+        float travel = travelYaw(player);
+        float back = travel + 180.0F;
+        if (bridgingDiagonally(travel)) {
+            return aim(player, new float[] {snap(back), snap(back + 45.0F), snap(back - 45.0F)}, currentPitch, false);
+        }
+        int side = lookSide(player, travel);
+        float[] yaws = {snap(back + side * 45.0F), snap(back - side * 45.0F)};
+        float[] result = aim(player, yaws, currentPitch, false);
+        if (result[0] == yaws[1]) lookSide = -side;
+        return result;
     }
 
     /**
-     * Turns from the bridging yaw toward the face in small steps until some
-     * pitch reaches it. The first reachable yaw lies on the edge of the face,
-     * where mouse-step rounding would miss, so a few further reachable steps
-     * are collected and the middle one is used.
+     * Faces forward while running and for the first Telly Ticks of a jump,
+     * then turns around and places until the rest of the jump is bridged.
+     * A jump over existing blocks never turns around.
      */
-    private boolean turnToFace(EntityPlayerSP player, float yawToBlock) {
-        float yaw = scaffoldYaw;
-        float pitch = scaffoldPitch;
-        List<float[]> reachable = new ArrayList<float[]>();
-        for (int step = 0; step <= 100; step++) {
-            float turn = 1.8F + random.nextFloat() / 10.0F;
-            float delta = RotationMath.clamp(RotationMath.difference(yawToBlock, yaw), -turn, turn);
-            yaw += delta;
-            pitch = yawBasedPitch(player, yaw, pitch, 84);
-            if (lookingAt(player, yaw, pitch, true)) {
-                reachable.add(new float[] {yaw, pitch});
-                if (reachable.size() == 5) break;
-            } else if (!reachable.isEmpty()) {
-                break;
+    private float[] tellyRotation(EntityPlayerSP player, float currentPitch) {
+        float camera = player.rotationYaw;
+        if (player.onGround) {
+            tellyTurned = tellyPlacing = false;
+            tellyDelay = tellyTicks.getMinInt() + random.nextInt(tellyTicks.getMaxInt() - tellyTicks.getMinInt() + 1);
+            return new float[] {camera, currentPitch};
+        }
+        boolean gap = gapUntilLanding(player);
+        if (!tellyTurned && gap && (!isMoving() || offGroundTicks >= tellyDelay)) tellyTurned = true;
+        tellyPlacing = tellyTurned && gap;
+        if (!tellyPlacing) return new float[] {camera, currentPitch};
+        Vec3 eyes = player.getPositionEyes(1.0F);
+        if (hasTarget() && faceVisible(eyes)) return rotationToFace(eyes);
+        return new float[] {movementYaw(camera) + 180.0F, TELLY_PRE_AIM};
+    }
+
+    /**
+     * The first candidate yaw with a pitch whose ray hits the face. With
+     * {@code search} the yaw may then turn up to 90 degrees from the first
+     * candidate, never further, so the player never looks ahead. Without a
+     * hit the first candidate is held at a pitch close to the next hit.
+     */
+    private float[] aim(EntityPlayerSP player, float[] yaws, float currentPitch, boolean search) {
+        if (hasTarget() && faceVisible(player.getPositionEyes(1.0F))) {
+            for (float yaw : yaws) {
+                float pitch = hitPitch(player, yaw, currentPitch);
+                if (!Float.isNaN(pitch)) return new float[] {yaw, pitch};
             }
-            if (delta == 0.0F) break;
+            if (search) {
+                float[] turned = nearestHit(player, yaws[0], currentPitch);
+                if (turned != null) return turned;
+            }
         }
-        if (reachable.isEmpty()) {
-            scaffoldYaw = yaw;
-            scaffoldPitch = pitch;
-            return false;
-        }
-        float[] middle = reachable.get(reachable.size() / 2);
-        scaffoldYaw = middle[0];
-        scaffoldPitch = centredPitch(player, middle[0], 84, middle[1]);
-        return true;
+        return new float[] {yaws[0], RotationMath.clamp(currentPitch, PRE_AIM_MIN, PRE_AIM_MAX)};
     }
 
     /**
-     * Pitch between 70 degrees and the limit whose ray hits the chosen face,
-     * or the last pitch when it still does. The middle of the first hitting
-     * range is used so noise and mouse-step rounding stay on the face.
+     * Turns away from {@code baseYaw} in small steps until some pitch reaches
+     * the face. The first reachable yaw lies on the edge of the face, where
+     * mouse-step rounding would miss, so it continues while the face stays
+     * reachable for two more steps.
      */
-    private float yawBasedPitch(EntityPlayerSP player, float yaw, float lastPitch, int maxPitch) {
-        return lookingAt(player, yaw, lastPitch, true) ? lastPitch : centredPitch(player, yaw, maxPitch, lastPitch);
+    private float[] nearestHit(EntityPlayerSP player, float baseYaw, float currentPitch) {
+        for (int offset = YAW_STEP; offset <= MAX_TURN; offset += YAW_STEP) {
+            for (int sign = -1; sign <= 1; sign += 2) {
+                float pitch = hitPitch(player, baseYaw + sign * offset, currentPitch);
+                if (Float.isNaN(pitch)) continue;
+                int reached = offset;
+                for (int extra = 1; extra <= 2 && reached + YAW_STEP <= MAX_TURN; extra++) {
+                    float further = hitPitch(player, baseYaw + sign * (reached + YAW_STEP), pitch);
+                    if (Float.isNaN(further)) break;
+                    reached += YAW_STEP;
+                    pitch = further;
+                }
+                return new float[] {baseYaw + sign * reached, pitch};
+            }
+        }
+        return null;
     }
 
-    private float centredPitch(EntityPlayerSP player, float yaw, int maxPitch, float fallback) {
+    /**
+     * The current pitch while its ray still hits the face at {@code yaw},
+     * otherwise the middle of the pitch range that hits it, so mouse-step
+     * rounding stays on the face; NaN when no pitch reaches it.
+     */
+    private float hitPitch(EntityPlayerSP player, float yaw, float currentPitch) {
+        if (currentPitch >= MIN_PITCH && lookingAt(player, yaw, currentPitch, true)) return currentPitch;
+        Vec3 eyes = player.getPositionEyes(1.0F);
+        double reach = minecraft.playerController.getBlockReachDistance();
         int first = -1;
         int last = -1;
-        for (int tenth = 700; tenth <= maxPitch * 10; tenth++) {
-            if (lookingAt(player, yaw, tenth / 10.0F, true)) {
-                if (first < 0) first = tenth;
-                last = tenth;
+        // Quarter-degree slab tests find the range; only its middle needs a world ray trace.
+        for (int quarter = (int) (MIN_PITCH * 4.0F); quarter <= (int) (MAX_PITCH * 4.0F); quarter++) {
+            if (entryFace(eyes, lookVector(yaw, quarter / 4.0F), reach, targetBox) == facing) {
+                if (first < 0) first = quarter;
+                last = quarter;
             } else if (first >= 0) {
                 break;
             }
         }
-        return first < 0 ? fallback : (first + last) / 20.0F;
+        if (first < 0) return Float.NaN;
+        float middle = (first + last) / 8.0F;
+        return lookingAt(player, yaw, middle, true) ? middle : Float.NaN;
+    }
+
+    /** No ray can enter a face while the eyes are behind its plane. */
+    private boolean faceVisible(Vec3 eyes) {
+        switch (facing) {
+            case EAST: return eyes.xCoord > targetBox.maxX;
+            case WEST: return eyes.xCoord < targetBox.minX;
+            case SOUTH: return eyes.zCoord > targetBox.maxZ;
+            case NORTH: return eyes.zCoord < targetBox.minZ;
+            case UP: return eyes.yCoord > targetBox.maxY;
+            default: return eyes.yCoord < targetBox.minY;
+        }
+    }
+
+    /** Rotation from the eyes toward the centre of the chosen face; it enters through that face when visible. */
+    private float[] rotationToFace(Vec3 eyes) {
+        double x = (targetBox.minX + targetBox.maxX) / 2.0D;
+        double y = (targetBox.minY + targetBox.maxY) / 2.0D;
+        double z = (targetBox.minZ + targetBox.maxZ) / 2.0D;
+        switch (facing) {
+            case EAST: x = targetBox.maxX; break;
+            case WEST: x = targetBox.minX; break;
+            case SOUTH: z = targetBox.maxZ; break;
+            case NORTH: z = targetBox.minZ; break;
+            case UP: y = targetBox.maxY; break;
+            default: y = targetBox.minY; break;
+        }
+        double deltaX = x - eyes.xCoord;
+        double deltaY = y - eyes.yCoord;
+        double deltaZ = z - eyes.zCoord;
+        double horizontal = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
+        return new float[] {(float) (Math.toDegrees(Math.atan2(deltaZ, deltaX)) - 90.0D),
+                (float) -Math.toDegrees(Math.atan2(deltaY, horizontal))};
+    }
+
+    /**
+     * Looking 45 degrees to one side only reaches the face from the other half
+     * of the block: +1 (back-left) while the player stands right of the block
+     * centre, -1 (back-right) while left of it, unchanged near the centre.
+     */
+    private int lookSide(EntityPlayerSP player, float travelYaw) {
+        if (!hasTarget()) return lookSide;
+        double radians = Math.toRadians(travelYaw);
+        double lateral = (player.posX - (blockPos.getX() + 0.5D)) * -Math.cos(radians)
+                + (player.posZ - (blockPos.getZ() + 0.5D)) * -Math.sin(radians);
+        if (lateral > SIDE_SWITCH) lookSide = 1;
+        else if (lateral < -SIDE_SWITCH) lookSide = -1;
+        return lookSide;
+    }
+
+    /** Direction of travel from the movement keys; while they are released, the last one relative to the camera. */
+    private float travelYaw(EntityPlayerSP player) {
+        if (isMoving()) travelOffset = RotationMath.difference(movementYaw(player.rotationYaw), player.rotationYaw);
+        return player.rotationYaw + travelOffset;
     }
 
     private boolean lookingAt(EntityPlayerSP player, float yaw, float pitch, boolean strict) {
@@ -492,19 +590,6 @@ public final class ScaffoldModule extends Module {
         return new Vec3(yawSin * pitchCos, pitchSin, yawCos * pitchCos);
     }
 
-    /** Rotation toward the centre of the chosen face, aimed from 1.2 blocks above the feet. */
-    private float[] directionToBlock(EntityPlayerSP player) {
-        double x = blockPos.getX() + 0.5D + facing.getFrontOffsetX() * 0.5D;
-        double y = blockPos.getY() + 0.5D + facing.getFrontOffsetY() * 0.5D;
-        double z = blockPos.getZ() + 0.5D + facing.getFrontOffsetZ() * 0.5D;
-        double deltaX = x - player.posX;
-        double deltaY = y - player.posY - 1.2D;
-        double deltaZ = z - player.posZ;
-        double horizontal = MathHelper.sqrt_double(deltaX * deltaX + deltaZ * deltaZ);
-        return new float[] {(float) (Math.atan2(deltaZ, deltaX) * 180.0D / Math.PI) - 90.0F,
-                (float) -(Math.atan2(deltaY, horizontal) * 180.0D / Math.PI)};
-    }
-
     /** Yaw of the pressed movement keys relative to {@code yaw}. */
     private float movementYaw(float yaw) {
         GameKeys keys = new GameKeys(minecraft);
@@ -522,10 +607,41 @@ public final class ScaffoldModule extends Module {
         return result;
     }
 
+    /** Within 10 degrees of a diagonal. */
     static boolean goingDiagonally(float yaw) {
         float wrapped = (yaw % 360.0F + 360.0F) % 360.0F;
         for (float diagonal : new float[] {45.0F, 135.0F, 225.0F, 315.0F}) {
             if (Math.abs(wrapped - diagonal) < 10.0F || Math.abs(wrapped - (diagonal + 360.0F)) < 10.0F) return true;
+        }
+        return false;
+    }
+
+    /** Closer to a diagonal than to an axis, so the bridge becomes a staircase. */
+    static boolean bridgingDiagonally(float yaw) {
+        float withinQuarter = (yaw % 90.0F + 90.0F) % 90.0F;
+        return Math.abs(withinQuarter - 45.0F) < 22.5F;
+    }
+
+    private static float snap(float yaw) {
+        return Math.round(yaw / 45.0F) * 45.0F;
+    }
+
+    // ----------------------------------------------------------------------------------------- telly
+
+    /** True when a column under the rest of this jump, up to the landing, has no block at the bridge height. */
+    private boolean gapUntilLanding(EntityPlayerSP player) {
+        double x = player.posX;
+        double y = player.posY;
+        double z = player.posZ;
+        double motionY = player.motionY;
+        double floor = targetY + 1.0D;
+        for (int tick = 0; tick < 40; tick++) {
+            if (!supports(new BlockPos(x, targetY, z), x, z)) return true;
+            if (tick > 0 && y <= floor) return false;
+            x += player.motionX;
+            z += player.motionZ;
+            y += motionY;
+            motionY = (motionY - 0.08D) * 0.98D;
         }
         return false;
     }
@@ -542,73 +658,86 @@ public final class ScaffoldModule extends Module {
         boolean keyRight = input.moveStrafe < 0.0F;
         boolean keyJump = input.jump;
         boolean keySneak = input.sneak;
-        boolean originalLeft = keyLeft;
         boolean normal = mode.is("Normal");
         boolean moving = isMoving();
-        float cameraYaw = player.rotationYaw;
-        boolean diagonal = goingDiagonally(cameraYaw);
         boolean jumpKey = minecraft.gameSettings.keyBindJump.isKeyDown();
 
-        if (!moving || keyJump || keySneak || (rotations.is("Polar") && diagonal)) placed = 0;
-        if (normal && rotations.is("Polar") && wasSneaking && !keySneak) {
-            player.motionX = 0.0D;
-            player.motionZ = 0.0D;
-        }
         applySprint(player);
-        if (moving && player.onGround && !jumpKey) {
-            if (jumpEnabled() || mode.is("Telly")) {
-                keyJump = true;
-            } else if (normal && rotations.is("Polar") && placed >= 7) {
-                keyJump = true;
-                placed = 0;
-            }
-        }
-        if (normal && sneak.isEnabled() && System.currentTimeMillis() - timerStart >= sneakDelay.getInt()) {
-            keySneak = true;
-            timerStart = System.currentTimeMillis();
-        }
+        if (moving && player.onGround && !jumpKey && (jumpEnabled() || mode.is("Telly"))) keyJump = true;
+        if (normal && edgeSneak(player, moving, keyJump)) keySneak = true;
+        else if (!normal) resetEdgeSneak();
         if (normal && safeWalk.isEnabled() && player.onGround && minecraft.theWorld.getCollidingBoundingBoxes(player,
                 player.getEntityBoundingBox().addCoord(player.motionX, player.motionY, player.motionZ)
                         .expand(-0.175D, 0.0D, -0.175D)).isEmpty()) {
             keySneak = true;
         }
-        if (normal && (rotations.is("Polar") || rotations.is("God Bridge"))) {
-            if (diagonal || jumpKey) {
-                if (sneakOwned) setSneakKey(false);
-            } else {
-                double movingYaw = Math.toRadians(Math.round((cameraYaw - 135.0F) / 45.0F) * 45.0F);
-                boolean rightSide = Math.floor(player.posX + Math.cos(movingYaw) * GOD_BRIDGE_STEP) != Math.floor(player.posX)
-                        || Math.floor(player.posZ + Math.sin(movingYaw) * GOD_BRIDGE_STEP) != Math.floor(player.posZ);
-                keyLeft = !rightSide && keyBack;
-                if (!polarSneak && !rightSide) {
-                    setSneakKey(true);
-                    polarState = true;
-                }
-                if (polarState && rightSide) {
-                    if (System.currentTimeMillis() - timerStart < 2000L) {
-                        setSneakKey(true);
-                    } else {
-                        setSneakKey(false);
-                        polarSneak = true;
-                        polarState = false;
-                        timerStart = System.currentTimeMillis();
-                    }
-                } else if (!rightSide) {
-                    timerStart = System.currentTimeMillis();
-                    polarSneak = false;
-                }
-            }
-        } else if (sneakOwned) {
-            setSneakKey(false);
-        }
-        wasSneaking = keySneak;
-        if (keyLeft != originalLeft || keyJump != input.jump || keySneak != input.sneak) {
+        if (keyJump != input.jump || keySneak != input.sneak) {
             float scale = keySneak ? 0.3F : 1.0F;
             input.moveForward = ((keyForward ? 1.0F : 0.0F) - (keyBack ? 1.0F : 0.0F)) * scale;
             input.moveStrafe = ((keyLeft ? 1.0F : 0.0F) - (keyRight ? 1.0F : 0.0F)) * scale;
             input.jump = keyJump;
             input.sneak = keySneak;
         }
+    }
+
+    /**
+     * Sneaks only at an unsupported block end and releases after the unsneak
+     * delay once a block supports the way ahead. With Prevent Double Sneaking
+     * a diagonal walk keeps sneaking from the first edge until the player has
+     * crossed into the block at the corner, instead of sneaking at each edge.
+     */
+    private boolean edgeSneak(EntityPlayerSP player, boolean moving, boolean jumping) {
+        if (!sneak.isEnabled() || !moving || jumping || !player.onGround) {
+            resetEdgeSneak();
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        float travel = movementYaw(player.rotationYaw);
+        boolean diagonal = goingDiagonally(travel);
+        int column = MathHelper.floor_double(player.posX);
+        int row = MathHelper.floor_double(player.posZ);
+        if (atBlockEnd(player, travel)) {
+            if (!edgeSneaking && preventDoubleSneak.isEnabled() && diagonal) {
+                cornerHold = true;
+                cornerX = column;
+                cornerZ = row;
+                cornerSince = now;
+            }
+            edgeSneaking = true;
+            unsneakAt = 0L;
+            return true;
+        }
+        if (!edgeSneaking) return false;
+        if (cornerHold) {
+            boolean pastCorner = column != cornerX && row != cornerZ;
+            if (!pastCorner && diagonal && preventDoubleSneak.isEnabled() && now - cornerSince < CORNER_TIMEOUT) return true;
+            cornerHold = false;
+        }
+        if (unsneakAt == 0L) unsneakAt = now + nextUnsneakDelay();
+        if (now < unsneakAt) return true;
+        resetEdgeSneak();
+        return false;
+    }
+
+    /** True when the point Block End Distance ahead of next tick's position has nothing under it. */
+    private boolean atBlockEnd(EntityPlayerSP player, float travelYaw) {
+        double radians = Math.toRadians(travelYaw);
+        double distance = blockEndDistance.getDouble();
+        double x = player.posX + player.motionX - Math.sin(radians) * distance;
+        double z = player.posZ + player.motionZ + Math.cos(radians) * distance;
+        return !supports(new BlockPos(x, player.posY - 0.01D, z), x, z);
+    }
+
+    private long nextUnsneakDelay() {
+        if (!randomizeUnsneak.isEnabled()) return unsneakDelay.getInt();
+        int min = unsneakRange.getMinInt();
+        int max = unsneakRange.getMaxInt();
+        return min + (max == min ? 0 : random.nextInt(max - min + 1));
+    }
+
+    private void resetEdgeSneak() {
+        edgeSneaking = cornerHold = false;
+        unsneakAt = 0L;
     }
 
     private void applySprint(EntityPlayerSP player) {
@@ -633,13 +762,6 @@ public final class ScaffoldModule extends Module {
         sprintOwned = true;
     }
 
-    /** A synthetic sneak press never hides the player's own physical sneak key. */
-    private void setSneakKey(boolean down) {
-        KeyBinding binding = minecraft.gameSettings.keyBindSneak;
-        KeyBinding.setKeyBindState(binding.getKeyCode(), down || VanillaClicks.physicallyDown(binding));
-        sneakOwned = down;
-    }
-
     // ----------------------------------------------------------------------------------------- placing
 
     /** Injected before vanilla handles attack/use clicks for this tick. */
@@ -659,10 +781,12 @@ public final class ScaffoldModule extends Module {
         }
         setRightClickDelay(0);
         boolean wasPlaced = place(player, fix);
-        if (dragClick.isEnabled() && !wasPlaced && blockPos != null && player.onGround
+        if (dragClick.isEnabled() && !wasPlaced && blockPos != null && player.onGround && !mode.is("Telly")
                 && !minecraft.gameSettings.keyBindSneak.isKeyDown() && random.nextDouble() > 0.5D) {
             MovingObjectPosition hit = serverRayTrace(player, fix);
-            if (hit != null && hit.typeOfHit == MovingObjectPosition.MovingObjectType.BLOCK && blockPos.equals(hit.getBlockPos())) {
+            // A drag click on the top would build a block behind the player.
+            if (hit != null && hit.typeOfHit == MovingObjectPosition.MovingObjectType.BLOCK && blockPos.equals(hit.getBlockPos())
+                    && (hit.sideHit != EnumFacing.UP || facing == EnumFacing.UP)) {
                 rightClick(player, hit);
             }
         }
@@ -670,10 +794,8 @@ public final class ScaffoldModule extends Module {
 
     private boolean place(EntityPlayerSP player, MoveFixModule fix) {
         if (blockPos == null || facing == null) return false;
-        if (mode.is("Normal") && (rotations.is("Polar") || rotations.is("God Bridge"))
-                && minecraft.gameSettings.keyBindSneak.isKeyDown()) {
-            return false;
-        }
+        // Telly only places once it has turned around in the air.
+        if (mode.is("Telly") && !tellyPlacing) return false;
         if (serverSlot < 0 && player.inventory.currentItem != blockSlot) {
             if (restoreSlot < 0) restoreSlot = player.inventory.currentItem;
             player.inventory.currentItem = blockSlot;
@@ -690,7 +812,6 @@ public final class ScaffoldModule extends Module {
             return false;
         }
         clearEmptyStack(player, held);
-        placed++;
         if (swing.isEnabled()) {
             player.swingItem();
         } else if (minecraft.getNetHandler() != null) {
@@ -883,6 +1004,10 @@ public final class ScaffoldModule extends Module {
         return minecraft.gameSettings == null ? 0.5F : minecraft.gameSettings.mouseSensitivity;
     }
 
+    private double sample(RangeSetting setting) {
+        return setting.getMin() + random.nextDouble() * (setting.getMax() - setting.getMin());
+    }
+
     private static double distance(double x, double y, double z, double otherX, double otherY, double otherZ) {
         double deltaX = otherX - x;
         double deltaY = otherY - y;
@@ -949,10 +1074,15 @@ public final class ScaffoldModule extends Module {
         final boolean right;
 
         GameKeys(Minecraft minecraft) {
-            forward = VanillaClicks.physicallyDown(minecraft.gameSettings.keyBindForward);
-            back = VanillaClicks.physicallyDown(minecraft.gameSettings.keyBindBack);
-            left = VanillaClicks.physicallyDown(minecraft.gameSettings.keyBindLeft);
-            right = VanillaClicks.physicallyDown(minecraft.gameSettings.keyBindRight);
+            forward = down(minecraft.gameSettings.keyBindForward);
+            back = down(minecraft.gameSettings.keyBindBack);
+            left = down(minecraft.gameSettings.keyBindLeft);
+            right = down(minecraft.gameSettings.keyBindRight);
+        }
+
+        /** The physical key; without a native keyboard (unit tests) the binding's own state. */
+        private static boolean down(KeyBinding binding) {
+            return Keyboard.isCreated() ? VanillaClicks.physicallyDown(binding) : binding.isKeyDown();
         }
     }
 
