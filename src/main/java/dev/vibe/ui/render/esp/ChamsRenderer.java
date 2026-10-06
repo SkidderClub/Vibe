@@ -7,6 +7,7 @@ import dev.vibe.module.impl.combat.TargetsModule;
 import dev.vibe.setting.ColorSetting;
 import dev.vibe.ui.effect.EffectProgram;
 import dev.vibe.ui.effect.EffectState;
+import dev.vibe.ui.render.CustomModelRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.ModelBase;
 import net.minecraft.client.renderer.GlStateManager;
@@ -78,16 +79,25 @@ public final class ChamsRenderer {
 
     private static void render(ModelBase model, Entity entity, float swing, float amount, float age,
                                float yaw, float pitch, float scale, boolean armor) {
+        // CustomModelRenderer's player models replace the body and do not wear vanilla armor.
+        if (armor && CustomModelRenderer.hidesArmor(entity)) return;
         EspModule esp = module(entity);
         if (esp == null) {
-            model.render(entity, swing, amount, age, yaw, pitch, scale);
+            renderGeometry(model, entity, swing, amount, age, yaw, pitch, scale, armor);
             return;
         }
         QolModule qol = antiInvisible((EntityLivingBase) entity);
         float opacity = qol == null ? 1 : qol.getInvisibleAlpha().getFloat() / 255.0F;
         EntityLivingBase living=(EntityLivingBase)entity;
-        draw(esp,armor,opacity,()->model.render(entity,swing,amount,age,yaw,pitch,scale),false,
+        draw(esp,armor,opacity,()->renderGeometry(model,entity,swing,amount,age,yaw,pitch,scale,armor),false,
                 esp.resolvedProfile(esp.profileFor(living)),esp.teamColor(living),living.hurtTime>0,-1,overrideColor(living));
+    }
+
+    private static void renderGeometry(ModelBase model, Entity entity, float swing, float amount, float age,
+                                       float yaw, float pitch, float scale, boolean armor) {
+        if (armor || !CustomModelRenderer.renderBody(model, entity, swing, amount, age, yaw, pitch, scale)) {
+            model.render(entity, swing, amount, age, yaw, pitch, scale);
+        }
     }
 
     /** Shared with the offscreen driver check; geometry already has vanilla's transforms and pose. */

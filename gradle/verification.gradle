@@ -63,6 +63,10 @@ registerRenderCheck('verifyVisualEffects', 'dev.vibe.ui.VisualEffectsRenderCheck
         'Checks Fog, Torus and the other shader effects.')
 registerRenderCheck('verifyChamsRendering', 'dev.vibe.ui.render.esp.ChamsRenderCheck', 'chams-render-check',
         'Checks Chams materials, occlusion, opacity and OpenGL state restoration.')
+registerRenderCheck('verifyCustomModelRendering', 'dev.vibe.model.CustomModelRenderCheck', 'custom-model-render-check',
+        'Renders CustomModelRenderer knives and characters; add files with -PvibeModels=sword:a.glb;player:b.gltf.', true) {
+    systemProperty 'vibe.models', project.findProperty('vibeModels') ?: ''
+}
 registerRenderCheck('verifyEspRendering', 'dev.vibe.ui.render.esp.EspRenderCheck', 'esp-render-check',
         'Checks ESP rendering and the ESP editor.')
 registerRenderCheck('verifyLicensesRendering', 'dev.vibe.ui.menu.LicensesRenderCheck', 'licenses-render-check',
