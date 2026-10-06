@@ -16,7 +16,7 @@ import org.lwjgl.input.Keyboard;
 /** Local dot-prefixed commands. They never leave the client as chat messages. */
 public final class CommandManager {
 
-    private static final List<String> ROOTS = Arrays.asList(".toggle", ".t", ".bind", ".b", ".binds", ".config", ".c", ".ign", ".waifu", ".friend", ".f", ".target", ".script", ".scripts", ".source", ".help");
+    private static final List<String> ROOTS = Arrays.asList(".toggle", ".t", ".bind", ".b", ".binds", ".config", ".c", ".ign", ".waifu", ".friend", ".f", ".target", ".script", ".scripts", ".models", ".model", ".source", ".help");
 
     public boolean execute(String message) {
         if (message == null || !message.trim().startsWith(".")) {
@@ -51,6 +51,8 @@ public final class CommandManager {
             target(parts);
         } else if (".script".equals(command) || ".scripts".equals(command)) {
             script(parts);
+        } else if (".models".equals(command) || ".model".equals(command)) {
+            models(parts);
         } else if (".source".equals(command)) {
             say("Vibe: GPLv3. Schizoid Fog, Torus and media HUD: AGPLv3. Open Licenses & credits in the main or pause menu.");
             say("Matching source: " + dev.vibe.ui.menu.LicenseDocuments.sourceArchive() + ", supplied beside this build by its distributor.");
@@ -137,6 +139,24 @@ public final class CommandManager {
             else if (parts.length >= 3 && !"create".equalsIgnoreCase(parts[1])) {
                 for (dev.vibe.script.ScriptRuntime.ScriptInfo info : Vibe.getInstance().getScriptRuntime().getScripts()) {
                     if (info.getName().toLowerCase().startsWith(needle)) results.add(replaceLastToken(input, info.getName()));
+                }
+            }
+        } else if (".models".equals(root) || ".model".equals(root)) {
+            if (parts.length == 2) {
+                addMatchingTokens(results, input, Arrays.asList("list", "info", "token", "import", "download", "downloadAll",
+                        "select", "reload", "openFolder"), needle);
+            } else if (parts.length == 3 && Arrays.asList("list", "downloadall", "openfolder", "select")
+                    .contains(parts[1].toLowerCase(java.util.Locale.ROOT))) {
+                addMatchingTokens(results, input, Arrays.asList("swords", "players"), needle);
+            } else if (parts.length >= 4 && "select".equalsIgnoreCase(parts[1])) {
+                dev.vibe.model.ModelKind kind = dev.vibe.model.ModelKind.byId(parts[2]);
+                dev.vibe.module.impl.visual.CustomModelRendererModule models = customModels();
+                if (kind != null && models != null) {
+                    String typed = joinParts(parts, 3, parts.length).toLowerCase(java.util.Locale.ROOT);
+                    String prefix = input.substring(0, input.length() - joinParts(parts, 3, parts.length).length());
+                    for (String name : models.getManager().choices(kind)) {
+                        if (name.toLowerCase(java.util.Locale.ROOT).startsWith(typed)) results.add(prefix + name);
+                    }
                 }
             }
         } else {
@@ -233,6 +253,7 @@ public final class CommandManager {
         say("§b.f <add|remove|rename|list>§7 — manage friends and aliases");
         say("§b.target <add|remove|list>§7 — manage priority targets");
         say("§b.script <create|reload|load|list|errors|enable|disable|rename|delete|openFolder>§7 — manage local Raven scripts");
+        say("§b.models <info|list|token|import|download|downloadAll|select|reload|openFolder>§7 — CustomModelRenderer models and Sketchfab downloads");
         say("§b.<module> <setting> <value>§7 — change a module setting (names may contain spaces)");
         say("§b.<module> <min|max> <value>§7 — set the only range, or name the range first");
         say("§b.<module> <multi-select option>§7 — toggle an option; name its setting if ambiguous");
@@ -293,6 +314,94 @@ public final class CommandManager {
         if (("enable".equals(action)||"disable".equals(action)) && parts.length >= 3) { String name=joinParts(parts,2,parts.length); dev.vibe.script.ScriptModule module=runtime.getModule(name); if(module==null){say("§cScript not found.");return;} module.setEnabled("enable".equals(action));say("§b"+module.getRawName()+" §7is now "+(module.isEnabled()?"§aenabled":"§cdisabled"));return; }
         if ("rename".equals(action) && parts.length >= 4) { String old=parts[2]; String next=joinParts(parts,3,parts.length); say(runtime.rename(old,next)?"Renamed §b"+old+" §7to §b"+next:"§cCould not rename script."); return; }
         say("Usage: §b.script <create|reload|load|list|errors|enable|disable|rename|delete|openFolder> [name]");
+    }
+
+    private dev.vibe.module.impl.visual.CustomModelRendererModule customModels() {
+        return Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.CustomModelRendererModule.class);
+    }
+
+    private void models(String[] parts) {
+        dev.vibe.module.impl.visual.CustomModelRendererModule module = customModels();
+        if (module == null) { say("§cCustomModelRenderer is unavailable."); return; }
+        dev.vibe.model.CustomModelManager manager = module.getManager();
+        String action = parts.length < 2 ? "info" : parts[1].toLowerCase(java.util.Locale.ROOT);
+        dev.vibe.model.ModelKind kind = parts.length >= 3 ? dev.vibe.model.ModelKind.byId(parts[2]) : null;
+        if ("info".equals(action)) {
+            say("CustomModelRenderer is " + (module.isEnabled() ? "§aenabled" : "§cdisabled") + "§7, Sketchfab token "
+                    + (manager.getToken() == null ? "§cnot set" : "§aset") + "§7.");
+            modelInfo(module, dev.vibe.model.ModelKind.SWORDS, module.getSwordModel().getValue());
+            modelInfo(module, dev.vibe.model.ModelKind.PLAYERS, module.getPlayerModel().getValue());
+            say("§b.models <list|token|import|download|downloadAll|select|reload|openFolder>");
+        } else if ("list".equals(action)) {
+            for (dev.vibe.model.ModelKind listed : dev.vibe.model.ModelKind.values()) {
+                if (kind != null && listed != kind) continue;
+                List<String> local = new ArrayList<String>(manager.localModels(listed).keySet());
+                int downloadable = 0, locked = 0;
+                for (dev.vibe.model.ModelCatalog.Entry entry : manager.getCatalog().entries(listed)) {
+                    if (manager.isLocal(listed, entry.name)) continue;
+                    if (entry.downloadable) downloadable++; else locked++;
+                }
+                say("§f" + listed.id + "§7: " + (local.isEmpty() ? "no local models" : "§b" + join(local))
+                        + " §7| " + downloadable + " downloadable, " + locked + " not downloadable on Sketchfab");
+                if (kind != null) {
+                    for (dev.vibe.model.ModelCatalog.Entry entry : manager.getCatalog().entries(listed)) {
+                        if (manager.isLocal(listed, entry.name)) continue;
+                        say((entry.downloadable ? "§a[download] " : "§8[locked] ") + "§f" + entry.name + " §8(" + entry.license + ", " + entry.faces + " faces)");
+                    }
+                }
+            }
+        } else if ("token".equals(action)) {
+            if (parts.length < 3) { say("Usage: §b.models token <Sketchfab API token|clear>§7 — find it at sketchfab.com → Settings → Password & API."); return; }
+            try {
+                manager.setToken("clear".equalsIgnoreCase(parts[2]) ? null : parts[2]);
+                say(manager.getToken() == null ? "Removed the Sketchfab token." : "Saved the Sketchfab token (outside config profiles). Selected models download now.");
+            } catch (java.io.IOException error) {
+                say("§cCould not save the token: " + error.getMessage());
+            }
+        } else if ("import".equals(action)) {
+            if (parts.length < 3) { say("Usage: §b.models import <Sketchfab model or collection link> [swords|players]"); return; }
+            manager.importUrl(parts[2], parts.length >= 4 ? dev.vibe.model.ModelKind.byId(parts[3]) : null);
+        } else if ("download".equals(action)) {
+            String name = joinParts(parts, 2, parts.length);
+            dev.vibe.model.ModelCatalog.Entry entry = null;
+            for (dev.vibe.model.ModelKind candidate : dev.vibe.model.ModelKind.values()) {
+                if (entry == null) entry = manager.getCatalog().find(candidate, name);
+            }
+            if (entry == null) { say("§cNo catalog model named §f" + name + "§c. See §b.models list swords|players"); return; }
+            if (manager.getToken() == null) { say("§cSet a token first: §b.models token <token>"); return; }
+            // Sketchfab still serves models the token's account bought, even when they are not public downloads.
+            if (!entry.downloadable) say("§e" + entry.name + " §7is not a free download; trying with your account's purchases.");
+            if (!manager.download(entry)) say(entry.name + " is already downloading.");
+        } else if ("downloadall".equals(action)) {
+            if (kind == null) { say("Usage: §b.models downloadAll <swords|players>"); return; }
+            if (manager.getToken() == null) { say("§cSet a token first: §b.models token <token>"); return; }
+            say("Queued §b" + manager.downloadAll(kind) + " §7downloads.");
+        } else if ("select".equals(action)) {
+            if (kind == null || parts.length < 4) { say("Usage: §b.models select <swords|players> <name>"); return; }
+            String name = joinParts(parts, 3, parts.length);
+            dev.vibe.setting.ModeSetting setting = kind == dev.vibe.model.ModelKind.SWORDS ? module.getSwordModel() : module.getPlayerModel();
+            module.refreshChoices();
+            String match = null;
+            for (String option : setting.getModes()) if (option.equalsIgnoreCase(name)) match = option;
+            if (match == null) { say("§cUnknown model §f" + name); return; }
+            setting.setValue(match);
+            Vibe.getInstance().getConfig().save(Vibe.getInstance().getConfig().getActiveName(), Vibe.getInstance().getModuleManager());
+            say("Selected §b" + match + (module.isEnabled() ? "" : " §7(enable CustomModelRenderer to see it)"));
+        } else if ("reload".equals(action)) {
+            manager.reload();
+            module.refreshChoices();
+            say("Reloaded custom models.");
+        } else if ("openfolder".equals(action)) {
+            if (module.openFolder(kind)) say("Opened the model folder.");
+        } else {
+            say("Usage: §b.models <info|list|token|import|download|downloadAll|select|reload|openFolder>");
+        }
+    }
+
+    private void modelInfo(dev.vibe.module.impl.visual.CustomModelRendererModule module, dev.vibe.model.ModelKind kind, String name) {
+        dev.vibe.model.CustomModelManager manager = module.getManager();
+        String credit = manager.attribution(kind, name);
+        say("§f" + kind.id + "§7: §b" + name + " §7(" + manager.status(kind, name) + ")" + (credit == null ? "" : " §8" + credit));
     }
 
     private void copyIgn() {

@@ -23,6 +23,8 @@ Use modules only where permitted by the server's rules. Vibe is client-only.
 See the [GTA7 guide](docs/GTA7.md) for the expanded map, controls, upgrades, skins and save backups.
 See the [GTA8 guide](docs/GTA8.md) for Los Vibes, a realistic open city with driving physics, traffic, police, weather and its own shader renderer.
 See the [Battlefront 3 guide](docs/BATTLEFRONT3.md) for Star Wars battles, faction armies, credits and upgrades in the Meme category.
+See [Custom models](docs/CUSTOM_MODELS.md) for CustomModelRenderer: knives in place of swords, characters
+in place of the player model, Sketchfab downloads and your own glTF/GLB/OBJ files.
 See [Music and visual effects](docs/MUSIC_AND_EFFECTS.md) for Fog, Torus, radio,
 the media HUD and audio-reactive waves. Fog and CustomCrosshair also work in GTA7.
 
@@ -72,6 +74,7 @@ lists all of them, for example:
 | `verifyXanaxRendering` | Xanax rendering, controls, profiles and small-screen layouts. |
 | `verifyChamsRendering` | Chams materials, transparency, partial cover, armor/skin toggles and OpenGL state. |
 | `verifyEspRendering` | ESP rendering and the ESP editor. |
+| `verifyCustomModelRendering` | CustomModelRenderer knives in first person and characters in several poses. |
 | `verifyGta8Rendering` | GTA8 scenes, actors, HUD and a vehicle/character gallery, with frame timings. |
 | `verifyRavenScripts -PvibeScriptDir=<folder>` | Compiles external Raven scripts against Vibe's script API. |
 
@@ -116,6 +119,7 @@ See [launcher/README.md](launcher/README.md) for details, data locations and rel
 | `game.*` | Game logic of the Meme games, independent of the screens. |
 | `hud` | HUD elements and the HUD editor. |
 | `combat`, `movement`, `input`, `inventory`, `network`, `target` | Logic shared by modules: rotations, ranges, pathfinding, clicks, packets. |
+| `model` | CustomModelRenderer's glTF/GLB/OBJ loaders, knife and character fitting, GPU upload and Sketchfab downloads. |
 | `core` | Forge core plugin and ASM transformers. They reference hook classes by name, so keep those strings in sync when moving classes. |
 | `account`, `config`, `command`, `event`, `language`, `media`, `script`, ... | Services created by `Vibe` at startup. |
 

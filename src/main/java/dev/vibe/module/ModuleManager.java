@@ -32,6 +32,7 @@ public final class ModuleManager {
         register(new FovChangerModule());
         register(new CustomCrosshairModule());
         register(new CustomCosmeticsModule());
+        register(new CustomModelRendererModule());
         register(new FogModule());
         register(new MusicModule());
         register(new AnimationsModule());

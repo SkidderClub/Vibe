@@ -279,6 +279,9 @@ public final class ClientEvents {
         for (Module module : Vibe.getInstance().getModuleManager().getModules()) {
             if (module instanceof MemeGameModule) ((MemeGameModule) module).tick();
         }
+        dev.vibe.module.impl.visual.CustomModelRendererModule customModels = Vibe.getInstance().getModuleManager()
+                .getModule(dev.vibe.module.impl.visual.CustomModelRendererModule.class);
+        if (customModels != null) customModels.tick();
         if (minecraft.thePlayer == null) return;
         dev.vibe.module.impl.combat.TargetsModule targets = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.TargetsModule.class);
         if (targets != null) targets.tickWarnings();
@@ -686,6 +689,17 @@ public final class ClientEvents {
             if (moveFix != null) moveFix.beginPlayerRender(minecraft.thePlayer);
         }
         cosmeticsRenderer.prepareSkin(event);
+    }
+
+    /** Runs last, so no later listener can cancel the render and leave the scale matrix pushed. */
+    @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.LOWEST)
+    public void onPlayerRenderScale(RenderPlayerEvent.Pre event) {
+        dev.vibe.ui.render.CustomModelRenderer.beginPlayerScale(event.entityPlayer, event.x, event.y, event.z);
+    }
+
+    @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.HIGHEST)
+    public void onPlayerRenderScaleEnd(RenderPlayerEvent.Post event) {
+        dev.vibe.ui.render.CustomModelRenderer.endPlayerScale(event.entityPlayer);
     }
 
     @SubscribeEvent
