@@ -63,6 +63,9 @@ public final class BedEspModule extends Module {
     private final Map<net.minecraft.world.chunk.Chunk, List<Bed>> chunkBeds = new LinkedHashMap<>();
     private final java.util.ArrayDeque<net.minecraft.world.chunk.Chunk> pendingChunks = new java.util.ArrayDeque<>();
     private java.lang.reflect.Field loadedChunksField;
+    private int[] rawBedStamp;
+    private boolean[] rawIsBed;
+    private int rawBedGeneration;
 
     public NumberSetting getViewDistance() { return viewDistance; }
     public BooleanSetting getFadeAlpha() { return fadeAlpha; }
@@ -151,6 +154,11 @@ public final class BedEspModule extends Module {
             }
         }
         long deadline = System.nanoTime() + 3_000_000L;
+        // A section stores raw state ids and get() resolves them through the global id map,
+        // which cannot change during this loop. Resolve each distinct id once and skip the
+        // ids that are not beds, so the full get() only runs for actual bed blocks.
+        if (rawBedStamp == null) { rawBedStamp = new int[65536]; rawIsBed = new boolean[65536]; }
+        if (++rawBedGeneration == 0) { java.util.Arrays.fill(rawBedStamp, 0); rawBedGeneration = 1; }
         for (int count = 0; count < 8 && !pendingChunks.isEmpty(); count++) {
             net.minecraft.world.chunk.Chunk chunk = pendingChunks.removeFirst();
             if (!minecraft.theWorld.getChunkProvider().chunkExists(chunk.xPosition, chunk.zPosition)) {
@@ -160,7 +168,14 @@ public final class BedEspModule extends Module {
             List<Bed> found = new ArrayList<>();
             for (net.minecraft.world.chunk.storage.ExtendedBlockStorage section : chunk.getBlockStorageArray()) {
                 if (section == null || section.isEmpty()) continue;
+                char[] data = section.getData();
                 for (int y = 0; y < 16; y++) for (int z = 0; z < 16; z++) for (int x = 0; x < 16; x++) {
+                    char raw = data[y << 8 | z << 4 | x];
+                    if (rawBedStamp[raw] != rawBedGeneration) {
+                        rawBedStamp[raw] = rawBedGeneration;
+                        rawIsBed[raw] = section.get(x, y, z).getBlock() == Blocks.bed;
+                    }
+                    if (!rawIsBed[raw]) continue;
                     net.minecraft.block.state.IBlockState state = section.get(x, y, z);
                     if (state.getBlock() != Blocks.bed) continue;
                     int meta = Blocks.bed.getMetaFromState(state);

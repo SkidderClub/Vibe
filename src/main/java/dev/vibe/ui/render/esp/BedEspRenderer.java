@@ -4,8 +4,10 @@ import dev.vibe.Vibe;
 import dev.vibe.module.impl.visual.BedEspModule;
 import dev.vibe.ui.RenderUtils;
 import dev.vibe.ui.WorldRenderUtils;
-import java.util.Map;
-import net.minecraft.block.Block;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.init.Blocks;
 import net.minecraft.util.AxisAlignedBB;
@@ -72,19 +74,40 @@ public final class BedEspRenderer {
     }
     private int fade(int color, float alpha) { return RenderUtils.alpha(color, Math.round((color >>> 24) * alpha)); }
 
+    /**
+     * The closest wool block in a 13x7x13 box decides the colour; equal distances go to the
+     * first block in x, then y, then z order. Visiting the offsets nearest-first in that same
+     * tie order finds the identical block and stops at it, instead of reading all 1183 blocks
+     * for every bed in every frame.
+     */
     private int nearestWoolColor(BlockPos origin) {
-        BlockPos nearest = null;
-        int best = Integer.MAX_VALUE;
-        for (int x = origin.getX() - 6; x <= origin.getX() + 6; x++) for (int y = origin.getY() - 3; y <= origin.getY() + 3; y++) for (int z = origin.getZ() - 6; z <= origin.getZ() + 6; z++) {
-            BlockPos pos = new BlockPos(x, y, z);
-            Block block = minecraft.theWorld.getBlockState(pos).getBlock();
-            if (block != Blocks.wool) continue;
-            int distance = (x - origin.getX()) * (x - origin.getX()) + (y - origin.getY()) * (y - origin.getY()) + (z - origin.getZ()) * (z - origin.getZ());
-            if (distance < best) { best = distance; nearest = pos; }
+        for (int i = 0; i < WOOL_SEARCH_X.length; i++) {
+            woolCursor.set(origin.getX() + WOOL_SEARCH_X[i], origin.getY() + WOOL_SEARCH_Y[i], origin.getZ() + WOOL_SEARCH_Z[i]);
+            IBlockState state = minecraft.theWorld.getBlockState(woolCursor);
+            if (state.getBlock() != Blocks.wool) continue;
+            int meta = Blocks.wool.getMetaFromState(state);
+            return WOOL_COLORS[Math.max(0, Math.min(WOOL_COLORS.length - 1, meta))];
         }
-        if (nearest == null) return 0xFF4FA3FF;
-        int meta = Blocks.wool.getMetaFromState(minecraft.theWorld.getBlockState(nearest));
-        int[] colors = {0xFFF9F9F9,0xFFF9801D,0xFFC74EBD,0xFF3AB3DA,0xFFFED83D,0xFF80C71F,0xFFF38BAA,0xFF474F52,0xFF9D9D97,0xFF169C9C,0xFF8932B8,0xFF3C44AA,0xFF835432,0xFF5E7C16,0xFFB02E26,0xFF1D1D21};
-        return colors[Math.max(0, Math.min(colors.length - 1, meta))];
+        return 0xFF4FA3FF;
+    }
+
+    private static final int[] WOOL_COLORS = {0xFFF9F9F9,0xFFF9801D,0xFFC74EBD,0xFF3AB3DA,0xFFFED83D,0xFF80C71F,0xFFF38BAA,0xFF474F52,0xFF9D9D97,0xFF169C9C,0xFF8932B8,0xFF3C44AA,0xFF835432,0xFF5E7C16,0xFFB02E26,0xFF1D1D21};
+    private static final int[] WOOL_SEARCH_X, WOOL_SEARCH_Y, WOOL_SEARCH_Z;
+    private final BlockPos.MutableBlockPos woolCursor = new BlockPos.MutableBlockPos();
+
+    static {
+        List<int[]> offsets = new ArrayList<int[]>();
+        for (int x = -6; x <= 6; x++) for (int y = -3; y <= 3; y++) for (int z = -6; z <= 6; z++)
+            offsets.add(new int[] {x, y, z, x * x + y * y + z * z});
+        // List.sort is stable, so blocks at an equal distance keep the x, y, z scan order.
+        offsets.sort(Comparator.comparingInt(offset -> offset[3]));
+        WOOL_SEARCH_X = new int[offsets.size()];
+        WOOL_SEARCH_Y = new int[offsets.size()];
+        WOOL_SEARCH_Z = new int[offsets.size()];
+        for (int i = 0; i < offsets.size(); i++) {
+            WOOL_SEARCH_X[i] = offsets.get(i)[0];
+            WOOL_SEARCH_Y[i] = offsets.get(i)[1];
+            WOOL_SEARCH_Z[i] = offsets.get(i)[2];
+        }
     }
 }

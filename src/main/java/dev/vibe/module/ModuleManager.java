@@ -8,11 +8,24 @@ import dev.vibe.module.impl.visual.*;
 import dev.vibe.module.impl.world.*;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 public final class ModuleManager {
 
     private final List<Module> modules = new ArrayList<Module>();
+    /** Marks a type with no matching module, so misses are remembered too. */
+    private static final Object NO_MODULE = new Object();
+    private static final AtomicReferenceFieldUpdater<ModuleManager, TypeIndex> TYPE_INDEX =
+            AtomicReferenceFieldUpdater.newUpdater(ModuleManager.class, TypeIndex.class, "typeIndex");
+    /**
+     * getModule(Class) answers from here instead of scanning every module; renderers ask for
+     * modules many times per frame. It belongs to one list instance and is replaced whenever
+     * that list changes. Null until the first lookup.
+     */
+    private volatile TypeIndex typeIndex;
 
     public ModuleManager() {
         register(new EspModule());
@@ -101,12 +114,14 @@ public final class ModuleManager {
 
     private void register(Module module) {
         modules.add(module);
+        moduleListChanged();
     }
 
     /** Registers a module supplied by the local scripting runtime. */
     public void registerDynamic(Module module) {
         if (module != null && !modules.contains(module)) {
             modules.add(module);
+            moduleListChanged();
         }
     }
 
@@ -115,7 +130,13 @@ public final class ModuleManager {
         if (module != null) {
             if (module.isEnabled()) module.setEnabled(false);
             modules.remove(module);
+            moduleListChanged();
         }
+    }
+
+    /** A fresh index (never null), so a lookup that began before the change cannot store its stale answer. */
+    private void moduleListChanged() {
+        typeIndex = new TypeIndex(modules, Collections.<Class<?>, Object>emptyMap());
     }
 
     public List<Module> getModules() {
@@ -146,11 +167,30 @@ public final class ModuleManager {
 
     @SuppressWarnings("unchecked")
     public <T extends Module> T getModule(Class<T> type) {
-        for (Module module : modules) {
+        List<Module> current = modules;
+        TypeIndex index = typeIndex;
+        boolean valid = index != null && index.modules == current;
+        if (valid) {
+            Object cached = index.byType.get(type);
+            if (cached != null) return cached == NO_MODULE ? null : (T) cached;
+        }
+        T found = null;
+        for (Module module : current) {
             if (type.isInstance(module)) {
-                return (T) module;
+                found = (T) module;
+                break;
             }
         }
-        return null;
+        Map<Class<?>, Object> next = new HashMap<Class<?>, Object>(valid ? index.byType : Collections.<Class<?>, Object>emptyMap());
+        next.put(type, found == null ? NO_MODULE : found);
+        // Only store the answer if the list did not change while it was computed.
+        TYPE_INDEX.compareAndSet(this, index, new TypeIndex(current, next));
+        return found;
+    }
+
+    private static final class TypeIndex {
+        final List<Module> modules;
+        final Map<Class<?>, Object> byType;
+        TypeIndex(List<Module> modules, Map<Class<?>, Object> byType) { this.modules = modules; this.byType = byType; }
     }
 }

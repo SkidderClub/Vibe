@@ -4,6 +4,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.WorldRenderer;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.client.shader.ShaderGroup;
 import net.minecraft.util.ResourceLocation;
@@ -182,6 +185,17 @@ public final class KawaseBlur {
         minecraft.entityRenderer.setupOverlayRendering();
     }
 
+    /** The vertices of Gui.drawScaledCustomSizeModalRect, with its exact float texture math. */
+    private static void scaledRectVertices(WorldRenderer world, int x, int y, float u, float v, int uWidth, int vHeight,
+                                           int width, int height, float tileWidth, float tileHeight) {
+        float f = 1.0F / tileWidth;
+        float f1 = 1.0F / tileHeight;
+        world.pos(x, y + height, 0.0D).tex(u * f, (v + (float) vHeight) * f1).endVertex();
+        world.pos(x + width, y + height, 0.0D).tex((u + (float) uWidth) * f, (v + (float) vHeight) * f1).endVertex();
+        world.pos(x + width, y, 0.0D).tex((u + (float) uWidth) * f, v * f1).endVertex();
+        world.pos(x, y, 0.0D).tex(u * f, v * f1).endVertex();
+    }
+
     /** Draws a section of the blur target in a true pixel-rounded silhouette. */
     private static void drawRoundedTexture(Framebuffer source,
                                            int left, int top, int right, int bottom, float radius) {
@@ -216,6 +230,10 @@ public final class KawaseBlur {
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
             source.bindFramebufferTexture();
+            // Every row is a Gui.drawScaledCustomSizeModalRect quad; they share one draw call.
+            Tessellator tessellator = Tessellator.getInstance();
+            WorldRenderer world = tessellator.getWorldRenderer();
+            world.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
             for (int y = top; y < bottom; y++) {
                 double edge = Math.min(y - top + 0.5D, bottom - y - 0.5D);
                 int inset = 0;
@@ -232,9 +250,10 @@ public final class KawaseBlur {
                 // scaled GUI coordinate system.
                 float u = start * scale;
                 float v = source.framebufferTextureHeight - y * scale;
-                Gui.drawScaledCustomSizeModalRect(start, y, u, v, (end - start) * scale, -scale,
+                scaledRectVertices(world, start, y, u, v, (end - start) * scale, -scale,
                         end - start, 1, source.framebufferTextureWidth, source.framebufferTextureHeight);
             }
+            tessellator.draw();
             source.unbindFramebufferTexture();
         } finally {
             GL11.glPopAttrib();

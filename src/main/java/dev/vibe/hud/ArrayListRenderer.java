@@ -125,8 +125,10 @@ drawText(r.suffix,x+textWidth(r.name,s)*scale,y,s,hud,i,rows.size(),now,true,ele
         }
     }
 
+    /** Compiled once; String.replaceAll compiled it again for every module in every frame. */
+    private static final java.util.regex.Pattern CAMEL_CASE=java.util.regex.Pattern.compile("([a-z])([A-Z])");
     public static String name(String name,ArrayListSettings s){
-        String result=s.spaces.isEnabled()?name.replaceAll("([a-z])([A-Z])","$1 $2"):name.replace(" ","");
+        String result=s.spaces.isEnabled()?CAMEL_CASE.matcher(name).replaceAll("$1 $2"):name.replace(" ","");
         return s.casing.is("Lowercase")?result.toLowerCase(Locale.ROOT):s.casing.is("Uppercase")?result.toUpperCase(Locale.ROOT):result;
     }
     public static String suffix(Module module,ArrayListSettings s){
@@ -158,6 +160,9 @@ drawText(r.suffix,x+textWidth(r.name,s)*scale,y,s,hud,i,rows.size(),now,true,ele
     }
     private void drawText(String text,float x,float y,ArrayListSettings s,HudModule hud,int index,int count,long now,boolean suffix,float elementScale){
         if(text.isEmpty())return;
+        // Only glyph draws happen until the end of this label, so one alpha-test query serves them all.
+        NeverLoseFont run=s.font.is("Minecraft")?null:font(s);
+        if(run!=null)run.beginRun();
         GlStateManager.pushMatrix();
         try {
 GlStateManager.translate(x,y,0);GlStateManager.scale(s.scale.getFloat()*elementScale,s.scale.getFloat()*elementScale,1);
@@ -180,7 +185,7 @@ GlStateManager.translate(x,y,0);GlStateManager.scale(s.scale.getFloat()*elementS
                     cursor+=textWidth(part,s);
                 }
             }
-        }finally{GlStateManager.popMatrix();}
+        }finally{GlStateManager.popMatrix();if(run!=null)run.endRun();}
     }
     private void outline(List<Row> rows,boolean right,float rh,float gap,ArrayListSettings s,HudModule hud){
         float t=s.outlineWidth.getFloat()*s.scale.getFloat();Row first=rows.get(0),last=rows.get(rows.size()-1);

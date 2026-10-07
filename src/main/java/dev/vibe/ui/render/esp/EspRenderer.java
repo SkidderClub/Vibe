@@ -25,6 +25,8 @@ public final class EspRenderer {
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final FloatBuffer modelView = BufferUtils.createFloatBuffer(16);
     private final FloatBuffer projection = BufferUtils.createFloatBuffer(16);
+    /** Copies of the captured matrices; BoxProjection reads them for every box. */
+    private final float[] model = new float[16], camera = new float[16];
     private final List<ScreenBox> screenBoxes = new ArrayList<ScreenBox>();
     private final Esp2DRenderer overlay = new Esp2DRenderer();
 
@@ -100,6 +102,8 @@ public final class EspRenderer {
         try {
             TargetsModule targets = Vibe.getInstance().getModuleManager().getModule(TargetsModule.class);
             QolModule qol = Vibe.getInstance().getModuleManager().getModule(QolModule.class);
+            // Constant for the whole frame; one instance serves every player's projection.
+            ScaledResolution resolution = capture2d ? new ScaledResolution(minecraft) : null;
             for (Object object : minecraft.theWorld.loadedEntityList) {
                 if (!(object instanceof EntityLivingBase)) {
                     continue;
@@ -122,7 +126,7 @@ public final class EspRenderer {
                             esp.getLineWidth(profile).getFloat());
                 }
                 if (capture2d) {
-                    ProjectedBounds bounds = bounds(box);
+                    ProjectedBounds bounds = bounds(box, resolution);
                     if (bounds != null && bounds.width() > .25F && bounds.height() > .5F) {
                         ItemStack held = player.getHeldItem();
                         String displayName = player instanceof EntityPlayer
@@ -156,10 +160,17 @@ public final class EspRenderer {
         if (esp == null || !esp.isEnabled() || !esp.getModes().isSelected("2D")) {
             return;
         }
+        if (screenBoxes.isEmpty()) return;
         ScaledResolution resolution = new ScaledResolution(minecraft);
-        for (ScreenBox box : screenBoxes) {
-            overlay.draw(esp.get2D(box.actor.profile), box.actor, new EspLayout.Rect(box.bounds.left, box.bounds.top,
-                    box.bounds.width(), box.bounds.height()), resolution.getScaledWidth(), resolution.getScaledHeight(), false);
+        // One GL state save and restore for all boxes instead of one per player.
+        overlay.beginBatch();
+        try {
+            for (ScreenBox box : screenBoxes) {
+                overlay.draw(esp.get2D(box.actor.profile), box.actor, new EspLayout.Rect(box.bounds.left, box.bounds.top,
+                        box.bounds.width(), box.bounds.height()), resolution.getScaledWidth(), resolution.getScaledHeight(), false);
+            }
+        } finally {
+            overlay.endBatch();
         }
     }
 
@@ -192,12 +203,14 @@ public final class EspRenderer {
         GL11.glGetFloat(GL11.GL_PROJECTION_MATRIX, projection);
         modelView.rewind();
         projection.rewind();
+        for (int i = 0; i < 16; i++) { model[i] = modelView.get(i); camera[i] = projection.get(i); }
     }
 
     private ProjectedBounds bounds(AxisAlignedBB box) {
-        float[] model = new float[16], camera = new float[16];
-        for (int i = 0; i < 16; i++) { model[i] = modelView.get(i); camera[i] = projection.get(i); }
-        ScaledResolution resolution = new ScaledResolution(minecraft);
+        return bounds(box, new ScaledResolution(minecraft));
+    }
+
+    private ProjectedBounds bounds(AxisAlignedBB box, ScaledResolution resolution) {
         // Both cameras clip in homogeneous space. GTA7's supersampled viewport maps to the same GUI dimensions.
         double[] clipped = BoxProjection.bounds(new double[] {box.minX, box.minY, box.minZ},
                 new double[] {box.maxX, box.maxY, box.maxZ}, model, camera,

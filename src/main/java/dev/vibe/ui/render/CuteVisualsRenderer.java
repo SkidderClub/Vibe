@@ -16,6 +16,34 @@ public final class CuteVisualsRenderer {
     private static final double[] BED_RED = {1.00D, 1.00D, 1.00D, .50D, .50D, .60D, .85D};
     private static final double[] BED_GREEN = {.40D, .60D, .90D, 1.00D, .75D, .50D, .50D};
     private static final double[] BED_BLUE = {.50D, .40D, .50D, .65D, 1.00D, 1.00D, 1.00D};
+    private static final double[][] HEART_PALETTE = {{1.0D, .5D, .8D}, {1.0D, .3D, .6D}, {.9D, .4D, .9D}};
+    private static final double[][] DOT_PALETTE = {{1.0D, .45D, .7D}, {1.0D, .6D, .85D}, {1.0D, .3D, .55D}, {1.0D, .75D, .95D}};
+    // Every shape uses fixed angles, so its unit outline is computed once with the exact
+    // expressions of the drawing code; scaling a stored value gives the same vertex.
+    private static final double[][] HEART_X = new double[31][], HEART_Y = new double[31][];
+    private static final double[] HEXAGON_COS = new double[7], HEXAGON_SIN = new double[7];
+    private static final double[] OCTAGON_COS = new double[9], OCTAGON_SIN = new double[9];
+    private static final double[] STAR_COS = new double[9], STAR_SIN = new double[9];
+    private static final double[] ARC_COS = new double[31], ARC_SIN = new double[31];
+
+    static {
+        for (int segments : new int[] {20, 30}) {
+            HEART_X[segments] = new double[segments + 1];
+            HEART_Y[segments] = new double[segments + 1];
+            for (int i = 0; i <= segments; i++) {
+                double t = i / (double) segments * Math.PI * 2.0D;
+                HEART_X[segments][i] = 16.0D * Math.pow(Math.sin(t), 3.0D);
+                HEART_Y[segments][i] = 13.0D * Math.cos(t) - 5.0D * Math.cos(2.0D * t) - 2.0D * Math.cos(3.0D * t) - Math.cos(4.0D * t);
+            }
+        }
+        for (int i = 0; i <= 6; i++) { double angle = i * Math.PI * 2.0D / 6.0D; HEXAGON_COS[i] = Math.cos(angle); HEXAGON_SIN[i] = Math.sin(angle); }
+        for (int i = 0; i <= 8; i++) { double angle = i * Math.PI * 2.0D / 8.0D; OCTAGON_COS[i] = Math.cos(angle); OCTAGON_SIN[i] = Math.sin(angle); }
+        for (int i = 0; i <= 8; i++) { double angle = i * Math.PI / 4.0D - Math.PI / 2.0D; STAR_COS[i] = Math.cos(angle); STAR_SIN[i] = Math.sin(angle); }
+        for (int segment = 0; segment <= 30; segment++) {
+            double angle = segment / 30.0D * Math.PI * 1.0D;
+            ARC_COS[segment] = Math.cos(angle); ARC_SIN[segment] = Math.sin(angle);
+        }
+    }
     private final Minecraft minecraft = Minecraft.getMinecraft();
 
     public void render(RenderWorldLastEvent event) {
@@ -59,7 +87,7 @@ public final class CuteVisualsRenderer {
         double dx = x - minecraft.getRenderManager().viewerPosX;
         double dy = y - minecraft.getRenderManager().viewerPosY;
         double dz = z - minecraft.getRenderManager().viewerPosZ;
-        double[][] palette = {{1.0D, .5D, .8D}, {1.0D, .3D, .6D}, {.9D, .4D, .9D}};
+        double[][] palette = HEART_PALETTE;
         GL11.glPushMatrix();
         try {
             GL11.glTranslated(dx, dy, dz);
@@ -88,7 +116,7 @@ public final class CuteVisualsRenderer {
         double dx = x - minecraft.getRenderManager().viewerPosX;
         double dy = y - minecraft.getRenderManager().viewerPosY;
         double dz = z - minecraft.getRenderManager().viewerPosZ;
-        double[][] palette = {{1.0D, .45D, .7D}, {1.0D, .6D, .85D}, {1.0D, .3D, .55D}, {1.0D, .75D, .95D}};
+        double[][] palette = DOT_PALETTE;
         double alpha = fade * pulse * module.getOpacity();
         if (alpha < .02D) return;
         GL11.glPushMatrix();
@@ -128,9 +156,14 @@ public final class CuteVisualsRenderer {
 
     private void drawRainbowArc(double radius, double red, double green, double blue, double alpha, float width, double progress) {
         GL11.glLineWidth(width); setColor(red, green, blue, alpha); GL11.glBegin(GL11.GL_LINE_STRIP);
-        for (int segment = 0; segment <= 30; segment++) {
-            double angle = segment / 30.0D * Math.PI * progress;
-            GL11.glVertex3d(Math.cos(angle) * radius, Math.sin(angle) * radius, 0.0D);
+        // A fully grown arc (most of its lifetime) has fixed angles.
+        if (progress == 1.0D) {
+            for (int segment = 0; segment <= 30; segment++) GL11.glVertex3d(ARC_COS[segment] * radius, ARC_SIN[segment] * radius, 0.0D);
+        } else {
+            for (int segment = 0; segment <= 30; segment++) {
+                double angle = segment / 30.0D * Math.PI * progress;
+                GL11.glVertex3d(Math.cos(angle) * radius, Math.sin(angle) * radius, 0.0D);
+            }
         }
         GL11.glEnd();
     }
@@ -181,14 +214,11 @@ public final class CuteVisualsRenderer {
 
     private void drawHeart(double size, double alpha, double red, double green, double blue, int segments, int layers, double growth, double glow) {
         double base = size / 16.0D;
+        double[] unitX = HEART_X[segments], unitY = HEART_Y[segments];
         for (int layer = layers; layer >= 0; layer--) {
             double scale = base * (1.0D + layer * growth), a = layer == 0 ? alpha * .9D : alpha * (glow / layer);
             setColor(red, green, blue, a); GL11.glBegin(GL11.GL_LINE_STRIP);
-            for (int i = 0; i <= segments; i++) {
-                double t = i / (double) segments * Math.PI * 2.0D;
-                GL11.glVertex3d(16.0D * Math.pow(Math.sin(t), 3.0D) * scale,
-                        (13.0D * Math.cos(t) - 5.0D * Math.cos(2.0D * t) - 2.0D * Math.cos(3.0D * t) - Math.cos(4.0D * t)) * scale, 0.0D);
-            }
+            for (int i = 0; i <= segments; i++) GL11.glVertex3d(unitX[i] * scale, unitY[i] * scale, 0.0D);
             GL11.glEnd();
         }
     }
@@ -197,7 +227,7 @@ public final class CuteVisualsRenderer {
         for (int layer = 2; layer >= 0; layer--) {
             double scale = size / 16.0D * (1.0D + layer * .1D), a = layer == 0 ? alpha * .9D : alpha * (.25D / layer);
             setColor(red, green, blue, a); GL11.glBegin(GL11.GL_LINE_STRIP);
-            for (int i = 0; i <= 8; i++) { double angle = i * Math.PI / 4.0D - Math.PI / 2.0D; double radius = (i % 2 == 0 ? 12.0D : 5.0D) * scale; GL11.glVertex3d(Math.cos(angle) * radius, Math.sin(angle) * radius, 0.0D); }
+            for (int i = 0; i <= 8; i++) { double radius = (i % 2 == 0 ? 12.0D : 5.0D) * scale; GL11.glVertex3d(STAR_COS[i] * radius, STAR_SIN[i] * radius, 0.0D); }
             GL11.glEnd();
         }
     }
@@ -206,7 +236,7 @@ public final class CuteVisualsRenderer {
         for (int layer = 2; layer >= 0; layer--) {
             double scale = size / 2.0D * (1.0D + layer * .15D), a = layer == 0 ? alpha * .9D : alpha * (.25D / layer);
             setColor(red, green, blue, a); GL11.glBegin(GL11.GL_TRIANGLE_FAN); GL11.glVertex3d(0.0D, 0.0D, 0.0D);
-            for (int i = 0; i <= 8; i++) { double angle = i * Math.PI * 2.0D / 8.0D; GL11.glVertex3d(Math.cos(angle) * scale, Math.sin(angle) * scale, 0.0D); }
+            for (int i = 0; i <= 8; i++) GL11.glVertex3d(OCTAGON_COS[i] * scale, OCTAGON_SIN[i] * scale, 0.0D);
             GL11.glEnd();
         }
     }
@@ -222,9 +252,9 @@ public final class CuteVisualsRenderer {
 
     private void drawFilledDot(double size) {
         GL11.glBegin(GL11.GL_TRIANGLE_FAN); GL11.glVertex3d(0.0D, 0.0D, 0.0D);
-        for (int i = 0; i <= 6; i++) { double angle = i * Math.PI * 2.0D / 6.0D; GL11.glVertex3d(Math.cos(angle) * size, Math.sin(angle) * size, 0.0D); }
+        for (int i = 0; i <= 6; i++) GL11.glVertex3d(HEXAGON_COS[i] * size, HEXAGON_SIN[i] * size, 0.0D);
         GL11.glEnd(); GL11.glBegin(GL11.GL_LINE_STRIP);
-        for (int i = 0; i <= 8; i++) { double angle = i * Math.PI * 2.0D / 8.0D; GL11.glVertex3d(Math.cos(angle) * size, Math.sin(angle) * size, 0.0D); }
+        for (int i = 0; i <= 8; i++) GL11.glVertex3d(OCTAGON_COS[i] * size, OCTAGON_SIN[i] * size, 0.0D);
         GL11.glEnd();
     }
 
