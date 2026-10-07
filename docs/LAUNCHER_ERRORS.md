@@ -1,975 +1,973 @@
-# Vibe Launcher: Fehlercodes und Lösungen
+# Vibe Launcher: error codes and fixes
 
-Jeder Fehler im Vibe Launcher hat einen festen Code im Format **`VL-xxx`**. Hier steht für jeden Code, was
-passiert ist, woran es meistens liegt und wie du es Schritt für Schritt behebst.
+Every error in the Vibe Launcher has a fixed code in the format **`VL-xxx`**. For each code, this page
+explains what happened, what usually causes it and how to fix it step by step.
 
-Du findest den Code an vier Stellen:
+You find the code in four places:
 
-- **Meldung unten rechts:** Der Titel beginnt mit dem Code, z. B. `VL-101 · Keine Internetverbindung`.
-  Darunter steht die Ursache und ein kurzer Lösungshinweis. **So behebst du es** öffnet den passenden
-  Abschnitt dieser Seite.
-- **Spielleiste:** Nach einem fehlgeschlagenen Start steht dort der Code mit Lösungshinweis. Fährst du mit
-  der Maus darüber, siehst du die genaue Meldung. Ein Klick öffnet diese Seite.
-- **Konsole:** Fehler sind rot markiert. Jede Fehlermeldung beginnt mit dem Code, danach folgen Lösung
-  und Link.
-- **Launcher-Log:** `logs/launcher.log` im Datenordner, mit vollständigem Stacktrace (Einstellungen →
-  Fehlerbehebung → Launcher-Log).
+- **Toast at the bottom right:** The title starts with the code, e.g. `VL-101 · No internet connection`.
+  Below it are the cause and a short hint on how to fix it. **How to fix** opens the matching section of
+  this page.
+- **Play bar:** After a failed start, it shows the code with a hint. Hover over it to see the exact
+  message. A click opens this page.
+- **Console:** Errors are marked in red. Every error message starts with the code, followed by the fix
+  and a link.
+- **Launcher log:** `logs/launcher.log` in the data folder, with the full stack trace (Settings →
+  Troubleshooting → Launcher log).
 
-Die Hunderterstelle sagt, wo das Problem liegt:
+The hundreds digit tells you where the problem is:
 
-| Codes | Bereich |
+| Codes | Area |
 | --- | --- |
-| [1xx](#1xx-internet-und-server) | Internet und Server |
-| [2xx](#2xx-dateien-und-ordner) | Dateien, Ordner und Speicherplatz |
-| [3xx](#3xx-java) | Java-Runtimes des Launchers |
-| [4xx](#4xx-vibe-download-und-updates) | Download und Updates von Vibe |
-| [5xx](#5xx-vibe-bauen-gradle) | Bauen von Vibe mit Gradle |
-| [6xx](#6xx-minecraft-starten-und-spielen) | Start und Abstürze von Minecraft |
-| [7xx](#7xx-der-launcher-selbst) | Der Launcher selbst |
-| [8xx](#8xx-eigene-mods) | Eigene Mods |
-| [900](#900-unerwartete-fehler) | Unerwartete Fehler |
+| [1xx](#1xx-internet-and-servers) | Internet and servers |
+| [2xx](#2xx-files-and-folders) | Files, folders and disk space |
+| [3xx](#3xx-java) | The launcher's Java runtimes |
+| [4xx](#4xx-vibe-download-and-updates) | Downloading and updating Vibe |
+| [5xx](#5xx-building-vibe-gradle) | Building Vibe with Gradle |
+| [6xx](#6xx-starting-and-playing-minecraft) | Starting Minecraft and crashes |
+| [7xx](#7xx-the-launcher-itself) | The launcher itself |
+| [8xx](#8xx-custom-mods) | Custom mods |
+| [900](#900-unexpected-errors) | Unexpected errors |
 
-## Inhalt
+## Contents
 
-- [Erste Hilfe bei jedem Fehler](#erste-hilfe-bei-jedem-fehler)
-- [Wichtige Ordner](#wichtige-ordner)
-- [Alle Codes auf einen Blick](#alle-codes-auf-einen-blick)
-- [Die Codes im Detail](#1xx-internet-und-server)
-- [Probleme ohne Fehlercode](#probleme-ohne-fehlercode)
-- [Einen Fehler melden](#einen-fehler-melden)
+- [First aid for any error](#first-aid-for-any-error)
+- [Important folders](#important-folders)
+- [All codes at a glance](#all-codes-at-a-glance)
+- [The codes in detail](#1xx-internet-and-servers)
+- [Problems without an error code](#problems-without-an-error-code)
+- [Reporting an error](#reporting-an-error)
 
-## Erste Hilfe bei jedem Fehler
+## First aid for any error
 
-1. **Lies die ganze Meldung.** Die zweite Zeile nennt die genaue Ursache, z. B. den Server, der nicht
-   antwortet, oder die Datei, die fehlt.
-2. **Versuch es noch einmal.** Viele Netzwerkfehler sind nach ein paar Minuten weg. Downloads, die
-   abbrechen, werden automatisch zweimal wiederholt.
-3. **Schau in die Konsole** (linke Leiste → Konsole). Rote Zeilen zeigen, was schiefging.
-4. **Nutze die Reparatur-Knöpfe** unter Einstellungen:
-   - *Fehlerbehebung → Build-Cache leeren*: Vibe wird beim nächsten Start komplett neu gebaut.
-   - *Fehlerbehebung → Vibe neu installieren*: Der Quellcode wird neu geladen. Welten, Einstellungen,
-     Accounts und Mods bleiben erhalten.
-   - *Java → Neu installieren*: Java 8 und Java 21 werden neu heruntergeladen (etwa 250 MB).
-5. **Starte den PC neu**, wenn Dateien gesperrt sind oder Java-Prozesse hängen.
+1. **Read the whole message.** The second line names the exact cause, e.g. the server that does not
+   answer or the file that is missing.
+2. **Try again.** Many network errors are gone after a few minutes. Downloads that break off are retried
+   twice automatically.
+3. **Look at the console** (left sidebar → Console). Red lines show what went wrong.
+4. **Use the repair buttons** in Settings:
+   - *Troubleshooting → Clear build cache*: Vibe is rebuilt from scratch on the next start.
+   - *Troubleshooting → Reinstall Vibe*: The source code is downloaded again. Worlds, settings, accounts
+     and mods are kept.
+   - *Java → Reinstall*: Java 8 and Java 21 are downloaded again (about 250 MB).
+5. **Restart your PC** if files are locked or Java processes hang.
 
-## Wichtige Ordner
+## Important folders
 
-Der **Datenordner** des Launchers liegt hier:
+The launcher's **data folder** is here:
 
-| System | Datenordner |
+| System | Data folder |
 | --- | --- |
-| Windows | `%APPDATA%\VibeLauncher` (z. B. `C:\Users\Name\AppData\Roaming\VibeLauncher`) |
+| Windows | `%APPDATA%\VibeLauncher` (e.g. `C:\Users\Name\AppData\Roaming\VibeLauncher`) |
 | macOS | `~/Library/Application Support/VibeLauncher` |
-| Linux | `~/.local/share/VibeLauncher` (oder `$XDG_DATA_HOME/VibeLauncher`) |
+| Linux | `~/.local/share/VibeLauncher` (or `$XDG_DATA_HOME/VibeLauncher`) |
 
-Du öffnest ihn mit Einstellungen → Ordner → *Launcher-Daten*. Darin liegen:
+Open it with Settings → Folders → *Launcher data*. It contains:
 
-| Pfad | Inhalt |
+| Path | Contents |
 | --- | --- |
-| `source/` | Der Vibe-Quellcode, aus dem Vibe gebaut wird |
-| `source/run/client/` | Dein Spielprofil: Welten, Optionen, Accounts, Mods, Absturzberichte |
-| `source/run/client/crash-reports/` | Absturzberichte von Minecraft |
-| `source/run/client/mods/` | Deine eigenen Mods |
-| `source/run/client/vibe/accounts/` | Account-Tresor (`accounts.vault`) und Schlüssel (`accounts.key`) |
-| `source/build/` | Build-Ausgabe; `source/build/optifine/` enthält die OptiFine-JAR |
-| `runtime/temurin-8`, `runtime/temurin-21` | Java 8 (startet Minecraft) und Java 21 (baut Vibe) |
-| `logs/launcher.log` | Launcher-Log |
-| `logs/game/` | Ein Log pro Spielstart (Build- und Minecraft-Ausgabe) |
-| `launcher.properties` | Einstellungen des Launchers |
+| `source/` | The Vibe source code that Vibe is built from |
+| `source/run/client/` | Your game profile: worlds, options, accounts, mods, crash reports |
+| `source/run/client/crash-reports/` | Minecraft's crash reports |
+| `source/run/client/mods/` | Your custom mods |
+| `source/run/client/vibe/accounts/` | Account vault (`accounts.vault`) and key (`accounts.key`) |
+| `source/build/` | Build output; `source/build/optifine/` holds the OptiFine JAR |
+| `runtime/temurin-8`, `runtime/temurin-21` | Java 8 (starts Minecraft) and Java 21 (builds Vibe) |
+| `logs/launcher.log` | Launcher log |
+| `logs/game/` | One log per game start (build and Minecraft output) |
+| `launcher.properties` | The launcher's settings |
 
-Außerdem nutzt Gradle seinen eigenen **Gradle-Ordner** im Benutzerverzeichnis: `%USERPROFILE%\.gradle`
-unter Windows, `~/.gradle` unter macOS und Linux (oder den Ordner aus der Umgebungsvariable
-`GRADLE_USER_HOME`). Dort liegen Gradle selbst (`wrapper/dists/`), Minecraft, Forge und alle
-Bibliotheken (`caches/`).
+Gradle also uses its own **Gradle folder** in your user directory: `%USERPROFILE%\.gradle` on Windows,
+`~/.gradle` on macOS and Linux (or the folder from the `GRADLE_USER_HOME` environment variable). It holds
+Gradle itself (`wrapper/dists/`), Minecraft, Forge and all libraries (`caches/`).
 
-> **Tipp:** Du kannst den Datenordner verschieben, indem du den Launcher so startest:
-> `java -Dvibe.launcher.home="D:\VibeLauncher" -jar VibeLauncher.jar`. Den Gradle-Ordner verschiebst du mit
-> der Umgebungsvariable `GRADLE_USER_HOME` (z. B. `D:\gradle`).
+> **Tip:** You can move the data folder by starting the launcher like this:
+> `java -Dvibe.launcher.home="D:\VibeLauncher" -jar VibeLauncher.jar`. Move the Gradle folder with the
+> `GRADLE_USER_HOME` environment variable (e.g. `D:\gradle`).
 
-## Alle Codes auf einen Blick
+## All codes at a glance
 
-| Code | Problem | Kurz-Lösung |
+| Code | Problem | Quick fix |
 | --- | --- | --- |
-| [VL-101](#vl-101) | Keine Internetverbindung | WLAN/Kabel prüfen |
-| [VL-102](#vl-102) | Verbindung blockiert | Firewall, Proxy, VPN prüfen |
-| [VL-103](#vl-103) | Zeitüberschreitung | Erneut versuchen, bessere Verbindung |
-| [VL-104](#vl-104) | Sichere Verbindung fehlgeschlagen | Uhrzeit prüfen, HTTPS-Scan aus |
-| [VL-105](#vl-105) | GitHub-Anfragelimit erreicht | Warten oder anderes Netzwerk |
-| [VL-106](#vl-106) | Serverfehler | Später erneut versuchen |
-| [VL-107](#vl-107) | Download abgebrochen | Stabile Verbindung, erneut versuchen |
-| [VL-108](#vl-108) | Unerwartete Antwort vom Server | WLAN-Anmeldeseite, Proxy, Filter |
-| [VL-109](#vl-109) | Datei auf dem Server nicht gefunden | Launcher aktualisieren |
-| [VL-201](#vl-201) | Keine Schreibrechte | Virenscanner/OneDrive/Rechte |
-| [VL-202](#vl-202) | Dateien werden verwendet | Programme schließen, Neustart |
-| [VL-203](#vl-203) | Nicht genug Speicherplatz | Platz schaffen |
-| [VL-204](#vl-204) | Dateisystemfehler | Laufwerk prüfen |
-| [VL-205](#vl-205) | Kein Minecraft-Ordner gefunden | Minecraft einmal starten |
-| [VL-206](#vl-206) | Launcher-Datenordner nicht nutzbar | Rechte prüfen, anderen Ordner wählen |
-| [VL-301](#vl-301) | Kein Java für dieses System | 64-Bit-System nötig |
-| [VL-302](#vl-302) | Java-Download beschädigt | Erneut versuchen |
-| [VL-303](#vl-303) | Java-Installation unbrauchbar | Java neu installieren |
-| [VL-304](#vl-304) | Java konnte nicht gestartet werden | Virenscanner, Java neu installieren |
-| [VL-305](#vl-305) | Falsche Java-Version | Java neu installieren |
-| [VL-401](#vl-401) | Vibe konnte nicht heruntergeladen werden | Verbindung zu GitHub prüfen |
-| [VL-402](#vl-402) | Letztes Update nicht abgeschlossen | Online gehen und Spielen klicken |
-| [VL-403](#vl-403) | Vibe-Download ungültig | Vibe neu installieren |
-| [VL-404](#vl-404) | Spielprofil konnte nicht übernommen werden | Programme schließen, erneut versuchen |
-| [VL-405](#vl-405) | Vibe-Dateien fehlen | Vibe neu installieren |
-| [VL-500](#vl-500) | Build fehlgeschlagen | Konsole lesen, Build-Cache leeren |
-| [VL-501](#vl-501) | Download beim Build fehlgeschlagen | Verbindung prüfen, später erneut |
-| [VL-502](#vl-502) | Vibe lässt sich nicht kompilieren | Cache leeren, neu installieren, melden |
-| [VL-503](#vl-503) | Gradle konnte nicht eingerichtet werden | Gradle-Download löschen |
-| [VL-504](#vl-504) | OptiFine konnte nicht heruntergeladen werden | Später erneut oder von Hand |
-| [VL-505](#vl-505) | Zu wenig Arbeitsspeicher für den Build | Programme schließen, Auslagerungsdatei |
-| [VL-506](#vl-506) | Gradle-Cache beschädigt | Gradle-Cache löschen |
-| [VL-507](#vl-507) | Build-Dateien sind gesperrt | Andere Builds beenden, Neustart |
-| [VL-508](#vl-508) | Minecraft-Dateien fehlen | Unimined-Cache löschen |
-| [VL-600](#vl-600) | Minecraft ist abgestürzt | Absturzbericht lesen, Mods testen |
-| [VL-601](#vl-601) | Minecraft konnte seinen Arbeitsspeicher nicht reservieren | Arbeitsspeicher senken |
-| [VL-602](#vl-602) | Minecraft hat keinen Arbeitsspeicher mehr | Arbeitsspeicher erhöhen |
-| [VL-603](#vl-603) | Problem mit dem Grafiktreiber | Treiber aktualisieren |
-| [VL-604](#vl-604) | Ein Mod verhindert den Start | Eigene Mods deaktivieren |
-| [VL-605](#vl-605) | Spielbibliotheken konnten nicht geladen werden | Build-Cache leeren |
-| [VL-606](#vl-606) | Java ist abgestürzt | Treiber, Overlays aus |
-| [VL-607](#vl-607) | Rosetta 2 fehlt | Rosetta installieren (Mac) |
-| [VL-701](#vl-701) | Launcher ist bereits geöffnet | Fenster suchen oder Prozess beenden |
-| [VL-702](#vl-702) | Kein Desktop verfügbar | In einer Desktop-Sitzung starten |
-| [VL-703](#vl-703) | Launcher-Update fehlgeschlagen | Später oder von Hand aktualisieren |
-| [VL-704](#vl-704) | Launcher-Update beschädigt | Später erneut versuchen |
-| [VL-705](#vl-705) | Launcher läuft nicht aus VibeLauncher.jar | Mit `java -jar` starten |
-| [VL-706](#vl-706) | Account-Tresor nicht lesbar | Sicherung zurückholen oder neu anlegen |
-| [VL-707](#vl-707) | Account-Schlüssel fehlt | Sicherung oder neu anmelden |
-| [VL-708](#vl-708) | Konnte nicht geöffnet werden | Von Hand öffnen |
-| [VL-709](#vl-709) | Launcher konnte nicht starten | Neu starten, Log melden |
-| [VL-801](#vl-801) | Keine Mod-Datei | Nur `.jar`/`.zip` |
-| [VL-802](#vl-802) | Mod-Datei zu groß | Datei prüfen |
-| [VL-803](#vl-803) | Beschädigte Mod-Datei | Mod neu herunterladen |
-| [VL-804](#vl-804) | OptiFine ist bereits enthalten | Nichts tun |
-| [VL-805](#vl-805) | Vibe wird automatisch geladen | Nichts tun |
-| [VL-806](#vl-806) | Fabric-Mod | Forge-1.8.9-Version suchen |
-| [VL-807](#vl-807) | Mod für ein neueres Minecraft | 1.8.9-Version suchen |
-| [VL-808](#vl-808) | Mod bereits installiert | Nichts tun |
-| [VL-809](#vl-809) | Dateiname bereits vergeben | Doppelte Kopie entfernen |
-| [VL-810](#vl-810) | Mod für eine andere Minecraft-Version | 1.8.9-Version suchen |
-| [VL-900](#vl-900) | Unerwarteter Fehler | Erneut versuchen, melden |
+| [VL-101](#vl-101) | No internet connection | Check Wi-Fi/cable |
+| [VL-102](#vl-102) | Connection blocked | Check firewall, proxy, VPN |
+| [VL-103](#vl-103) | Connection timed out | Try again, better connection |
+| [VL-104](#vl-104) | Secure connection failed | Check the clock, turn off HTTPS scanning |
+| [VL-105](#vl-105) | GitHub request limit reached | Wait or use another network |
+| [VL-106](#vl-106) | Server error | Try again later |
+| [VL-107](#vl-107) | Download interrupted | Stable connection, try again |
+| [VL-108](#vl-108) | Unexpected answer from the server | Wi-Fi login page, proxy, filter |
+| [VL-109](#vl-109) | File not found on the server | Update the launcher |
+| [VL-201](#vl-201) | No permission to write files | Antivirus/OneDrive/permissions |
+| [VL-202](#vl-202) | Files are in use | Close programs, restart |
+| [VL-203](#vl-203) | Not enough disk space | Free up space |
+| [VL-204](#vl-204) | File system error | Check the drive |
+| [VL-205](#vl-205) | No Minecraft folder found | Start Minecraft once |
+| [VL-206](#vl-206) | Launcher data folder unusable | Check permissions, choose another folder |
+| [VL-301](#vl-301) | No Java for this system | 64-bit system required |
+| [VL-302](#vl-302) | Java download damaged | Try again |
+| [VL-303](#vl-303) | Java installation unusable | Reinstall Java |
+| [VL-304](#vl-304) | Java could not be started | Antivirus, reinstall Java |
+| [VL-305](#vl-305) | Wrong Java version | Reinstall Java |
+| [VL-401](#vl-401) | Vibe could not be downloaded | Check the connection to GitHub |
+| [VL-402](#vl-402) | Last update did not finish | Go online and press Play |
+| [VL-403](#vl-403) | Vibe download is invalid | Reinstall Vibe |
+| [VL-404](#vl-404) | Game profile could not be moved | Close programs, try again |
+| [VL-405](#vl-405) | Vibe files are missing | Reinstall Vibe |
+| [VL-500](#vl-500) | Build failed | Read the console, clear the build cache |
+| [VL-501](#vl-501) | Download during the build failed | Check the connection, try again later |
+| [VL-502](#vl-502) | Vibe does not compile | Clear cache, reinstall, report |
+| [VL-503](#vl-503) | Gradle could not be set up | Delete the Gradle download |
+| [VL-504](#vl-504) | OptiFine could not be downloaded | Try again later or by hand |
+| [VL-505](#vl-505) | Not enough memory for the build | Close programs, paging file |
+| [VL-506](#vl-506) | Gradle cache damaged | Delete the Gradle cache |
+| [VL-507](#vl-507) | Build files are locked | End other builds, restart |
+| [VL-508](#vl-508) | Minecraft files are missing | Delete the Unimined cache |
+| [VL-600](#vl-600) | Minecraft crashed | Read the crash report, test mods |
+| [VL-601](#vl-601) | Minecraft could not reserve its memory | Lower the memory |
+| [VL-602](#vl-602) | Minecraft ran out of memory | Raise the memory |
+| [VL-603](#vl-603) | Graphics driver problem | Update the driver |
+| [VL-604](#vl-604) | A mod prevents the start | Disable custom mods |
+| [VL-605](#vl-605) | Game libraries could not be loaded | Clear the build cache |
+| [VL-606](#vl-606) | Java crashed | Driver, turn off overlays |
+| [VL-607](#vl-607) | Rosetta 2 is missing | Install Rosetta (Mac) |
+| [VL-701](#vl-701) | Launcher is already open | Find the window or end the process |
+| [VL-702](#vl-702) | No desktop available | Start in a desktop session |
+| [VL-703](#vl-703) | Launcher update failed | Update later or by hand |
+| [VL-704](#vl-704) | Launcher update damaged | Try again later |
+| [VL-705](#vl-705) | Launcher does not run from VibeLauncher.jar | Start with `java -jar` |
+| [VL-706](#vl-706) | Account vault unreadable | Restore a backup or start a new one |
+| [VL-707](#vl-707) | Account key missing | Backup or sign in again |
+| [VL-708](#vl-708) | Could not open | Open by hand |
+| [VL-709](#vl-709) | Launcher could not start | Restart, report the log |
+| [VL-801](#vl-801) | Not a mod file | Only `.jar`/`.zip` |
+| [VL-802](#vl-802) | Mod file too large | Check the file |
+| [VL-803](#vl-803) | Damaged mod file | Download the mod again |
+| [VL-804](#vl-804) | OptiFine is already included | Nothing to do |
+| [VL-805](#vl-805) | Vibe is loaded automatically | Nothing to do |
+| [VL-806](#vl-806) | Fabric mod | Look for a Forge 1.8.9 version |
+| [VL-807](#vl-807) | Mod for a newer Minecraft | Look for a 1.8.9 version |
+| [VL-808](#vl-808) | Mod already installed | Nothing to do |
+| [VL-809](#vl-809) | File name already taken | Remove the duplicate copy |
+| [VL-810](#vl-810) | Mod for another Minecraft version | Look for a 1.8.9 version |
+| [VL-900](#vl-900) | Unexpected error | Try again, report |
 
-## 1xx: Internet und Server
+## 1xx: Internet and servers
 
-Der Launcher braucht Internet für den ersten Start, für Updates und für den ersten Build. Er spricht mit
-diesen Servern; eine Firewall oder ein Filter muss sie erlauben:
+The launcher needs the internet for the first start, for updates and for the first build. It talks to
+these servers; a firewall or filter must allow them:
 
-| Server | Wofür |
+| Server | Used for |
 | --- | --- |
-| `api.github.com`, `github.com`, `codeload.github.com`, `raw.githubusercontent.com`, `objects.githubusercontent.com`, `release-assets.githubusercontent.com` | Vibe-Quellcode, Updates, Launcher-Updates, Java-Downloads |
-| `api.adoptium.net` | Suche nach Java 8 und Java 21 |
-| `services.gradle.org` | Gradle selbst (beim ersten Build) |
-| `repo.maven.apache.org`, `maven.minecraftforge.net`, `maven.fabricmc.net`, `maven.wagyourtail.xyz`, `jitpack.io` | Bibliotheken für den Build |
-| `piston-meta.mojang.com`, `launchermeta.mojang.com`, `libraries.minecraft.net`, `resources.download.minecraft.net` | Minecraft 1.8.9, Bibliotheken und Assets |
+| `api.github.com`, `github.com`, `codeload.github.com`, `raw.githubusercontent.com`, `objects.githubusercontent.com`, `release-assets.githubusercontent.com` | Vibe source code, updates, launcher updates, Java downloads |
+| `api.adoptium.net` | Looking up Java 8 and Java 21 |
+| `services.gradle.org` | Gradle itself (on the first build) |
+| `repo.maven.apache.org`, `maven.minecraftforge.net`, `maven.fabricmc.net`, `maven.wagyourtail.xyz`, `jitpack.io` | Libraries for the build |
+| `piston-meta.mojang.com`, `launchermeta.mojang.com`, `libraries.minecraft.net`, `resources.download.minecraft.net` | Minecraft 1.8.9, libraries and assets |
 | `optifine.net` | OptiFine |
-| `api.mojang.com`, `sessionserver.mojang.com`, `textures.minecraft.net` | Skins und Capes in der Vorschau |
+| `api.mojang.com`, `sessionserver.mojang.com`, `textures.minecraft.net` | Skins and capes in the preview |
 
-Ist Vibe einmal installiert und gebaut, startet es auch **ohne Internet**, solange kein Update
-halb fertig ist ([VL-402](#vl-402)).
+Once Vibe is installed and built, it also starts **without internet**, as long as no update is
+half-finished ([VL-402](#vl-402)).
 
 ### VL-101
-**Keine Internetverbindung**
+**No internet connection**
 
-Der Launcher findet den Server nicht. Typische Meldung: `api.github.com wurde nicht gefunden.` oder in der
-Konsole `UnknownHostException`, `Name or service not known`, `No such host is known`.
+The launcher cannot find the server. Typical message: `api.github.com could not be found.` or, in the
+console, `UnknownHostException`, `Name or service not known`, `No such host is known`.
 
-**Ursachen:** Kein WLAN oder Kabel, das Netzwerk hat keinen Internetzugang, ein DNS-Problem oder ein
-Werbe-/Jugendschutzfilter, der die Adresse sperrt.
+**Causes:** No Wi-Fi or cable, the network has no internet access, a DNS problem, or an ad blocker or
+parental-control filter that blocks the address.
 
-**Lösung:**
-1. Öffne eine beliebige Webseite im Browser. Klappt das nicht, liegt es am Netzwerk.
-2. Verbinde dich neu mit dem WLAN oder stecke das Kabel neu ein, starte notfalls den Router neu.
-3. Nutzt du einen DNS-Filter (Pi-hole, AdGuard, Kinderschutz), erlaube die Server aus der Tabelle oben.
-4. Windows: `ipconfig /flushdns` in der Eingabeaufforderung leert den DNS-Cache.
-5. Klicke erneut auf **Spielen**.
+**Fix:**
+1. Open any web page in your browser. If that does not work, the problem is the network.
+2. Reconnect to the Wi-Fi or plug the cable in again; restart the router if necessary.
+3. If you use a DNS filter (Pi-hole, AdGuard, parental controls), allow the servers from the table above.
+4. Windows: `ipconfig /flushdns` in the Command Prompt clears the DNS cache.
+5. Press **Play** again.
 
 ### VL-102
-**Verbindung blockiert**
+**Connection blocked**
 
-Der Server ist erreichbar, aber die Verbindung wird abgelehnt, oder ein Proxy verlangt eine Anmeldung
-(HTTP 401, 403, 407).
+The server can be reached, but the connection is refused, or a proxy asks for a login (HTTP 401, 403,
+407).
 
-**Ursachen:** Firewall, Virenscanner mit Web-Schutz, Firmen- oder Schulnetz, VPN, Proxy mit Anmeldung.
+**Causes:** Firewall, antivirus with web protection, company or school network, VPN, proxy with login.
 
-**Lösung:**
-1. Erlaube Java in der Firewall. Betroffen sind das Java, mit dem du den Launcher startest
-   (`javaw.exe`/`java.exe`), und die Runtimes im Datenordner unter `runtime\`.
-2. Schalte ein VPN testweise aus.
-3. Der Launcher nutzt die Proxy-Einstellungen des Systems. Proxys mit Benutzername und Passwort werden
-   nicht unterstützt: Nutze dann ein anderes Netzwerk, z. B. einen Handy-Hotspot.
-4. In Schul- oder Firmennetzen sind GitHub oder Maven oft gesperrt. Spiele dann in einem anderen Netz.
+**Fix:**
+1. Allow Java through the firewall. This affects the Java you start the launcher with
+   (`javaw.exe`/`java.exe`) and the runtimes in the data folder under `runtime\`.
+2. Turn off your VPN to test.
+3. The launcher uses the system's proxy settings. Proxies with a user name and password are not
+   supported: use another network instead, e.g. a phone hotspot.
+4. GitHub or Maven are often blocked in school or company networks. Play on another network then.
 
 ### VL-103
-**Zeitüberschreitung der Verbindung**
+**Connection timed out**
 
-Der Server hat nicht rechtzeitig geantwortet (Meldung `Der Server hat nicht rechtzeitig geantwortet.`,
-`Read timed out`, `connect timed out`).
+The server did not answer in time (message `The server did not answer in time.`, `Read timed out`,
+`connect timed out`).
 
-**Lösung:**
-1. Versuche es erneut. Abgebrochene Downloads wiederholt der Launcher schon zweimal von selbst.
-2. Pausiere andere große Downloads, Streams oder Updates.
-3. Nutze ein Netzwerkkabel oder geh näher an den Router.
-4. Schalte VPN oder Proxy testweise aus.
+**Fix:**
+1. Try again. The launcher already retries interrupted downloads twice on its own.
+2. Pause other large downloads, streams or updates.
+3. Use a network cable or move closer to the router.
+4. Turn off VPN or proxy to test.
 
 ### VL-104
-**Sichere Verbindung fehlgeschlagen**
+**Secure connection failed**
 
-Die verschlüsselte HTTPS-Verbindung konnte nicht aufgebaut werden (`SSLHandshakeException`,
+The encrypted HTTPS connection could not be established (`SSLHandshakeException`,
 `PKIX path building failed`, `unable to find valid certification path`).
 
-**Ursachen:**
-- Datum oder Uhrzeit des PCs sind falsch, dann wirken alle Zertifikate ungültig.
-- Ein Virenscanner prüft HTTPS-Verbindungen und tauscht dabei Zertifikate aus (z. B. „HTTPS-Scan“,
-  „Web-Schutz“, „verschlüsselte Verbindungen prüfen“ bei Avast, AVG, Kaspersky, ESET, Bitdefender).
-- Ein Firmen- oder Schul-Proxy bricht HTTPS auf.
-- Der Launcher läuft mit einem sehr alten Java 8, dem neue Stammzertifikate fehlen.
+**Causes:**
+- The PC's date or time is wrong, which makes all certificates look invalid.
+- An antivirus scans HTTPS connections and swaps certificates while doing so (e.g. "HTTPS scanning",
+  "Web Shield", "scan encrypted connections" in Avast, AVG, Kaspersky, ESET, Bitdefender).
+- A company or school proxy breaks up HTTPS.
+- The launcher runs on a very old Java 8 that lacks newer root certificates.
 
-**Lösung:**
-1. Stelle Datum, Uhrzeit und Zeitzone automatisch ein (Windows: Einstellungen → Zeit und Sprache).
-2. Schalte die HTTPS-Prüfung deines Virenscanners aus oder füge eine Ausnahme für Java hinzu.
-3. Aktualisiere das Java, mit dem du den Launcher öffnest, z. B. auf ein aktuelles Eclipse Temurin 8, 17
-   oder 21 (https://adoptium.net).
-4. Versuche es in einem anderen Netzwerk.
+**Fix:**
+1. Set date, time and time zone automatically (Windows: Settings → Time & language).
+2. Turn off your antivirus's HTTPS scanning or add an exception for Java.
+3. Update the Java you open the launcher with, e.g. to a current Eclipse Temurin 8, 17 or 21
+   (https://adoptium.net).
+4. Try another network.
 
 ### VL-105
-**GitHub-Anfragelimit erreicht**
+**GitHub request limit reached**
 
-GitHub erlaubt ohne Anmeldung etwa 60 Anfragen pro Stunde und Netzwerk (IP-Adresse). Die Meldung nennt die
-Uhrzeit, ab der es wieder geht, z. B. `Das Anfragelimit von GitHub ist erreicht (bis 14:05).`
+Without signing in, GitHub allows about 60 requests per hour per network (IP address). The message names
+the time from which it works again, e.g. `GitHub's request limit is reached (until 14:05).`
 
-**Ursachen:** Viele Starts oder Update-Prüfungen hintereinander, oder viele Leute im selben Netz
-(Schule, WG, VPN), die GitHub nutzen.
+**Causes:** Many starts or update checks in a row, or many people on the same network (school, shared
+flat, VPN) using GitHub.
 
-**Lösung:**
-1. Warte bis zur genannten Uhrzeit (höchstens eine Stunde).
-2. Ist Vibe schon installiert, schalte Einstellungen → Updates → *Vibe automatisch aktualisieren* aus: Dann
-   startet Vibe ohne GitHub-Anfrage.
-3. Alternativ ein anderes Netzwerk nutzen (z. B. Handy-Hotspot) oder das VPN ausschalten.
+**Fix:**
+1. Wait until the time given (at most one hour).
+2. If Vibe is already installed, turn off Settings → Updates → *Update Vibe automatically*: Vibe then
+   starts without asking GitHub.
+3. Alternatively use another network (e.g. a phone hotspot) or turn off the VPN.
 
 ### VL-106
-**Serverfehler**
+**Server error**
 
-Der Server antwortet mit einem Fehler (HTTP 5xx oder einem anderen unerwarteten Status). Die Meldung nennt
-den Server, z. B. `api.github.com antwortete mit HTTP 502.`
+The server answers with an error (HTTP 5xx or another unexpected status). The message names the server,
+e.g. `api.github.com answered HTTP 502.`
 
-**Lösung:**
-1. Warte ein paar Minuten und versuche es erneut.
-2. Prüfe, ob der Dienst gestört ist: https://www.githubstatus.com für GitHub.
+**Fix:**
+1. Wait a few minutes and try again.
+2. Check whether the service has an outage: https://www.githubstatus.com for GitHub.
 
 ### VL-107
-**Download abgebrochen**
+**Download interrupted**
 
-Die Verbindung ist mitten im Download abgerissen (`Connection reset`, `ended early`, `Premature EOF`).
-Große Downloads hat der Launcher dann bereits dreimal versucht.
+The connection dropped in the middle of a download (`Connection reset`, `ended early`, `Premature EOF`).
+By then, the launcher has already tried large downloads three times.
 
-**Lösung:**
-1. Prüfe die Verbindung und versuche es erneut.
-2. Schalte VPN oder Proxy testweise aus.
-3. Manche Virenscanner brechen große Downloads ab: Füge eine Ausnahme für Java hinzu.
+**Fix:**
+1. Check the connection and try again.
+2. Turn off VPN or proxy to test.
+3. Some antivirus programs break off large downloads: add an exception for Java.
 
 ### VL-108
-**Unerwartete Antwort vom Server**
+**Unexpected answer from the server**
 
-Statt der erwarteten Daten kam etwas anderes zurück, meistens eine Webseite. Typisch für:
+Something other than the expected data came back, usually a web page. Typical for:
 
-- **WLAN mit Anmeldeseite** (Hotel, Zug, Café, Uni-Gastnetz): Du bist noch nicht angemeldet.
-- Proxys, Jugendschutz- oder Werbefilter, die eine Sperrseite zeigen.
-- Eine Umleitung von HTTPS auf HTTP, die der Launcher aus Sicherheitsgründen ablehnt.
+- **Wi-Fi with a login page** (hotel, train, café, university guest network): you are not signed in yet.
+- Proxies, parental-control or ad filters that show a block page.
+- A redirect from HTTPS to HTTP, which the launcher refuses for security reasons.
 
-**Lösung:**
-1. Öffne eine Webseite im Browser und melde dich beim WLAN an, falls eine Anmeldeseite erscheint.
-2. Prüfe Filter und Proxy oder nutze ein anderes Netzwerk.
-3. Versuche es erneut.
+**Fix:**
+1. Open a web page in your browser and sign in to the Wi-Fi if a login page appears.
+2. Check filters and proxy or use another network.
+3. Try again.
 
 ### VL-109
-**Datei auf dem Server nicht gefunden**
+**File not found on the server**
 
-Der Server meldet HTTP 404: Die Datei, die der Launcher laden will, gibt es nicht mehr. Das passiert, wenn
-ein alter Launcher eine Adresse nutzt, die sich geändert hat.
+The server reports HTTP 404: the file the launcher wants to download no longer exists. This happens when
+an old launcher uses an address that has changed.
 
-**Lösung:**
-1. Aktualisiere den Launcher (Einstellungen → Updates) oder lade die neueste `VibeLauncher.jar` aus den
-   [GitHub-Releases](https://github.com/SkidderClub/Vibe/releases).
-2. Hilft das nicht, [melde den Fehler](#einen-fehler-melden).
+**Fix:**
+1. Update the launcher (Settings → Updates) or download the latest `VibeLauncher.jar` from the
+   [GitHub releases](https://github.com/SkidderClub/Vibe/releases).
+2. If that does not help, [report the error](#reporting-an-error).
 
-## 2xx: Dateien und Ordner
+## 2xx: Files and folders
 
 ### VL-201
-**Keine Schreibrechte**
+**No permission to write files**
 
-Der Launcher darf eine Datei nicht schreiben oder löschen (`Access is denied`, `Permission denied`,
+The launcher is not allowed to write or delete a file (`Access is denied`, `Permission denied`,
 `AccessDeniedException`).
 
-**Ursachen und Lösung:**
-1. **Virenscanner:** Füge den Datenordner und den Gradle-Ordner als Ausnahme hinzu.
-2. **Windows „Überwachter Ordnerzugriff“** (Windows-Sicherheit → Viren- & Bedrohungsschutz →
-   Ransomware-Schutz): Erlaube `java.exe` und `javaw.exe` oder schalte die Funktion testweise aus.
-3. **OneDrive/Dropbox:** Liegt der Launcher oder sein Datenordner in einem synchronisierten Ordner, verschiebe
-   ihn heraus (siehe Tipp unter [Wichtige Ordner](#wichtige-ordner)).
-4. **Linux/macOS:** Wurde der Launcher einmal mit `sudo` gestartet, gehören Dateien `root`. Repariere das mit
+**Causes and fix:**
+1. **Antivirus:** Add the data folder and the Gradle folder as exceptions.
+2. **Windows "Controlled folder access"** (Windows Security → Virus & threat protection → Ransomware
+   protection): Allow `java.exe` and `javaw.exe` or turn the feature off to test.
+3. **OneDrive/Dropbox:** If the launcher or its data folder is in a synced folder, move it out (see the tip
+   under [Important folders](#important-folders)).
+4. **Linux/macOS:** If the launcher was ever started with `sudo`, files belong to `root`. Fix this with
    `sudo chown -R "$USER" ~/.local/share/VibeLauncher ~/.gradle` (macOS:
-   `sudo chown -R "$USER" ~/Library/Application\ Support/VibeLauncher ~/.gradle`). Starte den Launcher nie
-   mit `sudo`.
-5. Starte den Launcher **nicht** als Administrator, wenn er vorher normal lief, sonst entstehen Dateien, die
-   du später nicht mehr ändern darfst.
+   `sudo chown -R "$USER" ~/Library/Application\ Support/VibeLauncher ~/.gradle`). Never start the
+   launcher with `sudo`.
+5. Do **not** start the launcher as administrator if it ran normally before; otherwise it creates files
+   you will not be allowed to change later.
 
 ### VL-202
-**Dateien werden verwendet**
+**Files are in use**
 
-Eine Datei oder ein Ordner ist gerade von einem anderen Programm geöffnet (`being used by another process`,
-`Der Vibe-Ordner wird gerade verwendet`).
+A file or folder is currently open in another program (`being used by another process`,
+`The Vibe folder is in use`).
 
-**Lösung:**
-1. Schließe Minecraft und andere Launcher.
-2. Schließe Explorer-Fenster, Editoren oder IDEs, die Dateien im Datenordner geöffnet haben.
-3. Beende hängende Java-Prozesse: Windows-Task-Manager → „OpenJDK Platform binary“ bzw.
-   „Java(TM) Platform SE binary“ → Task beenden. macOS/Linux: Aktivitätsanzeige bzw. `pkill -f GradleWrapperMain`.
-4. Virenscanner und die Windows-Suche halten Dateien manchmal kurz fest: einen Moment warten und erneut
-   versuchen.
-5. Hilft nichts davon, starte den PC neu.
+**Fix:**
+1. Close Minecraft and other launchers.
+2. Close Explorer windows, editors or IDEs that have files in the data folder open.
+3. End hanging Java processes: Windows Task Manager → "OpenJDK Platform binary" or
+   "Java(TM) Platform SE binary" → End task. macOS/Linux: Activity Monitor or `pkill -f GradleWrapperMain`.
+4. Antivirus programs and Windows Search sometimes hold on to files briefly: wait a moment and try
+   again.
+5. If none of this helps, restart your PC.
 
 ### VL-203
-**Nicht genug Speicherplatz**
+**Not enough disk space**
 
-Der Launcher prüft vor Downloads und Builds, ob genug Platz frei ist, und bricht sonst mit einer Meldung wie
-`Für C:\Users\…\VibeLauncher sind nur 800 MB frei, benötigt werden etwa 1,6 GB.` ab. Der Code erscheint auch,
-wenn das Laufwerk während eines Downloads oder Builds voll läuft.
+Before downloads and builds, the launcher checks whether enough space is free and otherwise stops with a
+message such as `Only 800 MB free for C:\Users\…\VibeLauncher, about 1.6 GB are needed.` The code also
+appears when the drive fills up during a download or build.
 
-**Platzbedarf (ungefähr):**
+**Space needed (approximately):**
 
-| Was | Wo | Größe |
+| What | Where | Size |
 | --- | --- | --- |
-| Vibe-Quellcode | Datenordner | 250 MB |
-| Java 8 und Java 21 | Datenordner | 450 MB |
-| Build-Ausgabe | Datenordner | 500 MB |
-| Gradle, Minecraft, Forge, Bibliotheken, Assets | Gradle-Ordner | 1–1,5 GB |
+| Vibe source code | Data folder | 250 MB |
+| Java 8 and Java 21 | Data folder | 450 MB |
+| Build output | Data folder | 500 MB |
+| Gradle, Minecraft, Forge, libraries, assets | Gradle folder | 1–1.5 GB |
 
-Beim ersten Start also etwa **3 GB**, verteilt auf Datenordner und Gradle-Ordner (meist beide auf `C:`).
+So the first start needs about **3 GB**, split between the data folder and the Gradle folder (usually
+both on `C:`).
 
-**Lösung:**
-1. Gib Speicherplatz frei (Windows: Einstellungen → System → Speicher → Temporäre Dateien).
-2. Oder verschiebe Datenordner und Gradle-Ordner auf ein anderes Laufwerk (siehe [Wichtige Ordner](#wichtige-ordner)).
-3. Versuche es erneut.
+**Fix:**
+1. Free up disk space (Windows: Settings → System → Storage → Temporary files).
+2. Or move the data folder and the Gradle folder to another drive (see [Important folders](#important-folders)).
+3. Try again.
 
 ### VL-204
-**Dateisystemfehler**
+**File system error**
 
-Eine Datei konnte aus einem anderen Grund nicht gelesen oder geschrieben werden.
+A file could not be read or written for some other reason.
 
-**Lösung:**
-1. Versuche es erneut.
-2. Passiert es wieder, prüfe das Laufwerk: Windows: Rechtsklick auf das Laufwerk → Eigenschaften → Tools →
-   Prüfen. macOS: Festplattendienstprogramm → Erste Hilfe.
-3. Liegt der Datenordner auf einem USB-Stick oder Netzlaufwerk, verschiebe ihn auf eine interne Festplatte.
+**Fix:**
+1. Try again.
+2. If it happens again, check the drive: Windows: right-click the drive → Properties → Tools → Check.
+   macOS: Disk Utility → First Aid.
+3. If the data folder is on a USB stick or network drive, move it to an internal drive.
 
 ### VL-205
-**Kein Minecraft-Ordner gefunden**
+**No Minecraft folder found**
 
-Erscheint bei Einstellungen → Ordner → *Aus Minecraft importieren*: Der normale Minecraft-Ordner
-(`%APPDATA%\.minecraft`, `~/Library/Application Support/minecraft` oder `~/.minecraft`) existiert nicht.
-Das ist kein Problem für Vibe, es wird nur nichts importiert.
+Appears for Settings → Folders → *Import from Minecraft*: the normal Minecraft folder
+(`%APPDATA%\.minecraft`, `~/Library/Application Support/minecraft` or `~/.minecraft`) does not exist.
+This is not a problem for Vibe; nothing is imported, that's all.
 
-**Lösung:**
-1. Starte den offiziellen Minecraft-Launcher einmal, dann gibt es den Ordner.
-2. Oder kopiere `options.txt` und Ressourcenpakete von Hand in den Spielordner (Einstellungen → Ordner →
-   *Spielordner* bzw. *Ressourcenpakete*).
+**Fix:**
+1. Start the official Minecraft launcher once; then the folder exists.
+2. Or copy `options.txt` and resource packs into the game folder by hand (Settings → Folders →
+   *Game folder* or *Resource packs*).
 
 ### VL-206
-**Launcher-Datenordner nicht nutzbar**
+**Launcher data folder unusable**
 
-Der Launcher kann beim Start nicht in seinen Datenordner schreiben und beendet sich mit einem Hinweisfenster.
+The launcher cannot write to its data folder when it starts and quits with a message window.
 
-**Lösung:**
-1. Prüfe, ob das Laufwerk voll ist ([VL-203](#vl-203)).
-2. Prüfe die Rechte am Ordner ([VL-201](#vl-201)), unter Linux/macOS besonders nach einem Start mit `sudo`.
-3. Lege den Datenordner woanders an:
+**Fix:**
+1. Check whether the drive is full ([VL-203](#vl-203)).
+2. Check the folder's permissions ([VL-201](#vl-201)), on Linux/macOS especially after a start with `sudo`.
+3. Create the data folder somewhere else:
    `java -Dvibe.launcher.home="D:\VibeLauncher" -jar VibeLauncher.jar`
-   (unter macOS/Linux z. B. `java -Dvibe.launcher.home="$HOME/VibeLauncher" -jar VibeLauncher.jar`).
+   (on macOS/Linux e.g. `java -Dvibe.launcher.home="$HOME/VibeLauncher" -jar VibeLauncher.jar`).
 
 ## 3xx: Java
 
-Der Launcher bringt **eigene Java-Versionen** mit: Java 8 startet Minecraft 1.8.9, Java 21 baut Vibe. Sie
-kommen von Eclipse Temurin (Adoptium), werden per Prüfsumme kontrolliert und liegen im Datenordner unter
-`runtime/`. Ein auf dem PC installiertes Java oder `JAVA_HOME` spielt **keine Rolle**; es wird nur zum
-Öffnen der `VibeLauncher.jar` gebraucht (siehe [Probleme ohne Fehlercode](#probleme-ohne-fehlercode)).
+The launcher brings **its own Java versions**: Java 8 starts Minecraft 1.8.9, Java 21 builds Vibe. They
+come from Eclipse Temurin (Adoptium), are verified by checksum and live in the data folder under
+`runtime/`. A Java installed on your PC or `JAVA_HOME` **does not matter**; it is only needed to open
+`VibeLauncher.jar` (see [Problems without an error code](#problems-without-an-error-code)).
 
 ### VL-301
-**Kein Java für dieses System**
+**No Java for this system**
 
-Adoptium bietet für dein Betriebssystem oder deinen Prozessor kein passendes Java an.
+Adoptium offers no suitable Java for your operating system or processor.
 
-**Lösung:** Vibe braucht ein **64-Bit**-Windows, macOS (Intel oder Apple Silicon mit Rosetta 2, siehe
-[VL-607](#vl-607)) oder 64-Bit-Linux auf einem x64-Prozessor. Auf 32-Bit-Windows, sehr alten Systemen oder
-exotischen Prozessoren läuft der Launcher nicht; Linux auf ARM bekommt zwar Java, Minecraft 1.8.9 selbst läuft
-dort aber nicht ([VL-605](#vl-605)). Prüfe unter Windows: Einstellungen → System → Info → Systemtyp.
+**Fix:** Vibe needs a **64-bit** Windows, macOS (Intel, or Apple Silicon with Rosetta 2, see
+[VL-607](#vl-607)) or 64-bit Linux on an x64 processor. The launcher does not run on 32-bit Windows, very
+old systems or exotic processors; Linux on ARM does get Java, but Minecraft 1.8.9 itself does not run there
+([VL-605](#vl-605)). On Windows, check: Settings → System → About → System type.
 
 ### VL-302
-**Java-Download beschädigt**
+**Java download damaged**
 
-Das heruntergeladene Java passt nicht zu seiner Prüfsumme oder das Archiv lässt sich nicht entpacken. Die Datei
-wird verworfen.
+The downloaded Java does not match its checksum, or the archive cannot be unpacked. The file is
+discarded.
 
-**Lösung:**
-1. Versuche es erneut, die Datei wird neu geladen.
-2. Passiert es wieder, verändert vermutlich ein Virenscanner oder Proxy Downloads: Ausnahme für Java
-   hinzufügen oder ein anderes Netzwerk nutzen.
-3. Prüfe den freien Speicherplatz ([VL-203](#vl-203)).
+**Fix:**
+1. Try again; the file is downloaded again.
+2. If it happens again, an antivirus or proxy is probably altering downloads: add an exception for Java
+   or use another network.
+3. Check the free disk space ([VL-203](#vl-203)).
 
 ### VL-303
-**Java-Installation unbrauchbar**
+**Java installation unusable**
 
-Im Java-Download fehlt eine nutzbare Installation, oder das installierte Java ist unvollständig (z. B. hat ein
-Virenscanner Dateien gelöscht).
+The Java download contains no usable installation, or the installed Java is incomplete (e.g. an
+antivirus deleted files).
 
-**Lösung:**
-1. Einstellungen → Java → **Neu installieren**.
-2. Hilft das nicht, schließe den Launcher, lösche im Datenordner den Ordner `runtime` und starte neu.
-3. Füge den Ordner `runtime` als Ausnahme im Virenscanner hinzu.
+**Fix:**
+1. Settings → Java → **Reinstall**.
+2. If that does not help, close the launcher, delete the `runtime` folder in the data folder and start
+   again.
+3. Add the `runtime` folder as an exception in your antivirus.
 
 ### VL-304
-**Java konnte nicht gestartet werden**
+**Java could not be started**
 
-Das Java des Launchers ließ sich nicht ausführen (`Cannot run program`, `A problem occurred starting process`,
+The launcher's Java could not be run (`Cannot run program`, `A problem occurred starting process`,
 `CreateProcess error=…`).
 
-**Ursachen:** Ein Virenscanner blockiert oder hat `java.exe` in die Quarantäne verschoben, die Datei ist nicht
-ausführbar (Linux/macOS), oder das System ist 32-Bit (`error=193`, „ist keine zulässige Win32-Anwendung“).
+**Causes:** An antivirus blocks `java.exe` or has moved it to quarantine, the file is not executable
+(Linux/macOS), or the system is 32-bit (`error=193`, "is not a valid Win32 application").
 
-**Lösung:**
-1. Schau in die Quarantäne deines Virenscanners und stelle Java wieder her; füge den Ordner `runtime` als
-   Ausnahme hinzu.
-2. Einstellungen → Java → **Neu installieren**.
-3. Linux/macOS: Liegt der Datenordner auf einem Laufwerk mit `noexec`, verschiebe ihn ([VL-206](#vl-206)).
-4. 32-Bit-Windows wird nicht unterstützt ([VL-301](#vl-301)).
+**Fix:**
+1. Look in your antivirus's quarantine and restore Java; add the `runtime` folder as an exception.
+2. Settings → Java → **Reinstall**.
+3. Linux/macOS: If the data folder is on a drive mounted with `noexec`, move it ([VL-206](#vl-206)).
+4. 32-bit Windows is not supported ([VL-301](#vl-301)).
 
 ### VL-305
-**Falsche Java-Version**
+**Wrong Java version**
 
-Gradle hat für den Build nicht die Java-Version gefunden, die es braucht (`No matching toolchains found`,
+Gradle did not find the Java version it needs for the build (`No matching toolchains found`,
 `Unsupported class file major version`).
 
-**Lösung:**
-1. Einstellungen → Java → **Neu installieren**. Danach sind Java 8 und Java 21 wieder sauber eingerichtet.
-2. Hast du `java8Home` oder `jdk21Home` in `launcher.properties` von Hand geändert, lösche diese Zeilen. Der
-   Launcher erkennt ein Java mit falscher Version inzwischen selbst und nutzt dann sein eigenes.
-3. Danach Einstellungen → Fehlerbehebung → **Build-Cache leeren** und erneut starten.
+**Fix:**
+1. Settings → Java → **Reinstall**. Afterwards Java 8 and Java 21 are set up cleanly again.
+2. If you changed `java8Home` or `jdk21Home` in `launcher.properties` by hand, delete these lines. The
+   launcher now detects a Java with the wrong version itself and then uses its own.
+3. Then Settings → Troubleshooting → **Clear build cache** and start again.
 
-## 4xx: Vibe-Download und Updates
+## 4xx: Vibe download and updates
 
 ### VL-401
-**Vibe konnte nicht heruntergeladen werden**
+**Vibe could not be downloaded**
 
-Beim ersten Start konnte der Vibe-Quellcode nicht geladen werden. Meist steht stattdessen der genauere Code
-der Ursache da, z. B. [VL-101](#vl-101) oder [VL-105](#vl-105).
+The Vibe source code could not be downloaded on the first start. Usually the more specific code of the
+cause is shown instead, e.g. [VL-101](#vl-101) or [VL-105](#vl-105).
 
-**Lösung:**
-1. Prüfe die Internetverbindung und ob https://github.com/SkidderClub/Vibe im Browser lädt.
-2. Folge dem Abschnitt zum genaueren Code, falls in der Konsole einer genannt ist.
-3. Versuche es erneut.
+**Fix:**
+1. Check your internet connection and whether https://github.com/SkidderClub/Vibe loads in the browser.
+2. Follow the section for the more specific code if the console names one.
+3. Try again.
 
 ### VL-402
-**Letztes Update nicht abgeschlossen**
+**Last update did not finish**
 
-Ein Vibe-Update wurde unterbrochen (Launcher geschlossen, Absturz, Strom weg). Damit Vibe nicht aus einer
-Mischung zweier Versionen gebaut wird, startet der Launcher erst nach der Reparatur. Ohne Internet ist das
-nicht möglich; dann siehst du oft den Code der Netzwerkursache (z. B. [VL-101](#vl-101)).
+A Vibe update was interrupted (launcher closed, crash, power cut). So that Vibe is not built from a mix of
+two versions, the launcher only starts after the repair. That is not possible without internet; you then
+often see the code of the network cause (e.g. [VL-101](#vl-101)).
 
-**Lösung:**
-1. Verbinde dich mit dem Internet und klicke auf **Spielen**: Das Update wird vollständig nachgeladen.
-2. Alternativ Einstellungen → Fehlerbehebung → **Vibe neu installieren**.
+**Fix:**
+1. Connect to the internet and press **Play**: the rest of the update is downloaded.
+2. Alternatively Settings → Troubleshooting → **Reinstall Vibe**.
 
-Dein Spielprofil (Welten, Einstellungen, Accounts, Mods) bleibt in beiden Fällen erhalten.
+Your game profile (worlds, settings, accounts, mods) is kept in both cases.
 
 ### VL-403
-**Vibe-Download ungültig**
+**Vibe download is invalid**
 
-Das heruntergeladene Vibe-Archiv ist beschädigt oder enthält kein Gradle-Projekt.
+The downloaded Vibe archive is damaged or does not contain a Gradle project.
 
-**Lösung:**
-1. Versuche es erneut.
-2. Einstellungen → Fehlerbehebung → **Vibe neu installieren**.
-3. Ein Virenscanner oder Proxy kann Downloads verändern: Ausnahme hinzufügen oder anderes Netzwerk testen.
-4. Hilft nichts, [melde den Fehler](#einen-fehler-melden): Dann ist der aktuelle Stand auf GitHub fehlerhaft.
+**Fix:**
+1. Try again.
+2. Settings → Troubleshooting → **Reinstall Vibe**.
+3. An antivirus or proxy can alter downloads: add an exception or try another network.
+4. If nothing helps, [report the error](#reporting-an-error): the current state on GitHub is broken.
 
 ### VL-404
-**Spielprofil konnte nicht übernommen werden**
+**Game profile could not be moved**
 
-Bei einem vollständigen Update wird der alte Quellcode-Ordner gegen den neuen getauscht und dein Spielprofil
-(`run/`) hinübergeschoben. Das hat nicht geklappt, meist weil Dateien geöffnet waren. Der Launcher stellt den
-alten Zustand wieder her.
+During a full update, the old source folder is swapped for the new one and your game profile (`run/`) is
+moved over. That did not work, usually because files were open. The launcher restores the previous state.
 
-**Lösung:**
-1. Schließe Minecraft, Explorer-Fenster im Datenordner und andere Programme ([VL-202](#vl-202)).
-2. Klicke erneut auf **Spielen** oder Einstellungen → Updates → *Jetzt aktualisieren*.
-3. **Wichtig:** Lösche keine Ordner `source-old-…` im Datenordner, die `run/client` enthalten. Der Launcher
-   holt ein dort liegendes Profil beim nächsten Start automatisch zurück.
+**Fix:**
+1. Close Minecraft, Explorer windows in the data folder and other programs ([VL-202](#vl-202)).
+2. Press **Play** again or use Settings → Updates → *Update now*.
+3. **Important:** Do not delete any `source-old-…` folders in the data folder that contain `run/client`.
+   The launcher automatically brings back a profile stored there on the next start.
 
 ### VL-405
-**Vibe-Dateien fehlen**
+**Vibe files are missing**
 
-Im installierten Quellcode fehlen wichtige Dateien, z. B. der Gradle-Wrapper (`gradle/wrapper/gradle-wrapper.jar`).
-Das passiert, wenn Dateien von Hand gelöscht oder von einem Virenscanner entfernt wurden.
+Important files are missing from the installed source code, e.g. the Gradle wrapper
+(`gradle/wrapper/gradle-wrapper.jar`). This happens when files were deleted by hand or removed by an
+antivirus.
 
-**Lösung:** Einstellungen → Fehlerbehebung → **Vibe neu installieren**. Dein Spielprofil bleibt erhalten.
+**Fix:** Settings → Troubleshooting → **Reinstall Vibe**. Your game profile is kept.
 
-## 5xx: Vibe bauen (Gradle)
+## 5xx: Building Vibe (Gradle)
 
-Vor jedem Start baut der Launcher Vibe mit Gradle aus dem Quellcode und startet dann Forge 1.8.9 mit
-OptiFine. Der **erste Build dauert 5–15 Minuten**, weil Gradle, Minecraft, Forge und alle Bibliotheken
-heruntergeladen werden; danach geht es deutlich schneller. Die komplette Ausgabe steht in der Konsole und in
-`logs/game/<Datum>.log`.
+Before every start, the launcher builds Vibe from the source code with Gradle and then starts Forge 1.8.9
+with OptiFine. The **first build takes 5–15 minutes** because Gradle, Minecraft, Forge and all libraries
+are downloaded; after that it is much faster. The full output is in the console and in
+`logs/game/<date>.log`.
 
 ### VL-500
-**Build fehlgeschlagen**
+**Build failed**
 
-Der Build ist aus einem Grund fehlgeschlagen, den der Launcher nicht genauer zuordnen kann. Die Meldung zeigt
-die erste und die letzte Zeile von Gradles „What went wrong“.
+The build failed for a reason the launcher cannot pin down further. The message shows the first and the
+last line of Gradle's "What went wrong".
 
-**Lösung:**
-1. Öffne die Konsole und lies den Abschnitt nach `* What went wrong:`.
-2. Einstellungen → Fehlerbehebung → **Build-Cache leeren**, dann erneut starten.
-3. Hilft das nicht: **Vibe neu installieren**.
-4. Bleibt der Fehler, [melde ihn](#einen-fehler-melden) mit dem Spiel-Log.
+**Fix:**
+1. Open the console and read the section after `* What went wrong:`.
+2. Settings → Troubleshooting → **Clear build cache**, then start again.
+3. If that does not help: **Reinstall Vibe**.
+4. If the error remains, [report it](#reporting-an-error) with the game log.
 
 ### VL-501
-**Download beim Build fehlgeschlagen**
+**Download during the build failed**
 
-Gradle konnte Minecraft, Forge oder eine Bibliothek nicht laden (`Could not resolve …`, `Could not GET …`,
+Gradle could not download Minecraft, Forge or a library (`Could not resolve …`, `Could not GET …`,
 `Read timed out`, `Received status code 5xx`).
 
-**Lösung:**
-1. Prüfe die Verbindung und versuche es in ein paar Minuten erneut; Maven-Server sind manchmal kurz
-   überlastet.
-2. Erlaube die Build-Server aus der [Tabelle unter 1xx](#1xx-internet-und-server) in Firewall und Filtern.
-3. Schalte VPN und Proxy testweise aus.
-4. Bricht es immer an derselben Datei ab, lösche den Gradle-Cache ([VL-506](#vl-506)).
+**Fix:**
+1. Check the connection and try again in a few minutes; Maven servers are sometimes briefly
+   overloaded.
+2. Allow the build servers from the [table under 1xx](#1xx-internet-and-servers) in your firewall and
+   filters.
+3. Turn off VPN and proxy to test.
+4. If it always stops at the same file, delete the Gradle cache ([VL-506](#vl-506)).
 
 ### VL-502
-**Vibe lässt sich nicht kompilieren**
+**Vibe does not compile**
 
-Der Java-Compiler meldet Fehler im Vibe-Quellcode (`Compilation failed`, `error: cannot find symbol`).
+The Java compiler reports errors in the Vibe source code (`Compilation failed`, `error: cannot find symbol`).
 
-**Lösung:**
-1. Einstellungen → Fehlerbehebung → **Build-Cache leeren**, dann starten.
-2. Hilft das nicht: **Vibe neu installieren** (falls Dateien von Hand verändert wurden).
-3. Bleibt der Fehler, ist die aktuelle Vibe-Version auf GitHub fehlerhaft. Warte auf ein Update (der Launcher
-   lädt es automatisch) und [melde den Fehler](#einen-fehler-melden).
+**Fix:**
+1. Settings → Troubleshooting → **Clear build cache**, then start.
+2. If that does not help: **Reinstall Vibe** (in case files were changed by hand).
+3. If the error remains, the current Vibe version on GitHub is broken. Wait for an update (the launcher
+   downloads it automatically) and [report the error](#reporting-an-error).
 
 ### VL-503
-**Gradle konnte nicht eingerichtet werden**
+**Gradle could not be set up**
 
-Gradle selbst (die Build-Software, etwa 130 MB von `services.gradle.org`) konnte nicht geladen werden oder der
-Download ist beschädigt (`Could not install Gradle distribution`, `Exception in thread "main" java.net…`,
+Gradle itself (the build software, about 130 MB from `services.gradle.org`) could not be downloaded, or
+the download is damaged (`Could not install Gradle distribution`, `Exception in thread "main" java.net…`,
 `zip END header not found`).
 
-**Lösung:**
-1. Prüfe die Verbindung zu `services.gradle.org` und versuche es erneut.
-2. Ist der Download beschädigt: Schließe den Launcher und lösche im Gradle-Ordner den Ordner
-   `wrapper/dists/gradle-8.8-bin` (Windows: `%USERPROFILE%\.gradle\wrapper\dists\gradle-8.8-bin`). Beim
-   nächsten Start wird Gradle neu geladen.
+**Fix:**
+1. Check the connection to `services.gradle.org` and try again.
+2. If the download is damaged: close the launcher and delete the folder `wrapper/dists/gradle-8.8-bin` in
+   the Gradle folder (Windows: `%USERPROFILE%\.gradle\wrapper\dists\gradle-8.8-bin`). Gradle is
+   downloaded again on the next start.
 
 ### VL-504
-**OptiFine konnte nicht heruntergeladen werden**
+**OptiFine could not be downloaded**
 
-Vibe startet mit OptiFine 1.8.9 HD U M6 pre2, das beim ersten Build von optifine.net geladen wird. optifine.net
-hat keinen Download-Link geliefert oder die Datei ist keine gültige OptiFine-JAR.
+Vibe starts with OptiFine 1.8.9 HD U M6 pre2, which is downloaded from optifine.net on the first build.
+optifine.net did not provide a download link, or the file is not a valid OptiFine JAR.
 
-**Lösung:**
-1. Versuche es später erneut; optifine.net ist manchmal überlastet oder ändert seine Download-Seite.
-2. **Von Hand:** Lade `preview_OptiFine_1.8.9_HD_U_M6_pre2.jar` über
-   https://optifine.net/adloadx?f=preview_OptiFine_1.8.9_HD_U_M6_pre2.jar herunter (nach der Werbung auf
-   „Download“ klicken) und speichere die Datei unverändert unter
-   `<Datenordner>/source/build/optifine/preview_OptiFine_1.8.9_HD_U_M6_pre2.jar`. Lege den Ordner `optifine`
-   an, falls er fehlt. Die Datei bleibt bei Updates und beim Leeren des Build-Caches erhalten.
-3. Werbe- oder DNS-Filter können optifine.net sperren: Ausnahme hinzufügen.
+**Fix:**
+1. Try again later; optifine.net is sometimes overloaded or changes its download page.
+2. **By hand:** Download `preview_OptiFine_1.8.9_HD_U_M6_pre2.jar` via
+   https://optifine.net/adloadx?f=preview_OptiFine_1.8.9_HD_U_M6_pre2.jar (click "Download" after the ad)
+   and save the file unchanged as
+   `<data folder>/source/build/optifine/preview_OptiFine_1.8.9_HD_U_M6_pre2.jar`. Create the `optifine`
+   folder if it is missing. The file is kept across updates and when the build cache is cleared.
+3. Ad or DNS filters can block optifine.net: add an exception.
 
 ### VL-505
-**Zu wenig Arbeitsspeicher für den Build**
+**Not enough memory for the build**
 
-Gradle braucht beim Bauen bis zu 3 GB Arbeitsspeicher. Es konnte nicht starten oder ist ausgegangen
+Gradle needs up to 3 GB of memory while building. It could not start or ran out
 (`Unable to start the daemon process`, `Could not reserve enough space for object heap`,
 `OutOfMemoryError`).
 
-**Lösung:**
-1. Schließe Browser, Spiele und andere große Programme und starte erneut.
-2. **Windows:** Die Auslagerungsdatei muss aktiv sein. Systemsteuerung → System → Erweiterte
-   Systemeinstellungen → Leistung → Einstellungen → Erweitert → Virtueller Arbeitsspeicher → *Größe der
-   Auslagerungsdatei für alle Laufwerke automatisch verwalten* aktivieren und neu starten.
-3. Senke Einstellungen → Spiel → **Arbeitsspeicher**, damit Gradle und Minecraft zusammen hineinpassen.
-4. Empfohlen sind mindestens 8 GB RAM.
+**Fix:**
+1. Close browsers, games and other large programs and start again.
+2. **Windows:** The paging file must be enabled. Control Panel → System → Advanced system settings →
+   Performance → Settings → Advanced → Virtual memory → enable *Automatically manage paging file size for
+   all drives* and restart.
+3. Lower Settings → Game → **Memory** so that Gradle and Minecraft fit in together.
+4. At least 8 GB of RAM is recommended.
 
 ### VL-506
-**Gradle-Cache beschädigt**
+**Gradle cache damaged**
 
-Dateien in Gradles Cache sind kaputt, meist nach einem Absturz, vollem Laufwerk oder abgebrochenem Download
+Files in Gradle's cache are broken, usually after a crash, a full drive or an interrupted download
 (`Could not read workspace metadata`, `invalid LOC header`, `error in opening zip file`).
 
-**Lösung:**
-1. Einstellungen → Fehlerbehebung → **Build-Cache leeren**, dann starten.
-2. Hilft das nicht: Schließe den Launcher und lösche im Gradle-Ordner den Ordner `caches`
-   (Windows: `%USERPROFILE%\.gradle\caches`). Beim nächsten Start wird alles neu geladen (etwa 1 GB).
-   Nutzt du Gradle auch für andere Projekte, werden deren Abhängigkeiten ebenfalls neu geladen.
+**Fix:**
+1. Settings → Troubleshooting → **Clear build cache**, then start.
+2. If that does not help: close the launcher and delete the `caches` folder in the Gradle folder
+   (Windows: `%USERPROFILE%\.gradle\caches`). Everything is downloaded again on the next start (about
+   1 GB). If you also use Gradle for other projects, their dependencies are downloaded again as well.
 
 ### VL-507
-**Build-Dateien sind gesperrt**
+**Build files are locked**
 
-Ein anderer Gradle-Prozess hält eine Sperre auf Gradles Cache (`Timeout waiting to lock`,
+Another Gradle process holds a lock on Gradle's cache (`Timeout waiting to lock`,
 `It is currently in use by another Gradle instance`).
 
-**Lösung:**
-1. Beende andere Builds: IDEs wie IntelliJ IDEA, ein offenes `run.bat`/`gradlew`, ein zweiter Launcher.
-2. Beende hängende Java-Prozesse im Task-Manager („OpenJDK Platform binary“).
-3. Starte den PC neu, falls die Sperre bleibt.
+**Fix:**
+1. End other builds: IDEs such as IntelliJ IDEA, an open `run.bat`/`gradlew`, a second launcher.
+2. End hanging Java processes in the Task Manager ("OpenJDK Platform binary").
+3. Restart your PC if the lock remains.
 
 ### VL-508
-**Minecraft-Dateien fehlen**
+**Minecraft files are missing**
 
-Unimined (das Gradle-Plugin für Minecraft) hat den Minecraft-1.8.9-Client nicht vorbereitet
-(`Unimined did not prepare the Minecraft 1.8.9 client`), meist nach einem abgebrochenen ersten Build.
+Unimined (the Gradle plugin for Minecraft) did not prepare the Minecraft 1.8.9 client
+(`Unimined did not prepare the Minecraft 1.8.9 client`), usually after an interrupted first build.
 
-**Lösung:**
-1. Schließe den Launcher und lösche im Gradle-Ordner `caches/unimined`
+**Fix:**
+1. Close the launcher and delete `caches/unimined` in the Gradle folder
    (Windows: `%USERPROFILE%\.gradle\caches\unimined`).
-2. Starte den Launcher mit Internetverbindung und klicke auf **Spielen**: Minecraft wird neu geladen.
+2. Start the launcher with an internet connection and press **Play**: Minecraft is downloaded again.
 
-## 6xx: Minecraft starten und spielen
+## 6xx: Starting and playing Minecraft
 
-Diese Codes erscheinen, wenn der Build geklappt hat, Minecraft aber nicht startet oder mit einem Fehler
-beendet wird. Gibt es einen frischen Absturzbericht, öffnet **Absturzbericht öffnen** ihn direkt; er liegt
-unter `<Datenordner>/source/run/client/crash-reports/`.
+These codes appear when the build worked but Minecraft does not start or exits with an error. If there is
+a fresh crash report, **Open crash report** opens it directly; it is in
+`<data folder>/source/run/client/crash-reports/`.
 
 ### VL-600
-**Minecraft ist abgestürzt**
+**Minecraft crashed**
 
-Minecraft wurde mit einem Fehler beendet. Die Ursache ließ sich keinem der genaueren Codes zuordnen.
+Minecraft exited with an error. The cause could not be matched to one of the more specific codes.
 
-**Lösung:**
-1. Öffne den Absturzbericht (Knopf in der Meldung) oder die Konsole. Wichtig sind die Zeile
-   `Description:` und die erste Zeile des Stacktraces darunter.
-2. Hast du eigene Mods, deaktiviere sie auf der Mods-Seite und starte erneut. Läuft es dann, aktiviere sie
-   einzeln, bis der Fehler wieder auftritt.
-3. Einstellungen → Fehlerbehebung → **Build-Cache leeren**.
-4. Bleibt es, [melde den Fehler](#einen-fehler-melden) mit dem Absturzbericht.
+**Fix:**
+1. Open the crash report (button in the message) or the console. What matters is the `Description:` line
+   and the first line of the stack trace below it.
+2. If you have custom mods, disable them on the Mods page and start again. If it works then, enable them
+   one by one until the error comes back.
+3. Settings → Troubleshooting → **Clear build cache**.
+4. If it remains, [report the error](#reporting-an-error) with the crash report.
 
-Hinweis: Auch wer Minecraft über den Task-Manager beendet, bekommt diesen Code.
+Note: Ending Minecraft through the Task Manager also produces this code.
 
 ### VL-601
-**Minecraft konnte seinen Arbeitsspeicher nicht reservieren**
+**Minecraft could not reserve its memory**
 
-Java konnte den eingestellten Arbeitsspeicher nicht bekommen und Minecraft gar nicht erst starten
+Java could not get the configured memory and could not even start Minecraft
 (`Could not reserve enough space for object heap`, `Error occurred during initialization of VM`,
 `There is insufficient memory for the Java Runtime Environment`).
 
-**Lösung:**
-1. Senke Einstellungen → Spiel → **Arbeitsspeicher** (z. B. auf 2–3 GB).
-2. Schließe andere Programme; auch Gradle belegt während des Spiels Speicher.
-3. Windows: Aktiviere die Auslagerungsdatei (siehe [VL-505](#vl-505)).
+**Fix:**
+1. Lower Settings → Game → **Memory** (e.g. to 2–3 GB).
+2. Close other programs; Gradle also uses memory while you play.
+3. Windows: Enable the paging file (see [VL-505](#vl-505)).
 
 ### VL-602
-**Minecraft hat keinen Arbeitsspeicher mehr**
+**Minecraft ran out of memory**
 
-Minecraft hat seinen Arbeitsspeicher aufgebraucht (`java.lang.OutOfMemoryError`).
+Minecraft used up its memory (`java.lang.OutOfMemoryError`).
 
-**Lösung:**
-1. Erhöhe Einstellungen → Spiel → **Arbeitsspeicher** auf 3–4 GB. Mehr als 6 GB hilft bei 1.8.9 selten.
-2. Nutze kleinere Ressourcenpakete (512x und höher brauchen sehr viel Speicher), weniger Shader und Mods.
-3. Senke die Sichtweite.
+**Fix:**
+1. Raise Settings → Game → **Memory** to 3–4 GB. More than 6 GB rarely helps with 1.8.9.
+2. Use smaller resource packs (512x and higher need a lot of memory), fewer shaders and mods.
+3. Lower the render distance.
 
 ### VL-603
-**Problem mit dem Grafiktreiber**
+**Graphics driver problem**
 
-Minecraft konnte kein OpenGL-Fenster öffnen (`Pixel format not accelerated`, `No OpenGL context found`,
+Minecraft could not open an OpenGL window (`Pixel format not accelerated`, `No OpenGL context found`,
 `LWJGLException`, `GLXBadFBConfig`).
 
-**Lösung:**
-1. **Installiere den aktuellen Grafiktreiber** direkt vom Hersteller (NVIDIA, AMD oder Intel), nicht nur über
-   Windows Update.
-2. **Laptops mit zwei Grafikkarten:** Windows: Einstellungen → System → Anzeige → Grafik → *Durchsuchen* →
-   `<Datenordner>\runtime\temurin-8\<Ordner>\bin\java.exe` und `javaw.exe` hinzufügen → Optionen →
-   *Hohe Leistung*. Bei NVIDIA alternativ in der NVIDIA-Systemsteuerung.
-3. **Remotedesktop/Streaming:** Über eine RDP-Sitzung gibt es oft kein OpenGL; starte direkt am PC.
-4. **Linux:** Installiere die Grafiktreiber (Mesa bzw. den proprietären Treiber) und `xrandr`
-   (Debian/Ubuntu: `sudo apt install x11-xserver-utils`). Minecraft 1.8.9 braucht X11; unter Wayland läuft es
-   über XWayland.
+**Fix:**
+1. **Install the latest graphics driver** directly from the manufacturer (NVIDIA, AMD or Intel), not just
+   via Windows Update.
+2. **Laptops with two graphics cards:** Windows: Settings → System → Display → Graphics → *Browse* → add
+   `<data folder>\runtime\temurin-8\<folder>\bin\java.exe` and `javaw.exe` → Options →
+   *High performance*. With NVIDIA, alternatively in the NVIDIA Control Panel.
+3. **Remote desktop/streaming:** There is often no OpenGL over an RDP session; start directly on the PC.
+4. **Linux:** Install the graphics drivers (Mesa or the proprietary driver) and `xrandr`
+   (Debian/Ubuntu: `sudo apt install x11-xserver-utils`). Minecraft 1.8.9 needs X11; on Wayland it runs
+   through XWayland.
 
 ### VL-604
-**Ein Mod verhindert den Start**
+**A mod prevents the start**
 
-Forge hat einen eigenen Mod abgelehnt oder ein Mod ist beim Laden abgestürzt (`MissingModsException`,
-`DuplicateModsFoundException`, `WrongMinecraftVersionException`, `UnsupportedClassVersionError`). Die Meldung
-zeigt die Zeile, die den Mod nennt.
+Forge rejected a custom mod, or a mod crashed while loading (`MissingModsException`,
+`DuplicateModsFoundException`, `WrongMinecraftVersionException`, `UnsupportedClassVersionError`). The
+message shows the line that names the mod.
 
-**Lösung:**
-1. Öffne die Mods-Seite und deaktiviere alle eigenen Mods. Startet Vibe dann, aktiviere sie einzeln, um den
-   Verursacher zu finden.
-2. `Missing Mods`/`requires`: Dem Mod fehlt ein anderer Mod, den er braucht; installiere ihn mit.
-3. `Duplicate Mods`: Ein Mod liegt doppelt im Mods-Ordner; entferne eine Kopie.
-4. `UnsupportedClassVersionError`: Der Mod ist für neuere Minecraft-/Java-Versionen gebaut und läuft nicht
-   mit 1.8.9; suche eine 1.8.9-Version.
+**Fix:**
+1. Open the Mods page and disable all custom mods. If Vibe starts then, enable them one by one to find the
+   culprit.
+2. `Missing Mods`/`requires`: the mod needs another mod that is missing; install it too.
+3. `Duplicate Mods`: a mod is in the mods folder twice; remove one copy.
+4. `UnsupportedClassVersionError`: the mod is built for newer Minecraft/Java versions and does not run
+   with 1.8.9; look for a 1.8.9 version.
 
 ### VL-605
-**Spielbibliotheken konnten nicht geladen werden**
+**Game libraries could not be loaded**
 
-Die nativen LWJGL-Bibliotheken (Grafik, Ton, Eingabe) ließen sich nicht laden (`UnsatisfiedLinkError`,
+The native LWJGL libraries (graphics, sound, input) could not be loaded (`UnsatisfiedLinkError`,
 `no lwjgl64 in java.library.path`).
 
-**Lösung:**
-1. Einstellungen → Fehlerbehebung → **Build-Cache leeren**: Die Bibliotheken werden neu entpackt.
-2. Prüfe die Quarantäne deines Virenscanners (z. B. `lwjgl64.dll`, `OpenAL64.dll`) und füge den
-   Datenordner und den Gradle-Ordner als Ausnahme hinzu.
-3. Linux auf ARM-Prozessoren wird von Minecraft 1.8.9 (LWJGL 2) nicht unterstützt.
+**Fix:**
+1. Settings → Troubleshooting → **Clear build cache**: the libraries are unpacked again.
+2. Check your antivirus's quarantine (e.g. `lwjgl64.dll`, `OpenAL64.dll`) and add the data folder and the
+   Gradle folder as exceptions.
+3. Linux on ARM processors is not supported by Minecraft 1.8.9 (LWJGL 2).
 
 ### VL-606
-**Java ist abgestürzt**
+**Java crashed**
 
-Die Java-Laufzeit selbst ist abgestürzt (`A fatal error has been detected by the Java Runtime Environment`,
-`EXCEPTION_ACCESS_VIOLATION`). Es gibt dann keinen Minecraft-Absturzbericht, sondern eine Datei
-`hs_err_pid<Zahl>.log` im Spielordner (`<Datenordner>/source/run/client/`).
+The Java runtime itself crashed (`A fatal error has been detected by the Java Runtime Environment`,
+`EXCEPTION_ACCESS_VIOLATION`). There is then no Minecraft crash report but a file
+`hs_err_pid<number>.log` in the game folder (`<data folder>/source/run/client/`).
 
-**Ursachen:** Fast immer Grafiktreiber oder Programme, die sich in das Spiel einklinken.
+**Causes:** Almost always the graphics driver or programs that hook into the game.
 
-**Lösung:**
-1. Aktualisiere den Grafiktreiber ([VL-603](#vl-603)).
-2. Schalte Overlays aus: Discord-Overlay, MSI Afterburner/RivaTuner, Overwolf, GeForce-Experience-Overlay,
-   Aufnahme-Tools.
-3. Deaktiviere eigene Mods und Shader zum Testen.
-4. Hilft nichts, [melde den Fehler](#einen-fehler-melden) mit der `hs_err_pid…log`-Datei.
+**Fix:**
+1. Update the graphics driver ([VL-603](#vl-603)).
+2. Turn off overlays: Discord overlay, MSI Afterburner/RivaTuner, Overwolf, GeForce Experience overlay,
+   recording tools.
+3. Disable custom mods and shaders to test.
+4. If nothing helps, [report the error](#reporting-an-error) with the `hs_err_pid…log` file.
 
 ### VL-607
-**Rosetta 2 fehlt**
+**Rosetta 2 is missing**
 
-Auf Macs mit Apple-Chip (M1, M2, …) läuft Minecraft 1.8.9 mit einem Intel-Java, das Rosetta 2 braucht
+On Macs with Apple chips (M1, M2, …), Minecraft 1.8.9 runs on an Intel Java, which needs Rosetta 2
 (`Bad CPU type in executable`).
 
-**Lösung:** Öffne das Terminal und führe aus:
+**Fix:** Open Terminal and run:
 
 ```
 softwareupdate --install-rosetta --agree-to-license
 ```
 
-Starte danach den Launcher neu und klicke auf **Spielen**.
+Then restart the launcher and press **Play**.
 
-## 7xx: Der Launcher selbst
+## 7xx: The launcher itself
 
 ### VL-701
-**Launcher ist bereits geöffnet**
+**Launcher is already open**
 
-Es läuft schon ein Vibe Launcher mit demselben Datenordner. Zwei Launcher würden sich beim Aktualisieren und
-Bauen gegenseitig stören.
+A Vibe Launcher with the same data folder is already running. Two launchers would get in each other's way
+when updating and building.
 
-**Lösung:**
-1. Suche das offene Fenster (Taskleiste, Alt+Tab; es kann minimiert sein).
-2. Ist keines sichtbar, hängt ein alter Launcher im Hintergrund: Windows-Task-Manager → „OpenJDK Platform
-   binary“ bzw. „Java(TM) Platform SE binary“ mit dem Vibe Launcher beenden. macOS/Linux:
+**Fix:**
+1. Look for the open window (taskbar, Alt+Tab; it may be minimized).
+2. If none is visible, an old launcher is hanging in the background: Windows Task Manager → end
+   "OpenJDK Platform binary" or "Java(TM) Platform SE binary" with the Vibe Launcher. macOS/Linux:
    `pkill -f VibeLauncher.jar`.
-3. Nach einem Launcher-Update startet der Launcher kurz von selbst neu; warte ein paar Sekunden.
+3. After a launcher update, the launcher restarts on its own for a moment; wait a few seconds.
 
 ### VL-702
-**Kein Desktop verfügbar**
+**No desktop available**
 
-Der Launcher wurde ohne grafische Oberfläche gestartet, z. B. über SSH, in einem Docker-Container oder unter
-Linux ohne `DISPLAY`. Die Meldung erscheint in der Kommandozeile.
+The launcher was started without a graphical interface, e.g. over SSH, in a Docker container or on Linux
+without `DISPLAY`. The message appears on the command line.
 
-**Lösung:** Starte den Launcher in einer normalen Desktop-Sitzung. Unter WSL brauchst du WSLg (Windows 11).
+**Fix:** Start the launcher in a normal desktop session. Under WSL you need WSLg (Windows 11).
 
 ### VL-703
-**Launcher-Update fehlgeschlagen**
+**Launcher update failed**
 
-Das Update des Launchers konnte nicht geladen oder installiert werden.
+The launcher update could not be downloaded or installed.
 
-**Lösung:**
-1. Versuche es später erneut (Einstellungen → Updates → *Update installieren*).
-2. Liegt `VibeLauncher.jar` in einem Ordner ohne Schreibrechte (z. B. `C:\Programme`), verschiebe die Datei
-   auf den Desktop oder in deinen Benutzerordner.
-3. **Von Hand:** Lade die neueste `VibeLauncher.jar` aus den
-   [GitHub-Releases](https://github.com/SkidderClub/Vibe/releases), schließe den Launcher und ersetze die alte
-   Datei.
+**Fix:**
+1. Try again later (Settings → Updates → *Install update*).
+2. If `VibeLauncher.jar` is in a folder without write permission (e.g. `C:\Program Files`), move the file
+   to the desktop or your user folder.
+3. **By hand:** Download the latest `VibeLauncher.jar` from the
+   [GitHub releases](https://github.com/SkidderClub/Vibe/releases), close the launcher and replace the old
+   file.
 
 ### VL-704
-**Launcher-Update beschädigt**
+**Launcher update damaged**
 
-Das heruntergeladene Update passte nicht zu seiner Prüfsumme und wurde zu deiner Sicherheit verworfen.
+The downloaded update did not match its checksum and was discarded for your safety.
 
-**Lösung:** Versuche es später erneut. Passiert es immer wieder, lade die Datei von Hand
-([VL-703](#vl-703)) und prüfe Virenscanner oder Proxy.
+**Fix:** Try again later. If it keeps happening, download the file by hand ([VL-703](#vl-703)) and check
+your antivirus or proxy.
 
 ### VL-705
-**Launcher läuft nicht aus VibeLauncher.jar**
+**Launcher does not run from VibeLauncher.jar**
 
-Automatische Updates und Neustarts (z. B. nach einem Sprachwechsel) funktionieren nur, wenn der Launcher aus
-der Datei `VibeLauncher.jar` läuft, nicht aus einer IDE oder aus entpackten Klassen.
+Automatic updates and restarts (e.g. after changing the language) only work when the launcher runs from
+the `VibeLauncher.jar` file, not from an IDE or from unpacked classes.
 
-**Lösung:** Starte den Launcher mit `java -jar VibeLauncher.jar` oder per Doppelklick auf die JAR. Nach einem
-Sprachwechsel kannst du ihn auch einfach von Hand neu starten.
+**Fix:** Start the launcher with `java -jar VibeLauncher.jar` or by double-clicking the JAR. After
+changing the language, you can also simply restart it by hand.
 
 ### VL-706
-**Account-Tresor nicht lesbar**
+**Account vault unreadable**
 
-Die Account-Liste von Vibe (`accounts.vault`) ist beschädigt oder passt nicht zum Schlüssel (`accounts.key`),
-z. B. weil eine der beiden Dateien aus einem anderen Profil stammt. Beide liegen in
-`<Datenordner>/source/run/client/vibe/accounts/`. Die Accounts-Seite zeigt den Fehler an; Vibe selbst meldet
-im Alt Manager „Cannot read the account vault“ und speichert keine Accounts, bis das behoben ist.
+Vibe's account list (`accounts.vault`) is damaged or does not match the key (`accounts.key`), e.g.
+because one of the two files comes from another profile. Both are in
+`<data folder>/source/run/client/vibe/accounts/`. The Accounts page shows the error; Vibe itself reports
+"Cannot read the account vault" in the Alt Manager and does not save any accounts until this is fixed.
 
-**Lösung:**
-1. Hast du eine Sicherung des Ordners `accounts`, stelle `accounts.vault` und `accounts.key` **zusammen** daraus
-   wieder her. Die beiden Dateien gehören immer zusammen; einzeln kopiert passen sie nicht.
-2. Ist keine Sicherung da: Schließe Minecraft und benenne `accounts.vault` in `accounts.vault.kaputt` um. Beim
-   nächsten Start beginnt Vibe mit einem leeren Tresor. Klicke dann auf **Account hinzufügen** und melde dich
-   im Alt Manager neu an.
-3. Dein Minecraft- bzw. Microsoft-Account selbst ist davon nicht betroffen, nur die lokal gespeicherte Anmeldung.
+**Fix:**
+1. If you have a backup of the `accounts` folder, restore `accounts.vault` and `accounts.key`
+   **together** from it. The two files always belong together; copied separately they do not match.
+2. If there is no backup: close Minecraft and rename `accounts.vault` to `accounts.vault.broken`. On the
+   next start, Vibe begins with an empty vault. Then press **Add account** and sign in again in the Alt
+   Manager.
+3. Your Minecraft or Microsoft account itself is not affected, only the locally saved sign-in.
 
 ### VL-707
-**Account-Schlüssel fehlt**
+**Account key missing**
 
-`accounts.vault` ist da, aber `accounts.key` fehlt. Ohne Schlüssel lässt sich der Tresor nicht entschlüsseln,
-und Vibe legt auch keinen neuen an, solange der alte Tresor existiert.
+`accounts.vault` is there, but `accounts.key` is missing. Without the key the vault cannot be decrypted,
+and Vibe does not create a new one as long as the old vault exists.
 
-**Lösung:**
-1. Stelle `accounts.key` aus einer Sicherung oder dem Papierkorb wieder her (gleicher Ordner wie
-   `accounts.vault`).
-2. Geht das nicht, sind die gespeicherten Anmeldungen verloren: Benenne `accounts.vault` um (siehe
-   [VL-706](#vl-706), Schritt 2) und melde dich im Alt Manager neu an.
+**Fix:**
+1. Restore `accounts.key` from a backup or the recycle bin (same folder as `accounts.vault`).
+2. If that is not possible, the saved sign-ins are lost: rename `accounts.vault` (see
+   [VL-706](#vl-706), step 2) and sign in again in the Alt Manager.
 
 ### VL-708
-**Konnte nicht geöffnet werden**
+**Could not open**
 
-Ein Ordner, eine Datei oder ein Link ließ sich nicht öffnen, weil kein passendes Programm (Dateimanager,
-Texteditor, Browser) gefunden wurde. Die Meldung nennt den Pfad bzw. die Adresse, die Konsole ebenfalls.
+A folder, file or link could not be opened because no suitable program (file manager, text editor,
+browser) was found. The message names the path or address, and so does the console.
 
-**Lösung:** Öffne den Pfad oder Link von Hand. Unter Linux hilft oft die Installation von `xdg-utils`.
+**Fix:** Open the path or link by hand. On Linux, installing `xdg-utils` often helps.
 
 ### VL-709
-**Launcher konnte nicht starten**
+**Launcher could not start**
 
-Beim Aufbau des Fensters ist ein unerwarteter Fehler aufgetreten.
+An unexpected error occurred while building the window.
 
-**Lösung:**
-1. Starte den Launcher erneut.
-2. Aktualisiere das Java, mit dem du den Launcher öffnest.
-3. Bleibt es, [melde den Fehler](#einen-fehler-melden) mit `logs/launcher.log` aus dem Datenordner.
+**Fix:**
+1. Start the launcher again.
+2. Update the Java you open the launcher with.
+3. If it remains, [report the error](#reporting-an-error) with `logs/launcher.log` from the data folder.
 
-## 8xx: Eigene Mods
+## 8xx: Custom mods
 
-Diese Codes stehen hinter abgelehnten Dateien, wenn du Mods auf den Launcher ziehst oder über **Mods
-hinzufügen** auswählst, z. B. `Sodium.jar: Fabric-Mods funktionieren nicht mit Forge 1.8.9 (VL-806)`.
-Vibe lädt Mods für **Forge 1.8.9**.
-
-### VL-801
-**Keine Mod-Datei**
-
-Nur `.jar`- oder `.zip`-Dateien können Mods sein. Entpacke heruntergeladene Archive (`.rar`, `.7z`) und
-füge die enthaltene `.jar` hinzu.
-
-### VL-802
-**Mod-Datei zu groß**
-
-Dateien über 300 MB werden abgelehnt. Prüfe, ob es wirklich ein Mod ist (und kein Modpack oder Spiel).
-
-### VL-803
-**Beschädigte Mod-Datei**
-
-Die Datei ist kein gültiges Archiv, oft ein abgebrochener Download oder eine HTML-Seite mit `.jar`-Endung.
-Lade den Mod erneut von der offiziellen Seite herunter.
-
-### VL-804
-**OptiFine ist bereits enthalten**
-
-Vibe startet immer mit OptiFine 1.8.9 HD U M6 pre2. Eine zweite OptiFine-Version würde den Start verhindern;
-du musst nichts tun.
-
-### VL-805
-**Vibe wird automatisch geladen**
-
-Du hast eine Vibe-JAR hinzugefügt. Der Launcher baut und lädt Vibe selbst; eine zweite Kopie würde Forge
-abbrechen lassen.
-
-### VL-806
-**Fabric-Mod**
-
-Fabric-Mods funktionieren nicht mit Forge. Suche auf der Seite des Mods nach einer Version für
+These codes are shown next to rejected files when you drag mods onto the launcher or select them with
+**Add mods**, e.g. `Sodium.jar: Fabric mods do not work with Forge 1.8.9 (VL-806)`. Vibe loads mods for
 **Forge 1.8.9**.
 
-### VL-807
-**Mod für ein neueres Minecraft**
+### VL-801
+**Not a mod file**
 
-Der Mod ist für Forge 1.13 oder neuer (enthält `META-INF/mods.toml`). Suche nach einer Version für 1.8.9.
+Only `.jar` or `.zip` files can be mods. Unpack downloaded archives (`.rar`, `.7z`) and add the `.jar`
+inside.
+
+### VL-802
+**Mod file too large**
+
+Files over 300 MB are refused. Check that it really is a mod (and not a modpack or a game).
+
+### VL-803
+**Damaged mod file**
+
+The file is not a valid archive, often an interrupted download or an HTML page with a `.jar` extension.
+Download the mod again from its official page.
+
+### VL-804
+**OptiFine is already included**
+
+Vibe always starts with OptiFine 1.8.9 HD U M6 pre2. A second OptiFine version would prevent the start;
+you do not need to do anything.
+
+### VL-805
+**Vibe is loaded automatically**
+
+You added a Vibe JAR. The launcher builds and loads Vibe itself; a second copy would make Forge abort.
+
+### VL-806
+**Fabric mod**
+
+Fabric mods do not work with Forge. Look on the mod's page for a version for **Forge 1.8.9**.
+
+### VL-807
+**Mod for a newer Minecraft**
+
+The mod is for Forge 1.13 or newer (it contains `META-INF/mods.toml`). Look for a version for 1.8.9.
 
 ### VL-808
-**Mod bereits installiert**
+**Mod already installed**
 
-Eine Datei mit demselben Namen liegt schon im Mods-Ordner (aktiv oder deaktiviert). Willst du eine neuere
-Version installieren, entferne zuerst die alte auf der Mods-Seite.
+A file with the same name is already in the mods folder (enabled or disabled). To install a newer
+version, first remove the old one on the Mods page.
 
 ### VL-809
-**Dateiname bereits vergeben**
+**File name already taken**
 
-Beim Aktivieren oder Deaktivieren eines Mods gibt es die Zieldatei schon, z. B. liegen `Mod.jar` und
-`Mod.jar.disabled` nebeneinander. Öffne den Mods-Ordner (Mods-Seite → *Ordner öffnen*) und lösche eine der
-beiden Dateien.
+When enabling or disabling a mod, the target file already exists, e.g. `Mod.jar` and
+`Mod.jar.disabled` are next to each other. Open the mods folder (Mods page → *Open folder*) and delete one
+of the two files.
 
 ### VL-810
-**Mod für eine andere Minecraft-Version**
+**Mod for another Minecraft version**
 
-Kein Fehler, sondern eine Warnung auf der Mods-Seite: Laut `mcmod.info` ist der Mod für eine andere
-Minecraft-Version gemacht. Er lädt eventuell nicht ([VL-604](#vl-604)). Suche nach einer 1.8.9-Version.
+Not an error but a warning on the Mods page: according to `mcmod.info`, the mod was made for another
+Minecraft version. It may not load ([VL-604](#vl-604)). Look for a 1.8.9 version.
 
-## 900: Unerwartete Fehler
+## 900: Unexpected errors
 
 ### VL-900
-**Unerwarteter Fehler**
+**Unexpected error**
 
-Ein Fehler, für den es keinen eigenen Code gibt. Die Meldung enthält die technische Beschreibung.
+An error that has no code of its own. The message contains the technical description.
 
-**Lösung:**
-1. Versuche es erneut und starte notfalls den Launcher neu.
-2. Bleibt es, [melde den Fehler](#einen-fehler-melden) mit dem Launcher-Log. Damit bekommt das Problem
-   künftig einen eigenen Code.
+**Fix:**
+1. Try again and restart the launcher if necessary.
+2. If it remains, [report the error](#reporting-an-error) with the launcher log. That way the problem will
+   get its own code in the future.
 
-## Probleme ohne Fehlercode
+## Problems without an error code
 
-**Die `VibeLauncher.jar` öffnet sich nicht per Doppelklick.**
-Zum Öffnen der JAR brauchst du ein installiertes Java 8 oder neuer.
-1. Installiere Java, z. B. Eclipse Temurin 21 von https://adoptium.net (beim Setup „Set JAVA_HOME“ und
-   „Associate .jar“ aktivieren).
-2. Öffnet sich stattdessen WinRAR oder 7-Zip, ist `.jar` falsch verknüpft: Rechtsklick → Öffnen mit →
-   *Java(TM) Platform SE binary* bzw. *OpenJDK Platform binary* → Immer diese App verwenden.
-3. Oder starte per Kommandozeile im Ordner der Datei: `java -jar VibeLauncher.jar`. Fehlermeldungen
-   erscheinen dann dort.
-4. Meldet Java `UnsupportedClassVersionError … class file version 52.0`, ist dein Java älter als Java 8:
-   aktualisiere es.
+**`VibeLauncher.jar` does not open on double-click.**
+To open the JAR you need Java 8 or newer installed.
+1. Install Java, e.g. Eclipse Temurin 21 from https://adoptium.net (enable "Set JAVA_HOME" and
+   "Associate .jar" during setup).
+2. If WinRAR or 7-Zip opens instead, `.jar` is associated with the wrong program: right-click → Open with
+   → *Java(TM) Platform SE binary* or *OpenJDK Platform binary* → Always use this app.
+3. Or start it from the command line in the file's folder: `java -jar VibeLauncher.jar`. Error messages
+   then appear there.
+4. If Java reports `UnsupportedClassVersionError … class file version 52.0`, your Java is older than
+   Java 8: update it.
 
-**Der erste Start dauert sehr lange.**
-Das ist normal: Beim ersten Mal werden Vibe, zwei Java-Versionen, Gradle, Minecraft, Forge und OptiFine
-geladen und Vibe wird gebaut (5–15 Minuten, je nach Leitung). Die Spielleiste zeigt den Fortschritt, die
-Konsole jede Zeile. Spätere Starts gehen deutlich schneller, weil nur noch Geändertes gebaut wird.
+**The first start takes very long.**
+That is normal: the first time, Vibe, two Java versions, Gradle, Minecraft, Forge and OptiFine are
+downloaded and Vibe is built (5–15 minutes, depending on your connection). The play bar shows the
+progress, the console every line. Later starts are much faster because only what changed is rebuilt.
 
-**Das Spiel startet, aber mit dem falschen Account oder nicht angemeldet.**
-Wähle den Account auf der Accounts-Seite. *Automatisch* nutzt das Auto Login von Vibe. Abgelaufene
-Microsoft-Anmeldungen erneuerst du im Alt Manager (Account hinzufügen).
+**The game starts, but with the wrong account or not signed in.**
+Choose the account on the Accounts page. *Automatic* uses Vibe's Auto Login. Renew expired Microsoft
+sign-ins in the Alt Manager (Add account).
 
-**In der Vorschau fehlt der Skin.**
-Skins kommen von den Mojang-Servern. Offline-Accounts und Accounts ohne eigenen Skin zeigen Steve bzw. Alex.
-Ohne Internet bleibt der zuletzt geladene Skin sichtbar. Das betrifft nur die Vorschau, nicht das Spiel.
+**The skin is missing in the preview.**
+Skins come from Mojang's servers. Offline accounts and accounts without their own skin show Steve or Alex.
+Without internet, the last loaded skin stays visible. This only affects the preview, not the game.
 
-**Nach dem Schließen des Launchers läuft Minecraft weiter.**
-Absicht: Das Spiel ist unabhängig vom Launcher. Öffnest du den Launcher wieder, verbindet er sich mit dem
-laufenden Spiel (ab Java 9 für den Launcher).
+**Minecraft keeps running after the launcher is closed.**
+That is intended: the game is independent of the launcher. When you open the launcher again, it connects
+to the running game (requires Java 9 or newer for the launcher).
 
-## Einen Fehler melden
+## Reporting an error
 
-Hilft keine Lösung, melde den Fehler im [Discord](https://dsc.gg/vibe-skidder-club) oder als
-[GitHub-Issue](https://github.com/SkidderClub/Vibe/issues). Gib Folgendes mit:
+If none of the fixes help, report the error on [Discord](https://dsc.gg/vibe-skidder-club) or as a
+[GitHub issue](https://github.com/SkidderClub/Vibe/issues). Include the following:
 
-1. Den **Fehlercode** und die vollständige Meldung (ein Screenshot genügt).
-2. Das **Launcher-Log**: `logs/launcher.log` im Datenordner (Konsole → *Launcher-Log*).
-3. Das **Spiel-Log** des fehlgeschlagenen Starts: `logs/game/<Datum>.log` (Konsole → *Spiel-Log*).
-4. Bei Abstürzen den **Absturzbericht** aus `source/run/client/crash-reports/` bzw. die
-   `hs_err_pid…log`-Datei.
-5. Dein Betriebssystem und, falls bekannt, Grafikkarte und Arbeitsspeicher.
+1. The **error code** and the full message (a screenshot is enough).
+2. The **launcher log**: `logs/launcher.log` in the data folder (Console → *Launcher log*).
+3. The **game log** of the failed start: `logs/game/<date>.log` (Console → *Game log*).
+4. For crashes, the **crash report** from `source/run/client/crash-reports/` or the
+   `hs_err_pid…log` file.
+5. Your operating system and, if known, graphics card and memory.
 
-Der Launcher selbst schreibt keine Passwörter oder Anmelde-Tokens in seine Logs: Aus dem Account-Tresor liest
-er nur Namen und UUIDs. Schau trotzdem kurz über die Dateien, bevor du sie öffentlich teilst.
+The launcher itself does not write passwords or sign-in tokens to its logs: from the account vault it only
+reads names and UUIDs. Still, take a quick look over the files before you share them publicly.
