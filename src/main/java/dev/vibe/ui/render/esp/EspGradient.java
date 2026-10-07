@@ -1,7 +1,6 @@
 package dev.vibe.ui.render.esp;
 
 import dev.vibe.module.impl.visual.Esp2DSettings.Gradient;
-import java.util.*;
 
 /** CPU reference also used by the editor strip and the shader's uniform preparation. */
 public final class EspGradient {
@@ -13,10 +12,14 @@ public final class EspGradient {
     }
     public EspGradient(Gradient gradient, double seconds,int team,boolean hurt) {
         int n=gradient.count.getInt();
-        List<Integer> indices=new ArrayList<Integer>(); for(int i=0;i<n;i++) indices.add(i);
-        Collections.sort(indices,Comparator.comparingDouble(i -> gradient.positions.get(i).getDouble()));
+        // Stable insertion sort by position: the same order as a stable sort with
+        // Double.compare, without boxing indices for every paint of every frame.
+        int[] indices=new int[n]; double[] keys=new double[n];
+        for(int i=0;i<n;i++) { keys[i]=gradient.positions.get(i).getDouble(); int j=i-1;
+            while(j>=0 && Double.compare(keys[indices[j]],keys[i])>0) { indices[j+1]=indices[j]; j--; }
+            indices[j+1]=i; }
         positions=new float[n]; colors=new int[n];
-        for(int i=0;i<n;i++) { positions[i]=gradient.positions.get(indices.get(i)).getFloat(); colors[i]=gradient.colors.get(indices.get(i)).resolve(team,hurt); }
+        for(int i=0;i<n;i++) { positions[i]=gradient.positions.get(indices[i]).getFloat(); colors[i]=gradient.colors.get(indices[i]).resolve(team,hurt); }
         double angle=Math.toRadians(gradient.direction.getDouble()); dx=(float)Math.cos(angle); dy=(float)Math.sin(angle);
         phase=(float)((seconds*gradient.speed.getDouble())%2);
     }

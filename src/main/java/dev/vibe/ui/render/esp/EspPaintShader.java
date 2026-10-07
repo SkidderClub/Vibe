@@ -32,6 +32,7 @@ final class EspPaintShader {
                 linked=GL20.glCreateProgram();GL20.glAttachShader(linked,vertex);GL20.glAttachShader(linked,fragment);GL20.glLinkProgram(linked);
                 if(GL20.glGetProgrami(linked,GL20.GL_LINK_STATUS)==0) throw new IllegalStateException(GL20.glGetProgramInfoLog(linked,4096));
                 program=linked;
+                resolveLocations();
             } catch(RuntimeException error) {
                 failed=true; if(linked!=0)GL20.glDeleteProgram(linked);
                 System.err.println("[Vibe] ESP gradient shader unavailable: "+error.getMessage()); return false;
@@ -42,28 +43,44 @@ final class EspPaintShader {
         int solidColor=paint.solid.resolve(team,hurt);
         if(paint.mode.is("Team")&&team!=0&&!paint.solid.isHurtOverride(hurt))solidColor=(solidColor&0xFF000000)|(team&0xFFFFFF);
         GL20.glUseProgram(program);
-        GL20.glUniform1i(location("image"),0);GL20.glUniform1i(location("textured"),texture?1:0);
-        GL20.glUniform1i(location("count"),solid?1:gradient.colors.length);
+        GL20.glUniform1i(imageLocation,0);GL20.glUniform1i(texturedLocation,texture?1:0);
+        GL20.glUniform1i(countLocation,solid?1:gradient.colors.length);
         for(int i=0;i<gradient.colors.length;i++) {
             int c=solid?solidColor:gradient.colors[i];
             if(forcedColor!=0)c=(c&0xFF000000)|(forcedColor&0x00FFFFFF);
-            GL20.glUniform4f(location("colors["+i+"]"),(c>>16&255)/255F,(c>>8&255)/255F,(c&255)/255F,(c>>>24)/255F);
-            GL20.glUniform1f(location("stops["+i+"]"),gradient.positions[i]);
+            GL20.glUniform4f(COLOR_LOCATIONS[i],(c>>16&255)/255F,(c>>8&255)/255F,(c&255)/255F,(c>>>24)/255F);
+            GL20.glUniform1f(STOP_LOCATIONS[i],gradient.positions[i]);
         }
-        GL20.glUniform2f(location("direction"),gradient.dx,gradient.dy);
-        GL20.glUniform1f(location("phase"),paint.mode.is("Rainbow")?(float)((seconds*paint.rainbowSpeed.getDouble())%1):gradient.phase);
-        GL20.glUniform1i(location("rainbow"),!solid&&paint.mode.is("Rainbow")?1:0);
-        GL20.glUniform1f(location("saturation"),paint.rainbowSaturation.getFloat());
-        GL20.glUniform1f(location("opacity"),opacity);
-        VIEWPORT.clear();GL11.glGetInteger(GL11.GL_VIEWPORT,VIEWPORT);
-        GL20.glUniform4f(location("viewport"),VIEWPORT.get(0),VIEWPORT.get(1),VIEWPORT.get(2),VIEWPORT.get(3));
-        GL20.glUniform2f(location("screen"),screenWidth,screenHeight);
+        GL20.glUniform2f(directionLocation,gradient.dx,gradient.dy);
+        GL20.glUniform1f(phaseLocation,paint.mode.is("Rainbow")?(float)((seconds*paint.rainbowSpeed.getDouble())%1):gradient.phase);
+        GL20.glUniform1i(rainbowLocation,!solid&&paint.mode.is("Rainbow")?1:0);
+        GL20.glUniform1f(saturationLocation,paint.rainbowSaturation.getFloat());
+        GL20.glUniform1f(opacityLocation,opacity);
+        if(!viewportValid){VIEWPORT.clear();GL11.glGetInteger(GL11.GL_VIEWPORT,VIEWPORT);viewportValid=true;}
+        GL20.glUniform4f(viewportLocation,VIEWPORT.get(0),VIEWPORT.get(1),VIEWPORT.get(2),VIEWPORT.get(3));
+        GL20.glUniform2f(screenLocation,screenWidth,screenHeight);
         boolean global=paint.mode.is("Global Gradient");
-        GL20.glUniform4f(location("region"),global?0:rect.x,global?0:rect.y,global?screenWidth:rect.w,global?screenHeight:rect.h);
+        GL20.glUniform4f(regionLocation,global?0:rect.x,global?0:rect.y,global?screenWidth:rect.w,global?screenHeight:rect.h);
         return true;
     }
-    private static final java.util.Map<String,Integer> locations=new java.util.HashMap<String,Integer>();
-    private static int location(String name) { Integer result=locations.get(name);if(result==null){result=GL20.glGetUniformLocation(program,name);locations.put(name,result);}return result; }
+    /**
+     * Drawing ESP boxes never changes the viewport, so their paints share one query.
+     * Esp2DRenderer calls this before the first paint of a box or batch of boxes.
+     */
+    static void invalidateViewport() { viewportValid=false; }
+    private static boolean viewportValid;
+    // Looked up once after linking; the names never change, so per-paint string building is unnecessary.
+    private static final int[] COLOR_LOCATIONS=new int[8],STOP_LOCATIONS=new int[8];
+    private static int imageLocation,texturedLocation,countLocation,directionLocation,phaseLocation,rainbowLocation,
+            saturationLocation,opacityLocation,viewportLocation,screenLocation,regionLocation;
+    private static void resolveLocations() {
+        imageLocation=location("image");texturedLocation=location("textured");countLocation=location("count");
+        for(int i=0;i<8;i++){COLOR_LOCATIONS[i]=location("colors["+i+"]");STOP_LOCATIONS[i]=location("stops["+i+"]");}
+        directionLocation=location("direction");phaseLocation=location("phase");rainbowLocation=location("rainbow");
+        saturationLocation=location("saturation");opacityLocation=location("opacity");viewportLocation=location("viewport");
+        screenLocation=location("screen");regionLocation=location("region");
+    }
+    private static int location(String name) { return GL20.glGetUniformLocation(program,name); }
     private static int compile(int type,String source) {
         int shader=GL20.glCreateShader(type);GL20.glShaderSource(shader,source);GL20.glCompileShader(shader);
         if(GL20.glGetShaderi(shader,GL20.GL_COMPILE_STATUS)==0) {String error=GL20.glGetShaderInfoLog(shader,4096);GL20.glDeleteShader(shader);throw new IllegalStateException(error);}
