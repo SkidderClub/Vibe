@@ -1,8 +1,10 @@
 package dev.vibe.launcher.game;
 
+import dev.vibe.launcher.core.ErrorCode;
 import dev.vibe.launcher.core.FileUtil;
 import dev.vibe.launcher.core.I18n;
 import dev.vibe.launcher.core.Json;
+import dev.vibe.launcher.core.LauncherException;
 import dev.vibe.launcher.core.Platform;
 import java.io.File;
 import java.io.IOException;
@@ -50,6 +52,8 @@ public final class ModLibrary {
     public static final class ImportResult {
         public final List<String> added = new ArrayList<String>();
         public final List<String> rejected = new ArrayList<String>();
+        /** The error code of each entry in {@link #rejected}. */
+        public final List<ErrorCode> rejectedCodes = new ArrayList<ErrorCode>();
     }
 
     static final class ModInfo {
@@ -88,26 +92,26 @@ public final class ModLibrary {
             String name = source.getName();
             String lower = name.toLowerCase(Locale.ROOT);
             if (!source.isFile() || !(lower.endsWith(".jar") || lower.endsWith(".zip"))) {
-                result.rejected.add(I18n.t("{0}: not a .jar mod file", name));
+                reject(result, ErrorCode.MOD_NOT_JAR, I18n.t("{0}: not a .jar mod file", name));
                 continue;
             }
             if (source.length() > MAX_SIZE) {
-                result.rejected.add(I18n.t("{0}: file is too large", name));
+                reject(result, ErrorCode.MOD_TOO_LARGE, I18n.t("{0}: file is too large", name));
                 continue;
             }
             ModInfo info;
             try { info = inspect(source.toPath()); }
             catch (IOException error) {
-                result.rejected.add(I18n.t("{0}: not a valid mod archive", name));
+                reject(result, ErrorCode.MOD_INVALID, I18n.t("{0}: not a valid mod archive", name));
                 continue;
             }
-            if (info.optifine) { result.rejected.add(I18n.t("{0}: OptiFine is already included with Vibe", name)); continue; }
-            if ("vibe".equalsIgnoreCase(info.id)) { result.rejected.add(I18n.t("{0}: Vibe is loaded automatically", name)); continue; }
-            if (info.fabric) { result.rejected.add(I18n.t("{0}: Fabric mods do not work with Forge 1.8.9", name)); continue; }
-            if (info.modernForge) { result.rejected.add(I18n.t("{0}: made for a newer Minecraft version", name)); continue; }
+            if (info.optifine) { reject(result, ErrorCode.MOD_OPTIFINE, I18n.t("{0}: OptiFine is already included with Vibe", name)); continue; }
+            if ("vibe".equalsIgnoreCase(info.id)) { reject(result, ErrorCode.MOD_VIBE, I18n.t("{0}: Vibe is loaded automatically", name)); continue; }
+            if (info.fabric) { reject(result, ErrorCode.MOD_FABRIC, I18n.t("{0}: Fabric mods do not work with Forge 1.8.9", name)); continue; }
+            if (info.modernForge) { reject(result, ErrorCode.MOD_NEWER_FORGE, I18n.t("{0}: made for a newer Minecraft version", name)); continue; }
             Path target = uniqueTarget(name);
             if (target == null) {
-                result.rejected.add(I18n.t("{0}: already installed", name));
+                reject(result, ErrorCode.MOD_DUPLICATE, I18n.t("{0}: already installed", name));
                 continue;
             }
             Files.copy(source.toPath(), target, StandardCopyOption.COPY_ATTRIBUTES);
@@ -116,12 +120,18 @@ public final class ModLibrary {
         return result;
     }
 
+    /** "Name.jar: reason (VL-806)": the code points to the fix in the error guide. */
+    private static void reject(ImportResult result, ErrorCode code, String reason) {
+        result.rejected.add(reason + " (" + code.id() + ")");
+        result.rejectedCodes.add(code);
+    }
+
     public void setEnabled(Mod mod, boolean enabled) throws IOException {
         if (mod.enabled == enabled) return;
         String name = mod.fileName;
         String next = enabled ? name.substring(0, name.length() - DISABLED.length()) : name + DISABLED;
         Path target = mod.file.resolveSibling(next);
-        if (Files.exists(target)) throw new IOException(I18n.t("{0} already exists in the mods folder.", next));
+        if (Files.exists(target)) throw new LauncherException(ErrorCode.MOD_NAME_TAKEN, I18n.t("{0} already exists in the mods folder.", next));
         Files.move(mod.file, target);
     }
 

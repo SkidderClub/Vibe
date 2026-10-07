@@ -1,7 +1,11 @@
 package dev.vibe.launcher.game;
 
+import dev.vibe.launcher.core.ErrorCode;
 import dev.vibe.launcher.core.FileUtil;
+import dev.vibe.launcher.core.I18n;
+import dev.vibe.launcher.core.LauncherException;
 import dev.vibe.launcher.core.Platform;
+import dev.vibe.launcher.core.Text;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -51,6 +55,7 @@ public final class GameSession {
     private volatile Stage stage;
     private final List<String> failure = new ArrayList<String>();
     private boolean collectingFailure;
+    private final FailureAnalyzer analyzer = new FailureAnalyzer();
 
     private GameSession(Path projectRoot, Path logFile, Path readyFile, Path sessionFile, Listener listener, Process process, long pid) {
         this.projectRoot = projectRoot;
@@ -70,9 +75,11 @@ public final class GameSession {
         // Start the Gradle wrapper directly, as gradlew(.bat) would: no cmd.exe or sh in between
         // means no shell quoting, no LF-only batch file quirks, and destroy() reaches Gradle itself.
         Path wrapper = request.projectRoot.resolve("gradle").resolve("wrapper").resolve("gradle-wrapper.jar");
-        if (!Files.isRegularFile(wrapper)) throw new IOException("The Vibe source has no Gradle wrapper (" + wrapper + ").");
+        if (!Files.isRegularFile(wrapper)) throw new LauncherException(ErrorCode.SOURCE_DAMAGED, I18n.t("The Vibe source has no Gradle wrapper ({0}).", wrapper));
+        Path java = Platform.javaExecutable(request.jdk21, false);
+        if (!Files.isRegularFile(java)) throw new LauncherException(ErrorCode.JAVA_BROKEN, I18n.t("Java 21 is missing at {0}.", java));
         List<String> command = new ArrayList<String>();
-        command.add(Platform.javaExecutable(request.jdk21, false).toString());
+        command.add(java.toString());
         command.add("-Xmx64m");
         command.add("-Xms64m");
         command.add("-Dorg.gradle.appname=gradlew");
@@ -105,7 +112,13 @@ public final class GameSession {
         builder.redirectInput(ProcessBuilder.Redirect.from(Platform.nullDevice()));
 
         long offset = Files.exists(request.logFile) ? Files.size(request.logFile) : 0;
-        Process process = builder.start();
+        Process process;
+        try {
+            process = builder.start();
+        } catch (IOException error) {
+            // "Cannot run program": blocked by an antivirus, not executable, or a broken runtime.
+            throw new LauncherException(ErrorCode.JAVA_START, I18n.t("Java 21 could not be started: {0}", Text.describe(error)), error);
+        }
         long pid = Platform.pid(process);
         GameSession session = new GameSession(request.projectRoot, request.logFile, request.readyFile, request.sessionFile, listener, process, pid);
         session.writeSessionFile();
@@ -170,6 +183,8 @@ public final class GameSession {
     public Path logFile() { return logFile; }
     public boolean reachedGame() { return reachedGame; }
     public Stage currentStage() { return stage; }
+    /** Known problems seen in the output; asked for a diagnosis when the run fails. */
+    public FailureAnalyzer analyzer() { return analyzer; }
 
     public void stop() {
         stopping = true;
@@ -237,10 +252,13 @@ public final class GameSession {
             else if (task.contains("compile") || task.contains("resources") || task.contains("classes") || task.startsWith("generate")) setStage(Stage.COMPILING);
             else if (stage == null) setStage(Stage.CONFIGURING);
         }
+        Stage current = stage;
+        analyzer.accept(line, current != null && current.ordinal() >= Stage.STARTING.ordinal());
         synchronized (this) {
             if (trimmed.startsWith("* What went wrong")) { collectingFailure = true; failure.clear(); return; }
             if (collectingFailure) {
-                if (trimmed.startsWith("* Try") || trimmed.startsWith("* Get more help") || failure.size() >= 8) collectingFailure = false;
+                // The deepest cause comes last, e.g. "repo.maven.apache.org: Name or service not known".
+                if (trimmed.startsWith("* Try") || trimmed.startsWith("* Get more help") || failure.size() >= 16) collectingFailure = false;
                 else if (!trimmed.isEmpty()) failure.add(trimmed.startsWith("> ") ? trimmed.substring(2) : trimmed);
             }
         }

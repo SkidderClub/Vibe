@@ -67,8 +67,25 @@ public final class InstallTests {
             Check.equal("long", new String(Files.readAllBytes(out.resolve(longName)), StandardCharsets.UTF_8));
             Check.equal("pax", new String(Files.readAllBytes(out.resolve(paxPath)), StandardCharsets.UTF_8));
             Check.isTrue(Files.isExecutable(out.resolve("jdk-21/bin/java")) || isWindows(), "mode applied");
-            if (!isWindows()) Check.equal(out.resolve("jdk-21"), RuntimeManager.findHome(out, false));
+            if (!isWindows()) Check.equal(out.resolve("jdk-21"), RuntimeManager.findHome(out, false, 0));
             Check.isTrue(!Files.exists(out.resolve("jdk-21/legal/link"), java.nio.file.LinkOption.NOFOLLOW_LINKS), "symbolic links are skipped");
+        });
+
+        check.test("a runtime of the wrong Java version is not used", () -> {
+            Path home = Files.createDirectories(temp.resolve("configured-java"));
+            Files.createDirectories(home.resolve("lib"));
+            Files.write(home.resolve("lib").resolve("rt.jar"), new byte[] { 1 });
+            Path java = dev.vibe.launcher.core.Platform.javaExecutable(home, false);
+            Files.createDirectories(java.getParent());
+            Files.write(java, new byte[] { 1 });
+            Files.write(home.resolve("release"), "JAVA_VERSION=\"17.0.2\"\nOS_NAME=\"Linux\"\n".getBytes(StandardCharsets.UTF_8));
+            Check.equal(17, RuntimeManager.majorVersion(home));
+            Check.equal(null, RuntimeManager.usable(home.toString(), false, 8));
+            Files.write(home.resolve("release"), "JAVA_VERSION=\"1.8.0_412\"\n".getBytes(StandardCharsets.UTF_8));
+            Check.equal(8, RuntimeManager.majorVersion(home));
+            Check.equal(home.toAbsolutePath().normalize(), RuntimeManager.usable(home.toString(), false, 8));
+            Files.delete(home.resolve("release"));
+            Check.equal(home.toAbsolutePath().normalize(), RuntimeManager.usable(home.toString(), false, 8));
         });
 
         check.test("self-update helper replaces the launcher JAR", () -> {

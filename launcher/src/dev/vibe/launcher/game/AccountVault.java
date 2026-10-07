@@ -1,6 +1,8 @@
 package dev.vibe.launcher.game;
 
+import dev.vibe.launcher.core.ErrorCode;
 import dev.vibe.launcher.core.Json;
+import dev.vibe.launcher.core.LauncherException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,9 +39,9 @@ public final class AccountVault {
     private static final byte[] MAGIC = "VIBEAC01".getBytes(StandardCharsets.US_ASCII);
 
     /** An error whose message is known to contain no vault content. */
-    private static final class SafeException extends IOException {
+    private static final class SafeException extends LauncherException {
         private static final long serialVersionUID = 1L;
-        SafeException(String message) { super(message); }
+        SafeException(ErrorCode code, String message) { super(code, message); }
     }
 
     private AccountVault() { }
@@ -47,7 +49,7 @@ public final class AccountVault {
     public static List<Account> read(Path directory) throws IOException {
         Path vault = directory.resolve("accounts.vault"), keyFile = directory.resolve("accounts.key");
         if (!Files.isRegularFile(vault, LinkOption.NOFOLLOW_LINKS)) return Collections.emptyList();
-        if (!Files.isRegularFile(keyFile, LinkOption.NOFOLLOW_LINKS)) throw new IOException("The account key is missing.");
+        if (!Files.isRegularFile(keyFile, LinkOption.NOFOLLOW_LINKS)) throw new SafeException(ErrorCode.ACCOUNT_KEY, "The account key is missing.");
         String autoLogin = "";
         Path autoLoginFile = directory.resolve("auto-login.txt");
         if (Files.isRegularFile(autoLoginFile)) autoLogin = new String(bounded(autoLoginFile, 256), StandardCharsets.UTF_8).trim();
@@ -56,7 +58,7 @@ public final class AccountVault {
         char[] text = null;
         try {
             if (data.length < MAGIC.length + 12 + 16 || !Arrays.equals(MAGIC, Arrays.copyOf(data, MAGIC.length)) || key.length != 16) {
-                throw new SafeException("The account vault is not a Vibe vault.");
+                throw new SafeException(ErrorCode.ACCOUNT_VAULT, "The account vault is not a Vibe vault.");
             }
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key, "AES"),
@@ -84,7 +86,7 @@ public final class AccountVault {
             throw error;
         } catch (Exception error) {
             // Never attach the cause: cipher and parser messages could echo vault content.
-            throw new IOException("The account vault could not be decrypted.");
+            throw new SafeException(ErrorCode.ACCOUNT_VAULT, "The account vault could not be decrypted.");
         } finally {
             Arrays.fill(data, (byte) 0);
             Arrays.fill(key, (byte) 0);

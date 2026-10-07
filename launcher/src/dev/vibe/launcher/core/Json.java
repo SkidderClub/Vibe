@@ -183,5 +183,11 @@ public final class Json {
     private boolean peek(char c) { return position < text.length && text[position] == c; }
     private void expect(char c) throws IOException { if (!peek(c)) throw error("Expected '" + c + "'"); position++; }
     private void skipWhitespace() { while (position < text.length && Character.isWhitespace(text[position])) position++; }
-    private IOException error(String message) { return new IOException(message + " at offset " + position + "."); }
+    private IOException error(String message) { return new SyntaxException(message + " at offset " + position + "."); }
+
+    /** The text is not valid JSON, e.g. a Wi-Fi login page answered instead of an API. */
+    public static final class SyntaxException extends IOException {
+        private static final long serialVersionUID = 1L;
+        SyntaxException(String message) { super(message); }
+    }
 }
