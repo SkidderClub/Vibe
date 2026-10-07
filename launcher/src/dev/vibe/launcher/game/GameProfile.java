@@ -1,6 +1,9 @@
 package dev.vibe.launcher.game;
 
+import dev.vibe.launcher.core.ErrorCode;
 import dev.vibe.launcher.core.FileUtil;
+import dev.vibe.launcher.core.I18n;
+import dev.vibe.launcher.core.LauncherException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -67,13 +70,31 @@ public final class GameProfile {
         return latest;
     }
 
+    /** The text of a crash report, at most {@code limit} bytes from its start; empty if unreadable. */
+    public static String readCrashReport(Path report, int limit) {
+        if (report == null) return "";
+        try {
+            java.io.InputStream input = Files.newInputStream(report);
+            try {
+                byte[] buffer = new byte[limit];
+                int length = 0, count;
+                while (length < limit && (count = input.read(buffer, length, limit - length)) > 0) length += count;
+                return new String(buffer, 0, length, java.nio.charset.StandardCharsets.UTF_8);
+            } finally {
+                input.close();
+            }
+        } catch (IOException ignored) {
+            return "";
+        }
+    }
+
     /**
      * Copies options and resource packs from the regular Minecraft folder once,
      * never overwriting anything that already exists in the Vibe profile.
      */
     public int importFromMinecraft() throws IOException {
         Path minecraft = defaultMinecraftDirectory();
-        if (!Files.isDirectory(minecraft)) throw new IOException("No Minecraft folder was found at " + minecraft + ".");
+        if (!Files.isDirectory(minecraft)) throw new LauncherException(ErrorCode.MINECRAFT_FOLDER_MISSING, I18n.t("No Minecraft folder was found at {0}.", minecraft));
         int copied = 0;
         Files.createDirectories(directory);
         for (Path file : FileUtil.children(minecraft)) {

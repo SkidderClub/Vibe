@@ -1,6 +1,7 @@
 package dev.vibe.launcher.game;
 
 import dev.vibe.launcher.Check;
+import dev.vibe.launcher.core.ErrorCode;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -61,6 +62,16 @@ public final class GameTests {
 
         check.test("missing vault means no accounts", () -> Check.equal(0, AccountVault.read(temp.resolve("nowhere")).size()));
 
+        check.test("vault problems carry their error code", () -> {
+            Path noKey = Files.createDirectories(temp.resolve("accounts-no-key"));
+            Files.write(noKey.resolve("accounts.vault"), new byte[64]);
+            Check.equal(ErrorCode.ACCOUNT_KEY, ErrorCode.of(Check.fails(IOException.class, () -> AccountVault.read(noKey))));
+            Path broken = Files.createDirectories(temp.resolve("accounts-broken"));
+            Files.write(broken.resolve("accounts.vault"), "VIBEAC01-not-encrypted-with-this-key".getBytes(StandardCharsets.US_ASCII));
+            Files.write(broken.resolve("accounts.key"), new byte[16]);
+            Check.equal(ErrorCode.ACCOUNT_VAULT, ErrorCode.of(Check.fails(IOException.class, () -> AccountVault.read(broken))));
+        });
+
         check.test("mcmod.info in both formats", () -> {
             ModLibrary.ModInfo plain = new ModLibrary.ModInfo();
             ModLibrary.parseMcmodInfo("[{\"modid\":\"p\",\"name\":\"§aPatcher\",\"version\":\"${version}\",\"mcversion\":\"1.8.9\",\"authorList\":[\"Sk1er\",\"LLC\"]}]", plain);
@@ -88,6 +99,8 @@ public final class GameTests {
             ModLibrary.ImportResult result = library.importFiles(Arrays.asList(good, old, optifine, fabric, vibe, text, broken));
             Check.equal(Arrays.asList("Patcher", "Map"), result.added);
             Check.equal(5, result.rejected.size());
+            Check.equal(Arrays.asList(ErrorCode.MOD_OPTIFINE, ErrorCode.MOD_FABRIC, ErrorCode.MOD_VIBE, ErrorCode.MOD_NOT_JAR, ErrorCode.MOD_INVALID), result.rejectedCodes);
+            Check.isTrue(result.rejected.get(1).endsWith("(VL-806)"), "code in the message: " + result.rejected.get(1));
             Check.equal(1, library.importFiles(Collections.singletonList(good)).rejected.size());
             List<ModLibrary.Mod> mods = library.list();
             Check.equal(2, mods.size());
@@ -133,6 +146,12 @@ public final class GameTests {
             Check.equal(Integer.valueOf(1), recorder.code);
             Check.isTrue(!recorder.reachedGame, "never reached the game");
             Check.equal("Execution failed for task ':compileJava'.\nCompilation failed; see the compiler error output for details.", recorder.failure);
+            Check.equal(ErrorCode.COMPILE_ERROR, recorder.session.analyzer().buildFailure(recorder.failure).code);
+        });
+
+        check.test("a source without Gradle wrapper is reported as damaged", () -> {
+            Path project = Files.createDirectories(temp.resolve("project-empty"));
+            Check.equal(ErrorCode.SOURCE_DAMAGED, ErrorCode.of(Check.fails(IOException.class, () -> runSession(project, temp.resolve("empty")))));
         });
     }
 
@@ -143,6 +162,7 @@ public final class GameTests {
         volatile Integer code;
         volatile boolean reachedGame;
         volatile String failure;
+        volatile GameSession session;
 
         @Override public void output(List<String> added) { lines.addAll(added); }
         @Override public void stage(GameSession.Stage stage) { stages.add(stage); }
@@ -164,7 +184,7 @@ public final class GameTests {
         request.readyFile = work.resolve("ready");
         request.sessionFile = work.resolve("session.properties");
         Recorder recorder = new Recorder();
-        GameSession.start(request, recorder);
+        recorder.session = GameSession.start(request, recorder);
         if (!recorder.done.await(30, TimeUnit.SECONDS)) throw new AssertionError("session did not finish");
         Check.isTrue(!Files.exists(request.sessionFile), "session marker removed");
         return recorder;

@@ -13,6 +13,9 @@ public final class Text {
         if (error == null) return "";
         Throwable cause = error;
         while (cause.getCause() != null && blank(cause.getMessage())) cause = cause.getCause();
+        // These only carry the host name or a terse phrase as their message.
+        if (cause instanceof java.net.UnknownHostException) return I18n.t("{0} could not be found.", blank(cause.getMessage()) ? "?" : cause.getMessage().trim());
+        if (cause instanceof java.net.SocketTimeoutException) return I18n.t("The server did not answer in time.");
         String message = cause.getMessage();
         if (blank(message)) message = cause.getClass().getSimpleName();
         return shorten(message.trim(), 220);

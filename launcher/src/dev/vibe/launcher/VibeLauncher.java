@@ -3,9 +3,12 @@ package dev.vibe.launcher;
 import dev.vibe.launcher.app.LauncherController;
 import dev.vibe.launcher.core.AppLog;
 import dev.vibe.launcher.core.AppPaths;
+import dev.vibe.launcher.core.ErrorCode;
+import dev.vibe.launcher.core.FileUtil;
 import dev.vibe.launcher.core.Http;
 import dev.vibe.launcher.core.I18n;
 import dev.vibe.launcher.core.Settings;
+import dev.vibe.launcher.core.Text;
 import dev.vibe.launcher.game.GameProfile;
 import dev.vibe.launcher.ui.LauncherFrame;
 import java.awt.GraphicsEnvironment;
@@ -47,7 +50,7 @@ public final class VibeLauncher {
         System.setProperty("swing.aatext", "true");
         System.setProperty("sun.java2d.uiScale.enabled", "true");
         if (GraphicsEnvironment.isHeadless()) {
-            System.err.println(PRODUCT + " needs a desktop session.");
+            System.err.println(PRODUCT + " needs a desktop session (" + ErrorCode.NO_DESKTOP.id() + "). " + ErrorCode.NO_DESKTOP.englishTitle() + ".");
             System.exit(1);
         }
         Http.setUserAgent("VibeLauncher/" + VERSION + " (+" + REPOSITORY_URL + ")");
@@ -55,27 +58,67 @@ public final class VibeLauncher {
         final AppLog log = new AppLog(paths.logs());
         log.info(PRODUCT + " " + VERSION + " starting on Java " + System.getProperty("java.version") + ", " + System.getProperty("os.name")
                 + " " + System.getProperty("os.arch") + "; data in " + paths.root());
-        Thread.setDefaultUncaughtExceptionHandler((thread, error) -> log.error("Uncaught error on " + thread.getName(), error));
+        Thread.setDefaultUncaughtExceptionHandler((thread, error) -> log.error(ErrorCode.UNEXPECTED.id() + " Uncaught error on " + thread.getName(), error));
 
         final Settings settings = new Settings(paths.settingsFile(), log);
         I18n.init(settings.language(), new GameProfile(paths.profile()).clientLanguage());
 
+        // Without a writable data folder nothing can be installed; say so instead of failing later.
+        IOException unwritable = checkWritable(paths);
+        if (unwritable != null) {
+            log.error(ErrorCode.DATA_FOLDER.id() + " The data folder " + paths.root() + " is not writable", unwritable);
+            fatal(ErrorCode.DATA_FOLDER, I18n.t("The launcher cannot write to {0}.", paths.root()) + "\n" + Text.describe(unwritable));
+            return;
+        }
+
         boolean restarted = Arrays.asList(args).contains("--wait-for-lock");
         if (!acquireLock(paths, restarted ? 15000 : 0)) {
-            log.info("Another launcher is already running; exiting.");
+            log.info(ErrorCode.ALREADY_RUNNING.id() + " Another launcher is already running; exiting.");
             SwingUtilities.invokeLater(() -> {
-                JOptionPane.showMessageDialog(null, I18n.t("Vibe Launcher is already open."), PRODUCT, JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(null, I18n.t("Vibe Launcher is already open.") + " (" + ErrorCode.ALREADY_RUNNING.id() + ")\n\n"
+                        + ErrorCode.ALREADY_RUNNING.hint(), PRODUCT, JOptionPane.INFORMATION_MESSAGE);
                 System.exit(0);
             });
             return;
         }
 
         SwingUtilities.invokeLater(() -> {
-            LauncherController controller = new LauncherController(paths, settings, log);
-            LauncherFrame frame = new LauncherFrame(controller);
-            frame.setVisible(true);
-            controller.start();
+            try {
+                LauncherController controller = new LauncherController(paths, settings, log);
+                LauncherFrame frame = new LauncherFrame(controller);
+                frame.setVisible(true);
+                controller.start();
+            } catch (RuntimeException | Error error) {
+                log.error(ErrorCode.STARTUP_FAILED.id() + " The launcher could not start", error);
+                fatal(ErrorCode.STARTUP_FAILED, Text.describe(error) + "\n" + I18n.t("Launcher log: {0}", log.file()));
+            }
         });
+    }
+
+    /** Creates the data folder and writes a probe file; returns the failure, if any. */
+    private static IOException checkWritable(AppPaths paths) {
+        try {
+            Files.createDirectories(paths.root());
+            java.nio.file.Path probe = paths.root().resolve(".write-test");
+            FileUtil.writeText(probe, "ok");
+            Files.deleteIfExists(probe);
+            return null;
+        } catch (IOException error) {
+            return error;
+        } catch (RuntimeException error) {
+            return new IOException(Text.describe(error), error);
+        }
+    }
+
+    /** An error dialog for problems that stop the launcher before its window exists, then exit. */
+    private static void fatal(final ErrorCode code, final String detail) {
+        Runnable show = () -> {
+            JOptionPane.showMessageDialog(null, code.heading() + "\n\n" + detail + "\n\n" + code.hint() + "\n\n" + I18n.t("Help: {0}", code.helpUrl()),
+                    PRODUCT, JOptionPane.ERROR_MESSAGE);
+            System.exit(1);
+        };
+        if (SwingUtilities.isEventDispatchThread()) show.run();
+        else SwingUtilities.invokeLater(show);
     }
 
     /** One launcher per data folder: two would update and build the same checkout at once. */

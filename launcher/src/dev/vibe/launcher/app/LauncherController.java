@@ -3,13 +3,16 @@ package dev.vibe.launcher.app;
 import dev.vibe.launcher.VibeLauncher;
 import dev.vibe.launcher.core.AppLog;
 import dev.vibe.launcher.core.AppPaths;
+import dev.vibe.launcher.core.ErrorCode;
 import dev.vibe.launcher.core.FileUtil;
 import dev.vibe.launcher.core.I18n;
+import dev.vibe.launcher.core.LauncherException;
 import dev.vibe.launcher.core.Platform;
 import dev.vibe.launcher.core.Progress;
 import dev.vibe.launcher.core.Settings;
 import dev.vibe.launcher.core.Text;
 import dev.vibe.launcher.game.AccountVault;
+import dev.vibe.launcher.game.FailureAnalyzer;
 import dev.vibe.launcher.game.GameProfile;
 import dev.vibe.launcher.game.GameSession;
 import dev.vibe.launcher.game.LaunchMode;
@@ -22,14 +25,17 @@ import dev.vibe.launcher.install.SourceManager;
 import dev.vibe.launcher.skin.SkinService;
 import java.io.File;
 import java.io.IOException;
-import java.io.InterruptedIOException;
+import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -52,21 +58,33 @@ public final class LauncherController {
         void notify(Notice notice);
     }
 
-    /** A toast: level, text and an optional action. */
+    /** A toast: level, text, an optional action and, for errors, a link to the fix. */
     public static final class Notice {
         public enum Level { INFO, SUCCESS, WARNING, ERROR }
         public final Level level;
         public final String title, message, actionLabel;
         public final Runnable action;
+        /** The error code shown in the title, or {@code null}. */
+        public final ErrorCode code;
+        /** Opens the error guide at {@link #code}; {@code null} when there is nothing to look up. */
+        public final Runnable help;
         /** Action marker: the interface opens its console page. */
         public static final Runnable SHOW_CONSOLE = () -> { };
         public Notice(Level level, String title, String message, String actionLabel, Runnable action) {
+            this(level, title, message, actionLabel, action, null, null);
+        }
+        public Notice(Level level, String title, String message, String actionLabel, Runnable action, ErrorCode code, Runnable help) {
             this.level = level; this.title = title; this.message = message; this.actionLabel = actionLabel; this.action = action;
+            this.code = code; this.help = help;
         }
     }
 
-    private static final java.util.regex.Pattern DOWNLOAD_FAILURE = java.util.regex.Pattern.compile(
-            "Could not (resolve|download|GET|HEAD)|status code (4\\d\\d|5\\d\\d)|timed out|UnknownHost|Connection reset|Network is unreachable");
+    /** The last failed installation, update or launch, shown in the play bar until the next attempt. */
+    public static final class Failure {
+        public final ErrorCode code;
+        public final String detail;
+        Failure(ErrorCode code, String detail) { this.code = code; this.detail = detail; }
+    }
 
     private static final java.util.regex.Pattern PROGRESS_LINE = java.util.regex.Pattern.compile("\\d{1,3}% \\(\\d+/\\d+\\)|[.\\d%]+");
 
@@ -91,7 +109,7 @@ public final class LauncherController {
     private volatile State state = State.IDLE;
     private volatile String progressTitle = "", progressDetail = "";
     private volatile double progress = -1;
-    private volatile String lastError = "";
+    private volatile Failure lastFailure;
     private volatile boolean launchQueued;
     /** Guards the hand-off between a queued Play click and the preparing task. */
     private final Object queueLock = new Object();
@@ -108,9 +126,11 @@ public final class LauncherController {
     private volatile LaunchMode mode;
     private volatile List<AccountVault.Account> accounts = Collections.emptyList();
     private volatile String accountsError = "";
+    private volatile ErrorCode accountsCode;
     private volatile List<ModLibrary.Mod> modList = Collections.emptyList();
     private volatile SourceManager.Remote remote;
     private volatile String remoteError = "";
+    private volatile IOException remoteFailure;
     private volatile List<ChangelogSection> changelog = Collections.emptyList();
     private volatile LauncherUpdater.Release launcherUpdate;
     private volatile String launcherUpdateStatus = "";
@@ -189,9 +209,40 @@ public final class LauncherController {
     }
 
     private void notice(Notice.Level level, String title, String message, String actionLabel, Runnable action) {
-        final Notice notice = new Notice(level, title, message, actionLabel, action);
+        notice(new Notice(level, title, message, actionLabel, action));
+    }
+
+    private void notice(final Notice notice) {
         SwingUtilities.invokeLater(() -> { Notifier current = notifier; if (current != null) current.notify(notice); });
     }
+
+    // ---- failures ----------------------------------------------------------
+
+    /**
+     * Logs a failed operation with its stack trace and reports it with its error code.
+     *
+     * @param context what failed, e.g. "Installing Vibe failed"
+     * @param blocking whether it stopped an installation, update or launch; only those
+     *                 stay visible in the play bar
+     */
+    private void fail(String context, Throwable error, ErrorCode fallback, boolean blocking, String actionLabel, Runnable action) {
+        ErrorCode code = ErrorCode.of(error, fallback);
+        log.error(code.id() + " " + context, error);
+        report(code, context + ": " + Text.describe(error), blocking, actionLabel, action);
+    }
+
+    /** Shows a failure as a toast with its fix and a link to the error guide, and adds the fix to the console. */
+    private void report(ErrorCode code, String detail, boolean blocking, String actionLabel, Runnable action) {
+        if (blocking) lastFailure = new Failure(code, detail);
+        console.append("[Launcher] " + code.heading() + " \u2013 " + code.hint());
+        console.append("[Launcher] " + I18n.t("Help: {0}", code.helpUrl()));
+        Runnable help = code == ErrorCode.OPEN_FAILED ? null : () -> openHelp(code);
+        notice(new Notice(Notice.Level.ERROR, code.heading(), detail + "\n" + code.hint(), actionLabel, action, code, help));
+        if (blocking) fire(Event.STATE);
+    }
+
+    /** Opens the error guide, at the given code's section when there is one. */
+    public void openHelp(ErrorCode code) { browse(code == null ? ErrorCode.HELP_URL : code.helpUrl()); }
 
     // ---- getters ---------------------------------------------------------
 
@@ -204,7 +255,8 @@ public final class LauncherController {
     public String progressTitle() { return progressTitle; }
     public String progressDetail() { return progressDetail; }
     public double progress() { return progress; }
-    public String lastError() { return lastError; }
+    /** The last failed installation, update or launch; {@code null} after a success or a new attempt. */
+    public Failure lastFailure() { return lastFailure; }
     public boolean launchQueued() { return launchQueued; }
     /** Whether Play would queue a launch behind the running installation or update. */
     public boolean canQueueLaunch() { synchronized (queueLock) { return queueOpen && !launchQueued; } }
@@ -213,6 +265,8 @@ public final class LauncherController {
     public LaunchMode mode() { return mode; }
     public List<AccountVault.Account> accounts() { return accounts; }
     public String accountsError() { return accountsError; }
+    /** The code for {@link #accountsError()}, or {@code null}. */
+    public ErrorCode accountsCode() { return accountsCode; }
     public List<ModLibrary.Mod> mods() { return modList; }
     public SourceManager.Remote remote() { return remote; }
     public String remoteError() { return remoteError; }
@@ -286,10 +340,12 @@ public final class LauncherController {
         try {
             accounts = AccountVault.read(profile.accounts());
             accountsError = "";
+            accountsCode = null;
         } catch (IOException error) {
             accounts = Collections.emptyList();
-            accountsError = error.getMessage();
-            log.warn("Account vault unavailable: " + error.getMessage());
+            accountsCode = ErrorCode.of(error, ErrorCode.ACCOUNT_VAULT);
+            accountsError = Text.describe(error);
+            log.warn(accountsCode.id() + " Account vault unavailable: " + accountsError);
         }
         if (!settings.selectedUuid().isEmpty() && selectedAccount() == null && accountsError.isEmpty() && !accounts.isEmpty()) {
             // The selected account was removed inside Vibe.
@@ -349,18 +405,19 @@ public final class LauncherController {
                     log.info("Added mods: " + join(result.added));
                 }
                 if (!result.rejected.isEmpty()) {
-                    notice(Notice.Level.WARNING, I18n.t("Some files were not added"), join(result.rejected), null, null);
+                    // The codes are in the text; the guide opens at the first one.
+                    final ErrorCode first = result.rejectedCodes.get(0);
+                    notice(new Notice(Notice.Level.WARNING, I18n.t("Some files were not added"), join(result.rejected), null, null, first, () -> openHelp(first)));
                 }
             } catch (IOException error) {
-                log.error("Could not add mods", error);
-                notice(Notice.Level.ERROR, I18n.t("Could not add mods"), Text.describe(error), null, null);
+                fail(I18n.t("Could not add mods"), error, ErrorCode.FILE_ERROR, false, null, null);
             }
         });
     }
 
     public void setModEnabled(ModLibrary.Mod mod, boolean enabled) {
         try { mods.setEnabled(mod, enabled); }
-        catch (IOException error) { notice(Notice.Level.ERROR, I18n.t("Could not change the mod"), Text.describe(error), null, null); }
+        catch (IOException error) { fail(I18n.t("Could not change the mod"), error, ErrorCode.FILE_ERROR, false, null, null); }
         reloadMods();
     }
 
@@ -369,7 +426,7 @@ public final class LauncherController {
             mods.delete(mod);
             log.info("Removed mod " + mod.fileName);
         } catch (IOException error) {
-            notice(Notice.Level.ERROR, I18n.t("Could not remove the mod"), Text.describe(error), null, null);
+            fail(I18n.t("Could not remove the mod"), error, ErrorCode.FILE_ERROR, false, null, null);
         }
         reloadMods();
     }
@@ -395,7 +452,7 @@ public final class LauncherController {
 
     /** Runs installation/update and, if a launch is queued, starts the game afterwards. */
     private void submit(final String title, final boolean forLaunch, final boolean forceUpdate) {
-        lastError = "";
+        lastFailure = null;
         synchronized (queueLock) { queueOpen = true; }
         setState(State.PREPARING, title, "", -1);
         task = worker.submit(() -> {
@@ -409,20 +466,16 @@ public final class LauncherController {
                 }
                 if (start) startGame();
                 else setState(State.IDLE, "", "", -1);
-            } catch (InterruptedIOException | InterruptedException cancelled) {
-                closeQueue();
-                setState(State.IDLE, "", "", -1);
-                console.append("[Launcher] Cancelled.");
             } catch (Exception error) {
                 closeQueue();
-                if (Thread.currentThread().isInterrupted()) {
+                // A read timeout is an InterruptedIOException as well, but a failure, not a cancel.
+                if (Thread.currentThread().isInterrupted() || LauncherException.cancelled(error)) {
                     setState(State.IDLE, "", "", -1);
+                    console.append("[Launcher] Cancelled.");
                     return;
                 }
-                log.error(title + " failed", error);
-                lastError = Text.describe(error);
+                fail(I18n.t("{0} failed", title), error, ErrorCode.UNEXPECTED, true, I18n.t("Show console"), Notice.SHOW_CONSOLE);
                 setState(State.IDLE, "", "", -1);
-                notice(Notice.Level.ERROR, I18n.t("{0} failed", title), lastError, I18n.t("Show console"), Notice.SHOW_CONSOLE);
             }
         });
     }
@@ -438,12 +491,23 @@ public final class LauncherController {
         Progress progress = (message, detail, fraction) -> setProgress(message, detail, fraction);
         boolean installed = source.isInstalled();
         boolean applyUpdates = forceUpdate || settings.autoUpdate();
-        if (!installed || applyUpdates || !forLaunch) {
+        // A half-applied update must be repaired, so GitHub is asked again even without auto-update.
+        if (!installed || applyUpdates || !forLaunch || settings.sourceIncomplete()) {
             progress.update(installed ? I18n.t("Checking for updates") : I18n.t("Installing Vibe"), "", -1);
             refreshRemote();
         }
         SourceManager.Remote known = remote;
-        if (!installed || settings.sourceIncomplete() || (applyUpdates && known != null && source.needsUpdate(known))) {
+        boolean sourceNeeded = !installed || settings.sourceIncomplete() || (applyUpdates && known != null && source.needsUpdate(known));
+        if (sourceNeeded && known == null && remoteFailure != null && (!installed || settings.sourceIncomplete())) {
+            // Without GitHub the source can be neither installed nor repaired: report why GitHub failed.
+            IOException cause = remoteFailure;
+            String what = installed ? I18n.t("The last Vibe update did not finish and GitHub is not reachable.") : I18n.t("Vibe could not be downloaded from GitHub.");
+            throw new LauncherException(ErrorCode.of(cause, installed ? ErrorCode.UPDATE_INCOMPLETE : ErrorCode.VIBE_DOWNLOAD),
+                    what + " " + Text.describe(cause), cause);
+        }
+        long needed = (!installed ? 900L : sourceNeeded ? 400L : 0L) + (runtimes.isReady() ? 0L : 700L);
+        if (needed > 0) requireSpace(Collections.singletonMap(paths.root(), needed * MB));
+        if (sourceNeeded) {
             boolean wasInstalled = installed;
             String before = source.installedRevision();
             source.update(known, progress.range(0, 1));
@@ -462,16 +526,65 @@ public final class LauncherController {
         try {
             remote = source.fetchRemote();
             remoteError = "";
+            remoteFailure = null;
         } catch (IOException error) {
-            remoteError = Text.describe(error);
-            log.warn("Could not check GitHub for Vibe updates: " + remoteError);
+            if (LauncherException.cancelled(error)) return;
+            ErrorCode code = ErrorCode.of(error, ErrorCode.UNEXPECTED_RESPONSE);
+            remoteFailure = error;
+            remoteError = Text.describe(error) + " (" + code.id() + ")";
+            log.warn(code.id() + " Could not check GitHub for Vibe updates: " + Text.describe(error));
         }
         fire(Event.SOURCE);
+    }
+
+    private static final long MB = 1024L * 1024L;
+
+    /**
+     * Fails with VL-203 before a download or build that would run out of disk space
+     * halfway. Folders on the same drive add up; an unknown free space is not checked.
+     */
+    private void requireSpace(Map<Path, Long> needs) throws LauncherException {
+        Map<FileStore, Long> total = new LinkedHashMap<FileStore, Long>();
+        Map<FileStore, Path> example = new LinkedHashMap<FileStore, Path>();
+        for (Map.Entry<Path, Long> need : needs.entrySet()) {
+            try {
+                Path existing = need.getKey().toAbsolutePath();
+                while (existing != null && !Files.exists(existing)) existing = existing.getParent();
+                if (existing == null) continue;
+                FileStore store = Files.getFileStore(existing);
+                Long sum = total.get(store);
+                total.put(store, (sum == null ? 0L : sum) + need.getValue());
+                if (!example.containsKey(store)) example.put(store, need.getKey());
+            } catch (IOException | RuntimeException ignored) {
+                // Unknown drive: let the operation try.
+            }
+        }
+        for (Map.Entry<FileStore, Long> entry : total.entrySet()) {
+            long free;
+            try { free = entry.getKey().getUsableSpace(); } catch (IOException | RuntimeException ignored) { continue; }
+            if (free > 0 && free < entry.getValue()) {
+                throw new LauncherException(ErrorCode.DISK_FULL, I18n.t("Only {0} free for {1}, about {2} are needed.",
+                        Text.bytes(free), example.get(entry.getKey()), Text.bytes(entry.getValue())));
+            }
+        }
+    }
+
+    /** Gradle's cache of Minecraft, Forge and the libraries; often on another drive than the launcher. */
+    private static Path gradleUserHome() {
+        String configured = System.getenv("GRADLE_USER_HOME");
+        if (configured != null && !configured.trim().isEmpty()) return Paths.get(configured.trim());
+        return Paths.get(System.getProperty("user.home"), ".gradle");
     }
 
     private void startGame() throws Exception {
         final LaunchMode launchMode = runningMode == null ? LaunchMode.VIBE : runningMode;
         RuntimeManager.Runtimes installedRuntimes = runtimes.ensure(Progress.NONE);
+        // The first build downloads Minecraft, Forge and the libraries and writes Vibe's build output.
+        Map<Path, Long> needs = new LinkedHashMap<Path, Long>();
+        Path gradleHome = gradleUserHome();
+        needs.put(gradleHome, (Files.isDirectory(gradleHome.resolve("caches").resolve("unimined")) ? 256L : 1536L) * MB);
+        needs.put(source.root(), (Files.isDirectory(source.root().resolve("build")) ? 256L : 768L) * MB);
+        requireSpace(needs);
         writeBridge(launchMode);
         try { profile.writeTheme(theme); } catch (IOException error) { log.warn("Could not share the theme with Vibe", error); }
 
@@ -545,7 +658,6 @@ public final class LauncherController {
         session = null;
         runningMode = null;
         console.append("[Launcher] " + (stopped ? "Stopped." : "Game process ended" + (code == null ? "." : " with exit code " + code + ".")));
-        setState(State.IDLE, "", "", -1);
         reloadAccounts();
         reloadMods();
         Theme shared = profile.readTheme();
@@ -554,28 +666,45 @@ public final class LauncherController {
             settings.setTheme(shared.name());
             fire(Event.THEME);
         }
-        if (stopped || code == null || code == 0) return;
-        if (!gameStarted) {
-            // Gradle nests causes; the first line says what failed, the last one why.
-            String[] lines = failure.isEmpty() ? new String[0] : failure.split("\n");
-            String cause = lines.length == 0 ? "" : lines[lines.length - 1];
-            String message = lines.length == 0 ? "" : lines.length == 1 ? cause : lines[0] + "\n" + cause;
-            if (DOWNLOAD_FAILURE.matcher(failure).find()) {
-                lastError = I18n.t("A download failed while building Vibe. Check your connection and try again in a few minutes.");
-            } else {
-                lastError = cause.isEmpty() ? I18n.t("The build failed. The console shows what went wrong.") : Text.shorten(cause, 240);
-            }
-            notice(Notice.Level.ERROR, I18n.t("Vibe could not be started"), message.isEmpty() ? lastError : Text.shorten(message, 400),
-                    I18n.t("Show console"), Notice.SHOW_CONSOLE);
-        } else {
-            final Path report = profile.latestCrashReport();
-            boolean fresh = report != null && System.currentTimeMillis() - report.toFile().lastModified() < 5 * 60 * 1000L;
-            lastError = I18n.t("Minecraft closed unexpectedly (exit code {0}).", code);
-            notice(Notice.Level.ERROR, I18n.t("Minecraft crashed"), lastError,
-                    fresh ? I18n.t("Open crash report") : I18n.t("Show console"),
-                    fresh ? () -> openPath(report) : Notice.SHOW_CONSOLE);
+        // The failure is known before the state changes, so the window can come to the front for it.
+        if (!stopped && code != null && code != 0) {
+            if (!gameStarted) buildFailed(ended, failure);
+            else gameCrashed(ended, code);
         }
-        fire(Event.STATE);
+        setState(State.IDLE, "", "", -1);
+    }
+
+    /** Reports why runClient failed before Minecraft started. */
+    private void buildFailed(GameSession ended, String failure) {
+        FailureAnalyzer.Result result = ended == null ? null : ended.analyzer().buildFailure(failure);
+        ErrorCode code = result == null ? ErrorCode.BUILD_FAILED : result.code;
+        // Gradle nests causes; the first line says what failed, the last one why.
+        String[] lines = failure.isEmpty() ? new String[0] : failure.split("\n");
+        String cause = lines.length == 0 ? "" : lines[lines.length - 1];
+        String detail = lines.length == 0 ? "" : lines.length == 1 ? cause : lines[0] + "\n" + cause;
+        if (detail.isEmpty() && result != null) detail = result.evidence;
+        if (detail.isEmpty()) detail = I18n.t("The build failed. The console shows what went wrong.");
+        detail = Text.shorten(detail, 300);
+        log.error(code.id() + " Vibe could not be started: " + detail.replace('\n', ' '), null);
+        report(code, detail, true, I18n.t("Show console"), Notice.SHOW_CONSOLE);
+    }
+
+    /** Reports a Minecraft that ended with an error, using its crash report when there is a fresh one. */
+    private void gameCrashed(GameSession ended, Integer exitCode) {
+        final Path crashReport = profile.latestCrashReport();
+        boolean fresh = crashReport != null && System.currentTimeMillis() - crashReport.toFile().lastModified() < 5 * 60 * 1000L;
+        String text = fresh ? GameProfile.readCrashReport(crashReport, 256 * 1024) : "";
+        FailureAnalyzer.Result result = ended == null ? null : ended.analyzer().gameFailure(text);
+        ErrorCode code = result == null ? ErrorCode.GAME_CRASHED : result.code;
+        boolean customMods = false;
+        for (ModLibrary.Mod mod : modList) customMods |= mod.enabled;
+        // Without custom mods a loader error points at Vibe itself, not at a conflict.
+        if (code == ErrorCode.MOD_CONFLICT && !customMods) code = ErrorCode.GAME_CRASHED;
+        String detail = I18n.t("Minecraft closed unexpectedly (exit code {0}).", exitCode);
+        if (result != null && !result.evidence.isEmpty()) detail += "\n" + result.evidence;
+        log.error(code.id() + " Minecraft crashed: " + detail.replace('\n', ' ') + (fresh ? " Crash report: " + crashReport : ""), null);
+        report(code, detail, true, fresh ? I18n.t("Open crash report") : I18n.t("Show console"),
+                fresh ? () -> openPath(crashReport) : Notice.SHOW_CONSOLE);
     }
 
     public void stop() {
@@ -634,17 +763,16 @@ public final class LauncherController {
 
     public void repairRuntimes() {
         if (state != State.IDLE) return;
-        lastError = "";
+        lastFailure = null;
         setState(State.PREPARING, I18n.t("Reinstalling Java"), "", -1);
         task = worker.submit(() -> {
             try {
+                requireSpace(Collections.singletonMap(paths.runtimes(), 700L * MB));
                 runtimes.reinstall((message, detail, fraction) -> setProgress(message, detail, fraction));
                 notice(Notice.Level.SUCCESS, I18n.t("Java reinstalled"), I18n.t("Java 8 and Java 21 are ready."), null, null);
             } catch (Exception error) {
-                if (!(error instanceof InterruptedIOException)) {
-                    log.error("Java reinstall failed", error);
-                    lastError = Text.describe(error);
-                    notice(Notice.Level.ERROR, I18n.t("Java could not be installed"), lastError, null, null);
+                if (!LauncherException.cancelled(error) && !Thread.currentThread().isInterrupted()) {
+                    fail(I18n.t("Java could not be installed"), error, ErrorCode.JAVA_BROKEN, true, null, null);
                 }
             }
             setState(State.IDLE, "", "", -1);
@@ -659,7 +787,7 @@ public final class LauncherController {
                 source.cleanBuild();
                 notice(Notice.Level.SUCCESS, I18n.t("Build cache cleared"), I18n.t("Vibe is compiled from scratch on the next launch."), null, null);
             } catch (IOException error) {
-                notice(Notice.Level.ERROR, I18n.t("Could not clear the build cache"), Text.describe(error), null, null);
+                fail(I18n.t("Could not clear the build cache"), error, ErrorCode.FILE_ERROR, false, null, null);
             }
         });
     }
@@ -670,7 +798,10 @@ public final class LauncherController {
                 int copied = profile.importFromMinecraft();
                 notice(Notice.Level.SUCCESS, I18n.t("Import finished"), copied == 0 ? I18n.t("Everything was already there.") : I18n.t("{0} items copied from .minecraft.", copied), null, null);
             } catch (IOException error) {
-                notice(Notice.Level.WARNING, I18n.t("Nothing imported"), Text.describe(error), null, null);
+                final ErrorCode code = ErrorCode.of(error, ErrorCode.FILE_ERROR);
+                log.warn(code.id() + " Import from .minecraft failed", error);
+                notice(new Notice(Notice.Level.WARNING, code.id() + " \u00b7 " + I18n.t("Nothing imported"), Text.describe(error) + "\n" + code.hint(),
+                        null, null, code, () -> openHelp(code)));
             }
         });
     }
@@ -684,8 +815,9 @@ public final class LauncherController {
                 notice(Notice.Level.INFO, I18n.t("Launcher update available"), I18n.t("Version {0} is ready to install.", release.version), I18n.t("Update"), this::installLauncherUpdate);
             }
         } catch (IOException error) {
-            launcherUpdateStatus = I18n.t("Update check failed: {0}", Text.describe(error));
-            log.warn("Launcher update check failed: " + Text.describe(error));
+            ErrorCode code = ErrorCode.of(error, ErrorCode.LAUNCHER_UPDATE);
+            launcherUpdateStatus = I18n.t("Update check failed: {0}", Text.describe(error) + " (" + code.id() + ")");
+            log.warn(code.id() + " Launcher update check failed: " + Text.describe(error));
         }
         fire(Event.LAUNCHER_UPDATE);
     }
@@ -700,10 +832,12 @@ public final class LauncherController {
                 updater.installOnExit(staged);
                 SwingUtilities.invokeLater(exit);
             } catch (Exception error) {
-                log.error("Launcher update failed", error);
-                lastError = Text.describe(error);
+                if (LauncherException.cancelled(error) || Thread.currentThread().isInterrupted()) {
+                    setState(State.IDLE, "", "", -1);
+                    return;
+                }
+                fail(I18n.t("Launcher update failed"), error, ErrorCode.LAUNCHER_UPDATE, true, null, null);
                 setState(State.IDLE, "", "", -1);
-                notice(Notice.Level.ERROR, I18n.t("Launcher update failed"), lastError, null, null);
             }
         });
     }
@@ -713,13 +847,18 @@ public final class LauncherController {
             if (Files.isRegularFile(path) && java.awt.Desktop.isDesktopSupported()) java.awt.Desktop.getDesktop().open(path.toFile());
             else Platform.openFolder(path);
         } catch (Exception error) {
-            notice(Notice.Level.ERROR, I18n.t("Could not open {0}", path.getFileName()), Text.describe(error), null, null);
+            ErrorCode code = ErrorCode.of(error, ErrorCode.OPEN_FAILED);
+            log.warn(code.id() + " Could not open " + path, error);
+            report(code, I18n.t("Could not open {0}", path) + ": " + Text.describe(error), false, null, null);
         }
     }
 
     public void browse(String url) {
         try { Platform.browse(url); }
-        catch (IOException error) { notice(Notice.Level.ERROR, I18n.t("Could not open the browser"), url, null, null); }
+        catch (IOException error) {
+            log.warn(ErrorCode.OPEN_FAILED.id() + " Could not open the browser for " + url, error);
+            report(ErrorCode.OPEN_FAILED, I18n.t("Could not open the browser") + ": " + url, false, null, null);
+        }
     }
 
     // ---- state helpers -------------------------------------------------------

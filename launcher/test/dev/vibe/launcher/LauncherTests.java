@@ -35,6 +35,8 @@ public final class LauncherTests {
             dev.vibe.launcher.game.GameTests.run(check, temp);
             System.out.println("skin");
             dev.vibe.launcher.skin.SkinTests.run(check);
+            System.out.println("errors");
+            dev.vibe.launcher.core.ErrorTests.run(check);
         } finally {
             FileUtil.deleteTreeQuietly(temp);
         }

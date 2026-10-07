@@ -23,7 +23,15 @@ public final class Http {
     public static final class StatusException extends IOException {
         private static final long serialVersionUID = 1L;
         public final int status;
-        StatusException(int status, String message) { super(message); this.status = status; }
+        public final String host;
+        /** GitHub's hourly or secondary request limit, not a real server failure. */
+        public final boolean rateLimited;
+        StatusException(int status, String host, boolean rateLimited, String message) {
+            super(message);
+            this.status = status;
+            this.host = host;
+            this.rateLimited = rateLimited;
+        }
     }
 
     private static volatile String userAgent = "VibeLauncher";
@@ -62,8 +70,8 @@ public final class Http {
     }
 
     /**
-     * Downloads to {@code target}, retrying interrupted transfers twice. The file is
-     * written next to the target first and only moved into place once complete.
+     * Downloads to {@code target}, retrying dropped or timed-out transfers twice. The file
+     * is written next to the target first and only moved into place once complete.
      */
     public static void download(String url, Path target, long limit, Progress progress) throws IOException {
         IOException last = null;
@@ -73,9 +81,10 @@ public final class Http {
                 return;
             } catch (StatusException error) {
                 throw error;
-            } catch (InterruptedIOException error) {
-                throw error;
             } catch (IOException error) {
+                // A read timeout is an InterruptedIOException too, but worth another attempt.
+                if (LauncherException.cancelled(error)) throw error;
+                if (!retryable(ErrorCode.of(error))) throw error;
                 last = error;
                 if (Thread.currentThread().isInterrupted()) throw new InterruptedIOException("Cancelled.");
                 try { Thread.sleep(1500L * attempt); } catch (InterruptedException interrupted) {
@@ -85,6 +94,14 @@ public final class Http {
             }
         }
         throw last;
+    }
+
+    /** Network hiccups are retried; a full disk, a certificate problem or a missing file would fail again. */
+    private static boolean retryable(ErrorCode code) {
+        switch (code) {
+            case NO_INTERNET: case CONNECTION_BLOCKED: case TIMEOUT: case DOWNLOAD_INTERRUPTED: case UNEXPECTED: return true;
+            default: return false;
+        }
     }
 
     private static void downloadOnce(String url, Path target, long limit, Progress progress) throws IOException {
@@ -166,14 +183,19 @@ public final class Http {
         int code = connection.getResponseCode();
         if (code >= 200 && code < 300) return;
         String host = host(url);
-        if ((code == 403 || code == 429) && "0".equals(connection.getHeaderField("X-RateLimit-Remaining"))) {
+        // GitHub answers 403 or 429 for its hourly limit (no requests remaining) and for its
+        // secondary limit (with Retry-After).
+        boolean github = host != null && host.toLowerCase(Locale.ROOT).endsWith("github.com");
+        boolean limited = github && (code == 429 || (code == 403 && ("0".equals(connection.getHeaderField("X-RateLimit-Remaining"))
+                || connection.getHeaderField("Retry-After") != null)));
+        if (limited) {
             String reset = connection.getHeaderField("X-RateLimit-Reset");
             String when = "";
-            try { when = " (until " + new SimpleDateFormat("HH:mm").format(new Date(Long.parseLong(reset) * 1000L)) + ")"; }
+            try { when = " " + I18n.t("(until {0})", new SimpleDateFormat("HH:mm").format(new Date(Long.parseLong(reset) * 1000L))); }
             catch (Exception ignored) { /* no reset time */ }
-            throw new StatusException(code, "GitHub's hourly request limit is reached" + when + ".");
+            throw new StatusException(code, host, true, I18n.t("GitHub's request limit is reached{0}.", when));
         }
-        throw new StatusException(code, host + " answered HTTP " + code + ".");
+        throw new StatusException(code, host, false, I18n.t("{0} answered HTTP {1}.", host, code));
     }
 
     private static String host(String url) {

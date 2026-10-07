@@ -88,6 +88,8 @@ Alt Manager for new sign-ins, manages custom mods, shares the menu themes, can s
 straight into GTA7 or GTA8, and shows the build and game output in its console.
 Rebuild it with `launcher\buildLauncher.bat` (Windows) or `launcher/buildLauncher.sh`.
 See [launcher/README.md](launcher/README.md) for details, data locations and releases.
+Every launcher error shows a code such as `VL-101`; [docs/LAUNCHER_ERRORS.md](docs/LAUNCHER_ERRORS.md)
+explains how to fix each one.
 
 ## Project layout
 

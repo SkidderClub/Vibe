@@ -1,6 +1,7 @@
 package dev.vibe.launcher.ui;
 
 import dev.vibe.launcher.app.LauncherController;
+import dev.vibe.launcher.core.ErrorCode;
 import dev.vibe.launcher.core.I18n;
 import dev.vibe.launcher.game.AccountVault;
 import dev.vibe.launcher.skin.SkinService;
@@ -66,8 +67,12 @@ final class AccountsPage extends JPanel {
         if (!controller.accountsError().isEmpty()) {
             Card error = Card.column(6, 18);
             error.outline(() -> Style.alpha(Style.danger(), 90));
-            error.add(new Label(I18n.t("The account vault could not be read"), Style.bodyBold(), Label.Tone.DANGER));
-            error.add(Label.small(I18n.t("Open Vibe's Alt Manager to repair it: it keeps accounts.vault and accounts.key together in the profile.")));
+            ErrorCode code = controller.accountsCode() == null ? ErrorCode.ACCOUNT_VAULT : controller.accountsCode();
+            error.add(new Label(code.id() + " \u00b7 " + I18n.t("The account vault could not be read"), Style.bodyBold(), Label.Tone.DANGER));
+            error.add(Label.small(controller.accountsError() + " " + code.hint()));
+            Stack.Panel actions = Stack.row(8);
+            actions.add(new FlatButton(I18n.t("How to fix"), Icons.EXTERNAL, FlatButton.Kind.SECONDARY, () -> controller.openHelp(code)));
+            error.add(actions);
             list.add(error);
         } else if (controller.accounts().isEmpty()) {
             Card empty = Card.column(6, 22);
