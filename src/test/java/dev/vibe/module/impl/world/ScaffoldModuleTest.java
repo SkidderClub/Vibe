@@ -242,9 +242,104 @@ public class ScaffoldModuleTest {
         assertEquals(1 + 64 + 64, scaffold.getBlockCount());
     }
 
-    @Test public void rotationsAreNamedNormalAndGodBridge() {
-        assertEquals(Arrays.asList("Normal", "GodBridge"), scaffold.getRotations().getModes());
+    @Test public void rotationsIncludeTheSourcePortedHypixelProfile() {
+        assertEquals(Arrays.asList("Normal", "GodBridge", "Hypixel"), scaffold.getRotations().getModes());
         assertEquals("Normal", scaffold.getRotations().getValue());
+    }
+
+    @Test public void hypixelPresetMatchesScreenshotAndOnlyExposesLongAndTellyB() {
+        scaffold.getRotations().setValue("Hypixel");
+        assertEquals(Arrays.asList("Disabled", "Long"), scaffold.hypixelTelly.getModes());
+        assertEquals("Long", scaffold.hypixelTelly.getValue());
+        assertEquals(Arrays.asList("Disabled", "Telly B"), scaffold.hypixelKeepMode.getModes());
+        assertEquals("Telly B", scaffold.hypixelKeepMode.getValue());
+        assertEquals(Arrays.asList("Disabled", "2", "3"), scaffold.hypixelMultiPlace.getModes());
+        assertEquals("Disabled", scaffold.hypixelMultiPlace.getValue());
+        assertEquals(20.0D, scaffold.hypixelClickSpeed.getDouble(), 0.0D);
+        assertEquals(-0.6D, scaffold.hypixelIceThreshold.getDouble(), 0.0D);
+        assertTrue(scaffold.hypixelTellyOnJump.isEnabled());
+        assertFalse(scaffold.hypixelKeepRmb.isEnabled());
+        assertFalse(scaffold.hypixelDisableJumpPotion.isEnabled());
+    }
+
+    @Test public void hypixelPacketsOnlyAllowOwnedPlacementAndNeverSuppressNonDigPackets() throws Exception {
+        HypixelScaffold profile = new HypixelScaffold(scaffold);
+        net.minecraft.network.Packet<?> use = new net.minecraft.network.play.client.C08PacketPlayerBlockPlacement(stone);
+        net.minecraft.network.Packet<?> dig = new net.minecraft.network.play.client.C07PacketPlayerDigging(
+                net.minecraft.network.play.client.C07PacketPlayerDigging.Action.START_DESTROY_BLOCK, new BlockPos(0,63,0), EnumFacing.UP);
+        assertTrue(profile.permitsPacket(use));
+        set(HypixelScaffold.class, profile, "rotationSentThisTick", true);
+        assertFalse(profile.permitsPacket(use));
+        player.inventory.currentItem = 3;
+        assertFalse(profile.permitsPacket(dig));
+        assertTrue(profile.permitsPacket(new net.minecraft.network.play.client.C0APacketAnimation()));
+        assertTrue(profile.permitsPacket(new net.minecraft.network.play.client.C07PacketPlayerDigging(
+                net.minecraft.network.play.client.C07PacketPlayerDigging.Action.RELEASE_USE_ITEM, BlockPos.ORIGIN, EnumFacing.DOWN)));
+        set(HypixelScaffold.class, profile, "sendingPlacement", true);
+        assertTrue(profile.permitsPacket(use));
+    }
+
+    @Test public void hypixelHookUsesRavensUpdateTimingQuantizationAndMoveFix() throws Exception {
+        world.blocks.put(new BlockPos(0,63,0), Blocks.stone.getDefaultState());
+        standAt(0.5D, 64.0D, 0.5D, -90.0F, 20.0F);
+        player.movementInput = new MovementInput();
+        player.movementInput.moveForward = 1.0F;
+        keys(true, false, false, false);
+        scaffold.getRotations().setValue("Hypixel");
+        // Isolate the flat-ground rotation from the screenshot's automatic Keep-Y jump.
+        scaffold.hypixelKeepMode.setValue("Disabled");
+        scaffold.hypixelTelly.setValue("Disabled");
+        scaffold.setEnabled(true);
+        scaffold.tickStart();
+        assertFalse("The port waits for onUpdate HEAD, after vanilla's click pass", scaffold.ownsRotation());
+        ScaffoldModule.hypixelUpdateHook();
+        assertTrue(scaffold.ownsRotation());
+        assertEquals("Silent", moveFix.getEffectiveCorrection());
+        assertTrue(Float.isFinite(moveFix.getRotationYaw()));
+        assertTrue(Float.isFinite(moveFix.getRotationPitch()));
+        assertEquals(Math.round(moveFix.getRotationYaw() / 0.0234375F),
+                moveFix.getRotationYaw() / 0.0234375F, 0.001D);
+        assertEquals(Math.round(moveFix.getRotationPitch() / 0.0234375F),
+                moveFix.getRotationPitch() / 0.0234375F, 0.001D);
+        assertSame(sword, player.getHeldItem());
+    }
+
+    @Test public void hypixelAcceptsRavensIceStacksEvenWhenNormalScaffoldExcludesThem() {
+        player.inventory.mainInventory[3] = new ItemStack(Blocks.ice,64);
+        scaffold.getRotations().setValue("Hypixel");
+        scaffold.setEnabled(true);
+        scaffold.tickStart();
+        assertEquals(3, scaffold.getServerSlot());
+        assertSame(player.inventory.mainInventory[3], scaffold.getBlockStack());
+    }
+
+    @Test public void hypixelLongTellyQueueIsTheRavenThreeBlockAlternatingRow() throws Exception {
+        HypixelScaffold profile = new HypixelScaffold(scaffold);
+        set(HypixelScaffold.class, profile, "hasLongTellyOrigin", true);
+        set(HypixelScaffold.class, profile, "longTellyOriginX", 10);
+        set(HypixelScaffold.class, profile, "longTellyOriginZ", 20);
+        set(HypixelScaffold.class, profile, "longTellyForwardX", 1);
+        set(HypixelScaffold.class, profile, "longTellyForwardZ", 0);
+        set(HypixelScaffold.class, profile, "longTellyLateralX", 0);
+        set(HypixelScaffold.class, profile, "longTellyLateralZ", 1);
+        set(HypixelScaffold.class, profile, "longTellyRowY", 63);
+        set(HypixelScaffold.class, profile, "lastGroundX", 10);
+        set(HypixelScaffold.class, profile, "lastGroundZ", 20);
+        set(HypixelScaffold.class, profile, "ticksSinceGrounded", 0);
+        set(HypixelScaffold.class, profile, "longTellyNeedsSideUpdate", false);
+        set(HypixelScaffold.class, profile, "longTellySprintJump", false);
+        standAt(10.5D, 64.0D, 20.5D, -90.0F, 20.0F);
+        java.lang.reflect.Method build = HypixelScaffold.class.getDeclaredMethod("buildLongTellyQueue", Vec3.class);
+        build.setAccessible(true);
+        build.invoke(profile, new Vec3(0.3D, 0.42D, 0.0D));
+        Field count = HypixelScaffold.class.getDeclaredField("queuedBlockCount");
+        Field queue = HypixelScaffold.class.getDeclaredField("queuedBlocks");
+        count.setAccessible(true); queue.setAccessible(true);
+        assertEquals(3, count.getInt(profile));
+        BlockPos[] positions = (BlockPos[]) queue.get(profile);
+        assertEquals(new BlockPos(10,64,20), positions[0]);
+        assertEquals(new BlockPos(11,64,20), positions[1]);
+        assertEquals(new BlockPos(12,64,20), positions[2]);
     }
 
     @Test public void rotationSpeedLimitsEveryTickAndAccelerationRampsUp() throws Exception {
@@ -580,6 +675,7 @@ public class ScaffoldModuleTest {
     public static final class FakeWorld extends WorldClient {
         Map<BlockPos, IBlockState> blocks;
         private FakeWorld() { super(null, null, 0, null, null); }
+        @Override public boolean isBlockLoaded(BlockPos pos) { return true; }
         @Override public IBlockState getBlockState(BlockPos pos) {
             IBlockState state = blocks.get(pos);
             return state == null ? Blocks.air.getDefaultState() : state;

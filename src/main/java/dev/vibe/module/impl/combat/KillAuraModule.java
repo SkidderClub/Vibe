@@ -34,11 +34,39 @@ import org.lwjgl.input.Mouse;
 /** Selects rotations before movement; supplies clicks in vanilla's input pass. */
 public final class KillAuraModule extends Module {
     private final RangeSetting reach = addSetting(new RangeSetting("Reach", 3.0D, 3.0D, 3.0D, 6.5D, 0.05D));
-    private final ModeSetting autoblock = addSetting(new ModeSetting("Autoblock Mode", "None", "None", "Vanilla", "Fake", "Legit", "AAC330"));
+    private final ModeSetting autoblock = addSetting(new ModeSetting("Autoblock Mode", "None", "None", "Vanilla", "Fake", "Legit", "AAC330", "Hypixel"));
     private final BooleanSetting onlyRightClick = addSetting(new BooleanSetting("Only When Rightclicking", false,
             () -> realBlockMode()));
     private final NumberSetting blockingRange = addSetting(new NumberSetting("Blocking Range", 3.0D, 1.0D, 7.0D, 0.1D,
-            () -> !autoblock.is("None")));
+            () -> !autoblock.is("None") && !autoblock.is("Hypixel")));
+    // RavenBS Auto Block, exposed here only when its Hypixel controller is
+    // selected.  These defaults intentionally mirror the supplied preset.
+    final NumberSetting hypixelRange = addSetting(new NumberSetting("Range", 3.5D, 2.0D, 6.0D, 0.1D,
+            () -> autoblock.is("Hypixel")));
+    final NumberSetting hypixelMaximumHurtTime = addSetting(new NumberSetting("Maximum hurt time", 200.0D, 50.0D, 500.0D, 50.0D,
+            () -> autoblock.is("Hypixel")));
+    final NumberSetting hypixelMaximumHoldDuration = addSetting(new NumberSetting("Maximum hold duration", 150.0D, 50.0D, 500.0D, 50.0D,
+            () -> autoblock.is("Hypixel")));
+    final NumberSetting hypixelCooldown = addSetting(new NumberSetting("Cooldown", 150.0D, 0.0D, 500.0D, 50.0D,
+            () -> autoblock.is("Hypixel")));
+    final ModeSetting hypixelUnblockOutOfRange = addSetting(new ModeSetting("Unblock out of range", "Once",
+            () -> autoblock.is("Hypixel"), "Once", "Always", "Fake"));
+    final BooleanSetting hypixelForceAttack = addSetting(new BooleanSetting("Force attack", true,
+            () -> autoblock.is("Hypixel")));
+    final BooleanSetting hypixelForceBlockAnimation = addSetting(new BooleanSetting("Force block animation", false,
+            () -> autoblock.is("Hypixel")));
+    final BooleanSetting hypixelRequireLeftMouse = addSetting(new BooleanSetting("Require left mouse", true,
+            () -> autoblock.is("Hypixel")));
+    final BooleanSetting hypixelRequireRightMouse = addSetting(new BooleanSetting("Require right mouse", false,
+            () -> autoblock.is("Hypixel")));
+    final BooleanSetting hypixelDamaged = addSetting(new BooleanSetting("Damaged", false,
+            () -> autoblock.is("Hypixel")));
+    final BooleanSetting hypixelIgnoreTeammates = addSetting(new BooleanSetting("Ignore teammates", true,
+            () -> autoblock.is("Hypixel")));
+    private final NumberSetting hypixelTargetCps = addSetting(new NumberSetting("Target CPS", 10.0D, 1.0D, 20.0D, 0.5D,
+            () -> autoblock.is("Hypixel")));
+    private final BooleanSetting hypixelSimulateExhaust = addSetting(new BooleanSetting("Simulate exhaust", true,
+            () -> autoblock.is("Hypixel")));
     private final ModeSetting yawAimpoint = addSetting(new ModeSetting("Yaw Aimpoint", "Center", "Center", "Closest"));
     private final ModeSetting pitchAimpoint = addSetting(new ModeSetting("Pitch Aimpoint", "Center", "Center", "Closest"));
     private final ModeSetting rotationMode = addSetting(new ModeSetting("Rotation Mode", "Normal", "Normal", "Acceleration"));
@@ -47,17 +75,17 @@ public final class KillAuraModule extends Module {
     private final RangeSetting rotationAcceleration = addSetting(new RangeSetting("Rotation Acceleration", 2.0D, 5.0D, 0.25D, 40.0D, 0.25D,
             () -> rotationMode.is("Acceleration")));
     private final NumberSetting clickingRange = addSetting(new NumberSetting("Clicking Range", 3.0D, 2.5D, 7.0D, 0.1D));
-    private final ModeSetting clickingMode = addSetting(new ModeSetting("Clicking Mode", "Normal", "Normal", "Drag Clicking", "Butterfly"));
+    private final ModeSetting clickingMode = addSetting(new ModeSetting("Clicking Mode", "Normal", () -> !autoblock.is("Hypixel"), "Normal", "Drag Clicking", "Butterfly"));
     private final RangeSetting normalCps = addSetting(new RangeSetting("Normal CPS", 8.0D, 12.0D, 1.0D, 20.0D, 0.1D,
-            () -> clickingMode.is("Normal")));
+            () -> !autoblock.is("Hypixel") && clickingMode.is("Normal")));
     private final RangeSetting dragCps = addSetting(new RangeSetting("Drag CPS", 25.0D, 40.0D, 5.0D, 60.0D, 0.5D,
-            () -> clickingMode.is("Drag Clicking")));
+            () -> !autoblock.is("Hypixel") && clickingMode.is("Drag Clicking")));
     private final RangeSetting dragDuration = addSetting(new RangeSetting("Drag Duration (ms)", 120.0D, 350.0D, 50.0D, 1000.0D, 10.0D,
-            () -> clickingMode.is("Drag Clicking")));
+            () -> !autoblock.is("Hypixel") && clickingMode.is("Drag Clicking")));
     private final RangeSetting dragPause = addSetting(new RangeSetting("Drag Pause (ms)", 150.0D, 400.0D, 50.0D, 1500.0D, 10.0D,
-            () -> clickingMode.is("Drag Clicking")));
+            () -> !autoblock.is("Hypixel") && clickingMode.is("Drag Clicking")));
     private final RangeSetting butterflyCps = addSetting(new RangeSetting("Butterfly CPS", 12.0D, 18.0D, 1.0D, 40.0D, 0.1D,
-            () -> clickingMode.is("Butterfly")));
+            () -> !autoblock.is("Hypixel") && clickingMode.is("Butterfly")));
     private final BooleanSetting notBlockBreaking = addSetting(new BooleanSetting("Not When BlockBreaking", true));
     private final BooleanSetting aimThroughWalls = addSetting(new BooleanSetting("Aim Through Walls", false));
     private final BooleanSetting piercing = addSetting(new BooleanSetting("Piercing", false));
@@ -83,6 +111,8 @@ public final class KillAuraModule extends Module {
     private Entity savedPointedEntity;
     private long legitBlockUntil;
     private long nextLegitBlock;
+    private final HypixelAutoblock hypixelBlock = new HypixelAutoblock(this);
+    private long hypixelNextAttack;
     private String previousBlockMode = "None";
     private String previousClickMode = "Normal";
 
@@ -92,6 +122,10 @@ public final class KillAuraModule extends Module {
 
     public void tickStart() {
         restoreInput();
+        if (previousBlockMode.equals("Hypixel") && !autoblock.is("Hypixel")) {
+            resetHypixelBlock(true);
+            previousBlockMode = autoblock.getValue();
+        }
         inputPrepared = false;
         if (sessionPlayer != minecraft.thePlayer) {
             clear();
@@ -101,7 +135,22 @@ public final class KillAuraModule extends Module {
         // Scaffold owns the server rotation and the held slot while enabled.
         if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive()) { clear(); return; }
         EntityLivingBase selected = chooseTarget();
-        if (selected == null) { clear(); return; }
+        if (selected == null) {
+            // RavenBS permits the physical right mouse button to maintain its
+            // manual block branch after a target leaves range.  Rotation and
+            // aura attacks still stop immediately; the autoclicker can continue
+            // while the physical attack button is held.
+            if (autoblock.is("Hypixel")) {
+                MoveFixModule fix = moveFix();
+                if (fix != null) fix.clearFakeRotation(getId());
+                target = null;
+                rotationInitialized = false;
+                clicks.reset();
+                return;
+            }
+            clear();
+            return;
+        }
         if (target != selected) {
             clicks.reset();
             legitBlockUntil = nextLegitBlock = 0L;
@@ -124,12 +173,21 @@ public final class KillAuraModule extends Module {
     private void prepareInput() {
         if (inputPrepared) return;
         inputPrepared = true;
-        if (!canOperate() || target == null || !validTarget(target) || isBreakingBlock() || ScaffoldModule.isActive()) {
+        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive()) {
             clear();
             releaseOwnedBlock();
             return;
         }
         long now = System.nanoTime() / 1000000L;
+        if (autoblock.is("Hypixel")) {
+            prepareHypixelInput(now);
+            return;
+        }
+        if (target == null || !validTarget(target)) {
+            clear();
+            releaseOwnedBlock();
+            return;
+        }
         if (!previousClickMode.equals(clickingMode.getValue())) {
             clicks.reset();
             previousClickMode = clickingMode.getValue();
@@ -187,6 +245,76 @@ public final class KillAuraModule extends Module {
         }
     }
 
+    /**
+     * RavenBS's Auto Block state machine, adapted to Vibe's vanilla-input
+     * path.  It deliberately counts client ticks for max-hold/hurt windows
+     * while using wall time only for the configured cooldown, exactly like
+     * the source controller.
+     */
+    private void prepareHypixelInput(long now) {
+        if (!previousBlockMode.equals(autoblock.getValue())) {
+            hypixelBlock.reset(true);
+            blockOwned = false;
+            previousBlockMode = autoblock.getValue();
+        }
+        if (!previousClickMode.equals(clickingMode.getValue())) {
+            clicks.reset();
+            previousClickMode = clickingMode.getValue();
+        }
+        // Raven order: Auto Block, click producer, then LOWEST force-attack.
+        hypixelBlock.onPrePlayerInteract();
+        KeyBinding attack = minecraft.gameSettings.keyBindAttack;
+        attackOwned = true;
+        VanillaClicks.discardPresses(attack);
+        KeyBinding.setKeyBindState(attack.getKeyCode(), false);
+        boolean inClickRange = target != null && validTarget(target) && distanceTo(target) <= clickingRange.getDouble();
+        // Raven's autoclicker also runs on physical LMB while aura has no target.
+        boolean clickActive = inClickRange || target == null && VanillaClicks.physicallyDown(attack);
+        if (!clickActive || !minecraft.inGameHasFocus || minecraft.currentScreen != null) hypixelNextAttack = 0L;
+        else {
+            long clickNow = System.currentTimeMillis();
+            int count = 0;
+            if (hypixelNextAttack == 0L) hypixelNextAttack = clickNow + hypixelAttackDelay();
+            else while (hypixelNextAttack <= clickNow) {
+                count++;
+                hypixelNextAttack += hypixelAttackDelay();
+            }
+            for (int i = 0; i < count; i++) VanillaClicks.pulseAttack(attack);
+        }
+        if (target != null && validTarget(target)) overrideHit(attackHit(sample(reach)));
+        hypixelBlock.onForceAttack();
+    }
+
+    private void resetHypixelBlock(boolean release) { hypixelBlock.reset(release); hypixelNextAttack = 0L; }
+
+    /** AutoClicker.nextDelay from the uploaded RavenBS source. */
+    private long hypixelAttackDelay() {
+        int target = Math.max(1, (int) hypixelTargetCps.getDouble());
+        int baseDelay = 1000 / target;
+        int finalDelay;
+        if (hypixelSimulateExhaust.isEnabled()) {
+            int variation = random.nextInt(baseDelay + 1) - baseDelay / 2;
+            finalDelay = baseDelay + variation;
+            if (random.nextInt(100) < 15) {
+                if (random.nextBoolean()) {
+                    finalDelay = 25 + random.nextInt(16);
+                } else {
+                    finalDelay = baseDelay + 50 + random.nextInt(41);
+                }
+            }
+            if (random.nextInt(100) < 8) {
+                int spikeMult = 50 + random.nextInt(151);
+                finalDelay = finalDelay * spikeMult / 100;
+            }
+            if (random.nextInt(100) < 10) {
+                finalDelay += 10 + random.nextInt(26);
+            }
+        } else {
+            finalDelay = baseDelay + (random.nextInt(21) - 10);
+        }
+        return Math.max(33, Math.min(180, finalDelay));
+    }
+
     public void tickEnd() { restoreInput(); }
 
     private boolean canOperate() {
@@ -240,7 +368,7 @@ public final class KillAuraModule extends Module {
         TargetsModule targets = Vibe.getInstance().getModuleManager().getModule(TargetsModule.class);
         if (targets == null || !targets.canTarget(entity)) return false;
         double range = Math.max(reach.getMax(), clickingRange.getDouble());
-        if (!autoblock.is("None")) range = Math.max(range, blockingRange.getDouble());
+        if (!autoblock.is("None") && !autoblock.is("Hypixel")) range = Math.max(range, blockingRange.getDouble());
         if (distanceTo(entity) > range) return false;
         float[] desired = rotationsTo(entity);
         if (!RotationMath.withinAngle(desired[0], desired[1], minecraft.thePlayer.rotationYaw,
@@ -389,10 +517,11 @@ public final class KillAuraModule extends Module {
         rotationInitialized = false;
         visualBlocking = false;
         legitBlockUntil = nextLegitBlock = 0L;
+        resetHypixelBlock(false);
         clicks.reset();
     }
 
-    @Override protected void onDisable() { aacReleaseResubmit = false; releaseOwnedBlock(); clear(); }
+    @Override protected void onDisable() { aacReleaseResubmit = false; resetHypixelBlock(true); releaseOwnedBlock(); clear(); }
 
     private MoveFixModule moveFix() {
         Vibe vibe = Vibe.getInstance();
@@ -401,6 +530,21 @@ public final class KillAuraModule extends Module {
 
     public EntityLivingBase getTarget() { return target; }
     public double getReachRadius() { return reach.getMax(); }
+    boolean isHypixelBlock() { return autoblock.is("Hypixel"); }
+    void setHypixelVisual(boolean value) { visualBlocking = value; }
+    public void hypixelFrame() { if (isEnabled() && autoblock.is("Hypixel")) hypixelBlock.frame(); }
+    public void onHypixelMouse(net.minecraftforge.client.event.MouseEvent event) {
+        if (isEnabled() && autoblock.is("Hypixel")) hypixelBlock.onMouse(event);
+    }
+    public static boolean hypixelUseHook() {
+        KillAuraModule aura = module();
+        return aura != null && aura.isEnabled() && aura.autoblock.is("Hypixel") && aura.hypixelBlock.blocksUse();
+    }
+    public static boolean hypixelRightClickHook() {
+        KillAuraModule aura = module();
+        return aura != null && aura.isEnabled() && aura.autoblock.is("Hypixel") && aura.hypixelBlock.blocksRightClick();
+    }
+
     public boolean isVisualBlocking() { return isEnabled() && visualBlocking && swordHeld(); }
 
     public static void prepareInputHook() {

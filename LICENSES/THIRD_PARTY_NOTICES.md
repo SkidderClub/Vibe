@@ -248,6 +248,13 @@ types for the [Raven scripting API](https://blowsy.gitbook.io/raven). The exact
 upstream revision and provenance of individual compatibility helpers are not
 recorded; the API name alone is not a license statement.
 
+The Hypixel autoblock/scaffold profiles, Saturation and BreakProgress were
+ported from a user-supplied Raven bS beta 17 source reconstruction. Source
+mapping, adaptation boundaries and reference hashes are recorded in
+[RavenBS feature port](../docs/RAVENBS_PORT.md). No upstream license grant was
+established from that reconstruction; redistribution rights remain an open
+distribution issue.
+
 ## External runtime and build tools
 
 Minecraft, Forge and the game's runtime libraries are obtained separately by the

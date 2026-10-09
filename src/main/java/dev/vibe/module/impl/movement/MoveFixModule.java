@@ -660,6 +660,9 @@ public final class MoveFixModule extends Module {
             moveForward = vanillaInput.moveForward;
             jump = vanillaInput.jump;
             sneak = vanillaInput.sneak;
+            ScaffoldModule scaffold = Vibe.getInstance() == null || Vibe.getInstance().getModuleManager() == null ? null
+                    : Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
+            if (scaffold != null) scaffold.beforeMoveInput(this);
             if (module.forcedMovementOwner != null) {
                 moveForward = module.forcedForward;
                 moveStrafe = module.forcedStrafe;
@@ -669,7 +672,6 @@ public final class MoveFixModule extends Module {
             }
             if (Vibe.getInstance() == null) return;
             // Scaffold edits the corrected keys (sneak, jump, god-bridge strafe).
-            ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
             if (scaffold != null) scaffold.applyMoveInput(this);
             // Gothaj's Jump velocity mode listens to the finalized movement
             // input, after physical keys and MoveFix correction are known.

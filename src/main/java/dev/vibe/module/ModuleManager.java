@@ -29,6 +29,8 @@ public final class ModuleManager {
         register(new CuteVisualsModule());
         register(new TrajectoriesModule());
         register(new FullBrightModule());
+        register(new SaturationModule());
+        register(new BreakProgressModule());
         register(new FovChangerModule());
         register(new CustomCrosshairModule());
         register(new CustomCosmeticsModule());

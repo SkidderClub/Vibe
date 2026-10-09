@@ -328,6 +328,12 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
         }
 
         @Override
+        public void visitCode() {
+            super.visitCode();
+            super.visitMethodInsn(Opcodes.INVOKESTATIC, SCAFFOLD_HOOK, "hypixelUpdateHook", "()V", false);
+        }
+
+        @Override
         public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean itf) {
             if (hooked || opcode != Opcodes.INVOKESPECIAL || !isUpdate(name, descriptor)) {
                 super.visitMethodInsn(opcode, owner, name, descriptor, itf);

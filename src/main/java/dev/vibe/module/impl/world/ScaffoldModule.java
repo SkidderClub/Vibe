@@ -80,20 +80,39 @@ public final class ScaffoldModule extends Module {
 
     private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Normal", "Normal", "Telly"));
     private final ModeSetting rotations = addSetting(new ModeSetting("Rotations", "Normal",
-            () -> mode.is("Normal"), "Normal", "GodBridge"));
+            () -> mode.is("Normal"), "Normal", "GodBridge", "Hypixel"));
+    // The Hypixel rotation profile is RavenBS's long-Telly/Telly-B branch.
+    // Its omitted Raven settings deliberately remain Vibe's existing scaffold
+    // features rather than creating parallel controls.
+    final ModeSetting hypixelTelly = addSetting(new ModeSetting("Telly", "Long",
+            () -> mode.is("Normal") && rotations.is("Hypixel"), "Disabled", "Long"));
+    final ModeSetting hypixelMultiPlace = addSetting(new ModeSetting("Multi-place", "Disabled",
+            () -> mode.is("Normal") && rotations.is("Hypixel"), "Disabled", "2", "3"));
+    final NumberSetting hypixelClickSpeed = addSetting(new NumberSetting("Click speed", 20.0D, 0.0D, 20.0D, 0.5D,
+            () -> mode.is("Normal") && rotations.is("Hypixel")));
+    final NumberSetting hypixelIceThreshold = addSetting(new NumberSetting("Ice threshold", -0.6D, -0.6D, 0.6D, 0.01D,
+            () -> mode.is("Normal") && rotations.is("Hypixel")));
+    final BooleanSetting hypixelTellyOnJump = addSetting(new BooleanSetting("Telly on jump", true,
+            () -> mode.is("Normal") && rotations.is("Hypixel")));
+    final ModeSetting hypixelKeepMode = addSetting(new ModeSetting("Keep Y Mode", "Telly B",
+            () -> hypixelRotations(), "Disabled", "Telly B"));
+    final BooleanSetting hypixelDisableJumpPotion = addSetting(new BooleanSetting("Disable on jump potion", false,
+            () -> hypixelRotations()));
+    final BooleanSetting hypixelKeepRmb = addSetting(new BooleanSetting("Keep Y on RMB", false,
+            () -> hypixelRotations()));
     private final ModeSetting rotationMode = addSetting(new ModeSetting("Rotation Mode", "Normal",
-            () -> mode.is("Normal"), "Normal", "Acceleration"));
+            () -> mode.is("Normal") && !hypixelRotations(), "Normal", "Acceleration"));
     private final RangeSetting rotationSpeed = addSetting(new RangeSetting("Rotation Speed", 45.0D, 60.0D, 1.0D, 180.0D, 0.5D,
-            () -> mode.is("Normal") && rotationMode.is("Normal")));
+            () -> mode.is("Normal") && !hypixelRotations() && rotationMode.is("Normal")));
     private final RangeSetting rotationAcceleration = addSetting(new RangeSetting("Rotation Acceleration", 5.0D, 10.0D,
-            0.25D, 40.0D, 0.25D, () -> mode.is("Normal") && rotationMode.is("Acceleration")));
+            0.25D, 40.0D, 0.25D, () -> mode.is("Normal") && !hypixelRotations() && rotationMode.is("Acceleration")));
     private final RangeSetting tellyTicks = addSetting(new RangeSetting("Telly Ticks", 2.0D, 3.0D, 0.0D, 8.0D, 1.0D,
             () -> mode.is("Telly")));
     private final BooleanSetting sideways = addSetting(new BooleanSetting("Sideways", false,
             () -> mode.is("Normal") && rotations.is("Normal")));
     private final ModeSetting sprint = addSetting(new ModeSetting("Sprint", "Always", "Always", "Off", "Legit"));
     private final ModeSetting tower = addSetting(new ModeSetting("Tower", "None", "None", "NCP", "Timer", "Intave"));
-    private final BooleanSetting keepY = addSetting(new BooleanSetting("Keep Y", true));
+    private final BooleanSetting keepY = addSetting(new BooleanSetting("Keep Y", true, () -> !hypixelRotations()));
     private final BooleanSetting sneak = addSetting(new BooleanSetting("Sneak", false, () -> mode.is("Normal")));
     private final NumberSetting blockEndDistance = addSetting(new NumberSetting("Block End Distance", 0.1D, 0.0D, 0.6D, 0.01D,
             () -> mode.is("Normal") && sneak.isEnabled()));
@@ -106,10 +125,10 @@ public final class ScaffoldModule extends Module {
     private final BooleanSetting preventDoubleSneak = addSetting(new BooleanSetting("Prevent Double Sneaking", true,
             () -> mode.is("Normal") && sneak.isEnabled()));
     private final BooleanSetting safeWalk = addSetting(new BooleanSetting("Safe Walk", true, () -> mode.is("Normal")));
-    private final BooleanSetting movementFix = addSetting(new BooleanSetting("Move Fix", true, () -> mode.is("Normal")));
+    private final BooleanSetting movementFix = addSetting(new BooleanSetting("Move Fix", true, () -> mode.is("Normal") && !hypixelRotations()));
     private final BooleanSetting spoofSlot = addSetting(new BooleanSetting("Spoof Slot", true));
     private final BooleanSetting swing = addSetting(new BooleanSetting("Swing", false));
-    private final BooleanSetting jump = addSetting(new BooleanSetting("Jump", false, () -> mode.is("Normal")));
+    private final BooleanSetting jump = addSetting(new BooleanSetting("Jump", false, () -> mode.is("Normal") && !hypixelRotations()));
     private final BooleanSetting dragClick = addSetting(new BooleanSetting("Drag Click", false));
     private final BooleanSetting renderCount = addSetting(new BooleanSetting("Render Count", false));
 
@@ -129,6 +148,8 @@ public final class ScaffoldModule extends Module {
     private boolean tellyTurned;
     private boolean tellyPlacing;
     private int tellyDelay;
+    private final HypixelScaffold hypixel = new HypixelScaffold(this);
+    private boolean wasHypixel;
     private boolean edgeSneaking;
     private long unsneakAt;
     private boolean cornerHold;
@@ -153,6 +174,8 @@ public final class ScaffoldModule extends Module {
 
     @Override
     protected void onEnable() {
+        hypixel.reset();
+        wasHypixel = hypixelRotations();
         offGroundTicks = 0;
         blockPos = null;
         facing = null;
@@ -171,6 +194,7 @@ public final class ScaffoldModule extends Module {
     @Override
     protected void onDisable() {
         releaseRotation();
+        hypixel.reset();
         restoreSwap();
         EntityPlayerSP player = minecraft.thePlayer;
         if (player != null && player == owner && restoreSlot >= 0 && restoreSlot < 9) {
@@ -202,17 +226,39 @@ public final class ScaffoldModule extends Module {
             targetBox = null;
             offGroundTicks = 0;
             tellyTurned = tellyPlacing = false;
+            hypixel.reset();
             resetEdgeSneak();
             if (player != null) targetY = MathHelper.floor_double(player.posY - 1.0D);
         }
         if (!isEnabled() || player == null || minecraft.theWorld == null || minecraft.playerController == null) return;
         MoveFixModule fix = moveFix();
+        if (wasHypixel != hypixelRotations()) {
+            releaseRotation();
+            hypixel.reset();
+            wasHypixel = hypixelRotations();
+        }
         blockSlot = findBlockSlot(player.inventory, serverSlot >= 0 ? serverSlot : player.inventory.currentItem);
+        if (hypixelRotations()) {
+            if (blockSlot < 0 || !hypixel.accepts(player.inventory.getStackInSlot(blockSlot))) {
+                blockSlot = -1;
+                int largest = 0;
+                for (int slot = 0; slot < 9; slot++) {
+                    ItemStack stack = player.inventory.getStackInSlot(slot);
+                    if (hypixel.accepts(stack) && stack.stackSize > largest) {
+                        blockSlot = slot;
+                        largest = stack.stackSize;
+                    }
+                }
+            }
+            int preferred = hypixel.preferredIceSlot(player);
+            if (preferred >= 0) blockSlot = preferred;
+        }
         serverSlot = spoofSlot.isEnabled() ? blockSlot : -1;
         if (blockSlot < 0 || fix == null) {
             releaseRotation();
             return;
         }
+        if (hypixelRotations()) return;
         processBlockData(player);
         updateRotations(player, fix);
     }
@@ -231,7 +277,7 @@ public final class ScaffoldModule extends Module {
     // ----------------------------------------------------------------------------------------- target
 
     private void processBlockData(EntityPlayerSP player) {
-        if (!keepY.isEnabled() || jumpEnabled() || minecraft.gameSettings.keyBindJump.isKeyDown()) {
+        if (!keepY.isEnabled() || jumpEnabled() || (minecraft.gameSettings.keyBindJump.isKeyDown())) {
             targetY = MathHelper.floor_double(player.posY - 1.0D);
         }
         blockPos = findSupport(player, player.posX, targetY, player.posZ);
@@ -663,7 +709,7 @@ public final class ScaffoldModule extends Module {
         boolean jumpKey = minecraft.gameSettings.keyBindJump.isKeyDown();
 
         applySprint(player);
-        if (moving && player.onGround && !jumpKey && (jumpEnabled() || mode.is("Telly"))) keyJump = true;
+        if (!hypixelRotations() && moving && player.onGround && !jumpKey && (jumpEnabled() || mode.is("Telly"))) keyJump = true;
         if (normal && edgeSneak(player, moving, keyJump)) keySneak = true;
         else if (!normal) resetEdgeSneak();
         if (normal && safeWalk.isEnabled() && player.onGround && minecraft.theWorld.getCollidingBoundingBoxes(player,
@@ -678,6 +724,7 @@ public final class ScaffoldModule extends Module {
             input.jump = keyJump;
             input.sneak = keySneak;
         }
+        if (hypixelRotations()) hypixel.afterInput();
     }
 
     /**
@@ -780,6 +827,7 @@ public final class ScaffoldModule extends Module {
             player.inventory.currentItem = serverSlot;
         }
         setRightClickDelay(0);
+        if (hypixelRotations()) return;
         boolean wasPlaced = place(player, fix);
         if (dragClick.isEnabled() && !wasPlaced && blockPos != null && player.onGround && !mode.is("Telly")
                 && !minecraft.gameSettings.keyBindSneak.isKeyDown() && random.nextDouble() > 0.5D) {
@@ -993,6 +1041,52 @@ public final class ScaffoldModule extends Module {
 
     private boolean jumpEnabled() {
         return mode.is("Normal") && jump.isEnabled();
+    }
+
+    /** The RavenBS long-Telly/Telly-B profile is a rotation branch of Normal Scaffold. */
+
+    /** Raven's PrePlayerInput runs before MoveFix transforms the keys. */
+    public void beforeMoveInput(MovementInput input) {
+        if (isEnabled() && hypixelRotations() && minecraft.thePlayer == owner) hypixel.beforeInput(input);
+    }
+
+    void sendHypixelRotations(float yaw, float pitch) {
+        MoveFixModule fix = moveFix();
+        if (fix != null) {
+            fix.setFakeRotation(getId(), yaw, pitch, enabledCorrection(fix));
+            rotating = true;
+        }
+    }
+    Float hypixelServerYaw() { MoveFixModule fix = moveFix(); return fix == null ? null : fix.getRotationYaw(); }
+    boolean hypixelMovementFix() { return moveFix() != null && rotating; }
+    boolean hypixelSwing() { return swing.isEnabled(); }
+
+    /** Matches Raven's EntityPlayerSP.onUpdate HEAD event, after the click pass. */
+    public static void hypixelUpdateHook() {
+        ScaffoldModule module = module();
+        if (module == null || !module.isEnabled() || !module.hypixelRotations()) return;
+        EntityPlayerSP player = module.minecraft.thePlayer;
+        if (player == null || player != module.owner || module.minecraft.theWorld == null
+                || module.minecraft.playerController == null || module.blockSlot < 0
+                || !module.minecraft.theWorld.isBlockLoaded(new BlockPos(player.posX, 0.0D, player.posZ))) return;
+        int visibleSlot = player.inventory.currentItem;
+        if (!module.spoofSlot.isEnabled() && visibleSlot != module.blockSlot && module.restoreSlot < 0) module.restoreSlot = visibleSlot;
+        player.inventory.currentItem = module.blockSlot;
+        try { module.hypixel.update(); }
+        finally { if (module.spoofSlot.isEnabled()) player.inventory.currentItem = visibleSlot; }
+    }
+    public static boolean hypixelPacketHook(Object packet) {
+        ScaffoldModule module = module();
+        return module == null || !module.isEnabled() || !module.hypixelRotations()
+                || !(packet instanceof net.minecraft.network.Packet)
+                || module.hypixel.permitsPacket((net.minecraft.network.Packet<?>) packet);
+    }
+    public void onHypixelMouse(net.minecraftforge.client.event.MouseEvent event) {
+        if (isEnabled() && hypixelRotations() && !hypixel.permitsMouse(event.button)) event.setCanceled(true);
+    }
+
+    private boolean hypixelRotations() {
+        return mode.is("Normal") && rotations.is("Hypixel");
     }
 
     private boolean isMoving() {

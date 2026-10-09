@@ -211,6 +211,11 @@ public final class BedAuraModule extends Module {
     @Override protected void onDisable() { reset(); nextScan = 0; }
     public ModeSetting getMode() { return mode; }
     public BlockPos getTarget() { return target; }
+    public boolean isActivelyMining() { return isEnabled() && owner == minecraft.thePlayer && (ready || mining) && target != null; }
+    public float getAuraBreakProgress() {
+        if (!isActivelyMining() || minecraft.playerController == null) return 0.0F;
+        return dev.vibe.module.impl.visual.BreakProgressModule.controllerProgress(minecraft.playerController);
+    }
     public ColorSetting getTargetColor() { return targetColor; }
     public boolean shouldRenderTarget() { return isEnabled() && renderTarget.isEnabled() && target != null; }
 }

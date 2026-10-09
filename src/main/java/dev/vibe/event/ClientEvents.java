@@ -120,6 +120,7 @@ import net.minecraft.item.ItemStack;
 public final class ClientEvents {
 
     private final Minecraft minecraft = Minecraft.getMinecraft();
+    private final dev.vibe.ui.render.BreakProgressRenderer breakProgressRenderer = new dev.vibe.ui.render.BreakProgressRenderer();
     private final EspRenderer espRenderer = new EspRenderer();
     private final TargetEspRenderer targetEspRenderer = new TargetEspRenderer();
     private final SkeletalRenderer skeletalRenderer = new SkeletalRenderer();
@@ -261,6 +262,10 @@ public final class ClientEvents {
             return;
         }
         if (event.phase == TickEvent.Phase.END) {
+            dev.vibe.module.impl.visual.SaturationModule saturation = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.SaturationModule.class);
+            if (saturation != null) saturation.tick();
+            dev.vibe.module.impl.visual.BreakProgressModule breakProgress = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.BreakProgressModule.class);
+            if (breakProgress != null) breakProgress.tick();
             KillAuraModule killaura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
             if (killaura != null) killaura.tickEnd();
             ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
@@ -348,9 +353,19 @@ public final class ClientEvents {
         }
     }
 
+    @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.HIGHEST)
+    public void onRavenMouse(net.minecraftforge.client.event.MouseEvent event) {
+        KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
+        if (aura != null) aura.onHypixelMouse(event);
+        ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
+        if (scaffold != null) scaffold.onHypixelMouse(event);
+    }
+
     @SubscribeEvent
     public void onRenderTick(TickEvent.RenderTickEvent event) {
         if (event.phase == TickEvent.Phase.END) return;
+        KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
+        if (aura != null) aura.hypixelFrame();
         TimerRangeModule timerRange = Vibe.getInstance().getModuleManager().getModule(TimerRangeModule.class);
         if (timerRange != null) timerRange.frameTick();
         AmbienceModule ambience = Vibe.getInstance().getModuleManager().getModule(AmbienceModule.class);
@@ -641,6 +656,13 @@ public final class ClientEvents {
         suppressedSidebar = null;
         suppressedTeamSidebar = null;
         suppressedTeamSlot = -1;
+    }
+
+    @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.HIGHEST)
+    public void onBreakProgressRender(RenderWorldLastEvent event) {
+        dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
+        if (hypixel != null && hypixel.suppressVisuals()) return;
+        breakProgressRenderer.render(event);
     }
 
     @SubscribeEvent

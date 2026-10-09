@@ -1,6 +1,7 @@
 package dev.vibe.combat;
 
 import dev.vibe.core.MoveFixTransformer;
+import dev.vibe.core.RavenFeatureTransformer;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.JarURLConnection;
@@ -39,6 +40,7 @@ public class CombatHooksTest {
         verifyInvisible(transform(living, living, resource(living)), false);
         String controller = "net.minecraft.client.multiplayer.PlayerControllerMP";
         verifyTool(transform(controller, controller, resource(controller)), false);
+        verifyRaven(false, null);
     }
 
     @Test public void releaseInputAndRenderHooksHaveValidStacksAndCorrectOrder() throws Exception {
@@ -49,6 +51,7 @@ public class CombatHooksTest {
             verifyRenderer(transform("bln", RENDERER, read(jar.getInputStream(jar.getJarEntry("bln.class")))), true);
             verifyInvisible(transform("bjl", "net.minecraft.client.renderer.entity.RendererLivingEntity", read(jar.getInputStream(jar.getJarEntry("bjl.class")))), true);
             verifyTool(transform("bda", "net.minecraft.client.multiplayer.PlayerControllerMP", read(jar.getInputStream(jar.getJarEntry("bda.class")))), true);
+            verifyRaven(true, jar);
         }
     }
 
@@ -113,6 +116,9 @@ public class CombatHooksTest {
         verify(node, method);
         assertEquals(1, calls(method, "beginPacketRotationHook"));
         assertTrue(calls(method, "endPacketRotationHook") >= 1);
+        MethodNode update = method(node, obfuscated ? "t_" : "onUpdate", "()V");
+        verify(node, update);
+        assertEquals(1, calls(update, "hypixelUpdateHook", SCAFFOLD));
     }
 
     private void verifyJump(ClassNode node, boolean obfuscated) throws Exception {
@@ -142,8 +148,37 @@ public class CombatHooksTest {
 
     private ClassNode transform(String raw, String mapped, byte[] bytes) {
         ClassNode node = new ClassNode();
-        new ClassReader(new MoveFixTransformer().transform(raw, mapped, bytes)).accept(node, 0);
+        byte[] moved = new MoveFixTransformer().transform(raw, mapped, bytes);
+        new ClassReader(new RavenFeatureTransformer().transform(raw, mapped, moved)).accept(node, 0);
         return node;
+    }
+
+    private void verifyRaven(boolean obfuscated, JarFile jar) throws Exception {
+        String rendererName = "net.minecraft.client.renderer.EntityRenderer";
+        String handlerName = "net.minecraft.client.network.NetHandlerPlayClient";
+        String controllerName = "net.minecraft.client.multiplayer.PlayerControllerMP";
+        ClassNode renderer = transform(obfuscated ? "bfk" : rendererName, rendererName,
+                obfuscated ? read(jar.getInputStream(jar.getJarEntry("bfk.class"))) : resource(rendererName));
+        MethodNode active = method(renderer, obfuscated ? "a" : "isShaderActive", "()Z");
+        MethodNode group = method(renderer, obfuscated ? "f" : "getShaderGroup", obfuscated ? "()Lblr;" : "()Lnet/minecraft/client/shader/ShaderGroup;");
+        MethodNode size = method(renderer, obfuscated ? "a" : "updateShaderGroupSize", "(II)V");
+        MethodNode render = method(renderer, obfuscated ? "a" : "updateCameraAndRender", "(FJ)V");
+        for (MethodNode method : new MethodNode[]{active, group, size, render}) verify(renderer, method);
+        assertTrue(calls(active, "shaderActiveHook") >= 1);
+        assertTrue(calls(group, "shaderGroupHook") >= 1);
+        assertEquals(1, calls(size, "resizeHook"));
+        assertEquals(1, calls(render, "render", "dev/vibe/ui/effect/SaturationRenderer"));
+        ClassNode handler = transform(obfuscated ? "bcy" : handlerName, handlerName,
+                obfuscated ? read(jar.getInputStream(jar.getJarEntry("bcy.class"))) : resource(handlerName));
+        MethodNode send = method(handler, obfuscated ? "a" : "addToSendQueue", obfuscated ? "(Lff;)V" : "(Lnet/minecraft/network/Packet;)V");
+        verify(handler, send);
+        assertEquals(1, calls(send, "hypixelPacketHook"));
+        ClassNode controller = transform(obfuscated ? "bda" : controllerName, controllerName,
+                obfuscated ? read(jar.getInputStream(jar.getJarEntry("bda.class"))) : resource(controllerName));
+        MethodNode use = method(controller, obfuscated ? "a" : "sendUseItem", obfuscated ? "(Lwn;Ladm;Lzx;)Z"
+                : "(Lnet/minecraft/entity/player/EntityPlayer;Lnet/minecraft/world/World;Lnet/minecraft/item/ItemStack;)Z");
+        verify(controller, use);
+        assertEquals(1, calls(use, "hypixelUseHook"));
     }
 
     private MethodNode method(ClassNode node, String name, String descriptor) {
