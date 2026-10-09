@@ -1,6 +1,7 @@
 package dev.vibe.launcher.ui;
 
 import dev.vibe.launcher.app.LauncherController;
+import dev.vibe.launcher.core.ErrorCode;
 import dev.vibe.launcher.core.I18n;
 import dev.vibe.launcher.core.Text;
 import dev.vibe.launcher.game.ModLibrary;
@@ -134,7 +135,8 @@ final class ModsPage extends JPanel {
             if (!mod.version.isEmpty()) titleRow.add(new Label(mod.version, Style.small(), Label.Tone.FAINT));
             if (mod.wrongVersion()) {
                 Label warning = new Label(I18n.t("for Minecraft {0}", mod.minecraftVersion), Style.smallBold(), Label.Tone.WARNING);
-                warning.setToolTipText(I18n.t("This mod says it was made for another Minecraft version and may not load."));
+                warning.setToolTipText(I18n.t("This mod says it was made for another Minecraft version and may not load.")
+                        + " (" + ErrorCode.MOD_WRONG_VERSION.id() + ")");
                 titleRow.add(warning);
             }
             text.add(titleRow);

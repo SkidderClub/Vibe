@@ -136,7 +136,7 @@ public final class HudModule extends Module {
     public void synchronizeArrayListModules(Iterable<Module> modules) {
         Set<String> selected = null;
         for (Module module : modules) {
-            if (!arrayListModules.getOptions().contains(module.getRawName())) {
+            if (!arrayListModules.hasOption(module.getRawName())) {
                 arrayListModules.addOption(module.getRawName());
                 // A profile may already contain a newly registered name. Toggling
                 // it here used to hide saved entries on every other client start.

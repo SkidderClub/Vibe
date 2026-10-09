@@ -26,6 +26,9 @@ public final class NeverLoseFont {
     private final Map<Integer, Page> pages = new HashMap<Integer, Page>();
     private final Map<Character,float[]> inkMetrics=new HashMap<Character,float[]>();
     private Font fallback;
+    /** advance() per character, by high byte; NaN marks a value not computed for the current pages yet. */
+    private final float[][] advances = new float[256][];
+    private boolean inRun, runAlphaKnown, runAlpha;
 
     private NeverLoseFont(int style) {
         this(style, 20);
@@ -89,8 +92,22 @@ public final class NeverLoseFont {
     }
 
     private float advance(char c) {
-        return activeFont.canDisplay(c) ? metrics.charWidth(c) * .5F : page(c >> 8).advances[c & 255];
+        float[] row = advances[c >> 8];
+        if (row == null) { row = new float[256]; java.util.Arrays.fill(row, Float.NaN); advances[c >> 8] = row; }
+        float value = row[c & 255];
+        if (value != value) {
+            value = activeFont.canDisplay(c) ? metrics.charWidth(c) * .5F : page(c >> 8).advances[c & 255];
+            row[c & 255] = value;
+        }
+        return value;
     }
+
+    /**
+     * Starts a run of draw calls with no other alpha-test changes in between. draw() leaves the
+     * alpha test as it found it, so the first draw's driver query answers for the whole run.
+     */
+    public void beginRun() { inRun = true; runAlphaKnown = false; }
+    public void endRun() { inRun = false; runAlphaKnown = false; }
 
     public void draw(String text, float x, float y, int color) {
         prepareScript();
@@ -98,7 +115,12 @@ public final class NeverLoseFont {
         if (text.isEmpty()) return;
         GlStateManager.enableTexture2D(); GlStateManager.enableBlend();
         GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
-        boolean alpha = GL11.glIsEnabled(GL11.GL_ALPHA_TEST);
+        boolean alpha;
+        if (inRun && runAlphaKnown) alpha = runAlpha;
+        else {
+            alpha = GL11.glIsEnabled(GL11.GL_ALPHA_TEST);
+            if (inRun) { runAlpha = alpha; runAlphaKnown = true; }
+        }
         GlStateManager.disableAlpha();
         GlStateManager.color((color >> 16 & 255) / 255F, (color >> 8 & 255) / 255F, (color & 255) / 255F, (color >>> 24) / 255F);
         for (int i = 0; i < text.length(); i++) {
@@ -182,6 +204,7 @@ public final class NeverLoseFont {
     private void clearPages() {
         for (Page page : pages.values()) page.texture.deleteGlTexture();
         pages.clear();
+        java.util.Arrays.fill(advances, null);
     }
 
     private static final class Page {

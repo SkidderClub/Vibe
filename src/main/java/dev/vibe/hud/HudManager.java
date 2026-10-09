@@ -87,6 +87,8 @@ public final class HudManager {
     private final dev.vibe.hud.MusicVisualizer musicVisualizer = new dev.vibe.hud.MusicVisualizer();
     private final long sessionStarted = System.currentTimeMillis();
     private final LiquidGlassRenderer liquidGlass = new LiquidGlassRenderer();
+    /** Reused by the clock widget; the HUD is only drawn on the render thread. */
+    private final SimpleDateFormat clockFormat = new SimpleDateFormat("HH:mm:ss");
     private ItemStack[] sampleArmor;
     private final float[] motionSamples = new float[96];
     private int motionSampleIndex;
@@ -371,7 +373,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     private void drawClock(HudModule hud, ScaledResolution resolution, FontRenderer font) {
-        drawSimpleWidget(clock, new SimpleDateFormat("HH:mm:ss").format(new Date()), hud, resolution, font, 0.22F);
+        drawSimpleWidget(clock, clockFormat.format(new Date()), hud, resolution, font, 0.22F);
     }
 
     private void drawSessionInfo(HudModule hud, ScaledResolution resolution, FontRenderer font) {

@@ -78,10 +78,42 @@ public final class Esp2DRenderer {
     private float textWidth(TextStyle t,String value) {return t.font.is("Minecraft")?mc.fontRendererObj.getStringWidth(value):font(t).width(value);}
     private float textHeight(TextStyle t,String text) {return t.font.is("Minecraft")?8:font(t).inkHeight(text);}
 
+    private boolean batching;
+    private int batchProgram,batchTexture;
+
+    /**
+     * Saves the GL state once for several draw calls; endBatch restores it exactly as each
+     * draw would have. Every box still begins with GuiRenderState.prepare and sets the rest
+     * of its state itself, so boxes in a batch render the same as separately saved ones.
+     */
+    public void beginBatch() {
+        if(batching)return;
+        batchProgram=GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);batchTexture=GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        EspPaintShader.invalidateViewport();
+        batching=true;
+    }
+    public void endBatch() {
+        if(!batching)return;
+        batching=false;
+        restore(batchProgram,batchTexture);
+    }
+    private static void restore(int program,int texture) {
+        GL20.glUseProgram(program);GL11.glPopAttrib();
+        // Fonts/items go through Minecraft's cache; reconcile texture and toggles after raw GL restoration.
+        GlStateManager.bindTexture(0);GlStateManager.bindTexture(texture);
+        syncState();GlStateManager.resetColor();
+    }
+
     public Frame draw(Esp2DSettings settings,Actor actor,EspLayout.Rect box,int screenWidth,int screenHeight,boolean editor) {
         Frame frame=measure(settings,actor,box);
-        int program=GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM),texture=GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
-        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        boolean own=!batching;
+        int program=0,texture=0;
+        if(own) {
+            program=GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);texture=GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+            GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+            EspPaintShader.invalidateViewport();
+        }
         try {
             GuiRenderState.prepare(false);GL20.glUseProgram(0);GL11.glDisable(GL11.GL_ALPHA_TEST);
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);
@@ -108,10 +140,7 @@ public final class Esp2DRenderer {
                 }
             }
         } finally {
-            GL20.glUseProgram(program);GL11.glPopAttrib();
-            // Fonts/items go through Minecraft's cache; reconcile texture and toggles after raw GL restoration.
-            GlStateManager.bindTexture(0);GlStateManager.bindTexture(texture);
-            syncState();GlStateManager.resetColor();
+            if(own)restore(program,texture);
         }
         return frame;
     }
@@ -134,11 +163,16 @@ public final class Esp2DRenderer {
         if(e.backgroundEnabled.isEnabled())solid(r.expand(2*scale),alpha(resolve(e.background,actor),opacity));
         GlStateManager.pushMatrix();GlStateManager.translate(r.x,r.y-(t.font.is("Minecraft")?0:font(t).inkTop(value)*size),0);GlStateManager.scale(size,size,1);
         try {
-            if(e.outline.isEnabled()) {
-                float d=e.outlineWidth.getFloat()*scale/size;
-                for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)if(x!=0||y!=0)text(t,value,x*d,y*d,alpha(resolve(e.outlineColor,actor),opacity));
-            }
-            if(t.shadow.isEnabled())text(t,value,1,1,alpha(0xB0000000,opacity));
+            // The outline and shadow passes are plain glyph draws; one alpha-test query serves them.
+            NeverLoseFont run=t.font.is("Minecraft")?null:font(t);
+            if(run!=null)run.beginRun();
+            try {
+                if(e.outline.isEnabled()) {
+                    float d=e.outlineWidth.getFloat()*scale/size;
+                    for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)if(x!=0||y!=0)text(t,value,x*d,y*d,alpha(resolve(e.outlineColor,actor),opacity));
+                }
+                if(t.shadow.isEnabled())text(t,value,1,1,alpha(0xB0000000,opacity));
+            } finally {if(run!=null)run.endRun();}
             boolean shader=paint(settings,t.color,r,w,h,true,actor,seconds);
             text(t,value,0,0,shader?0xFFFFFFFF:alpha(fallback(settings,t.color,r,w,h,seconds,actor),opacity));
         } finally {GL20.glUseProgram(0);GlStateManager.popMatrix();}

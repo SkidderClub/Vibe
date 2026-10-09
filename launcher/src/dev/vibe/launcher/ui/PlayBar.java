@@ -112,11 +112,20 @@ final class PlayBar extends Stack.Panel {
         boolean animate = busy && Anim.enabled;
         if (animate && !shimmer.isRunning()) shimmer.start();
         if (!animate && shimmer.isRunning()) shimmer.stop();
+        // After a failure the status links to the fix for its error code.
+        LauncherController.Failure failure = state == State.IDLE ? controller.lastFailure() : null;
+        status.setCursor(Cursor.getPredefinedCursor(failure != null ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+        status.setToolTipText(failure == null ? null : "<html><div style='width:340px'>" + html(failure.detail) + "<br><br>"
+                + html(I18n.t("Click to open the guide for {0}.", failure.code.id())) + "</div></html>");
         account.repaint();
         mode.repaint();
         status.repaint();
         play.repaint();
         revalidate();
+    }
+
+    private static String html(String text) {
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>");
     }
 
     private void secondaryAction() {
@@ -236,9 +245,18 @@ final class PlayBar extends Stack.Panel {
         }
     }
 
-    /** Progress title, detail and bar; when idle, the readiness summary or the last error. */
+    /** Progress title, detail and bar; when idle, the readiness summary or the last error with its code. */
     private final class Status extends JComponent {
         private static final long serialVersionUID = 1L;
+
+        Status() {
+            addMouseListener(new MouseAdapter() {
+                @Override public void mouseClicked(MouseEvent event) {
+                    LauncherController.Failure failure = controller.lastFailure();
+                    if (controller.state() == State.IDLE && failure != null) controller.openHelp(failure.code);
+                }
+            });
+        }
 
         @Override public Dimension getPreferredSize() { return new Dimension(160, 56); }
 
@@ -251,9 +269,10 @@ final class PlayBar extends Stack.Panel {
                 Color titleColor = Style.text(), detailColor = Style.muted();
                 boolean bar = state == State.PREPARING || state == State.BUILDING || state == State.STOPPING;
                 if (state == State.IDLE) {
-                    if (!controller.lastError().isEmpty()) {
-                        title = I18n.t("Something went wrong");
-                        detail = controller.lastError();
+                    LauncherController.Failure failure = controller.lastFailure();
+                    if (failure != null) {
+                        title = failure.code.heading();
+                        detail = failure.code.hint();
                         titleColor = Style.danger();
                     } else if (!controller.sourceInstalled()) {
                         title = I18n.t("Vibe is not installed yet");

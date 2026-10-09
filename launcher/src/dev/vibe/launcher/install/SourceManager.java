@@ -3,15 +3,16 @@ package dev.vibe.launcher.install;
 import dev.vibe.launcher.VibeLauncher;
 import dev.vibe.launcher.core.AppLog;
 import dev.vibe.launcher.core.AppPaths;
+import dev.vibe.launcher.core.ErrorCode;
 import dev.vibe.launcher.core.FileUtil;
 import dev.vibe.launcher.core.Http;
 import dev.vibe.launcher.core.I18n;
 import dev.vibe.launcher.core.Json;
+import dev.vibe.launcher.core.LauncherException;
 import dev.vibe.launcher.core.Progress;
 import dev.vibe.launcher.core.Settings;
 import dev.vibe.launcher.core.Text;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -86,7 +87,7 @@ public final class SourceManager {
             commits.add(new Commit(sha, Text.firstLine(Json.string(commit, "message")), Json.string(author, "name"),
                     parseTime(Json.string(author, "date"))));
         }
-        if (commits.isEmpty()) throw new IOException("GitHub did not return any Vibe commits.");
+        if (commits.isEmpty()) throw new LauncherException(ErrorCode.UNEXPECTED_RESPONSE, I18n.t("GitHub did not return any Vibe commits."));
         return new Remote(commits.get(0).sha, Collections.unmodifiableList(commits));
     }
 
@@ -102,10 +103,10 @@ public final class SourceManager {
         if (remote == null) {
             if (settings.sourceIncomplete()) {
                 // A half-applied update would build a mix of two versions.
-                throw new IOException(I18n.t("The last Vibe update did not finish. Connect to the internet so it can be repaired."));
+                throw new LauncherException(ErrorCode.UPDATE_INCOMPLETE, I18n.t("The last Vibe update did not finish. Connect to the internet so it can be repaired."));
             }
             if (isInstalled()) return;
-            throw new IOException(I18n.t("Vibe could not be downloaded. Check your internet connection and try again."));
+            throw new LauncherException(ErrorCode.VIBE_DOWNLOAD, I18n.t("Vibe could not be downloaded. Check your internet connection and try again."));
         }
         if (!needsUpdate(remote)) return;
         String installed = settings.sourceRevision();
@@ -113,9 +114,8 @@ public final class SourceManager {
         if (isInstalled() && !settings.sourceIncomplete()) {
             try {
                 updated = applyDelta(installed, remote.head, progress);
-            } catch (InterruptedIOException error) {
-                throw error;
             } catch (IOException error) {
+                if (LauncherException.cancelled(error)) throw error;
                 log.warn("Delta update failed; downloading the full source instead", error);
             }
         }
@@ -208,12 +208,16 @@ public final class SourceManager {
             progress.update(message, null, -1);
             Http.download(API + "/zipball/" + revision, archive, 2L * 1024L * 1024L * 1024L, progress.range(0, 0.8).bytes(message));
             Path extracted = work.resolve("extracted");
-            Archives.unzip(archive, extracted, I18n.t("Unpacking Vibe"), progress.range(0.8, 0.98));
+            try {
+                Archives.unzip(archive, extracted, I18n.t("Unpacking Vibe"), progress.range(0.8, 0.98));
+            } catch (IOException error) {
+                throw LauncherException.wrap(error, ErrorCode.SOURCE_INVALID, I18n.t("The downloaded Vibe archive is damaged."));
+            }
             Files.deleteIfExists(archive);
             Path candidate = null;
             if (isVibeRoot(extracted)) candidate = extracted;
             else for (Path child : FileUtil.children(extracted)) if (Files.isDirectory(child) && isVibeRoot(child)) candidate = child;
-            if (candidate == null) throw new IOException("The downloaded Vibe archive does not contain a Gradle project.");
+            if (candidate == null) throw new LauncherException(ErrorCode.SOURCE_INVALID, I18n.t("The downloaded Vibe archive does not contain a Gradle project."));
             Path gradlew = candidate.resolve("gradlew");
             if (Files.isRegularFile(gradlew)) gradlew.toFile().setExecutable(true, false);
             progress.update(I18n.t("Installing Vibe"), null, 0.99);
@@ -235,7 +239,7 @@ public final class SourceManager {
             try {
                 move(active, previous);
             } catch (IOException error) {
-                throw new IOException(I18n.t("The Vibe folder is in use. Close programs that have files open in it and try again."), error);
+                throw new LauncherException(ErrorCode.FILE_IN_USE, I18n.t("The Vibe folder is in use. Close programs that have files open in it and try again."), error);
             }
         }
         try {
@@ -254,7 +258,7 @@ public final class SourceManager {
                 // If even that fails, recoverProfile() finds it on the next start.
                 move(active, candidate);
                 move(previous, active);
-                throw new IOException("The game profile could not be carried over to the new Vibe version.", error);
+                throw new LauncherException(ErrorCode.PROFILE_CARRY_OVER, I18n.t("The game profile could not be carried over to the new Vibe version."), error);
             }
         }
         Path optifine = previous.resolve("build").resolve("optifine");

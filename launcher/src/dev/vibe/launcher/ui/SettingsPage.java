@@ -116,6 +116,9 @@ final class SettingsPage extends JPanel {
                     if (Dialogs.confirm(this, I18n.t("Reinstall Vibe?"), I18n.t("The source is downloaded again. Your game profile stays untouched."), I18n.t("Reinstall"), false)) controller.reinstallSource();
                 })));
         repair.add(Pages.divider());
+        repair.add(Pages.setting(I18n.t("Error codes"), I18n.t("Every error shows a code such as VL-101. The guide explains each code and how to fix it."),
+                new FlatButton(I18n.t("Open guide"), Icons.EXTERNAL, FlatButton.Kind.SECONDARY, () -> controller.openHelp(null))));
+        repair.add(Pages.divider());
         repair.add(Pages.setting(I18n.t("Launcher log"), Text.shorten(controller.logFile().toString(), 90),
                 new FlatButton(I18n.t("Open"), Icons.EXTERNAL, FlatButton.Kind.SECONDARY, () -> controller.openPath(controller.logFile()))));
         body.add(repair);

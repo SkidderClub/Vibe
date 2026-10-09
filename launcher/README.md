@@ -87,7 +87,21 @@ launcher has exited; the launcher then starts again, even if the replacement fai
 
 ## Troubleshooting
 
+Every error has a code such as `VL-101` (no internet connection) or `VL-504` (OptiFine could not be
+downloaded). It appears in the toast, in the play bar and in the console, together with a one-line fix;
+*How to fix* opens its section in [docs/LAUNCHER_ERRORS.md](../docs/LAUNCHER_ERRORS.md), the full guide
+to every code. The hundreds group the cause: 1xx internet, 2xx files, 3xx Java, 4xx Vibe
+download, 5xx Gradle build, 6xx Minecraft, 7xx launcher, 8xx mods, 900 unexpected.
+
+Failed builds and crashes are diagnosed from Gradle's "What went wrong", the last lines of the game output
+and the crash report, so they name the actual cause (wrong Java version, out of memory, graphics driver,
+mod conflict, ...). Downloads and builds check the free disk space first, and read timeouts are retried
+instead of being treated as a cancel.
+
 - **The build fails after an update:** Settings → Troubleshooting → *Clear build cache*.
 - **Broken or edited source:** *Reinstall Vibe* downloads it again and keeps the profile.
 - **Java problems:** Settings → Java → *Reinstall*.
 - The console's *Launcher log* and *Game log* buttons open the files to attach to a bug report.
+
+New codes are added to `ErrorCode` with an English title and fix, their German translation in `I18n`
+and a `### VL-xxx` section in the guide; the launcher tests check all three.

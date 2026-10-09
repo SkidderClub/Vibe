@@ -227,7 +227,7 @@ public final class LauncherFrame extends JFrame {
             }
         }
         if (state == State.IDLE && (lastState == State.RUNNING || lastState == State.STOPPING || lastState == State.BUILDING)) {
-            if (minimizedForGame || !controller.lastError().isEmpty()) {
+            if (minimizedForGame || controller.lastFailure() != null) {
                 setExtendedState(getExtendedState() & ~ICONIFIED);
                 toFront();
             }
@@ -266,7 +266,7 @@ public final class LauncherFrame extends JFrame {
         try {
             dev.vibe.launcher.install.LauncherUpdater.restart();
         } catch (java.io.IOException error) {
-            controller.log().warn("Restart failed", error);
+            controller.log().warn(dev.vibe.launcher.core.ErrorCode.of(error).id() + " Restart failed", error);
         }
         dispose();
         System.exit(0);

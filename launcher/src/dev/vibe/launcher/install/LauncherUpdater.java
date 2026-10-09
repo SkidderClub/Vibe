@@ -3,9 +3,11 @@ package dev.vibe.launcher.install;
 import dev.vibe.launcher.VibeLauncher;
 import dev.vibe.launcher.core.AppLog;
 import dev.vibe.launcher.core.AppPaths;
+import dev.vibe.launcher.core.ErrorCode;
 import dev.vibe.launcher.core.Http;
 import dev.vibe.launcher.core.I18n;
 import dev.vibe.launcher.core.Json;
+import dev.vibe.launcher.core.LauncherException;
 import dev.vibe.launcher.core.Platform;
 import dev.vibe.launcher.core.Progress;
 import dev.vibe.launcher.core.Version;
@@ -86,7 +88,7 @@ public final class LauncherUpdater {
         String expected = Http.getText(release.checksumUrl, 4096).trim().split("\\s+")[0].toLowerCase(Locale.ROOT);
         if (!expected.matches("[0-9a-f]{64}") || !expected.equals(Http.sha256(staged))) {
             Files.deleteIfExists(staged);
-            throw new IOException(I18n.t("The launcher update failed its checksum test and was discarded."));
+            throw new LauncherException(ErrorCode.LAUNCHER_CHECKSUM, I18n.t("The launcher update failed its checksum test and was discarded."));
         }
         return staged;
     }
@@ -99,12 +101,19 @@ public final class LauncherUpdater {
      */
     public void installOnExit(Path staged) throws IOException {
         Path current = Platform.currentJar();
-        if (current == null) throw new IOException(I18n.t("Automatic updates only work when the launcher runs from VibeLauncher.jar."));
+        if (current == null) throw new LauncherException(ErrorCode.NOT_A_JAR, I18n.t("Automatic updates only work when the launcher runs from VibeLauncher.jar."));
+        if (!Files.isWritable(current)) {
+            throw new LauncherException(ErrorCode.ACCESS_DENIED, I18n.t("{0} cannot be replaced. Move the launcher to a folder you can write to, such as your desktop.", current));
+        }
         Path helper = paths.root().resolve("launcher-updater.jar");
         Files.copy(current, helper, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         String java = Platform.currentJava(true).toString();
-        start(new ProcessBuilder(java, "-cp", helper.toString(), SelfUpdate.class.getName(),
-                staged.toString(), current.toString(), java, paths.lockFile().toString()));
+        try {
+            start(new ProcessBuilder(java, "-cp", helper.toString(), SelfUpdate.class.getName(),
+                    staged.toString(), current.toString(), java, paths.lockFile().toString()));
+        } catch (IOException error) {
+            throw new LauncherException(ErrorCode.LAUNCHER_UPDATE, I18n.t("The update helper could not be started."), error);
+        }
         log.info("Launcher update " + staged.getFileName() + " staged; restarting.");
     }
 
@@ -122,7 +131,7 @@ public final class LauncherUpdater {
     /** Starts this launcher again after the current process has exited. */
     public static void restart() throws IOException {
         Path current = Platform.currentJar();
-        if (current == null) throw new IOException(I18n.t("Restart the launcher manually to apply this change."));
+        if (current == null) throw new LauncherException(ErrorCode.NOT_A_JAR, I18n.t("Restart the launcher manually to apply this change."));
         start(new ProcessBuilder(Platform.currentJava(true).toString(), "-jar", current.toString(), "--wait-for-lock"));
     }
 

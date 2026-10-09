@@ -1,6 +1,7 @@
 package dev.vibe.launcher.ui;
 
 import dev.vibe.launcher.app.LauncherController;
+import dev.vibe.launcher.core.I18n;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Cursor;
@@ -74,8 +75,8 @@ final class Toasts {
         final LauncherController.Notice notice;
         final Anim.Value opacity = new Anim.Value(this, 0, 12);
         final Timer timer;
-        private Rectangle actionBounds, closeBounds;
-        private boolean hoverAction, hoverClose;
+        private Rectangle actionBounds, helpBounds, closeBounds;
+        private boolean hoverAction, hoverHelp, hoverClose;
 
         View(LauncherController.Notice notice) {
             this.notice = notice;
@@ -84,11 +85,12 @@ final class Toasts {
             timer.setRepeats(false);
             MouseAdapter mouse = new MouseAdapter() {
                 @Override public void mouseEntered(MouseEvent event) { timer.stop(); }
-                @Override public void mouseExited(MouseEvent event) { timer.restart(); hoverAction = false; hoverClose = false; repaint(); }
+                @Override public void mouseExited(MouseEvent event) { timer.restart(); hoverAction = false; hoverHelp = false; hoverClose = false; repaint(); }
                 @Override public void mouseMoved(MouseEvent event) {
                     hoverAction = actionBounds != null && actionBounds.contains(event.getPoint());
+                    hoverHelp = helpBounds != null && helpBounds.contains(event.getPoint());
                     hoverClose = closeBounds != null && closeBounds.contains(event.getPoint());
-                    setCursor(Cursor.getPredefinedCursor(hoverAction || hoverClose ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+                    setCursor(Cursor.getPredefinedCursor(hoverAction || hoverHelp || hoverClose ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
                     repaint();
                 }
                 @Override public void mouseClicked(MouseEvent event) {
@@ -96,6 +98,9 @@ final class Toasts {
                         dismiss(View.this);
                         if (notice.action == LauncherController.Notice.SHOW_CONSOLE || notice.action == null) showConsole.run();
                         else notice.action.run();
+                    } else if (helpBounds != null && helpBounds.contains(event.getPoint())) {
+                        // The toast stays: its text is what the guide is looked up for.
+                        notice.help.run();
                     } else if (closeBounds != null && closeBounds.contains(event.getPoint())) {
                         dismiss(View.this);
                     }
@@ -125,10 +130,17 @@ final class Toasts {
             }
         }
 
+        /** Errors with a code keep their cause and their fix, so they may take more lines. */
+        private int maxLines() { return notice.code != null ? 8 : 5; }
+
+        private List<String> titleLines(FontMetrics metrics) { return Style.wrap(metrics, notice.title, TOAST_WIDTH - 86, 2); }
+
         int preferredHeight() {
             FontMetrics metrics = getFontMetrics(Style.small());
-            int lines = notice.message == null || notice.message.isEmpty() ? 0 : Style.wrap(metrics, notice.message, TOAST_WIDTH - 86, 5).size();
-            return 44 + lines * (metrics.getHeight() + 1) + (notice.actionLabel != null ? 28 : 0);
+            FontMetrics titleMetrics = getFontMetrics(Style.bodyBold());
+            int lines = notice.message == null || notice.message.isEmpty() ? 0 : Style.wrap(metrics, notice.message, TOAST_WIDTH - 86, maxLines()).size();
+            int extraTitle = (titleLines(titleMetrics).size() - 1) * titleMetrics.getHeight();
+            return 44 + extraTitle + lines * (metrics.getHeight() + 1) + (notice.actionLabel != null || notice.help != null ? 28 : 0);
         }
 
         @Override protected void paintComponent(Graphics graphics) {
@@ -143,26 +155,42 @@ final class Toasts {
                 levelIcon().paint(g, 20, 20, 18, color);
                 int textX = 56, textWidth = w - textX - 30;
                 Font titleFont = Style.bodyBold();
-                Style.text(g, Style.ellipsize(g.getFontMetrics(titleFont), notice.title, textWidth), textX, 30, titleFont, Style.text());
+                FontMetrics titleMetrics = g.getFontMetrics(titleFont);
                 int y = 30;
+                List<String> title = titleLines(titleMetrics);
+                for (int index = 0; index < title.size(); index++) {
+                    if (index > 0) y += titleMetrics.getHeight();
+                    Style.text(g, Style.ellipsize(titleMetrics, title.get(index), textWidth), textX, y, titleFont, Style.text());
+                }
                 if (notice.message != null && !notice.message.isEmpty()) {
                     g.setFont(Style.small());
                     FontMetrics metrics = g.getFontMetrics();
-                    for (String line : Style.wrap(metrics, notice.message, w - 86, 5)) {
+                    for (String line : Style.wrap(metrics, notice.message, w - 86, maxLines())) {
                         y += metrics.getHeight() + 1;
                         Style.text(g, line, textX, y, Style.small(), Style.muted());
                     }
                 }
                 closeBounds = new Rectangle(w - 30, 10, 20, 20);
                 Icons.CLOSE.paint(g, w - 28, 12, 16, hoverClose ? Style.text() : Style.faint());
+                Font font = Style.smallBold();
+                int buttonX = textX - 2;
                 if (notice.actionLabel != null) {
-                    Font font = Style.smallBold();
                     int width = g.getFontMetrics(font).stringWidth(notice.actionLabel) + 20;
-                    actionBounds = new Rectangle(textX - 2, y + 8, width, 24);
+                    actionBounds = new Rectangle(buttonX, y + 8, width, 24);
                     Style.fill(g, actionBounds.x, actionBounds.y, actionBounds.width, actionBounds.height, 7, Style.alpha(color, hoverAction ? 70 : 40));
                     Style.textCentered(g, notice.actionLabel, actionBounds.getCenterX(), actionBounds.y, actionBounds.height, font, Style.mix(color, Style.text(), 0.3));
+                    buttonX += width + 8;
                 } else {
                     actionBounds = null;
+                }
+                if (notice.help != null) {
+                    String label = I18n.t("How to fix");
+                    int width = g.getFontMetrics(font).stringWidth(label) + 20;
+                    helpBounds = new Rectangle(buttonX, y + 8, width, 24);
+                    Style.fill(g, helpBounds.x, helpBounds.y, helpBounds.width, helpBounds.height, 7, Style.alpha(Style.text(), hoverHelp ? 38 : 18));
+                    Style.textCentered(g, label, helpBounds.getCenterX(), helpBounds.y, helpBounds.height, font, Style.text());
+                } else {
+                    helpBounds = null;
                 }
             } finally {
                 g.dispose();

@@ -30,6 +30,12 @@ public final class LanguageManager {
             "Turkish", "Western Punjabi", "Tagalog", "Tamil", "Iranian Persian", "Korean", "Amharic",
             "Thai", "Javanese", "Italian", "Gujarati", "Dutch", "Nepali", "Czech", "Polish", "Zulu",
             "Romanian", "Aurebesh"));
+    /** The catalog's own language names; each one normalizes to itself. */
+    private static final java.util.Set<String> CANONICAL_LANGUAGES =
+            Collections.newSetFromMap(new java.util.IdentityHashMap<String, Boolean>());
+    static { CANONICAL_LANGUAGES.addAll(LANGUAGES); }
+    /** The last other input and its result; text drawing normalizes the same setting value constantly. */
+    private static volatile String[] lastNormalized = {null, null};
 
     static {
         add("Chinese", pairs(
@@ -95,6 +101,16 @@ public final class LanguageManager {
     /** Accept the original wording of the language request when importing older identities. */
     public static String normalizeLanguage(String value) {
         if (value == null) return "English";
+        // Strings are immutable, so the same instance always normalizes the same way.
+        if (CANONICAL_LANGUAGES.contains(value)) return value;
+        String[] last = lastNormalized;
+        if (last[0] == value) return last[1];
+        String result = normalizeUncached(value);
+        lastNormalized = new String[] {value, result};
+        return result;
+    }
+
+    private static String normalizeUncached(String value) {
         String clean = value.trim();
         if ("Finish".equalsIgnoreCase(clean)) clean = "Finnish";
         if ("Sweden".equalsIgnoreCase(clean)) clean = "Swedish";
