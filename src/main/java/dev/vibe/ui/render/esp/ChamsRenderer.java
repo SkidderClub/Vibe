@@ -2,6 +2,7 @@ package dev.vibe.ui.render.esp;
 
 import dev.vibe.Vibe;
 import dev.vibe.module.impl.visual.EspModule;
+import dev.vibe.module.impl.movement.FreecamModule;
 import dev.vibe.module.impl.client.QolModule;
 import dev.vibe.module.impl.combat.TargetsModule;
 import dev.vibe.setting.ColorSetting;
@@ -46,7 +47,7 @@ public final class ChamsRenderer {
         if (esp == null || !esp.isEnabled() || !esp.getModes().isSelected("Chams")) return null;
         EntityLivingBase entity = (EntityLivingBase) candidate;
         if (entity.worldObj != mc.theWorld || !entity.isEntityAlive() || entity.isDead) return null;
-        if (entity == mc.thePlayer) return mc.gameSettings.thirdPersonView != 0 ? esp : null;
+        if (entity == mc.thePlayer) return FreecamModule.thirdPersonHook(mc.gameSettings.thirdPersonView) != 0 ? esp : null;
         TargetsModule targets = vibe.getModuleManager().getModule(TargetsModule.class);
         return (targets != null && targets.canVisualize(entity)) || antiInvisible(entity) != null ? esp : null;
     }

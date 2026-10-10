@@ -2,6 +2,7 @@ package dev.vibe.ui.render.esp;
 
 import dev.vibe.Vibe;
 import dev.vibe.module.impl.visual.EspModule;
+import dev.vibe.module.impl.movement.FreecamModule;
 import dev.vibe.module.impl.combat.TargetsModule;
 import dev.vibe.module.impl.client.QolModule;
 import dev.vibe.ui.RenderUtils;
@@ -111,7 +112,7 @@ public final class EspRenderer {
                 EntityLivingBase player = (EntityLivingBase) object;
                 boolean antiInvisible = isAntiInvisible(qol, player);
                 boolean local = player == minecraft.thePlayer;
-                if (local ? minecraft.gameSettings.thirdPersonView == 0 || !player.isEntityAlive()
+                if (local ? FreecamModule.thirdPersonHook(minecraft.gameSettings.thirdPersonView) == 0 || !player.isEntityAlive()
                         : targets == null || (!targets.canVisualize(player) && !antiInvisible)) {
                     continue;
                 }
@@ -153,14 +154,17 @@ public final class EspRenderer {
         }
     }
 
-    public void renderOverlay() {
+    /** True only for a current, enabled 2D world pass (also used by Freecam's clean view). */
+    public boolean hasOverlay() {
         EspModule esp = Vibe.getInstance().getModuleManager().getModule(EspModule.class);
         dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
-        if (hypixel != null && hypixel.suppressVisuals()) return;
-        if (esp == null || !esp.isEnabled() || !esp.getModes().isSelected("2D")) {
-            return;
-        }
-        if (screenBoxes.isEmpty()) return;
+        return (hypixel == null || !hypixel.suppressVisuals()) && esp != null && esp.isEnabled()
+                && esp.getModes().isSelected("2D") && !screenBoxes.isEmpty();
+    }
+
+    public void renderOverlay() {
+        if (!hasOverlay()) return;
+        EspModule esp = Vibe.getInstance().getModuleManager().getModule(EspModule.class);
         ScaledResolution resolution = new ScaledResolution(minecraft);
         // One GL state save and restore for all boxes instead of one per player.
         overlay.beginBatch();

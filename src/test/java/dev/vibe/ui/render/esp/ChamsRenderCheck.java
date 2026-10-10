@@ -59,7 +59,8 @@ public final class ChamsRenderCheck {
             GL11.glReadPixels(W / 4, H / 2, 1, 1, GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, depth);
             near(.25F, depth.get(0), .0001F, "Hidden pass changed scene depth");
             GL11.glReadPixels(W * 3 / 4, H / 2, 1, 1, GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, depth);
-            near(1, depth.get(0), .0001F, "Visible pass changed scene depth");
+            // Visible body depth must occlude later cape/armor layers; only the hidden pass is read-only.
+            near(.5F, depth.get(0), .0001F, "Visible pass did not write body depth for subsequent layers");
 
             hidden.getArmor().setEnabled(false);
             scene(); ChamsRenderer.draw(esp, true, 1, ChamsRenderCheck::quad);

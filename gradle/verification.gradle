@@ -59,6 +59,8 @@ registerRenderCheck('verifyBattlefrontRendering', 'dev.vibe.game.battlefront.Bat
         'battlefront-render-check', 'Renders Battlefront 3 scenes offscreen.', true)
 registerRenderCheck('verifyVisualRendering', 'dev.vibe.ui.VisualRenderCheck', 'visual-render-check',
         'Checks inventory and GUI rendering state.')
+registerRenderCheck('verifyFreecamRendering', 'dev.vibe.camera.FreecamRenderCheck', 'freecam-render-check',
+        'Checks FPV camera transforms, player visibility, knockback projection and the drone OSD.', true)
 registerRenderCheck('verifyVisualEffects', 'dev.vibe.ui.VisualEffectsRenderCheck', 'visual-effects-check',
         'Checks Fog, Torus and the other shader effects.')
 registerRenderCheck('verifyRavenVisuals', 'dev.vibe.ui.RavenVisualRenderCheck', 'raven-visual-check',

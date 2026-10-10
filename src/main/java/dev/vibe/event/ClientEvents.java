@@ -28,6 +28,7 @@ import dev.vibe.module.impl.meme.Gta7Module;
 import dev.vibe.module.impl.client.QolModule;
 import dev.vibe.module.impl.combat.VelocityModule;
 import dev.vibe.module.impl.movement.FlyModule;
+import dev.vibe.module.impl.movement.FreecamModule;
 import dev.vibe.module.impl.movement.SpeedModule;
 import dev.vibe.module.impl.movement.LongJumpModule;
 import dev.vibe.module.impl.movement.NoFallModule;
@@ -78,6 +79,7 @@ import dev.vibe.ui.render.CuteVisualsRenderer;
 import dev.vibe.ui.render.TrajectoriesRenderer;
 import dev.vibe.ui.render.esp.ItemEspRenderer;
 import dev.vibe.ui.render.CustomCosmeticsRenderer;
+import dev.vibe.ui.render.FreecamHudRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiChat;
@@ -140,6 +142,7 @@ public final class ClientEvents {
     private final TrajectoriesRenderer trajectoriesRenderer = new TrajectoriesRenderer();
     private final ItemEspRenderer itemEspRenderer = new ItemEspRenderer();
     private final CustomCosmeticsRenderer customCosmeticsRenderer = new CustomCosmeticsRenderer();
+    private final FreecamHudRenderer freecamHudRenderer = new FreecamHudRenderer();
     private final ScaffoldCountRenderer scaffoldCountRenderer = new ScaffoldCountRenderer();
     private Scoreboard suppressedScoreboard;
     private ScoreObjective suppressedSidebar;
@@ -229,6 +232,8 @@ public final class ClientEvents {
             if (noSlow != null) {
                 noSlow.installInputHook();
             }
+            FreecamModule freecam = Vibe.getInstance().getModuleManager().getModule(FreecamModule.class);
+            if (freecam != null) freecam.tick();
             // Pathing sets its server rotation and forced movement before
             // Minecraft samples MovementInput for this tick.
             dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
@@ -374,6 +379,8 @@ public final class ClientEvents {
         }
         ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
         if (scripts != null) scripts.renderTick(event.renderTickTime);
+        FreecamModule freecam = Vibe.getInstance().getModuleManager().getModule(FreecamModule.class);
+        if (freecam != null) freecam.frameTick(event.renderTickTime);
     }
 
     @SubscribeEvent(receiveCanceled = true)
@@ -387,6 +394,7 @@ public final class ClientEvents {
         if (event.type != RenderGameOverlayEvent.ElementType.TEXT
                 && event.type != RenderGameOverlayEvent.ElementType.ALL) return;
         if (event.type == RenderGameOverlayEvent.ElementType.ALL) restoreVanillaScoreboard();
+        if (FreecamModule.hideHudHook()) return;
         if (minecraft.gameSettings.showDebugInfo && debugText != null && !debugText.isCanceled()) {
             DebugOverlay.begin(event.resolution.getScaledWidth(), minecraft.fontRendererObj.FONT_HEIGHT,
                     debugText.left, debugText.right, minecraft.fontRendererObj::getStringWidth);
@@ -401,6 +409,7 @@ public final class ClientEvents {
                     hitmarkerRenderer.renderOverlay();
                     scaffoldCountRenderer.render();
                     if (deferredCrosshair) customCrosshairRenderer.render();
+                    freecamHudRenderer.render();
                 }
                 if (hypixel != null) hypixel.renderPitBotBanner();
             } else {
@@ -545,6 +554,7 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onHotbarPost(RenderGameOverlayEvent.Post event) {
+        if (FreecamModule.hideHudHook()) return;
         if (event.type != RenderGameOverlayEvent.ElementType.HOTBAR) return;
         ScaledResolution resolution = new ScaledResolution(minecraft);
         int left = resolution.getScaledWidth() / 2 - 91;
@@ -562,6 +572,11 @@ public final class ClientEvents {
         if (event.type != RenderGameOverlayEvent.ElementType.CROSSHAIRS) {
             return;
         }
+        FreecamModule freecam = Vibe.getInstance().getModuleManager().getModule(FreecamModule.class);
+        if (freecam != null && freecam.shouldDrawDroneHud()) {
+            event.setCanceled(true);
+            return;
+        }
         CustomCrosshairModule crosshair = Vibe.getInstance().getModuleManager().getModule(CustomCrosshairModule.class);
         // The custom renderer intentionally remains first-person only, but
         // vanilla's textured crosshair must still be hidden in third person
@@ -574,9 +589,27 @@ public final class ClientEvents {
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.HIGHEST)
     public void onPreAll(RenderGameOverlayEvent.Pre event) {
         if (event.type != RenderGameOverlayEvent.ElementType.ALL) return;
+        if (FreecamModule.hideHudHook()) {
+            restoreVanillaScoreboard();
+            debugText = null;
+            deferredCrosshair = false;
+            DebugOverlay.clear();
+            // ALL precedes vanilla's projection setup and every HUD widget, including the hotbar.
+            // ESP annotates the world, not the hidden client HUD. Preserve its captured 2D pass.
+            // Do not toggle any saved HUD/module settings.
+            event.setCanceled(true);
+            FreecamModule freecam = Vibe.getInstance().getModuleManager().getModule(FreecamModule.class);
+            if (espRenderer.hasOverlay() || freecam.shouldDrawDroneHud()) {
+                minecraft.entityRenderer.setupOverlayRendering();
+                dev.vibe.ui.GuiRenderState.prepare(false);
+                espRenderer.renderOverlay();
+                freecamHudRenderer.render();
+            }
+            return;
+        }
         dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
         if (hypixel != null && hypixel.suppressVisuals()) {
             restoreVanillaScoreboard();

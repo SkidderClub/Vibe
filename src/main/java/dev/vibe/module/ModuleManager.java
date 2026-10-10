@@ -69,6 +69,7 @@ public final class ModuleManager {
         register(new KillAuraModule());
         register(new SpeedModule());
         register(new FlyModule());
+        register(new FreecamModule());
         register(new LongJumpModule());
         register(new NoFallModule());
         register(new BlurModule());
