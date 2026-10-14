@@ -33,6 +33,8 @@ public final class LauncherTests {
             dev.vibe.launcher.install.InstallTests.run(check, temp);
             System.out.println("game");
             dev.vibe.launcher.game.GameTests.run(check, temp);
+            System.out.println("extensions UI");
+            dev.vibe.launcher.ui.ExtensionUiTests.run(check, temp);
             System.out.println("skin");
             dev.vibe.launcher.skin.SkinTests.run(check);
             System.out.println("errors");

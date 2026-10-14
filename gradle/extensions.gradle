@@ -1,0 +1,117 @@
+// Optional features are compiled and packaged independently. Core has no extension classes/resources.
+sourceSets {
+    lego {
+        java.srcDirs = ['extensions/lego/src/main/java']
+        resources.srcDirs = ['extensions/lego/src/main/resources']
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath
+    }
+    example {
+        java.srcDirs = ['extensions/example/src/main/java']
+        resources.srcDirs = ['extensions/example/src/main/resources']
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath
+    }
+    cosmetica {
+        java.srcDirs = ['extensions/cosmetica/src/main/java']
+        resources.srcDirs = ['extensions/cosmetica/src/main/resources']
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath
+    }
+    cosmeticaTest {
+        java.srcDirs = ['extensions/cosmetica/src/test/java']
+        resources.srcDirs = ['extensions/cosmetica/src/test/resources']
+        compileClasspath += sourceSets.cosmetica.output + sourceSets.cosmetica.compileClasspath + configurations.testCompileClasspath
+        runtimeClasspath += sourceSets.cosmetica.runtimeClasspath + configurations.testRuntimeClasspath
+    }
+    legoTest {
+        java.srcDirs = ['extensions/lego/src/test/java']
+        resources.srcDirs = ['extensions/lego/src/test/resources']
+        compileClasspath += sourceSets.lego.output + sourceSets.lego.compileClasspath + configurations.testCompileClasspath
+        runtimeClasspath += sourceSets.lego.runtimeClasspath + configurations.testRuntimeClasspath
+    }
+    exampleTest {
+        java.srcDirs = ['extensions/example/src/test/java']
+        resources.srcDirs = ['extensions/example/src/test/resources']
+        compileClasspath += sourceSets.example.output + sourceSets.example.compileClasspath + configurations.testCompileClasspath
+        runtimeClasspath += sourceSets.example.runtimeClasspath + configurations.testRuntimeClasspath
+    }
+}
+
+// LEGO is a private, optional checkout. A public clone must build without it.
+ext.vibeBuiltExtensions = ['example', 'cosmetica']
+if (file('extensions/lego/src/main/resources/META-INF/vibe-extension.json').isFile() &&
+        !providers.gradleProperty('vibePublicBuild').isPresent()) vibeBuiltExtensions += 'lego'
+
+vibeBuiltExtensions.each { extension ->
+    def sources = sourceSets[extension]
+    tasks.named(sources.processResourcesTaskName) {
+        inputs.property 'version', project.version
+        filesMatching('META-INF/vibe-extension.json') { expand version: project.version, vibeVersion: project.version }
+    }
+    def devJar = tasks.register("${extension}ExtensionDevJar", Jar) {
+        group = 'extensions'
+        description = "Builds the ${extension} extension for the development environment."
+        from sources.output
+        from("extensions/${extension}/LICENSES") { into 'META-INF/vibe/LICENSES' }
+        archiveFileName = "Vibe-${extension.capitalize()}-${project.version}-dev.jar"
+        destinationDirectory = layout.buildDirectory.dir('extensions/dev')
+        preserveFileTimestamps = false
+        reproducibleFileOrder = true
+        manifest { attributes('Vibe-Extension': extension, 'Implementation-Version': project.version) }
+    }
+    // Reuse core's MCP -> SRG mapping; extensions must be remapped too for real Forge installations.
+    def remapped = unimined.minecrafts[sourceSets.main].remap(devJar.get(), "${extension}ExtensionJar") {
+        archiveFileName = "Vibe-${extension.capitalize()}-${project.version}.jar"
+        destinationDirectory = layout.buildDirectory.dir('libs')
+    }
+    tasks.named('assemble') { dependsOn remapped }
+    tasks.register("test${extension.capitalize()}Extension", Test) {
+        group = 'verification'
+        description = "Runs the ${extension} extension's tests without putting it on core's classpath."
+        testClassesDirs = sourceSets[extension + 'Test'].output.classesDirs
+        classpath = sourceSets[extension + 'Test'].runtimeClasspath
+    }
+    tasks.named('check') { dependsOn "test${extension.capitalize()}Extension" }
+}
+
+tasks.register('verifyExtensionPackaging') {
+    group = 'verification'
+    description = 'Checks that the core JAR excludes extension code/assets and that extension JARs are standalone.'
+    dependsOn 'remapJar'
+    dependsOn vibeBuiltExtensions.collect { it + 'ExtensionJar' }
+    doLast {
+        def entries = { File jar ->
+            def archive = new java.util.jar.JarFile(jar)
+            try { Collections.list(archive.entries()).collect { it.name } }
+            finally { archive.close() }
+        }
+        def core = tasks.named('remapJar').get().archiveFile.get().asFile
+        def coreEntries = entries(core)
+        def forbidden = coreEntries.findAll { it.startsWith('dev/vibe/lego/') || it.startsWith('assets/vibe/lego/') ||
+            it.contains('/LegoModule') || it.contains('/LegoCharacterSelectionModule') || it.contains('/LegoBattlePassModule') ||
+            it.contains('/TestModule') || it.startsWith('dev/vibe/extension/lego/') || it.startsWith('dev/vibe/extension/example/') ||
+            it.startsWith('dev/vibe/cosmetic/') || it.startsWith('assets/vibe/cosmetica/') || it.startsWith('dev/vibe/extension/cosmetica/') ||
+            it.contains('/CosmeticsModule') || it.contains('/CosmeticsEditorModule') || it.contains('/CosmeticsRenderer') ||
+            it.startsWith('dev/vibe/ui/screen/Cosmetic') }
+        if (!forbidden.empty) throw new GradleException('Extension content leaked into core: ' + forbidden.take(10))
+        if (!coreEntries.contains('dev/vibe/module/impl/visual/CustomCosmeticsModule.class') ||
+                !coreEntries.contains('dev/vibe/ui/render/CustomCosmeticsRenderer.class'))
+            throw new GradleException('CustomCosmetics must remain in core')
+        vibeBuiltExtensions.each { extension ->
+            def jar = tasks.named("${extension}ExtensionJar").get().archiveFile.get().asFile
+            def content = entries(jar)
+            if (!content.contains('META-INF/vibe-extension.json')) throw new GradleException('Missing extension descriptor: ' + jar)
+            if (content.contains('dev/vibe/Vibe.class') || content.contains('dev/vibe/extension/VibeExtension.class') ||
+                    content.contains('net/minecraft/client/Minecraft.class') || content.contains('mcmod.info'))
+                throw new GradleException('Extension embeds core, Minecraft or a second Forge mod: ' + jar)
+            if (extension == 'lego' && content.count { it.startsWith('assets/vibe/lego/models/') && it.endsWith('.zip') } != 989)
+                throw new GradleException('LEGO extension is missing character bundles')
+            if (extension == 'cosmetica' && (!content.contains('assets/vibe/cosmetica/catalog.json') ||
+                    !content.contains('dev/vibe/ui/render/CosmeticsRenderer.class') || content.any { it.contains('/CustomCosmetics') }))
+                throw new GradleException('Cosmetica extension is incomplete or contains CustomCosmetics')
+        }
+        logger.lifecycle('Extension JARs verified: ' + vibeBuiltExtensions.join(', ') + '; CustomCosmetics stays in core.')
+    }
+}
+tasks.named('check') { dependsOn 'verifyExtensionPackaging' }

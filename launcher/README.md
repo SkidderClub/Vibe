@@ -23,6 +23,11 @@ start.
   removed. OptiFine, Vibe itself, Fabric and newer-Forge mods are refused, mods
   for other Minecraft versions are flagged.
 - **Appearance**: the six menu themes are shared with Vibe in both directions.
+- **Extensions**: Cosmetica is enabled by default; the example Test module is optional.
+  Use **Add JAR** or drag a custom extension JAR onto the window to install it.
+  Installed extensions have
+  enable/disable switches and can be removed. Their settings and progress remain
+  in the persistent profile when disabled.
 - **Settings**: memory, what happens to the window when Minecraft starts,
   automatic updates, Java runtimes, folders, import of `options.txt` and resource
   packs from `.minecraft`, build-cache and source repair.
@@ -50,6 +55,7 @@ Windows, `~/Library/Application Support/VibeLauncher` on macOS and
 | --- | --- |
 | `source/` | Managed checkout of `SkidderClub/Vibe` (`main`). |
 | `source/run/client/` | Vibe's persistent game profile: worlds, options, accounts, mods. |
+| `source/run/client/vibe/extensions.properties` | Public extension selections, applied before launch. |
 | `runtime/temurin-8`, `runtime/temurin-21` | Private Java runtimes, SHA-256 verified. |
 | `logs/launcher.log`, `logs/game/` | Launcher log and one log per game session. |
 | `cache/skins/` | Cached skins and capes. |

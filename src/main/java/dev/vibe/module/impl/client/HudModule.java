@@ -26,11 +26,11 @@ public final class HudModule extends Module {
             "ESP", "TargetESP", "Hitmarker", "Skeletal", "Cosmetics", "ChestESP", "FullBright", "FOV Changer", "CustomCrosshair", "Animations", "AimAssist", "Velocity", "BHop", "Fly",
             "LeftClicker", "Sprint", "NoJumpDelay", "NoSlow", "Eagle", "FastPlace", "HUD Editor", "NameProtect", "ClickGUI");
     private static final List<String> DEFAULT_ARRAY_LIST_OPTIONS = Arrays.asList(
-            "ESP", "TargetESP", "Hitmarker", "Skeletal", "Cosmetics", "ChestESP", "FullBright", "FOV Changer", "CustomCrosshair", "Animations", "Targets", "AimAssist", "Velocity", "Speed", "Fly",
+            "ESP", "TargetESP", "Hitmarker", "Skeletal", "ChestESP", "FullBright", "FOV Changer", "CustomCrosshair", "Animations", "Targets", "AimAssist", "Velocity", "Speed", "Fly",
             "LeftClicker", "Sprint", "NoJumpDelay", "NoSlow", "Eagle", "FastPlace", "HUD Editor",
             "HUD", "NameProtect", "ClickGUI", "Blur", "Waifu", "Particles", "QOL");
     private static final List<String> DEFAULT_ARRAY_LIST_DEFAULTS = Arrays.asList(
-            "ESP", "TargetESP", "Hitmarker", "Skeletal", "Cosmetics", "ChestESP", "FullBright", "FOV Changer", "CustomCrosshair", "Animations", "AimAssist", "Velocity", "Speed", "Fly",
+            "ESP", "TargetESP", "Hitmarker", "Skeletal", "ChestESP", "FullBright", "FOV Changer", "CustomCrosshair", "Animations", "AimAssist", "Velocity", "Speed", "Fly",
             "LeftClicker", "Sprint", "NoJumpDelay", "NoSlow", "Eagle", "FastPlace", "HUD Editor", "NameProtect", "ClickGUI");
 
     // Retained only as the migration fallback for layouts that predate

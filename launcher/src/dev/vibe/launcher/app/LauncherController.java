@@ -12,6 +12,7 @@ import dev.vibe.launcher.core.Progress;
 import dev.vibe.launcher.core.Settings;
 import dev.vibe.launcher.core.Text;
 import dev.vibe.launcher.game.AccountVault;
+import dev.vibe.launcher.game.ExtensionLibrary;
 import dev.vibe.launcher.game.FailureAnalyzer;
 import dev.vibe.launcher.game.GameProfile;
 import dev.vibe.launcher.game.GameSession;
@@ -97,6 +98,7 @@ public final class LauncherController {
     private final SkinService skins;
     private final GameProfile profile;
     private final ModLibrary mods;
+    private final ExtensionLibrary extensions;
     private final ConsoleBuffer console = new ConsoleBuffer();
     private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<Listener>();
     private final ExecutorService worker = Executors.newSingleThreadExecutor(runnable -> {
@@ -128,6 +130,7 @@ public final class LauncherController {
     private volatile String accountsError = "";
     private volatile ErrorCode accountsCode;
     private volatile List<ModLibrary.Mod> modList = Collections.emptyList();
+    private volatile List<ExtensionLibrary.Entry> extensionList = Collections.emptyList();
     private volatile SourceManager.Remote remote;
     private volatile String remoteError = "";
     private volatile IOException remoteFailure;
@@ -146,6 +149,8 @@ public final class LauncherController {
         this.skins = new SkinService(paths.skinCache(), log);
         this.profile = new GameProfile(paths.profile());
         this.mods = new ModLibrary(profile.mods());
+        this.extensions = new ExtensionLibrary(mods, profile.vibe().resolve("extensions.properties"));
+        this.extensionList = extensions.list(modList);
         Theme shared = profile.readTheme();
         this.theme = shared != null ? shared : Theme.parse(settings.theme());
         this.mode = LaunchMode.parse(settings.launchMode());
@@ -387,20 +392,27 @@ public final class LauncherController {
 
     public void reloadMods() {
         modList = mods.list();
+        extensionList = extensions.list(modList);
         fire(Event.MODS);
     }
 
     public Path modsFolder() { return mods.folder(); }
 
     public void importMods(final List<File> files) {
+        importMods(files, null);
+    }
+
+    public void importMods(final List<File> files, final java.util.function.Consumer<Boolean> imported) {
         // Imports wait for a running download: a full reinstall moves the profile folder.
         if (state == State.PREPARING) notice(Notice.Level.INFO, I18n.t("Mods queued"), I18n.t("They are added as soon as the current step has finished."), null, null);
         worker.execute(() -> {
             try {
                 ModLibrary.ImportResult result = mods.importFiles(files);
+                extensions.imported(result.extensionIds);
                 reloadMods();
                 if (!result.added.isEmpty()) {
-                    notice(Notice.Level.SUCCESS, result.added.size() == 1 ? I18n.t("Mod added") : I18n.t("{0} mods added", result.added.size()),
+                    notice(Notice.Level.SUCCESS, result.extensionsAdded > 0 ? I18n.t("Extensions added") :
+                            result.added.size() == 1 ? I18n.t("Mod added") : I18n.t("{0} mods added", result.added.size()),
                             join(result.added), null, null);
                     log.info("Added mods: " + join(result.added));
                 }
@@ -409,9 +421,28 @@ public final class LauncherController {
                     final ErrorCode first = result.rejectedCodes.get(0);
                     notice(new Notice(Notice.Level.WARNING, I18n.t("Some files were not added"), join(result.rejected), null, null, first, () -> openHelp(first)));
                 }
+                if (imported != null) SwingUtilities.invokeLater(() -> imported.accept(result.extensionsAdded > 0));
             } catch (IOException error) {
                 fail(I18n.t("Could not add mods"), error, ErrorCode.FILE_ERROR, false, null, null);
             }
+        });
+    }
+
+    public List<ExtensionLibrary.Entry> extensions() { return extensionList; }
+
+    public void setExtensionEnabled(ExtensionLibrary.Entry extension, boolean enabled) {
+        worker.execute(() -> {
+            try { extensions.setEnabled(extension, enabled, state == State.IDLE); }
+            catch (IOException error) { fail(I18n.t("Could not change the extension"), error, ErrorCode.FILE_ERROR, false, null, null); }
+            reloadMods();
+        });
+    }
+
+    public void deleteExtension(ExtensionLibrary.Entry extension) {
+        worker.execute(() -> {
+            try { extensions.delete(extension); }
+            catch (IOException error) { fail(I18n.t("Could not remove the extension"), error, ErrorCode.FILE_ERROR, false, null, null); }
+            reloadMods();
         });
     }
 

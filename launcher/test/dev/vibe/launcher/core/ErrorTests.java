@@ -48,7 +48,7 @@ public final class ErrorTests {
                 System.out.println("        (docs/LAUNCHER_ERRORS.md not found from " + System.getProperty("user.dir") + "; documentation check skipped)");
                 return;
             }
-            String text = new String(Files.readAllBytes(guide), StandardCharsets.UTF_8);
+            String text = new String(Files.readAllBytes(guide), StandardCharsets.UTF_8).replace("\r\n", "\n");
             for (ErrorCode code : ErrorCode.values()) {
                 Check.isTrue(text.contains("\n### " + code.id() + "\n"), code.id() + " has no section in " + guide);
             }

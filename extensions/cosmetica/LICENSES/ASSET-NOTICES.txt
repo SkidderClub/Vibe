@@ -1,0 +1,10 @@
+Cosmetica client/UI artwork under assets/vibe/cosmetica/upstream-ui comes from
+https://github.com/Cosmetica-cc/Cosmetica-2/tree/1.16.5
+The upstream Apache-2.0 license and NOTICE are retained alongside this file.
+
+The offline catalog retains accessory IDs and creator metadata from api.cloaks.gg
+and cdn.cosmetica.cc. Models, textures, thumbnails and the bundled skin remain
+their creators' work. This snapshot does not record a license for each uploaded
+asset; the upstream client/UI license does not establish those asset terms.
+PNG thumbnails are generated from the original WebP sheets for Minecraft 1.8.9.
+See the repository's LICENSES/THIRD_PARTY_NOTICES.md for the existing inventory.

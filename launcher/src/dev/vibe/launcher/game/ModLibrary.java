@@ -28,6 +28,8 @@ public final class ModLibrary {
     public static final class Mod {
         public final Path file;
         public final String fileName, name, version, minecraftVersion, authors, description;
+        public final String extensionId, requiredVibeVersion;
+        public final boolean extension;
         public final boolean enabled;
         public final long size;
 
@@ -39,6 +41,9 @@ public final class ModLibrary {
             this.minecraftVersion = info.minecraftVersion;
             this.authors = info.authors;
             this.description = info.description;
+            this.extension = info.extension;
+            this.extensionId = info.extensionId;
+            this.requiredVibeVersion = info.requiredVibeVersion;
             this.enabled = enabled;
             this.size = size;
         }
@@ -50,6 +55,8 @@ public final class ModLibrary {
     }
 
     public static final class ImportResult {
+        public int extensionsAdded;
+        public final List<String> extensionIds = new ArrayList<String>();
         public final List<String> added = new ArrayList<String>();
         public final List<String> rejected = new ArrayList<String>();
         /** The error code of each entry in {@link #rejected}. */
@@ -58,7 +65,8 @@ public final class ModLibrary {
 
     static final class ModInfo {
         String id = "", name = "", version = "", minecraftVersion = "", authors = "", description = "";
-        boolean optifine, fabric, modernForge;
+        String extensionId = "", requiredVibeVersion = "";
+        boolean optifine, fabric, modernForge, extension;
     }
 
     private static final long MAX_SIZE = 300L * 1024L * 1024L;
@@ -72,7 +80,9 @@ public final class ModLibrary {
 
     public List<Mod> list() {
         List<Mod> result = new ArrayList<Mod>();
-        for (Path file : FileUtil.children(folder)) {
+        List<Path> files = new ArrayList<Path>(FileUtil.children(folder));
+        files.addAll(FileUtil.children(folder.resolve("1.8.9")));
+        for (Path file : files) {
             String name = file.getFileName().toString().toLowerCase(Locale.ROOT);
             boolean enabled = name.endsWith(".jar") || name.endsWith(".zip");
             boolean disabled = name.endsWith(".jar" + DISABLED) || name.endsWith(".zip" + DISABLED);
@@ -109,6 +119,16 @@ public final class ModLibrary {
             if ("vibe".equalsIgnoreCase(info.id)) { reject(result, ErrorCode.MOD_VIBE, I18n.t("{0}: Vibe is loaded automatically", name)); continue; }
             if (info.fabric) { reject(result, ErrorCode.MOD_FABRIC, I18n.t("{0}: Fabric mods do not work with Forge 1.8.9", name)); continue; }
             if (info.modernForge) { reject(result, ErrorCode.MOD_NEWER_FORGE, I18n.t("{0}: made for a newer Minecraft version", name)); continue; }
+            if (info.extension && !lower.endsWith(".jar")) {
+                reject(result, ErrorCode.MOD_NOT_JAR, I18n.t("{0}: Vibe extensions must be .jar files", name)); continue;
+            }
+            boolean duplicate = false;
+            if (info.extension) for (Mod installed : list()) {
+                if (info.extensionId.equals(installed.extensionId)) { duplicate = true; break; }
+            }
+            if (duplicate) {
+                reject(result, ErrorCode.MOD_DUPLICATE, I18n.t("{0}: already installed", info.name)); continue;
+            }
             Path target = uniqueTarget(name);
             if (target == null) {
                 reject(result, ErrorCode.MOD_DUPLICATE, I18n.t("{0}: already installed", name));
@@ -116,6 +136,7 @@ public final class ModLibrary {
             }
             Files.copy(source.toPath(), target, StandardCopyOption.COPY_ATTRIBUTES);
             result.added.add(info.name.isEmpty() ? displayName(name) : info.name);
+            if (info.extension) { result.extensionsAdded++; result.extensionIds.add(info.extensionId); }
         }
         return result;
     }
@@ -166,10 +187,37 @@ public final class ModLibrary {
                 try { data = readAll(input, 256 * 1024); } finally { input.close(); }
                 parseMcmodInfo(new String(data, StandardCharsets.UTF_8), info);
             }
+            ZipEntry extension = zip.getEntry("META-INF/vibe-extension.json");
+            if (extension != null) {
+                InputStream input = zip.getInputStream(extension);
+                byte[] data;
+                try { data = readAll(input, 16384); } finally { input.close(); }
+                Map<String, Object> json = Json.object(Json.parse(new String(data, StandardCharsets.UTF_8)));
+                Object api = json.get("apiVersion");
+                String id = requiredString(json, "id"), main = requiredString(json, "entrypoint");
+                if (!(api instanceof Double) || ((Double) api).doubleValue() != 1.0 ||
+                        !id.matches("[a-z][a-z0-9_-]{1,63}") ||
+                        !main.matches("[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)+") ||
+                        zip.getEntry(main.replace('.', '/') + ".class") == null)
+                    throw new IOException("Unsupported or incomplete Vibe extension descriptor.");
+                info.name = clean(requiredString(json, "name"));
+                info.version = clean(requiredString(json, "version"));
+                info.extensionId = id;
+                info.extension = true;
+                info.requiredVibeVersion = json.containsKey("vibeVersion") ? requiredString(json, "vibeVersion") : "";
+                info.description = clean(Json.string(json, "description"));
+            }
         } finally {
             zip.close();
         }
         return info;
+    }
+
+    private static String requiredString(Map<String, Object> json, String key) throws IOException {
+        Object value = json.get(key);
+        if (!(value instanceof String) || ((String) value).trim().isEmpty() || ((String) value).length() > 255)
+            throw new IOException("Invalid extension field: " + key);
+        return ((String) value).trim();
     }
 
     /** Accepts both the plain array format and version 2's {@code {"modList": [...]}}. */
@@ -214,7 +262,7 @@ public final class ModLibrary {
         byte[] buffer = new byte[8192];
         int count;
         while ((count = input.read(buffer)) != -1) {
-            if (output.size() + count > limit) throw new IOException("mcmod.info is too large.");
+            if (output.size() + count > limit) throw new IOException("Archive metadata is too large.");
             output.write(buffer, 0, count);
         }
         return output.toByteArray();

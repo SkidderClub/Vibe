@@ -2,7 +2,7 @@ package dev.vibe.ui.screen;
 
 import dev.vibe.Vibe;
 import dev.vibe.friend.FriendManager.Friend;
-import dev.vibe.cosmetic.CosmeticPreset;
+import dev.vibe.extension.FriendProfileProvider;
 import dev.vibe.module.impl.client.BlurModule;
 import dev.vibe.module.impl.client.FriendEditorModule;
 import dev.vibe.ui.RenderUtils;
@@ -61,11 +61,13 @@ public final class FriendEditorGui extends GuiScreen {
             fontRendererObj.drawStringWithShadow(friend.getAlias(), left + 105, y + 4, SkeetEditorStyle.MUTED);
             fontRendererObj.drawStringWithShadow(friend.getAddedDate(), left + 185, y + 4, SkeetEditorStyle.MUTED);
             fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("×"), left + 255, y + 4, 0xFFFF6A82);
-            SkeetEditorStyle.row(left + 16, y + 17, left + 247, y + 32, !friend.getCosmeticPreset().isEmpty(), false);
-            String profile = "Cosmetic profile";
-            fontRendererObj.drawStringWithShadow(fontRendererObj.trimStringToWidth(dev.vibe.language.LanguageManager.translate(profile), 106), left + 20, y + 20, SkeetEditorStyle.MUTED);
-            String presetLabel = friend.getCosmeticPreset().isEmpty() ? dev.vibe.language.LanguageManager.translate("None") : presetName(friend);
-            fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("< ") + fontRendererObj.trimStringToWidth(presetLabel, 89) + " >", left + 132, y + 20, SkeetEditorStyle.TEXT);
+            if (profiles() != null) {
+                SkeetEditorStyle.row(left + 16, y + 17, left + 247, y + 32, !friend.getCosmeticPreset().isEmpty(), false);
+                String profile = "Cosmetic profile";
+                fontRendererObj.drawStringWithShadow(fontRendererObj.trimStringToWidth(dev.vibe.language.LanguageManager.translate(profile), 106), left + 20, y + 20, SkeetEditorStyle.MUTED);
+                String presetLabel = friend.getCosmeticPreset().isEmpty() ? dev.vibe.language.LanguageManager.translate("None") : presetName(friend);
+                fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("< ") + fontRendererObj.trimStringToWidth(presetLabel, 89) + " >", left + 132, y + 20, SkeetEditorStyle.TEXT);
+            }
             y += 40;
             if (y + 36 > top + 288) break;
         }
@@ -87,8 +89,7 @@ public final class FriendEditorGui extends GuiScreen {
             Gui.drawScaledCustomSizeModalRect(px + 45, py + 29, 40, 8, 8, 8, 28, 28, 64, 64);
         }
         fontRendererObj.drawStringWithShadow(player.getName(), px + 8, py + 61, RenderUtils.TEXT);
-        String preset = selectedPresetName();
-        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.format("Preset: %s", preset), px + 8, py + 71, SkeetEditorStyle.MUTED);
+        if (profiles() != null) fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.format("Preset: %s", presetName(selected)), px + 8, py + 71, SkeetEditorStyle.MUTED);
         int itemX = px + 8;
         ItemStack held = player.getHeldItem(); if (held != null) drawItem(held, itemX, py + 90);
         for (int slot = 0; slot < 4; slot++) { ItemStack armor = player.getCurrentArmor(slot); if (armor != null) drawItem(armor, px + 8 + slot * 25, py + 120); }
@@ -125,16 +126,17 @@ public final class FriendEditorGui extends GuiScreen {
     @Override protected void keyTyped(char typedChar, int keyCode) throws IOException { if (keyCode == Keyboard.KEY_ESCAPE) { mc.displayGuiScreen(null); return; } if (!name.textboxKeyTyped(typedChar, keyCode)) alias.textboxKeyTyped(typedChar, keyCode); }
     @Override public void onGuiClosed() { if (module.isEnabled()) module.setEnabled(false); super.onGuiClosed(); }
     @Override public boolean doesGuiPauseGame() { return false; }
-    private String selectedPresetName() { return presetName(selected); }
+    private FriendProfileProvider profiles() {
+        return Vibe.getInstance().getExtensions() == null ? null
+                : Vibe.getInstance().getExtensions().getService(FriendProfileProvider.class);
+    }
     private String presetName(Friend selected) {
         if (selected == null || selected.getCosmeticPreset() == null || selected.getCosmeticPreset().isEmpty()) return "None";
-        CosmeticPreset preset = Vibe.getInstance().getCosmeticPresetManager().findById(selected.getCosmeticPreset());
-        return preset == null ? "None" : preset.getName();
+        FriendProfileProvider provider = profiles();
+        return provider == null ? "None" : provider.name(selected);
     }
     private void cyclePreset(boolean backwards) {
-        if (selected == null) return;
-        List<CosmeticPreset> presets = Vibe.getInstance().getCosmeticPresetManager().getPresets();
-        String id = Vibe.getInstance().getCosmeticPresetManager().cycleId(selected.getCosmeticPreset(), backwards);
-        Vibe.getInstance().getFriendManager().setCosmeticPreset(selected.getName(), id);
+        FriendProfileProvider provider = profiles();
+        if (selected != null && provider != null) provider.cycle(selected, backwards);
     }
 }

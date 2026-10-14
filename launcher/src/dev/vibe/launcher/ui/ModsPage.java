@@ -71,11 +71,13 @@ final class ModsPage extends JPanel {
     private void rebuild() {
         list.removeAll();
         int enabled = 0;
+        int total = 0;
         for (ModLibrary.Mod mod : controller.mods()) {
+            if (mod.extension) continue;
             list.add(new ModRow(mod));
+            total++;
             if (mod.enabled) enabled++;
         }
-        int total = controller.mods().size();
         summary.setText(total == 0 ? "" : I18n.t("{0} of {1} enabled", enabled, total));
         if (total == 0) {
             Card empty = Card.column(6, 22);

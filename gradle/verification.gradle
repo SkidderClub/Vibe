@@ -61,6 +61,8 @@ registerRenderCheck('verifyVisualRendering', 'dev.vibe.ui.VisualRenderCheck', 'v
         'Checks inventory and GUI rendering state.')
 registerRenderCheck('verifyFreecamRendering', 'dev.vibe.camera.FreecamRenderCheck', 'freecam-render-check',
         'Checks FPV camera transforms, player visibility, knockback projection and the drone OSD.', true)
+registerRenderCheck('verifyPathRendering', 'dev.vibe.path.PathRenderCheck', 'path-render-check',
+        'Checks Path routing, cached world lines, depth modes, colors, styles and camera/render state.', true)
 registerRenderCheck('verifyVisualEffects', 'dev.vibe.ui.VisualEffectsRenderCheck', 'visual-effects-check',
         'Checks Fog, Torus and the other shader effects.')
 registerRenderCheck('verifyRavenVisuals', 'dev.vibe.ui.RavenVisualRenderCheck', 'raven-visual-check',
@@ -70,6 +72,21 @@ registerRenderCheck('verifyChamsRendering', 'dev.vibe.ui.render.esp.ChamsRenderC
 registerRenderCheck('verifyCustomModelRendering', 'dev.vibe.model.CustomModelRenderCheck', 'custom-model-render-check',
         'Renders CustomModelRenderer knives and characters; add files with -PvibeModels=sword:a.glb;player:b.gltf.', true) {
     systemProperty 'vibe.models', project.findProperty('vibeModels') ?: ''
+}
+if (vibeBuiltExtensions.contains('lego')) registerRenderCheck('verifyLegoRendering', 'dev.vibe.lego.LegoRenderCheck', 'lego-render-check',
+        'Checks LEGO screens, scaled selection, purchases, HUD and all bundled characters.', true) {
+    dependsOn tasks.named('legoTestClasses')
+    classpath = sourceSets.legoTest.runtimeClasspath + sourceSets.main.runtimeClasspath
+    maxHeapSize = '2g'
+    systemProperty 'lego.only', project.findProperty('legoOnly') ?: ''
+}
+registerRenderCheck('verifyExtensionLoading', 'dev.vibe.extension.ExtensionLaunchCheck', 'extensions-check',
+        'Loads separate and combined extension installations through Forge with offscreen resource/model checks.', true) {
+    dependsOn vibeBuiltExtensions.collect { it + 'ExtensionDevJar' }
+    maxHeapSize = '2g'
+    args tasks.named('exampleExtensionDevJar').get().archiveFile.get().asFile.absolutePath,
+         (vibeBuiltExtensions.contains('lego') ? tasks.named('legoExtensionDevJar').get().archiveFile.get().asFile.absolutePath : ''),
+         tasks.named('cosmeticaExtensionDevJar').get().archiveFile.get().asFile.absolutePath
 }
 registerRenderCheck('verifyEspRendering', 'dev.vibe.ui.render.esp.EspRenderCheck', 'esp-render-check',
         'Checks ESP rendering and the ESP editor.')

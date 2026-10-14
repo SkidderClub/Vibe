@@ -40,6 +40,19 @@ import net.minecraft.util.BlockPos;
  */
 public final class StatisticsService {
     public enum Scope { GLOBAL, ACCOUNT, RANDOM }
+    public enum Activity { JUMP, BLOCK_PLACED, BLOCK_BROKEN, BED_BROKEN, KILL }
+    /** Confirmed actions are dispatched on the client thread, alongside statistics. */
+    public interface ActivityListener {
+        void onActivity(Activity activity, BlockPos position, EntityLivingBase target);
+    }
+    private final List<ActivityListener> activityListeners = new ArrayList<ActivityListener>();
+    public synchronized void addActivityListener(ActivityListener listener) {
+        if (listener != null && !activityListeners.contains(listener)) activityListeners.add(listener);
+    }
+    public synchronized void removeActivityListener(ActivityListener listener) { activityListeners.remove(listener); }
+    private void activity(Activity action, BlockPos position, EntityLivingBase target) {
+        for (ActivityListener listener : new ArrayList<ActivityListener>(activityListeners)) listener.onActivity(action, position, target);
+    }
 
     public static final class RankedAccount {
         public final String name;
@@ -68,6 +81,8 @@ public final class StatisticsService {
     private final Map<BlockPos, BlockWatch> watchedBlocks = new HashMap<BlockPos, BlockWatch>();
     /** Netty receives the final dig packet off-thread; tick consumes it on the client thread. */
     private final Queue<BlockPos> confirmedBreaks = new ConcurrentLinkedQueue<BlockPos>();
+    private final Map<BlockPos, Long> recentBreaks = new HashMap<BlockPos, Long>();
+    private net.minecraft.world.World sampledWorld;
     private final SecureRandom random = new SecureRandom();
     private SecretKeySpec key;
     private String sampledAccount = "";
@@ -116,6 +131,9 @@ public final class StatisticsService {
     public synchronized void tick() {
         long now = System.currentTimeMillis();
         updateProfileAndServer();
+        if (sampledWorld != minecraft.theWorld) {
+            resetSamples(); attacked.clear(); sampledWorld = minecraft.theWorld;
+        }
         collectDeaths(now);
         sampleMovementAndBlocks(now);
         if (lastTick == 0L) { lastTick = now; return; }
@@ -211,7 +229,10 @@ public final class StatisticsService {
             Map.Entry<EntityLivingBase, Long> entry = iterator.next();
             EntityLivingBase target = entry.getKey();
             if (target == null || now > entry.getValue()) { iterator.remove(); continue; }
-            if (target.isDead || !target.isEntityAlive()) { addProfile("kills", 1L); sessionKills++; iterator.remove(); }
+            if (target.isDead || !target.isEntityAlive()) {
+                addProfile("kills", 1L); sessionKills++; iterator.remove();
+                activity(Activity.KILL, null, target);
+            }
         }
     }
 
@@ -261,7 +282,7 @@ public final class StatisticsService {
             }
             boolean jumping = previousOnGround && !minecraft.thePlayer.onGround && minecraft.thePlayer.motionY > .08D
                     && minecraft.thePlayer.movementInput != null && minecraft.thePlayer.movementInput.jump;
-            if (jumping) addProfile("jumps", 1L);
+            if (jumping) { addProfile("jumps", 1L); activity(Activity.JUMP, null, null); }
             previousOnGround = minecraft.thePlayer.onGround;
             lastX = minecraft.thePlayer.posX;
             lastY = minecraft.thePlayer.posY;
@@ -272,17 +293,22 @@ public final class StatisticsService {
         while (iterator.hasNext()) {
             Map.Entry<BlockPos, BlockWatch> entry = iterator.next();
             BlockWatch watch = entry.getValue();
+            if (!minecraft.theWorld.isBlockLoaded(entry.getKey())) { iterator.remove(); continue; }
             Block current = minecraft.theWorld.getBlockState(entry.getKey()).getBlock();
             if (watch.placement) {
                 if (current != watch.original && current != Blocks.air) {
                     addProfile("blocksPlaced", 1L);
                     iterator.remove();
+                    activity(Activity.BLOCK_PLACED, entry.getKey(), null);
                 } else if (now > watch.expires) iterator.remove();
             } else {
                 if (current == Blocks.air && watch.original != Blocks.air) {
                     addProfile("blocksBroken", 1L);
                     if (watch.original == Blocks.bed) addProfile("bedsBroken", 1L);
+                    recentBreaks.put(entry.getKey(), now);
                     iterator.remove();
+                    activity(Activity.BLOCK_BROKEN, entry.getKey(), null);
+                    if (watch.original == Blocks.bed) activity(Activity.BED_BROKEN, entry.getKey(), null);
                 } else if (now > watch.expires) iterator.remove();
             }
         }
@@ -290,12 +316,24 @@ public final class StatisticsService {
     /** Consume one final destroy acknowledgement per position and remove its old watch
      * before the fallback state sampler can count it a second time. */
     private void confirmCompletedBreaks() {
+        long now = System.currentTimeMillis();
+        recentBreaks.values().removeIf(time -> now - time > 1000);
         BlockPos position;
         while ((position = confirmedBreaks.poll()) != null) {
-            BlockWatch watch = watchedBlocks.remove(position);
+            BlockWatch watch = watchedBlocks.get(position);
+            // An old dig packet can arrive after another block was placed here.
+            // Preserve that newer placement watch for the world-state sampler.
+            if (watch != null && watch.placement) watch = null;
+            else watchedBlocks.remove(position);
+            if (!minecraft.theWorld.isBlockLoaded(position)) continue;
+            // A late STOP packet must not count a break already observed as air.
+            if ((watch == null || watch.original == Blocks.air) && recentBreaks.containsKey(position)) continue;
             Block broken = watch == null ? minecraft.theWorld.getBlockState(position).getBlock() : watch.original;
+            recentBreaks.put(position, now);
             addProfile("blocksBroken", 1L);
             if (broken == Blocks.bed) addProfile("bedsBroken", 1L);
+            activity(Activity.BLOCK_BROKEN, position, null);
+            if (broken == Blocks.bed) activity(Activity.BED_BROKEN, position, null);
         }
     }
     private void addProfile(String metric, long amount) {
@@ -338,6 +376,7 @@ public final class StatisticsService {
         walkedRemainder = 0.0D;
         watchedBlocks.clear();
         confirmedBreaks.clear();
+        recentBreaks.clear();
     }
 
     private void addFavourites(Snapshot snapshot) {

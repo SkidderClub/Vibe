@@ -162,6 +162,13 @@ processResources {
 }
 
 jar {
+    // Also exclude stale output from a checkout that previously bundled these optional features.
+    exclude 'dev/vibe/lego/**', 'assets/vibe/lego/**', 'dev/vibe/module/impl/meme/Lego*.class'
+    exclude 'dev/vibe/module/impl/movement/TestModule*.class', 'dev/vibe/extension/lego/**', 'dev/vibe/extension/example/**'
+    exclude 'META-INF/vibe/LICENSES/OpenSaga-nudat-MIT.txt'
+    exclude 'dev/vibe/cosmetic/**', 'assets/vibe/cosmetica/**', 'dev/vibe/extension/cosmetica/**'
+    exclude 'dev/vibe/module/impl/visual/CosmeticsModule*.class', 'dev/vibe/module/impl/client/CosmeticsEditorModule*.class'
+    exclude 'dev/vibe/ui/render/CosmeticsRenderer*.class', 'dev/vibe/ui/screen/Cosmetic*.class'
     // Shade the bundled libraries (including WebP's and ImGui's native/ folders) so
     // every feature works in a normal Forge installation, not only in development.
     from { bundledLibraries.get().collect { zipTree(it) } }
@@ -192,10 +199,11 @@ tasks.register('sourceDistribution', Zip) {
     includeEmptyDirs = false
     from(tasks.named('collectDependencyNotices')) { into 'LICENSES/dependencies' }
     from(project.projectDir) {
-        include 'src/**', 'tools/**', 'docs/**', 'gradle/**', 'LICENSES/**', '.github/**'
+        include 'src/**', 'extensions/**', 'tools/**', 'docs/**', 'gradle/**', 'LICENSES/**', '.github/**'
         include '*.gradle', 'gradle.properties', 'gradlew', 'gradlew.bat', '*.bat', '*.md'
         include '.gitignore', '.gitattributes', '.editorconfig'
-        exclude '**/__pycache__/**', '**/*.pyc', '.gradle/**', '.git/**', 'run/**', 'build/**', 'logs/**'
+        exclude '**/__pycache__/**', '**/*.pyc', '**/.gradle/**', '.git/**', 'run/**', '**/build/**', 'logs/**'
+        exclude 'extensions/lego/**'
     }
     preserveFileTimestamps = false
     reproducibleFileOrder = true
@@ -203,4 +211,6 @@ tasks.register('sourceDistribution', Zip) {
 tasks.named('build') { dependsOn tasks.named('sourceDistribution') }
 
 apply from: 'gradle/optifine.gradle'
+apply from: 'gradle/extensions.gradle'
+apply from: 'gradle/launcher-extensions.gradle'
 apply from: 'gradle/verification.gradle'

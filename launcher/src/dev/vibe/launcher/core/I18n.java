@@ -58,6 +58,29 @@ public final class I18n {
     private static void de(String english, String german) { GERMAN.put(english, german); }
 
     static {
+        // Extensions
+        de("Extensions", "Erweiterungen");
+        de("Add JAR", "JAR hinzufügen");
+        de("Extensions added", "Erweiterungen hinzugefügt");
+        de("Choose what Vibe includes. Changes take effect on the next launch.", "Wähle deine Vibe-Erweiterungen. Änderungen gelten ab dem nächsten Start.");
+        de("Install custom extensions from a JAR file.", "Installiere eigene Erweiterungen aus einer JAR-Datei.");
+        de("Browse for a JAR", "JAR-Datei auswählen");
+        de("Release to install the extension", "Loslassen, um die Erweiterung zu installieren");
+        de("Drop extension JARs anywhere in this window", "Erweiterungs-JARs in dieses Fenster ziehen");
+        de("Vibe extensions (*.jar)", "Vibe-Erweiterungen (*.jar)");
+        de("Cosmetica accessories and editor. CustomCosmetics is included in Vibe.", "Cosmetica-Accessoires und Editor. CustomCosmetics ist in Vibe enthalten.");
+        de("The Test module for extension developers.", "Das Test-Modul für Erweiterungsentwickler.");
+        de("Ready on next launch", "Bereit ab dem nächsten Start");
+        de("Available with Vibe", "Mit Vibe verfügbar");
+        de("Not installed", "Nicht installiert");
+        de("Enabled", "Aktiviert");
+        de("Disabled", "Deaktiviert");
+        de("Requires Vibe {0}", "Benötigt Vibe {0}");
+        de("Could not change the extension", "Erweiterung konnte nicht geändert werden");
+        de("Could not remove the extension", "Erweiterung konnte nicht entfernt werden");
+        de("Drop to add mods or extensions", "Loslassen, um Mods oder Erweiterungen hinzuzufügen");
+        de("JAR files are copied into Vibe's mods folder", "JAR-Dateien werden in Vibes Mods-Ordner kopiert");
+        de("{0}: Vibe extensions must be .jar files", "{0}: Vibe-Erweiterungen müssen JAR-Dateien sein");
         // Time
         de("just now", "gerade eben");
         de("1 minute ago", "vor 1 Minute");

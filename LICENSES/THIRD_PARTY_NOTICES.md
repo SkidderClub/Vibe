@@ -159,13 +159,13 @@ under the MIT license; the complete text is stored in
 
 ### Cosmetica
 
-[`src/main/resources/assets/vibe/cosmetica/`](../src/main/resources/assets/vibe/cosmetica) contains an offline catalogue from `api.cloaks.gg`
+[`extensions/cosmetica/src/main/resources/assets/vibe/cosmetica/`](../extensions/cosmetica/src/main/resources/assets/vibe/cosmetica) contains the optional extension's offline catalogue from `api.cloaks.gg`
 and `cdn.cosmetica.cc`. Accessory IDs and creator metadata are retained in
-[`catalog.json`](../src/main/resources/assets/vibe/cosmetica/catalog.json). Models, textures, thumbnails and skins
+[`catalog.json`](../extensions/cosmetica/src/main/resources/assets/vibe/cosmetica/catalog.json). Models, textures, thumbnails and skins
 remain the work of their respective creators; the snapshot does not record a
 license for each asset.
 
-The client/UI assets under [`upstream-ui/`](../src/main/resources/assets/vibe/cosmetica/upstream-ui) come from
+The client/UI assets under [`upstream-ui/`](../extensions/cosmetica/src/main/resources/assets/vibe/cosmetica/upstream-ui) come from
 [Cosmetica-2](https://github.com/Cosmetica-cc/Cosmetica-2), whose
 [Apache-2.0 license](https://github.com/Cosmetica-cc/Cosmetica-2/blob/1.16.5/LICENSE)
 and [NOTICE](https://github.com/Cosmetica-cc/Cosmetica-2/blob/1.16.5/NOTICE) cover that

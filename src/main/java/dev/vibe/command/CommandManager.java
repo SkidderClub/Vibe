@@ -16,7 +16,7 @@ import org.lwjgl.input.Keyboard;
 /** Local dot-prefixed commands. They never leave the client as chat messages. */
 public final class CommandManager {
 
-    private static final List<String> ROOTS = Arrays.asList(".toggle", ".t", ".bind", ".b", ".binds", ".config", ".c", ".ign", ".waifu", ".friend", ".f", ".target", ".script", ".scripts", ".models", ".model", ".source", ".help");
+    private static final List<String> ROOTS = Arrays.asList(".toggle", ".t", ".bind", ".b", ".binds", ".config", ".c", ".ign", ".waifu", ".friend", ".f", ".target", ".script", ".scripts", ".models", ".model", ".extensions", ".source", ".help");
 
     public boolean execute(String message) {
         if (message == null || !message.trim().startsWith(".")) {
@@ -53,6 +53,10 @@ public final class CommandManager {
             script(parts);
         } else if (".models".equals(command) || ".model".equals(command)) {
             models(parts);
+        } else if (".extensions".equals(command)) {
+            dev.vibe.extension.ExtensionManager extensions = Vibe.getInstance().getExtensions();
+            if (extensions == null || extensions.getStatus().isEmpty()) say("No Vibe extensions loaded. Put extension JARs in mods and restart.");
+            else for (String status : extensions.getStatus()) say(status);
         } else if (".source".equals(command)) {
             say("Vibe: GPLv3. Schizoid Fog, Torus and media HUD: AGPLv3. Open Licenses & credits in the main or pause menu.");
             say("Matching source: " + dev.vibe.ui.menu.LicenseDocuments.sourceArchive() + ", supplied beside this build by its distributor.");
@@ -244,6 +248,7 @@ public final class CommandManager {
     }
 
     private void help() {
+        say("§b.extensions§7 — list loaded extensions and load errors");
         say(".source - source archive, repository and GPLv3/AGPLv3 licenses");
         say("§b.t <module>§7 — toggle a module");
         say("§b.b <module> <key|none>§7 — set a module keybind");

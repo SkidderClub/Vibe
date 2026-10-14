@@ -31,10 +31,9 @@ public final class ModuleManager {
         register(new EspModule());
         register(new EspEditorModule());
         register(new TargetEspModule());
+        register(new PathModule());
         register(new ItemEspModule());
         register(new HitmarkerModule());
-        register(new CosmeticsModule());
-        register(new CosmeticsEditorModule());
         register(new ChestEspModule());
         register(new BedEspModule());
         register(new BlockChangeEspModule());
@@ -65,7 +64,6 @@ public final class ModuleManager {
         register(new SprintModule());
         register(new NoSlowModule());
         register(new MoveFixModule());
-        register(new TestModule());
         register(new KillAuraModule());
         register(new SpeedModule());
         register(new FlyModule());
@@ -128,12 +126,11 @@ public final class ModuleManager {
         }
     }
 
-    /** Removes an obsolete compiled script module during a reload. */
+    /** Removes a script or extension module even when its disable callback fails. */
     public void unregisterDynamic(Module module) {
         if (module != null) {
-            if (module.isEnabled()) module.setEnabled(false);
-            modules.remove(module);
-            moduleListChanged();
+            try { if (module.isEnabled()) module.setEnabled(false); }
+            finally { modules.remove(module); moduleListChanged(); }
         }
     }
 

@@ -12,7 +12,8 @@ import static org.junit.Assert.*;
 
 public class WorldWalkTerrainTest {
     @Test public void usesRealCollisionBoxesForSlabsCeilingsAndHazards() throws Exception {
-        net.minecraft.init.Bootstrap.register();
+        // Raw unit-test classes have no Forge LaunchClassLoader for the statistics/language bootstrap.
+        dev.vibe.camera.DroneCollisionsTest.registerBlocks();
         FixtureWorld world=allocate(FixtureWorld.class);world.blocks=new HashMap<>();
         EntityPlayerSP player=allocate(EntityPlayerSP.class);player.width=.6F;player.height=1.8F;
         WorldWalkTerrain terrain=new WorldWalkTerrain(world,player);

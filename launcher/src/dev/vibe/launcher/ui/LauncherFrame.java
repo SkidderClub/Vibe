@@ -106,6 +106,7 @@ public final class LauncherFrame extends JFrame {
         playBar = new PlayBar(controller, () -> show(Page.ACCOUNTS));
         pages.put(Page.HOME, new HomePage(controller));
         pages.put(Page.MODS, new ModsPage(controller));
+        pages.put(Page.EXTENSIONS, new ExtensionsPage(controller));
         pages.put(Page.ACCOUNTS, new AccountsPage(controller));
         pages.put(Page.APPEARANCE, new AppearancePage(controller));
         pages.put(Page.SETTINGS, new SettingsPage(controller));
@@ -173,7 +174,7 @@ public final class LauncherFrame extends JFrame {
         sidebar.select(page);
         if (page == Page.CONSOLE) ((ConsolePage) pages.get(page)).shown();
         if (page == Page.ACCOUNTS) controller.reloadAccounts();
-        if (page == Page.MODS) controller.reloadMods();
+        if (page == Page.MODS || page == Page.EXTENSIONS) controller.reloadMods();
         sidebar.repaint();
     }
 
@@ -466,8 +467,7 @@ public final class LauncherFrame extends JFrame {
                 event.acceptDrop(DnDConstants.ACTION_COPY);
                 try {
                     List<File> files = (List<File>) event.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
-                    controller.importMods(files);
-                    show(Page.MODS);
+                    controller.importMods(files, extension -> show(extension ? Page.EXTENSIONS : Page.MODS));
                     event.dropComplete(true);
                 } catch (Exception error) {
                     controller.log().warn("Drop failed", error);
@@ -481,6 +481,7 @@ public final class LauncherFrame extends JFrame {
         dropOverlay.setBounds(0, 0, getLayeredPane().getWidth(), getLayeredPane().getHeight());
         dropOverlay.setVisible(dropping);
         ((ModsPage) pages.get(Page.MODS)).setDragActive(dropping);
+        ((ExtensionsPage) pages.get(Page.EXTENSIONS)).setDragActive(dropping);
     }
 
     private static void installDefaults() {
@@ -506,8 +507,8 @@ public final class LauncherFrame extends JFrame {
                 g.setStroke(new java.awt.BasicStroke(2f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND, 10f, new float[] { 10f, 8f }, 0f));
                 g.draw(new java.awt.geom.RoundRectangle2D.Double(24, 24, w - 48, h - 48, 28, 28));
                 Icons.MODS.paint(g, w / 2.0 - 24, h / 2.0 - 58, 48, Style.accent());
-                Style.textCentered(g, I18n.t("Drop to add mods"), w / 2.0, h / 2.0, 30, Style.font(java.awt.Font.BOLD, 22f), Style.text());
-                Style.textCentered(g, I18n.t("Forge 1.8.9 .jar files are copied into Vibe's mods folder"), w / 2.0, h / 2.0 + 30, 22, Style.body(), Style.muted());
+                Style.textCentered(g, I18n.t("Drop to add mods or extensions"), w / 2.0, h / 2.0, 30, Style.font(java.awt.Font.BOLD, 22f), Style.text());
+                Style.textCentered(g, I18n.t("JAR files are copied into Vibe's mods folder"), w / 2.0, h / 2.0 + 30, 22, Style.body(), Style.muted());
             } finally {
                 g.dispose();
             }

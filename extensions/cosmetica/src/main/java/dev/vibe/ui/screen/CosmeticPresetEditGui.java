@@ -17,7 +17,8 @@ import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
 /** Skeet-styled editor for real public Cosmetica catalogue entries. */
-public final class CosmeticPresetEditGui extends GuiScreen {
+public final class CosmeticPresetEditGui extends GuiScreen implements dev.vibe.extension.ParticleTargetScreen {
+    @Override public String particleTarget() { return "Cosmetics Editor"; }
     private final CosmeticsEditorModule module;
     private final CosmeticsEditorGui parent;
     private final CosmeticPreset preset;
@@ -32,7 +33,7 @@ public final class CosmeticPresetEditGui extends GuiScreen {
     @Override public void initGui() {
         int width=Math.min(this.width-16,1010),height=Math.min(this.height-18,575); left=(this.width-width)/2;right=left+width;top=Math.max(10,(this.height-height)/2);bottom=top+height;
         name=field(0,left+22,top+71,205,preset.getName(),24); skin=field(1,left+22,top+118,205,preset.getSkinName(),16); search=field(2,left+480,top+51,245,"",44);
-        Vibe.getInstance().getCosmeticaCatalogService().search("",1);
+        dev.vibe.extension.cosmetica.CosmeticaExtension.catalog().search("",1);
     }
     private GuiTextField field(int id,int x,int y,int width,String value,int limit){GuiTextField field=new GuiTextField(id,fontRendererObj,x,y,width,16);field.setText(value);field.setMaxStringLength(limit);field.setEnableBackgroundDrawing(false);return field;}
 
@@ -60,7 +61,7 @@ for(CosmeticaAccessory accessory:accessories){if(rowY+49>=y+20&&rowY<bottom-17){
     private void drawCatalog(int mouseX,int mouseY) {
         int x=left+474,y=top+30; SkeetEditorStyle.panel(x,y,right-14,bottom-14,"Cosmetica catalog");
         SkeetEditorStyle.input(x+6,y+17,x+257,y+39);search.drawTextBox();SkeetEditorStyle.button(x+264,y+17,x+333,y+39,"SEARCH",true);
-        CosmeticaCatalogService catalog=Vibe.getInstance().getCosmeticaCatalogService();String summary=catalog.isLoading()?catalog.getStatus():catalog.getStatus()+"  •  scroll to browse";fontRendererObj.drawStringWithShadow(fontRendererObj.trimStringToWidth(summary,right-x-22),x+8,y+49,SkeetEditorStyle.MUTED);
+        CosmeticaCatalogService catalog=dev.vibe.extension.cosmetica.CosmeticaExtension.catalog();String summary=catalog.isLoading()?catalog.getStatus():catalog.getStatus()+"  •  scroll to browse";fontRendererObj.drawStringWithShadow(fontRendererObj.trimStringToWidth(summary,right-x-22),x+8,y+49,SkeetEditorStyle.MUTED);
         catalogScroll=Math.min(catalogScroll,catalogMaxScroll(catalog));
         int listTop=catalogListTop(),listBottom=catalogListBottom();
         beginScissor(x+6,listTop,right-x-27,listBottom-listTop);
@@ -95,20 +96,20 @@ private void toggle(int x,int y,String text,boolean value){SkeetEditorStyle.row(
         if(button==0&&hit(panel+12,previewTop+124,226,218,mouseX,mouseY)){rotating=true;lastMouseX=mouseX;return;}
         if(button==0&&hit(panel+12,previewTop+391,226,20,mouseX,mouseY)){preset.setOnlyThirdPerson(!preset.isOnlyThirdPerson());save();return;}
         int ex=left+278,ey=top+30,rowY=ey+21-equippedScroll;for(CosmeticaAccessory accessory:preset.getAccessories()){if(hit(ex+5,rowY,170,46,mouseX,mouseY)){if(button==1){preset.remove(accessory.getId());save();}else if(button==0){mc.displayGuiScreen(new CosmeticAccessoryOptionsGui(module,preset,accessory,this));}return;}rowY+=49;}
-        int cx=left+474,cy=top+30;CosmeticaCatalogService catalog=Vibe.getInstance().getCosmeticaCatalogService();if(button==0&&hit(cx+264,cy+17,69,22,mouseX,mouseY)){catalog.search(search.getText(),1);catalogScroll=0;return;}
+        int cx=left+474,cy=top+30;CosmeticaCatalogService catalog=dev.vibe.extension.cosmetica.CosmeticaExtension.catalog();if(button==0&&hit(cx+264,cy+17,69,22,mouseX,mouseY)){catalog.search(search.getText(),1);catalogScroll=0;return;}
         int listTop=catalogListTop(),listBottom=catalogListBottom();
         if(mouseY>=listTop&&mouseY<listBottom){int itemY=listTop-catalogScroll;for(CosmeticaAccessory accessory:catalog.getResults()){if(hit(cx+6,itemY,right-cx-27,53,mouseX,mouseY)){if(preset.contains(accessory.getId()))preset.remove(accessory.getId());else{preset.equip(accessory);catalog.getModel(accessory);}save();return;}itemY+=57;}}
         super.mouseClicked(mouseX,mouseY,button);
     }
     @Override protected void mouseClickMove(int mouseX,int mouseY,int button,long time){if(rotating&&button==0){previewYaw+=mouseX-lastMouseX;lastMouseX=mouseX;}}
     @Override protected void mouseReleased(int mouseX,int mouseY,int state){rotating=false;super.mouseReleased(mouseX,mouseY,state);}
-    @Override public void handleMouseInput()throws IOException{super.handleMouseInput();int wheel=Mouse.getEventDWheel();if(wheel==0)return;int mouseX=Mouse.getEventX()*width/mc.displayWidth,mouseY=height-Mouse.getEventY()*height/mc.displayHeight-1;if(mouseX>=left+278&&mouseX<left+458){int maximum=Math.max(0,preset.getAccessories().size()*49-(bottom-(top+30)-38));equippedScroll=Math.max(0,Math.min(maximum,equippedScroll+(wheel<0?28:-28)));}else if(mouseX>=left+474&&mouseX<right-14&&mouseY>=catalogListTop()&&mouseY<catalogListBottom()){CosmeticaCatalogService catalog=Vibe.getInstance().getCosmeticaCatalogService();catalogScroll=Math.max(0,Math.min(catalogMaxScroll(catalog),catalogScroll+(wheel<0?38:-38)));}}
-    @Override protected void keyTyped(char character,int keyCode)throws IOException{if(keyCode==Keyboard.KEY_ESCAPE){save();mc.displayGuiScreen(parent);return;}if(name.textboxKeyTyped(character,keyCode)){preset.setName(name.getText());save();}else if(skin.textboxKeyTyped(character,keyCode)){preset.setSkinName(skin.getText());save();}else if(search.textboxKeyTyped(character,keyCode)&&keyCode==Keyboard.KEY_RETURN){Vibe.getInstance().getCosmeticaCatalogService().search(search.getText(),1);catalogScroll=0;}}
+    @Override public void handleMouseInput()throws IOException{super.handleMouseInput();int wheel=Mouse.getEventDWheel();if(wheel==0)return;int mouseX=Mouse.getEventX()*width/mc.displayWidth,mouseY=height-Mouse.getEventY()*height/mc.displayHeight-1;if(mouseX>=left+278&&mouseX<left+458){int maximum=Math.max(0,preset.getAccessories().size()*49-(bottom-(top+30)-38));equippedScroll=Math.max(0,Math.min(maximum,equippedScroll+(wheel<0?28:-28)));}else if(mouseX>=left+474&&mouseX<right-14&&mouseY>=catalogListTop()&&mouseY<catalogListBottom()){CosmeticaCatalogService catalog=dev.vibe.extension.cosmetica.CosmeticaExtension.catalog();catalogScroll=Math.max(0,Math.min(catalogMaxScroll(catalog),catalogScroll+(wheel<0?38:-38)));}}
+    @Override protected void keyTyped(char character,int keyCode)throws IOException{if(keyCode==Keyboard.KEY_ESCAPE){save();mc.displayGuiScreen(parent);return;}if(name.textboxKeyTyped(character,keyCode)){preset.setName(name.getText());save();}else if(skin.textboxKeyTyped(character,keyCode)){preset.setSkinName(skin.getText());save();}else if(search.textboxKeyTyped(character,keyCode)&&keyCode==Keyboard.KEY_RETURN){dev.vibe.extension.cosmetica.CosmeticaExtension.catalog().search(search.getText(),1);catalogScroll=0;}}
     @Override public void onGuiClosed(){if(module.isEnabled()&&!(mc.currentScreen instanceof CosmeticsEditorGui)&&!(mc.currentScreen instanceof CosmeticAccessoryOptionsGui))module.setEnabled(false);super.onGuiClosed();}
     private int catalogListTop(){return top+98;}
     private int catalogListBottom(){return bottom-17;}
     private int catalogMaxScroll(CosmeticaCatalogService catalog){return Math.max(0,catalog.getResults().size()*57-(catalogListBottom()-catalogListTop()));}
     private void beginScissor(int x,int y,int width,int height){ScaledResolution resolution=new ScaledResolution(mc);int scale=resolution.getScaleFactor();GL11.glEnable(GL11.GL_SCISSOR_TEST);GL11.glScissor(x*scale,(resolution.getScaledHeight()-(y+height))*scale,width*scale,height*scale);}
     private void endScissor(){GL11.glDisable(GL11.GL_SCISSOR_TEST);}
-    @Override public boolean doesGuiPauseGame(){return false;} private void save(){preset.setName(name.getText());preset.setSkinName(skin.getText());Vibe.getInstance().getCosmeticPresetManager().save();}private static boolean hit(int x,int y,int width,int height,int mouseX,int mouseY){return mouseX>=x&&mouseX<x+width&&mouseY>=y&&mouseY<y+height;}
+    @Override public boolean doesGuiPauseGame(){return false;} private void save(){preset.setName(name.getText());preset.setSkinName(skin.getText());dev.vibe.extension.cosmetica.CosmeticaExtension.presets().save();}private static boolean hit(int x,int y,int width,int height,int mouseX,int mouseY){return mouseX>=x&&mouseX<x+width&&mouseY>=y&&mouseY<y+height;}
 }

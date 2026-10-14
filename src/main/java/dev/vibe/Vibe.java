@@ -4,12 +4,11 @@ import dev.vibe.account.AccountManager;
 import dev.vibe.combat.CombatTimerAccess;
 import dev.vibe.command.CommandManager;
 import dev.vibe.config.VibeConfig;
-import dev.vibe.cosmetic.CosmeticPresetManager;
-import dev.vibe.cosmetic.CosmeticaCatalogService;
 import dev.vibe.event.ClientEvents;
 import dev.vibe.event.GuiButtonLocalizationEvents;
 import dev.vibe.event.MainMenuEvents;
 import dev.vibe.event.ReconnectEvents;
+import dev.vibe.extension.ExtensionManager;
 import dev.vibe.friend.FriendManager;
 import dev.vibe.hud.HudManager;
 import dev.vibe.identity.ClientIdentity;
@@ -48,12 +47,12 @@ public final class Vibe {
     private HudManager hudManager;
     private ClientIdentity identity;
     private FriendManager friendManager;
-    private CosmeticPresetManager cosmeticPresetManager;
-    private CosmeticaCatalogService cosmeticaCatalogService;
     private TargetManager targetManager;
     private ScriptRuntime scriptRuntime;
     private AccountManager accountManager;
     private StatisticsService statistics;
+    private ExtensionManager extensions;
+    private boolean extensionLoading;
     private int loadedModuleCount;
     private int loadedSettingCount;
 
@@ -74,8 +73,6 @@ public final class Vibe {
         config = new VibeConfig(event.getModConfigurationDirectory());
         identity = new ClientIdentity(minecraft.mcDataDir);
         friendManager = new FriendManager(event.getModConfigurationDirectory());
-        cosmeticPresetManager = new CosmeticPresetManager(event.getModConfigurationDirectory());
-        cosmeticaCatalogService = new CosmeticaCatalogService(minecraft.mcDataDir);
         targetManager = new TargetManager(event.getModConfigurationDirectory());
         hudManager = new HudManager(event.getModConfigurationDirectory());
         moduleManager = new ModuleManager();
@@ -96,6 +93,12 @@ public final class Vibe {
         MinecraftForge.EVENT_BUS.register(reconnect);
         FMLCommonHandler.instance().bus().register(reconnect);
         FMLCommonHandler.instance().bus().register(events);
+        extensions = new ExtensionManager(minecraft.mcDataDir, moduleManager, statistics,
+                MinecraftForge.EVENT_BUS, FMLCommonHandler.instance().bus());
+        extensionLoading = true;
+        try { extensions.load(); }
+        finally { extensionLoading = false; }
+        Runtime.getRuntime().addShutdownHook(new Thread(extensions::shutdown, "Vibe-Extensions-Shutdown"));
 
         config.load(moduleManager);
         // Script modules are registered after the normal profile is loaded,
@@ -144,12 +147,12 @@ public final class Vibe {
     }
 
     public FriendManager getFriendManager() { return friendManager; }
-    public CosmeticPresetManager getCosmeticPresetManager() { return cosmeticPresetManager; }
-    public CosmeticaCatalogService getCosmeticaCatalogService() { return cosmeticaCatalogService; }
     public TargetManager getTargetManager() { return targetManager; }
     public ScriptRuntime getScriptRuntime() { return scriptRuntime; }
     public AccountManager getAccountManager() { return accountManager; }
     public StatisticsService getStatistics() { return statistics; }
+    public ExtensionManager getExtensions() { return extensions; }
+    public boolean isExtensionLoading() { return extensionLoading; }
 
     /** Snapshot shown on the menu; recalculated after every client startup. */
     public void refreshLoadedCounts() {

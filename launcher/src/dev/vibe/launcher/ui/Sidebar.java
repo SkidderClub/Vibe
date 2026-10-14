@@ -36,7 +36,12 @@ final class Sidebar extends Stack.Panel {
         }
         items.get(Page.MODS).badge = () -> {
             int enabled = 0;
-            for (dev.vibe.launcher.game.ModLibrary.Mod mod : controller.mods()) if (mod.enabled) enabled++;
+            for (dev.vibe.launcher.game.ModLibrary.Mod mod : controller.mods()) if (mod.enabled && !mod.extension) enabled++;
+            return enabled == 0 ? "" : Integer.toString(enabled);
+        };
+        items.get(Page.EXTENSIONS).badge = () -> {
+            int enabled = 0;
+            for (dev.vibe.launcher.game.ExtensionLibrary.Entry extension : controller.extensions()) if (extension.enabled) enabled++;
             return enabled == 0 ? "" : Integer.toString(enabled);
         };
         items.get(Page.CONSOLE).alert = () -> controller.console().unseenErrors() > 0;

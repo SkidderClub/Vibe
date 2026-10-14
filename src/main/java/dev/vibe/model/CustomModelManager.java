@@ -100,7 +100,12 @@ public final class CustomModelManager {
     }
 
     public CustomModelManager(File minecraftDirectory) {
-        root = new File(minecraftDirectory, "vibe/models");
+        this(minecraftDirectory, new File(minecraftDirectory, "vibe/models"));
+    }
+
+    /** Separate libraries can share the proven loading pipeline without changing user selections. */
+    public CustomModelManager(File minecraftDirectory, File modelRoot) {
+        root = modelRoot;
         cache = new File(root, ".cache");
         tokenFile = new File(root, ".sketchfab-token");
         for (ModelKind kind : ModelKind.values()) folder(kind).mkdirs();

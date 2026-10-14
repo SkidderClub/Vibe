@@ -1,0 +1,74 @@
+// The launcher prepares public extensions and applies switches for imported JARs.
+// Private extensions are never provisioned automatically.
+def profile = file(providers.gradleProperty('vibeExtensionProfile').getOrElse('run/client'))
+def choicesFile = new File(profile, 'vibe/extensions.properties')
+def choices = new Properties()
+if (choicesFile.isFile()) choicesFile.withInputStream { choices.load(it) }
+def installed = [:]
+[new File(profile, 'mods'), new File(profile, 'mods/1.8.9')].each { folder ->
+    (folder.listFiles() ?: []).findAll {
+        def name = it.name.toLowerCase(Locale.ROOT)
+        it.isFile() && (name.endsWith('.jar') || name.endsWith('.jar.disabled'))
+    }.each { jar ->
+        try {
+            new java.util.jar.JarFile(jar).withCloseable { archive ->
+                def descriptor = archive.getJarEntry('META-INF/vibe-extension.json')
+                if (descriptor != null && descriptor.size >= 0 && descriptor.size <= 16384) {
+                    def json = archive.getInputStream(descriptor).withCloseable { new groovy.json.JsonSlurper().parse(it, 'UTF-8') }
+                    if (json instanceof Map && json.apiVersion == 1 && json.id instanceof String && json.id.matches('[a-z][a-z0-9_-]{1,63}')) {
+                        if (installed.containsKey(json.id)) throw new GradleException('Duplicate Vibe extension: ' + json.id)
+                        installed[json.id] = jar
+                    }
+                }
+            }
+        } catch (java.io.IOException ignored) { /* The client reports broken imported archives. */ }
+        catch (groovy.json.JsonException ignored) { /* Leave malformed imported descriptors to the client. */ }
+    }
+}
+def selected = ['example', 'cosmetica'].findAll { id ->
+    Boolean.parseBoolean(choices.getProperty(id, Boolean.toString(installed.containsKey(id)
+            ? installed[id].name.toLowerCase(Locale.ROOT).endsWith('.jar') : id == 'cosmetica')))
+}
+def switched = [:]
+installed.each { id, jar ->
+    if (!choices.containsKey(id)) return
+    boolean enabled = jar.name.toLowerCase(Locale.ROOT).endsWith('.jar')
+    boolean wanted = Boolean.parseBoolean(choices.getProperty(id))
+    if (enabled != wanted) switched[id] = new File(jar.parentFile, wanted ? jar.name.substring(0, jar.name.length() - '.disabled'.length()) : jar.name + '.disabled')
+}
+def targets = selected.collectEntries { id ->
+    [(id): switched[id] ?: installed[id] ?: new File(profile, "mods/Vibe-${id.capitalize()}-${project.version}.jar")]
+}
+def prepare = tasks.register('prepareLauncherExtensions') {
+    group = 'extensions'
+    description = 'Prepares public launcher extensions and applies switches for imported JARs.'
+    dependsOn selected.collect { it + 'ExtensionJar' }
+    inputs.files(selected.collect { tasks.named(it + 'ExtensionJar').flatMap { it.archiveFile } })
+    inputs.properties(choices.collectEntries { key, value -> [(String.valueOf(key)): String.valueOf(value)] })
+    inputs.property('switches', switched.collectEntries { id, target -> [(id): target.absolutePath] })
+    outputs.files(targets.values() + switched.values())
+    doLast {
+        switched.each { id, target ->
+            java.nio.file.Files.move(installed[id].toPath(), target.toPath())
+            logger.lifecycle('[Vibe] Extension ' + id + ': ' + (target.name.endsWith('.disabled') ? 'disabled' : 'enabled'))
+        }
+        targets.each { id, target ->
+            File source = tasks.named(id + 'ExtensionJar').get().archiveFile.get().asFile
+            target.parentFile.mkdirs()
+            def temporary = java.nio.file.Files.createTempFile(target.parentFile.toPath(), '.vibe-extension-', '.tmp')
+            try {
+                java.nio.file.Files.copy(source.toPath(), temporary, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                try {
+                    java.nio.file.Files.move(temporary, target.toPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                    java.nio.file.Files.move(temporary, target.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+                }
+            } finally { java.nio.file.Files.deleteIfExists(temporary) }
+            logger.lifecycle('[Vibe] Prepared extension: ' + id)
+        }
+    }
+}
+if (providers.gradleProperty('vibeOptifine').isPresent() && providers.gradleProperty('vibePersistentRun').isPresent()) {
+    tasks.named('runClient').configure { dependsOn prepare }
+}

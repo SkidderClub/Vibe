@@ -155,6 +155,18 @@ public final class VibeConfig {
             data.add("settings", settings);
             modules.add(data);
         }
+        // Removing an optional extension must not erase its settings/keybinds from the profile.
+        if (previous.has("modules") && previous.get("modules").isJsonArray()) {
+            java.util.Set<String> written = new java.util.HashSet<String>();
+            for (Module module : manager.getModules()) written.add(module.getId());
+            for (JsonElement entry : previous.getAsJsonArray("modules")) {
+                if (!entry.isJsonObject()) continue;
+                JsonObject data = entry.getAsJsonObject();
+                String id = getString(data, "id", "");
+                if (!id.isEmpty() && findModule(manager, id) == null
+                        && written.add(id.toLowerCase(java.util.Locale.ROOT))) modules.add(data);
+            }
+        }
         root.add("modules", modules);
         File temporary = new File(directory, "." + safeName + ".json.tmp");
         try {

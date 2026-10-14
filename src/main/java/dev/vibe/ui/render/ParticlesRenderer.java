@@ -9,8 +9,7 @@ import dev.vibe.ui.game.MemeGameGui;
 import dev.vibe.ui.game.NesEmulatorGui;
 import dev.vibe.ui.game.SlotsGui;
 import dev.vibe.ui.screen.ConfigEditorGui;
-import dev.vibe.ui.screen.CosmeticPresetEditGui;
-import dev.vibe.ui.screen.CosmeticsEditorGui;
+import dev.vibe.extension.ParticleTargetScreen;
 import dev.vibe.ui.screen.EspEditorGui;
 import dev.vibe.ui.screen.FriendEditorGui;
 import dev.vibe.ui.screen.InventoryEditorGui;
@@ -170,7 +169,7 @@ public final class ParticlesRenderer {
         if (screen instanceof ConfigEditorGui) return module.getGuiTargets().isSelected("Config Editor");
         if (screen instanceof KeybindEditorGui) return module.getGuiTargets().isSelected("Keybind Editor");
         if (screen instanceof EspEditorGui) return module.getGuiTargets().isSelected("ESP Editor");
-        if (screen instanceof CosmeticsEditorGui || screen instanceof CosmeticPresetEditGui) return module.getGuiTargets().isSelected("Cosmetics Editor");
+        if (screen instanceof ParticleTargetScreen) return module.getGuiTargets().isSelected(((ParticleTargetScreen) screen).particleTarget());
         if (screen instanceof NesEmulatorGui) return module.getGuiTargets().isSelected("NES Emulator");
         if (screen instanceof Gta7Gui) return module.getGuiTargets().isSelected("GTA7");
         if (screen instanceof MemeGameGui) return module.getGuiTargets().isSelected("Meme Games");

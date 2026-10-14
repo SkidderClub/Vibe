@@ -132,7 +132,7 @@ public final class CosmeticAccessoryOptionsGui extends GuiScreen {
         if (Math.abs(after - before) > 0.00001F) offsetsChanged = true;
     }
     private void flag(int flag) { accessory.setVisibilityFlag(flag, !accessory.hasVisibilityFlag(flag)); save(); }
-    private void save() { Vibe.getInstance().getCosmeticPresetManager().save(); }
+    private void save() { dev.vibe.extension.cosmetica.CosmeticaExtension.presets().save(); }
     private static String number(float value) { return String.format(Locale.ROOT, "%.2f", value); }
     private static boolean hit(int x, int y, int width, int height, int mouseX, int mouseY) { return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height; }
 }

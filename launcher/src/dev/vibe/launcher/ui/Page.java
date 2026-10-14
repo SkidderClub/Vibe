@@ -4,6 +4,7 @@ package dev.vibe.launcher.ui;
 enum Page {
     HOME("Home", Icons.HOME),
     MODS("Mods", Icons.MODS),
+    EXTENSIONS("Extensions", Icons.PLUS),
     ACCOUNTS("Accounts", Icons.ACCOUNTS),
     APPEARANCE("Appearance", Icons.APPEARANCE),
     SETTINGS("Settings", Icons.SETTINGS),

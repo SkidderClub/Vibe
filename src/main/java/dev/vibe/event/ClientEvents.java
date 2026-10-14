@@ -1,5 +1,7 @@
 package dev.vibe.event;
 
+import net.minecraft.util.BlockPos;
+
 import dev.vibe.Vibe;
 import dev.vibe.launcher.LauncherBridge;
 import dev.vibe.command.VibeChatGui;
@@ -20,7 +22,6 @@ import dev.vibe.module.impl.client.NameProtectModule;
 import dev.vibe.module.impl.movement.NoJumpDelayModule;
 import dev.vibe.module.impl.movement.NoSlowModule;
 import dev.vibe.module.impl.movement.MoveFixModule;
-import dev.vibe.module.impl.movement.TestModule;
 import dev.vibe.module.impl.combat.KillAuraModule;
 import dev.vibe.module.impl.visual.ItemEspModule;
 import dev.vibe.module.impl.meme.GirlfriendModule;
@@ -64,7 +65,7 @@ import dev.vibe.ui.render.ScaffoldCountRenderer;
 import dev.vibe.ui.render.esp.EspRenderer;
 import dev.vibe.ui.render.esp.TargetEspRenderer;
 import dev.vibe.ui.render.esp.SkeletalRenderer;
-import dev.vibe.ui.render.CosmeticsRenderer;
+import dev.vibe.ui.render.PlayerSkinRenderer;
 import dev.vibe.ui.RenderUtils;
 import dev.vibe.ui.render.CustomCrosshairRenderer;
 import dev.vibe.ui.render.ParticlesRenderer;
@@ -126,7 +127,7 @@ public final class ClientEvents {
     private final EspRenderer espRenderer = new EspRenderer();
     private final TargetEspRenderer targetEspRenderer = new TargetEspRenderer();
     private final SkeletalRenderer skeletalRenderer = new SkeletalRenderer();
-    private final CosmeticsRenderer cosmeticsRenderer = new CosmeticsRenderer();
+    private final PlayerSkinRenderer playerSkinRenderer = new PlayerSkinRenderer();
     private final ChestEspRenderer chestEspRenderer = new ChestEspRenderer();
     private final CustomCrosshairRenderer customCrosshairRenderer = new CustomCrosshairRenderer();
     private final ParticlesRenderer particlesRenderer = new ParticlesRenderer();
@@ -143,6 +144,7 @@ public final class ClientEvents {
     private final ItemEspRenderer itemEspRenderer = new ItemEspRenderer();
     private final CustomCosmeticsRenderer customCosmeticsRenderer = new CustomCosmeticsRenderer();
     private final FreecamHudRenderer freecamHudRenderer = new FreecamHudRenderer();
+    private final dev.vibe.ui.render.PathRenderer pathRenderer = new dev.vibe.ui.render.PathRenderer();
     private final ScaffoldCountRenderer scaffoldCountRenderer = new ScaffoldCountRenderer();
     private Scoreboard suppressedScoreboard;
     private ScoreObjective suppressedSidebar;
@@ -189,8 +191,7 @@ public final class ClientEvents {
             ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
             if (scripts != null) scripts.tickStart();
             // Producers select the fake rotation before vanilla samples input.
-            TestModule test = Vibe.getInstance().getModuleManager().getModule(TestModule.class);
-            if (test != null) test.tick();
+            if (Vibe.getInstance().getExtensions() != null) Vibe.getInstance().getExtensions().tickStart();
             KillAuraModule killaura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
             if (killaura != null) killaura.tickStart();
             // Scaffold's rotation must win: it keeps the player on the bridge.
@@ -202,7 +203,6 @@ public final class ClientEvents {
             }
             GirlfriendModule girlfriend = Vibe.getInstance().getModuleManager().getModule(GirlfriendModule.class);
             if (girlfriend != null) girlfriend.tick();
-            cosmeticsRenderer.installLayers();
             skeletalRenderer.installLayers();
             PacketDelayService.getInstance().tick();
             LagRangeModule lagRange = Vibe.getInstance().getModuleManager().getModule(LagRangeModule.class);
@@ -275,6 +275,8 @@ public final class ClientEvents {
             if (killaura != null) killaura.tickEnd();
             ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
             if (scaffold != null) scaffold.tickEnd();
+            dev.vibe.module.impl.visual.PathModule path = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.PathModule.class);
+            if (path != null) path.tick();
         }
         if (event.phase != TickEvent.Phase.END) {
             return;
@@ -722,6 +724,7 @@ public final class ClientEvents {
         trajectoriesRenderer.render(event);
         itemEspRenderer.render(event);
         targetEspRenderer.render(event);
+        pathRenderer.render(event);
         hitmarkerRenderer.renderWorld(event);
         skeletalRenderer.render(event);
         customCosmeticsRenderer.render(event);
@@ -743,7 +746,7 @@ public final class ClientEvents {
             MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
             if (moveFix != null) moveFix.beginPlayerRender(minecraft.thePlayer);
         }
-        cosmeticsRenderer.prepareSkin(event);
+        playerSkinRenderer.prepareSkin(event);
     }
 
     /** Runs last, so no later listener can cancel the render and leave the scale matrix pushed. */
@@ -799,7 +802,9 @@ public final class ClientEvents {
             } else if (event.action == PlayerInteractEvent.Action.RIGHT_CLICK_BLOCK) {
                 ItemStack held = minecraft.thePlayer.getHeldItem();
                 if (held != null && held.getItem() instanceof ItemBlock && event.face != null) {
-                    Vibe.getInstance().getStatistics().watchBlockPlacement(event.pos.offset(event.face));
+                    BlockPos placement = minecraft.theWorld.getBlockState(event.pos).getBlock().isReplaceable(minecraft.theWorld, event.pos)
+                            ? event.pos : event.pos.offset(event.face);
+                    Vibe.getInstance().getStatistics().watchBlockPlacement(placement);
                 }
             }
         }

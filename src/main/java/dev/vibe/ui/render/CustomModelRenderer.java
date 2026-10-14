@@ -6,6 +6,7 @@ import dev.vibe.model.CompiledModel;
 import dev.vibe.model.SwordFitter;
 import dev.vibe.module.impl.meme.HypixelModule;
 import dev.vibe.module.impl.visual.CustomModelRendererModule;
+import dev.vibe.extension.PlayerModelProvider;
 import java.nio.FloatBuffer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.ModelBase;
@@ -187,6 +188,18 @@ public final class CustomModelRenderer {
     public static boolean renderBody(ModelBase model, Entity entity, float swing, float amount, float age,
             float yaw, float pitch, float scale) {
         if (drawing || !(model instanceof ModelBiped) || !(entity instanceof EntityPlayer)) return false;
+        PlayerModelProvider provider = extensionModel((EntityPlayer) entity);
+        if (provider != null) {
+            CompiledModel character = provider.model();
+            if (character != null && character.getPivots() != null) {
+                ModelBiped biped = (ModelBiped) model;
+                biped.setRotationAngles(swing, amount, age, yaw, pitch, scale, entity);
+                drawing = true;
+                try { drawPlayer(character, biped, 0, scale, entity.isSneaking(), true); }
+                finally { drawing = false; }
+                return true;
+            }
+        }
         CustomModelRendererModule settings = module();
         if (settings == null || !settings.appliesToPlayer((EntityPlayer) entity) || HypixelModule.visualsSuppressed()) return false;
         CompiledModel compiled = settings.playerModel();
@@ -215,6 +228,7 @@ public final class CustomModelRenderer {
      */
     public static void beginPlayerScale(EntityPlayer player, double x, double y, double z) {
         if (scaledPlayer != null || player == null) return;
+        if (extensionModel(player) != null) return;
         CustomModelRendererModule settings = module();
         if (settings == null || !settings.appliesToPlayer(player) || HypixelModule.visualsSuppressed()) return;
         float size = settings.getPlayerScale().getFloat();
@@ -281,12 +295,19 @@ public final class CustomModelRenderer {
     /** Armor is shaped for vanilla's body, so it is hidden while a custom model is drawn instead. */
     public static boolean hidesArmor(Object entity) {
         if (!(entity instanceof EntityPlayer)) return false;
+        PlayerModelProvider provider = extensionModel((EntityPlayer) entity);
+        if (provider != null && provider.hideArmor() && provider.model() != null) return true;
         CustomModelRendererModule settings = module();
         return settings != null && settings.getHideArmor().isEnabled() && settings.appliesToPlayer((EntityPlayer) entity)
                 && !HypixelModule.visualsSuppressed() && settings.playerModel() != null;
     }
 
     // ---- GL state ----
+
+    private static PlayerModelProvider extensionModel(EntityPlayer player) {
+        Vibe vibe = Vibe.getInstance();
+        return vibe == null || vibe.getExtensions() == null ? null : vibe.getExtensions().playerModel(player);
+    }
 
     /** Saves the state custom drawing changes and switches to smooth shading without culling. Not reentrant. */
     private static void begin() {

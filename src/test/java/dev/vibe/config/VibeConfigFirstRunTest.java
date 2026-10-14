@@ -83,6 +83,13 @@ public class VibeConfigFirstRunTest {
         ModeSetting speedMode = setting(manager.getModule(SpeedModule.class), "Mode", ModeSetting.class);
         assertEquals("Custom", speedMode.getValue());
 
+        assertTrue(config.save("legacy", manager));
+        JsonObject migrated = new JsonParser().parse(new String(Files.readAllBytes(
+                new File(config.getDirectory(), "legacy.json").toPath()), StandardCharsets.UTF_8)).getAsJsonObject();
+        for (com.google.gson.JsonElement element : migrated.getAsJsonArray("modules"))
+            assertFalse("A migrated alias must not be retained as an absent extension",
+                    "bhop".equalsIgnoreCase(element.getAsJsonObject().get("id").getAsString()));
+
         assertTrue(config.save("round-trip", manager));
         JsonObject saved = new JsonParser().parse(new String(Files.readAllBytes(
                 new File(config.getDirectory(), "round-trip.json").toPath()), StandardCharsets.UTF_8)).getAsJsonObject();

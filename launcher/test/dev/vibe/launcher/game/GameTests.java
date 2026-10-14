@@ -118,6 +118,83 @@ public final class GameTests {
             Check.equal(1, library.list().size());
         });
 
+        check.test("extensions import by descriptor, persist switches and reject duplicate IDs", () -> {
+            Path source = Files.createDirectories(temp.resolve("extension-downloads"));
+            ModLibrary library = new ModLibrary(temp.resolve("extension-profile/mods"));
+            ExtensionLibrary extensions = new ExtensionLibrary(library, temp.resolve("extension-profile/vibe/extensions.properties"));
+            Check.equal(2, extensions.list(library.list()).size());
+            File custom = extensionJar(source.resolve("shared.jar"), "custom_extension", "Custom extension", 1, true);
+            ModLibrary.ImportResult added = library.importFiles(Collections.singletonList(custom));
+            Check.equal(1, added.extensionsAdded);
+            ModLibrary.Mod installed = library.list().get(0);
+            Check.isTrue(installed.extension && installed.enabled, "classified as an enabled extension");
+            Check.equal("custom_extension", installed.extensionId);
+            Check.equal("Custom extension", installed.name);
+            Check.equal("0.0.6", installed.requiredVibeVersion);
+            extensions.setEnabled(extensions.list(library.list()).get(2), false);
+            Check.isTrue(Files.isRegularFile(library.folder().resolve("shared.jar.disabled")), "disabled JAR ignored by Forge and Vibe");
+            ExtensionLibrary restarted = new ExtensionLibrary(new ModLibrary(library.folder()), temp.resolve("extension-profile/vibe/extensions.properties"));
+            Check.isTrue(!restarted.list(library.list()).get(2).enabled, "disabled after restart");
+            File duplicate = extensionJar(source.resolve("renamed.jar"), "custom_extension", "Other name", 1, true);
+            Check.equal(Collections.singletonList(ErrorCode.MOD_DUPLICATE), library.importFiles(Collections.singletonList(duplicate)).rejectedCodes);
+            restarted.setEnabled(restarted.list(library.list()).get(2), true);
+            Check.isTrue(Files.isRegularFile(library.folder().resolve("shared.jar")), "re-enabled in place");
+            Path versioned = Files.createDirectories(library.folder().resolve("1.8.9"));
+            Files.move(library.folder().resolve("shared.jar"), versioned.resolve("shared.jar"));
+            Check.equal(1, library.list().size());
+            Check.equal(1, library.importFiles(Collections.singletonList(duplicate)).rejected.size());
+            restarted.setEnabled(restarted.list(library.list()).get(2), false);
+            Check.isTrue(Files.isRegularFile(versioned.resolve("shared.jar.disabled")), "nested mods folder supported");
+            restarted.delete(restarted.list(library.list()).get(2));
+            Check.equal(0, library.list().size());
+            Check.equal(2, restarted.list(library.list()).size());
+        });
+
+        check.test("public extension choices persist before installation and removal stays disabled", () -> {
+            ModLibrary library = new ModLibrary(temp.resolve("public-profile/mods"));
+            Path choices = temp.resolve("public-profile/vibe/extensions.properties");
+            ExtensionLibrary extensions = new ExtensionLibrary(library, choices);
+            Check.isTrue(extensions.list(library.list()).get(0).enabled, "Cosmetica is enabled by default");
+            Check.isTrue(!extensions.list(library.list()).get(1).enabled, "example remains opt-in");
+            extensions.setEnabled(extensions.list(library.list()).get(0), false);
+            Check.isTrue(!new ExtensionLibrary(library, choices).list(library.list()).get(0).enabled, "explicit opt-out overrides the default before installation");
+            extensions.setEnabled(extensions.list(library.list()).get(0), true);
+            Check.equal("true", dev.vibe.launcher.core.FileUtil.readProperties(choices).getProperty("cosmetica"));
+            Check.isTrue(new ExtensionLibrary(library, choices).list(library.list()).get(0).enabled, "pending selection survives restart");
+            Check.equal(0, library.list().size());
+            File jar = extensionJar(temp.resolve("public-cosmetica.jar"), "cosmetica", "Cosmetica", 1, true);
+            library.importFiles(Collections.singletonList(jar));
+            extensions.setEnabled(extensions.list(library.list()).get(0), false);
+            Check.isTrue(!extensions.list(library.list()).get(0).enabled, "installed disabled state wins");
+            Files.delete(choices);
+            Check.isTrue(!extensions.list(library.list()).get(0).enabled, "disabled JAR overrides the default without a saved choice");
+            extensions.delete(extensions.list(library.list()).get(0));
+            Check.equal(0, library.list().size());
+            Check.equal("false", dev.vibe.launcher.core.FileUtil.readProperties(choices).getProperty("cosmetica"));
+            Check.isTrue(!extensions.list(library.list()).get(0).enabled, "removed extension is not reinstalled");
+            library.importFiles(Collections.singletonList(jar));
+            extensions.imported(Collections.singletonList("cosmetica"));
+            Check.isTrue(extensions.list(library.list()).get(0).enabled, "a fresh import clears the removed choice");
+            extensions.setEnabled(extensions.list(library.list()).get(0), false, false);
+            Check.isTrue(library.list().get(0).enabled, "running client's JAR was left open and in place");
+            Check.isTrue(!new ExtensionLibrary(library, choices).list(library.list()).get(0).enabled, "deferred disable persists for the next launch");
+        });
+
+        check.test("extension validation rejects incompatible and incomplete archives", () -> {
+            ModLibrary library = new ModLibrary(temp.resolve("bad-extension-profile/mods"));
+            File wrongApi = extensionJar(temp.resolve("api.jar"), "wrong_api", "Bad API", 2, true);
+            File incomplete = extensionJar(temp.resolve("missing.jar"), "missing", "Missing entrypoint", 1, false);
+            File malformed = jar(temp.resolve("descriptor.jar"), "META-INF/vibe-extension.json", "not-json");
+            File wrongSuffix = extensionJar(temp.resolve("extension.zip"), "zipped", "ZIP extension", 1, true);
+            ModLibrary.ImportResult result = library.importFiles(Arrays.asList(wrongApi, incomplete, malformed, wrongSuffix));
+            Check.equal(0, result.added.size());
+            Check.equal(Arrays.asList(ErrorCode.MOD_INVALID, ErrorCode.MOD_INVALID, ErrorCode.MOD_INVALID, ErrorCode.MOD_NOT_JAR), result.rejectedCodes);
+            File custom = extensionJar(temp.resolve("custom.jar"), "custom", "My extension", 1, true);
+            library.importFiles(Collections.singletonList(custom));
+            ExtensionLibrary extensions = new ExtensionLibrary(library, temp.resolve("bad-extension-profile/choices.properties"));
+            Check.equal("custom", extensions.list(library.list()).get(2).id);
+        });
+
         check.test("session follows stages, readiness and exit code", () -> {
             Path project = Files.createDirectories(temp.resolve("project-ok"));
             fakeWrapper(project);
@@ -215,6 +292,21 @@ public final class GameTests {
         output.putNextEntry(new ZipEntry(entry));
         output.write(content.getBytes(StandardCharsets.UTF_8));
         output.close();
+        return file.toFile();
+    }
+
+    private static File extensionJar(Path file, String id, String name, int api, boolean entrypoint) throws IOException {
+        try (ZipOutputStream output = new ZipOutputStream(Files.newOutputStream(file))) {
+            output.putNextEntry(new ZipEntry("META-INF/vibe-extension.json"));
+            output.write(("{\"apiVersion\":" + api + ",\"id\":\"" + id + "\",\"name\":\"" + name
+                    + "\",\"version\":\"1.0\",\"vibeVersion\":\"0.0.6\",\"entrypoint\":\"sample.Extension\"}").getBytes(StandardCharsets.UTF_8));
+            output.closeEntry();
+            if (entrypoint) {
+                output.putNextEntry(new ZipEntry("sample/Extension.class"));
+                output.write(new byte[] { 1 });
+                output.closeEntry();
+            }
+        }
         return file.toFile();
     }
 

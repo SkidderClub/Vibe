@@ -1,0 +1,162 @@
+[
+  {
+    "id": "obiwan",
+    "name": "Obi-Wan Kenobi",
+    "tier": 0
+  },
+  {
+    "id": "quigon",
+    "name": "Qui-Gon Jinn",
+    "tier": 0
+  },
+  {
+    "id": "jarjar",
+    "name": "Jar Jar Binks",
+    "tier": 1
+  },
+  {
+    "id": "amidala",
+    "name": "Queen Amidala",
+    "tier": 2
+  },
+  {
+    "id": "panaka",
+    "name": "Captain Panaka",
+    "tier": 3
+  },
+  {
+    "id": "anakinboy",
+    "name": "Anakin Skywalker (Boy)",
+    "tier": 4
+  },
+  {
+    "id": "maul",
+    "name": "Darth Maul",
+    "tier": 5
+  },
+  {
+    "id": "anakin",
+    "name": "Anakin Skywalker (Padawan)",
+    "tier": 6
+  },
+  {
+    "id": "padme",
+    "name": "Padme Amidala",
+    "tier": 7
+  },
+  {
+    "id": "clone",
+    "name": "Clone Trooper",
+    "tier": 8
+  },
+  {
+    "id": "jango",
+    "name": "Jango Fett",
+    "tier": 9
+  },
+  {
+    "id": "dooku",
+    "name": "Count Dooku",
+    "tier": 10
+  },
+  {
+    "id": "obiwan3",
+    "name": "Obi-Wan Kenobi (Jedi)",
+    "tier": 11
+  },
+  {
+    "id": "mace",
+    "name": "Mace Windu",
+    "tier": 12
+  },
+  {
+    "id": "grievous",
+    "name": "General Grievous",
+    "tier": 13
+  },
+  {
+    "id": "anakin3",
+    "name": "Anakin Skywalker (Jedi)",
+    "tier": 14
+  },
+  {
+    "id": "yoda",
+    "name": "Yoda",
+    "tier": 15
+  },
+  {
+    "id": "luke",
+    "name": "Luke Skywalker",
+    "tier": 16
+  },
+  {
+    "id": "leia",
+    "name": "Princess Leia",
+    "tier": 17
+  },
+  {
+    "id": "han",
+    "name": "Han Solo",
+    "tier": 18
+  },
+  {
+    "id": "chewbacca",
+    "name": "Chewbacca",
+    "tier": 19
+  },
+  {
+    "id": "ben",
+    "name": "Ben Kenobi",
+    "tier": 20
+  },
+  {
+    "id": "hothhan",
+    "name": "Han Solo (Hoth)",
+    "tier": 21
+  },
+  {
+    "id": "lando",
+    "name": "Lando Calrissian",
+    "tier": 22
+  },
+  {
+    "id": "boba",
+    "name": "Boba Fett",
+    "tier": 23
+  },
+  {
+    "id": "bespinluke",
+    "name": "Luke Skywalker (Bespin)",
+    "tier": 24
+  },
+  {
+    "id": "vader",
+    "name": "Darth Vader",
+    "tier": 25
+  },
+  {
+    "id": "wicket",
+    "name": "Wicket",
+    "tier": 26
+  },
+  {
+    "id": "ackbar",
+    "name": "Admiral Ackbar",
+    "tier": 27
+  },
+  {
+    "id": "endorleia",
+    "name": "Leia (Endor)",
+    "tier": 28
+  },
+  {
+    "id": "lukesjedi",
+    "name": "Luke Skywalker (Jedi)",
+    "tier": 29
+  },
+  {
+    "id": "emperor",
+    "name": "The Emperor",
+    "tier": 30
+  }
+]

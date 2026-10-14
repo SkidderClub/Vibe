@@ -6,7 +6,6 @@ import dev.vibe.cosmetic.CosmeticaCatalogService;
 import dev.vibe.cosmetic.CosmeticaModel;
 import dev.vibe.cosmetic.CosmeticPreset;
 import dev.vibe.module.impl.visual.CosmeticsModule;
-import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -17,7 +16,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.client.model.ModelPlayer;
 import net.minecraft.client.model.ModelRenderer;
-import net.minecraft.client.network.NetworkPlayerInfo;
 import net.minecraft.client.renderer.entity.RenderPlayer;
 import net.minecraft.client.renderer.entity.layers.LayerRenderer;
 import net.minecraft.client.renderer.GlStateManager;
@@ -26,7 +24,6 @@ import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.client.event.RenderPlayerEvent;
 import org.lwjgl.opengl.GL11;
 
 /** Renders the original JSON model and texture supplied by a Cosmetica catalog accessory. */
@@ -35,27 +32,15 @@ public final class CosmeticsRenderer {
     private static final ThreadLocal<Boolean> RENDERING = new ThreadLocal<Boolean>();
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final Map<UUID, ResourceLocation> customSkins = new HashMap<UUID, ResourceLocation>();
-    private final Map<UUID, ResourceLocation> originalSkins = new HashMap<UUID, ResourceLocation>();
     /** Both vanilla player renderers (default and slim) receive one layer. */
     private final Set<RenderPlayer> layeredRenderers = Collections.newSetFromMap(new IdentityHashMap<RenderPlayer, Boolean>());
-    private Field skinField;
-    private boolean searchedSkinField;
 
-    /** Runs before vanilla binds a player texture, allowing only assigned presets to override a skin. */
-    public void prepareSkin(RenderPlayerEvent.Pre event) {
-        EntityPlayer player = event.entityPlayer;
-        if (player == null || minecraft.getNetHandler() == null) return;
-        NetworkPlayerInfo info = minecraft.getNetHandler().getPlayerInfo(player.getUniqueID()); if (info == null) return;
-        dev.vibe.module.impl.client.NameProtectModule nameProtect = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.NameProtectModule.class);
-        if (nameProtect != null && nameProtect.hidesOthers() && player != minecraft.thePlayer) {
-            try { Field field = findSkinField(); if (field != null) field.set(info, skinFor(player.getUniqueID(), "GommeHD")); } catch (Throwable ignored) { }
-            return;
-        }
+    /** Core owns applying/restoring skin overrides and gives privacy masking priority. */
+    public ResourceLocation skin(EntityPlayer player) {
         CosmeticsModule module = Vibe.getInstance().getModuleManager().getModule(CosmeticsModule.class);
-        CosmeticPreset preset = module != null && module.isEnabled() ? Vibe.getInstance().getCosmeticPresetManager().resolve(player, Vibe.getInstance().getFriendManager()) : null;
-        if (preset == null) { restoreSkin(player.getUniqueID(), info); return; }
-        ResourceLocation skin = skinFor(player.getUniqueID(), preset.getSkinName());
-        try { Field field = findSkinField(); if (field == null) return; if (!originalSkins.containsKey(player.getUniqueID())) originalSkins.put(player.getUniqueID(), info.getLocationSkin()); field.set(info, skin); } catch (Throwable ignored) { }
+        CosmeticPreset preset = module != null && module.isEnabled()
+                ? dev.vibe.extension.cosmetica.CosmeticaExtension.presets().resolve(player, Vibe.getInstance().getFriendManager()) : null;
+        return preset == null ? null : skinFor(player.getUniqueID(), preset.getSkinName());
     }
 
     /**
@@ -82,7 +67,7 @@ public final class CosmeticsRenderer {
         CosmeticsModule module = Vibe.getInstance().getModuleManager().getModule(CosmeticsModule.class);
         CosmeticPreset previewPreset = PREVIEW_PRESET.get();
         if (previewPreset == null && (module == null || !module.isEnabled())) return;
-        CosmeticPreset preset = previewPreset == null ? Vibe.getInstance().getCosmeticPresetManager().resolve(player, Vibe.getInstance().getFriendManager()) : previewPreset;
+        CosmeticPreset preset = previewPreset == null ? dev.vibe.extension.cosmetica.CosmeticaExtension.presets().resolve(player, Vibe.getInstance().getFriendManager()) : previewPreset;
         if (preset == null || preset.getAccessories().isEmpty()) return;
         if (player == minecraft.thePlayer && preset.isOnlyThirdPerson() && minecraft.gameSettings.thirdPersonView == 0) return;
         boolean cull = GL11.glIsEnabled(GL11.GL_CULL_FACE);
@@ -101,7 +86,7 @@ public final class CosmeticsRenderer {
             // normal. Render the authored PNG at its original colour.
             GlStateManager.enableTexture2D(); GlStateManager.enableDepth(); GlStateManager.disableLighting();
             GlStateManager.depthMask(true); GlStateManager.color(1, 1, 1, 1); GL11.glColor4f(1, 1, 1, 1);
-            CosmeticaCatalogService catalog = Vibe.getInstance().getCosmeticaCatalogService();
+            CosmeticaCatalogService catalog = dev.vibe.extension.cosmetica.CosmeticaExtension.catalog();
             for (CosmeticaAccessory accessory : preset.getAccessories()) renderAccessory(player, playerModel, catalog, accessory);
         } finally {
             restore(GL11.GL_CULL_FACE, cull);
@@ -235,8 +220,6 @@ public final class CosmeticsRenderer {
         try { minecraft.getTextureManager().loadTexture(result, new ThreadDownloadImageData(null, "https://minotar.net/skin/" + safe, DefaultPlayerSkin.getDefaultSkinLegacy(), null)); } catch (Throwable ignored) { }
         customSkins.put(uuid, result); return result;
     }
-    private Field findSkinField() { if (searchedSkinField) return skinField; searchedSkinField=true; try { skinField=NetworkPlayerInfo.class.getDeclaredField("locationSkin"); } catch(Throwable ignored) { try { skinField=NetworkPlayerInfo.class.getDeclaredField("field_178865_e"); } catch(Throwable ignoredAgain) { } } if(skinField!=null)skinField.setAccessible(true); return skinField; }
-    private void restoreSkin(UUID id,NetworkPlayerInfo info) { if(!originalSkins.containsKey(id))return; try { Field field=findSkinField();if(field!=null)field.set(info,originalSkins.remove(id)); }catch(Throwable ignored){} }
     private boolean hasResource(ResourceLocation location) { try { minecraft.getResourceManager().getResource(location); return true; } catch (Exception ignored) { return false; } }
     private static void restore(int capability, boolean enabled) { if (enabled) GL11.glEnable(capability); else GL11.glDisable(capability); }
 }

@@ -11,6 +11,8 @@ modules, ESP, a customizable HUD, cosmetics, an account manager and local Java s
 2. Copy the built `Vibe-1.8.9-<version>.jar` into your game directory's `mods/` folder.
 3. Launch the Forge profile.
 
+Optional extension JARs go in the same `mods/` folder. **LEGO**, **Cosmetica cosmetics** and the **Test example** are separate JARs. **CustomCosmetics remains in core**. See [Extensions](docs/EXTENSIONS.md) to install them or build your own.
+
 Use modules only where permitted by the server's rules. Vibe is client-only.
 
 ## Quick start
@@ -25,6 +27,7 @@ See the [GTA8 guide](docs/GTA8.md) for Los Vibes, a realistic open city with dri
 See the [Battlefront 3 guide](docs/BATTLEFRONT3.md) for Star Wars battles, faction armies, credits and upgrades in the Meme category.
 See [Custom models](docs/CUSTOM_MODELS.md) for CustomModelRenderer: knives in place of swords, characters
 in place of the player model, Sketchfab downloads and your own glTF/GLB/OBJ files.
+See [LEGO characters](docs/LEGO.md) for the optional LEGO extension's 989 characters and costumes from six games, animated stud pickups and six-chapter Saga Pass.
 See [Music and visual effects](docs/MUSIC_AND_EFFECTS.md) for Fog, Torus, radio,
 the media HUD and audio-reactive waves. Fog and CustomCrosshair also work in GTA7.
 
@@ -97,7 +100,8 @@ explains how to fix each one.
 | --- | --- |
 | `src/main/java/dev/vibe/` | The mod; see the package overview below. |
 | `src/main/java/keystrokesmod/` | Raven-compatible script API. The package name is part of the API that scripts compile against. |
-| `src/main/resources/assets/vibe/` | Vibe assets, including cosmetics, Girlfriend sounds, menu shaders and Waifu presets. |
+| `src/main/resources/assets/vibe/` | Core Vibe assets, including Girlfriend sounds, menu shaders and Waifu presets. |
+| `extensions/` | Optional LEGO, Cosmetica and example modules, assets and tests. |
 | `src/main/resources/assets/minecraft/` | Assets loaded through the Minecraft resource namespace. |
 | `src/test/` | Unit tests and the offscreen rendering checks. |
 | `launcher/` | The standalone Vibe Launcher, a separate Java 8 Swing application. |
@@ -131,7 +135,7 @@ the README and the standard Gradle files (`build.gradle`, `settings.gradle`,
 
 Add bundled assets beneath `src/main/resources/assets/vibe/`. Gradle packages them
 automatically and generates preset lists for `shader/`, `waifu/` and the MP3 event
-folders in `girlfriend/`. The Cosmetica download helper writes to `cosmetica/` here too.
+folders in `girlfriend/`. The Cosmetica download helper writes to `extensions/cosmetica/src/main/resources/assets/vibe/cosmetica/` for the optional extension.
 Libraries shaded into the JAR must be Java 8 bytecode: Minecraft 1.8.9 runs on Java 8,
 and Forge cannot read newer class files.
 

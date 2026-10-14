@@ -89,6 +89,7 @@ public final class CosmeticaCatalogService {
 
     public List<CosmeticaAccessory> getResults(){return results;} public boolean isLoading(){return loading;} public String getStatus(){return status;} public int getPage(){return page;} public int getPages(){return pages;}
     public void nextPage(){if(!loading&&page<pages)search(requested,page+1);} public void previousPage(){if(!loading&&page>1)search(requested,page-1);}
+    public void close() { worker.shutdownNow(); }
 
     public CosmeticaModel getModel(final CosmeticaAccessory accessory) {
         if(accessory==null||accessory.getModelUrl().isEmpty())return null; CosmeticaModel model=loadedModels.get(accessory.getId()); if(model!=null)return model;
