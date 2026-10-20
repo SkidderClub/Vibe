@@ -1,8 +1,13 @@
 package dev.vibe.game.gta;
 import dev.vibe.Vibe;
 import dev.vibe.module.ModuleManager;
-import dev.vibe.module.impl.*;
+import dev.vibe.module.impl.meme.Gta7Module;
+import dev.vibe.module.impl.visual.CustomCrosshairModule;
+import dev.vibe.module.impl.visual.EspModule;
+import dev.vibe.module.impl.visual.FogModule;
 import dev.vibe.ui.*;
+import dev.vibe.ui.game.Gta7Gui;
+import dev.vibe.ui.render.esp.EspRenderer;
 import java.io.*;
 import java.lang.reflect.*;
 import java.nio.*;

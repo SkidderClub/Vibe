@@ -1,0 +1,1239 @@
+{
+ "source": "Sketchfab public collection API snapshot",
+ "collections": [
+  {
+   "kind": "swords",
+   "uid": "2e4d663e1556469f95ca2203a069e081",
+   "name": "CS KNIFES",
+   "author": "quift",
+   "url": "https://sketchfab.com/quift/collections/cs-knifes-2e4d663e1556469f95ca2203a069e081",
+   "models": [
+    {
+     "uid": "1dbca0f0a3574b15a0c0f90b98ee5d83",
+     "name": "★ Karambit | Black Laminate",
+     "author": "csgoitems.pro",
+     "license": "Unknown",
+     "downloadable": false,
+     "faces": 13938
+    },
+    {
+     "uid": "2c1c53bca3d34db69e4bd0e08f52a297",
+     "name": "★ M9 Bayonet | Autotronic",
+     "author": "csgoitems.pro",
+     "license": "Unknown",
+     "downloadable": false,
+     "faces": 10125
+    },
+    {
+     "uid": "4bf566f4e6314b9fa10f2ddd4f1b7be1",
+     "name": "★ M9 Bayonet | Black Laminate",
+     "author": "csgoitems.pro",
+     "license": "Unknown",
+     "downloadable": false,
+     "faces": 10125
+    },
+    {
+     "uid": "320c57f148b5426d84f940a7caa0b53e",
+     "name": "★ Karambit | Marble Fade",
+     "author": "csgoitems.pro",
+     "license": "Unknown",
+     "downloadable": false,
+     "faces": 13938
+    },
+    {
+     "uid": "43e317035ca84ba89a598a6be6698eac",
+     "name": "★ Karambit | Autotronic",
+     "author": "csgoitems.pro",
+     "license": "Unknown",
+     "downloadable": false,
+     "faces": 13938
+    },
+    {
+     "uid": "6ee6b3e7929e497da9d9fab7d0a99ae0",
+     "name": "CS2 Kukri Knife",
+     "author": "csgoitems.pro",
+     "license": "Unknown",
+     "downloadable": false,
+     "faces": 8874
+    },
+    {
+     "uid": "b8eee21e4db54203a8e057c6f2125270",
+     "name": "Karambit",
+     "author": "RyanKoh",
+     "license": "Unknown",
+     "downloadable": false,
+     "faces": 5848
+    },
+    {
+     "uid": "4e2315798ba64d1f8be179b4f3b13c28",
+     "name": "CS:GO Butterfly | Doppler",
+     "author": "kircata",
+     "license": "Unknown",
+     "downloadable": false,
+     "faces": 11996
+    },
+    {
+     "uid": "59db909f7ab441afa05159b49bc0ccae",
+     "name": "★ M9 Bayonet | Lore",
+     "author": "csgoitems.pro",
+     "license": "Unknown",
+     "downloadable": false,
+     "faces": 10125
+    },
+    {
+     "uid": "3df6ee38fea34a7d945b433c83d6a25b",
+     "name": "★ Gut Knife | Lore",
+     "author": "csgoitems.pro",
+     "license": "Unknown",
+     "downloadable": false,
+     "faces": 12004
+    },
+    {
+     "uid": "76c471b4199f402d8342119d806073b6",
+     "name": "★ Flip Knife | Lore",
+     "author": "csgoitems.pro",
+     "license": "Unknown",
+     "downloadable": false,
+     "faces": 3232
+    },
+    {
+     "uid": "1d1211cd7b664b5fbe0a86db31e356e9",
+     "name": "★ Karambit | Lore",
+     "author": "csgoitems.pro",
+     "license": "Unknown",
+     "downloadable": false,
+     "faces": 13938
+    },
+    {
+     "uid": "4c833a6a50414a899c0c14738d70ff78",
+     "name": "Hunting knife",
+     "author": "sanekcloff",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 6436
+    },
+    {
+     "uid": "2e545f11eb484c8388f1b7d6f59ce7c5",
+     "name": "M9 Bayonet Freehand",
+     "author": "TerryUTG",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 10125
+    },
+    {
+     "uid": "6e53488b85c645c0a6dc0d0fc14302ab",
+     "name": "Butterfly Knife | Freehand",
+     "author": "TerryUTG",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 11996
+    },
+    {
+     "uid": "38185a07b3cb4818ac0419dbbe72527a",
+     "name": "Karambit Knife Freehand",
+     "author": "TerryUTG",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 13938
+    },
+    {
+     "uid": "bc7ec378ff7841b68114122771172156",
+     "name": "Butterfly Knife Ruby",
+     "author": "PiPo07",
+     "license": "Standard",
+     "downloadable": false,
+     "faces": 26396
+    },
+    {
+     "uid": "862b985a8d264043bd2650c548a4b41f",
+     "name": "Butterfly Knife Emerald",
+     "author": "PiPo07",
+     "license": "Standard",
+     "downloadable": false,
+     "faces": 26396
+    },
+    {
+     "uid": "92eeb6b82cd34831a0ea8195faab496a",
+     "name": "CS GO Karambit Crimson Web Knife",
+     "author": "metorphium",
+     "license": "Unknown",
+     "downloadable": false,
+     "faces": 13938
+    },
+    {
+     "uid": "6d6d3163afc8428b8a212d347ce01f39",
+     "name": "M9 Bayonet Knife",
+     "author": "ThomasEs",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 4496
+    },
+    {
+     "uid": "5f9d7e12bbf24685bfad8d3db905a122",
+     "name": "knife CS GO",
+     "author": "pitertuzik",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 13938
+    }
+   ]
+  },
+  {
+   "kind": "players",
+   "uid": "d60caf23f8604cef9bfe39bbe24c0b31",
+   "name": "Star Wars Characters",
+   "author": "doctormordi",
+   "url": "https://sketchfab.com/doctormordi/collections/star-wars-characters-d60caf23f8604cef9bfe39bbe24c0b31",
+   "models": [
+    {
+     "uid": "3229acc2be1b477a9b264c7cd36428c5",
+     "name": "Star Wars Rebel Soldier",
+     "author": "LarsH.",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 16558
+    },
+    {
+     "uid": "f0ca5d7dd5b64869907c6e781d7c660a",
+     "name": "B1 Battle Droid Star Wars",
+     "author": "leoxx300",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 20816
+    },
+    {
+     "uid": "77eae86c9f8545cabc87ef0fb8695c5a",
+     "name": "R2-D2 - Star Wars",
+     "author": "quiznos323",
+     "license": "CC Attribution-NonCommercial-ShareAlike",
+     "downloadable": true,
+     "faces": 20809
+    },
+    {
+     "uid": "029de9e7d0264119bbc4cbff45b8ed04",
+     "name": "Eopie Star Wars",
+     "author": "michael50",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 34831
+    },
+    {
+     "uid": "bb52ea58e9f04427b9b9bf4b829e0810",
+     "name": "STAR WARS DROIDE B2 BY OSCAR CREATIVO",
+     "author": "oscar_creativo",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 371340
+    },
+    {
+     "uid": "2761149238284abe8ce1bd8795c3d6b8",
+     "name": "K-2SO star wars droid",
+     "author": "tomas.anglim.811",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 19395
+    },
+    {
+     "uid": "7a4a4571b70d402ebef271c3dae9141d",
+     "name": "Star Wars Mouse Droid",
+     "author": "alexeyshadrin80",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 1932458
+    },
+    {
+     "uid": "0fae75387d2c4396858d568b9fbb19ab",
+     "name": "Sullustan Star Wars PNJ",
+     "author": "michael50",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 44922
+    },
+    {
+     "uid": "86b72f64925e4b73a6ff8ff893e70a1d",
+     "name": "Star Wars Droid Wolf",
+     "author": "disowered",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 81440
+    },
+    {
+     "uid": "b7c9cde2a0884be491ab07e123631d24",
+     "name": "BB-9E",
+     "author": "Fortis",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 3184
+    },
+    {
+     "uid": "3581f3a312dc426d87af3031f5198edf",
+     "name": "Star Wars Bantha Walk",
+     "author": "michael50",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 71776
+    },
+    {
+     "uid": "4a57954690eb4377b62a6290b2dee070",
+     "name": "Star Wars - Grogu",
+     "author": "crazy4creativity",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 250000
+    },
+    {
+     "uid": "67611b62211648b7805359ab148c949a",
+     "name": "Shore trooper || Rogue One: A Star Wars Story",
+     "author": "RC-Koa",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 42214
+    },
+    {
+     "uid": "503860c8c63b419daa391f296ab874f1",
+     "name": "Death trooper || Rogue One: A Star Wars Story",
+     "author": "RC-Koa",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 66575
+    },
+    {
+     "uid": "92b8bc14356446e797deab4823e83eb7",
+     "name": "VR Art Gallery - EL9",
+     "author": "lazae",
+     "license": "Standard",
+     "downloadable": false,
+     "faces": 656
+    },
+    {
+     "uid": "7fd8c5ccd2874c67911ff3d5dd775e3b",
+     "name": "VR Wedding Venue - El6",
+     "author": "lazae",
+     "license": "Standard",
+     "downloadable": false,
+     "faces": 1556
+    },
+    {
+     "uid": "9d1989e7329c4072897387442818b719",
+     "name": "VR Meditation Room - EL13",
+     "author": "lazae",
+     "license": "Standard",
+     "downloadable": false,
+     "faces": 5127
+    },
+    {
+     "uid": "b2a625f178bc41e68227ada178a9c2cf",
+     "name": "VR Modern Art Gallery - EL 11",
+     "author": "lazae",
+     "license": "Standard",
+     "downloadable": false,
+     "faces": 1508
+    },
+    {
+     "uid": "3467fb25bc2c4db9b0969740522bf560",
+     "name": "VR Modern Restaurant Scene - E9",
+     "author": "lazae",
+     "license": "Standard",
+     "downloadable": false,
+     "faces": 33588
+    },
+    {
+     "uid": "077bbe07d52f44c18ef9f30422d50ee5",
+     "name": "[UE4] Storm Trooper (Rigged + Game Ready)",
+     "author": "SanForge",
+     "license": "CC Attribution-NonCommercial",
+     "downloadable": true,
+     "faces": 34702
+    },
+    {
+     "uid": "3b93ee8b245f4a46b97df4b4473a8984",
+     "name": "General Grievous",
+     "author": "aupuma",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 476786
+    },
+    {
+     "uid": "4e0ac5df97c940c2a01684aa5b23fcd8",
+     "name": "Rose Tico",
+     "author": "mindmulchforthemasses",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 4270
+    },
+    {
+     "uid": "61213fd805a54e758bb92ec869cb183d",
+     "name": "BD-1",
+     "author": "kuiperesteve",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 47850
+    },
+    {
+     "uid": "6dabccb1ba044d85ad6b05a94544973c",
+     "name": "Mandalorian Armored - Fortnite",
+     "author": "Yeboireal",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 28745
+    },
+    {
+     "uid": "b3ba110bfb804c4aa1bf8bc9f27391b0",
+     "name": "Chewbacca",
+     "author": "Stym",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 72462
+    },
+    {
+     "uid": "524e1fcf8c774573b5b15496efc4f572",
+     "name": "Jabba",
+     "author": "Stym",
+     "license": "CC Attribution-NonCommercial-ShareAlike",
+     "downloadable": true,
+     "faces": 28502
+    },
+    {
+     "uid": "cc8a36aa9b184c4b8a4a74d7cd54cf6d",
+     "name": "Anakin Skywalker Low-Poly",
+     "author": "Stym",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 7758
+    },
+    {
+     "uid": "7560d567785742c29ff45b2c8029cda1",
+     "name": "Mandalorian w/bones Non Armored - Read Desc",
+     "author": "Yeboireal",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 24840
+    },
+    {
+     "uid": "6bb0be59be404ab0b880a46783f69ade",
+     "name": "Star Wars - C3PO",
+     "author": "albertomarun",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 8920
+    },
+    {
+     "uid": "8e328cc9b21849aea5fed5c7d389597a",
+     "name": "JANGO FETT",
+     "author": "rodrigoscar",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 74402
+    },
+    {
+     "uid": "44136feb26a843e5b218d79a0745803f",
+     "name": "Admiral Ackbar",
+     "author": "nathanmlange",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 266896
+    },
+    {
+     "uid": "1b82ccf44f0b4ce788c4077bda0fb157",
+     "name": "Yoda",
+     "author": "Stym",
+     "license": "CC Attribution-NonCommercial-ShareAlike",
+     "downloadable": true,
+     "faces": 18093
+    },
+    {
+     "uid": "4338105e09704f359c6afcab7e5fce10",
+     "name": "Darth_Talon",
+     "author": "orbelin.jaimes",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 14080
+    },
+    {
+     "uid": "60a35bb311314596b5a7e5719e8e35ca",
+     "name": "OOM Command droid",
+     "author": "lymxmask",
+     "license": "CC Attribution-NonCommercial",
+     "downloadable": true,
+     "faces": 31832
+    },
+    {
+     "uid": "05678f11f4fe47178c9b4941ee334e16",
+     "name": "Fortnite Stormtrooper Skin",
+     "author": "Neut2000",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 32849
+    },
+    {
+     "uid": "a863482a891447db955579d7b3ab19a3",
+     "name": "Darth Nihilus",
+     "author": "RaulBraga.7",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 14852
+    },
+    {
+     "uid": "ad6c1b24a5014d9984c2f63d2ca5f27b",
+     "name": "Stormtrooper",
+     "author": "asifsaj",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 7257
+    },
+    {
+     "uid": "71374f8575744fb691f57256274c00ee",
+     "name": "R2- D2",
+     "author": "Johnson-Martin",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 113815
+    },
+    {
+     "uid": "f3688d384b2042b6a8fc3360f64b9a48",
+     "name": "Star Wars Battlefront - Droideka",
+     "author": "dylantrooper7",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 2569
+    },
+    {
+     "uid": "db4fdcd9eead4782af5aad3beec8c947",
+     "name": "Darth Maul - WIP",
+     "author": "lucianosoares",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 2642
+    },
+    {
+     "uid": "e30ad72b8ef74ead9739dad571bed50f",
+     "name": "Baze Malbus",
+     "author": "mindmulchforthemasses",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 7281
+    },
+    {
+     "uid": "c072b4097f894f34a2144c6d53c13ade",
+     "name": "Praetorian Guard",
+     "author": "mindmulchforthemasses",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 3150
+    },
+    {
+     "uid": "14f77062bf884c01bfad060a6378d27c",
+     "name": "Star Wars Gonk Droid",
+     "author": "aclarke064",
+     "license": "CC Attribution-NonCommercial-ShareAlike",
+     "downloadable": true,
+     "faces": 6864
+    },
+    {
+     "uid": "4b15c64baf834e0a96f8ff807c76ef22",
+     "name": "Bossk",
+     "author": "Stym",
+     "license": "CC Attribution-NonCommercial-ShareAlike",
+     "downloadable": true,
+     "faces": 48940
+    },
+    {
+     "uid": "55e0194bf96546cba173f655904aac39",
+     "name": "Storm Trooper",
+     "author": "codame",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 200372
+    },
+    {
+     "uid": "cbfd9b686cca427096387955ceea2785",
+     "name": "Princess Leia",
+     "author": "keianhzo",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 292428
+    },
+    {
+     "uid": "36261cd23cca477dac9f9deec09e3c6b",
+     "name": "Obi-wan",
+     "author": "imagandaiii",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 12541
+    },
+    {
+     "uid": "cac806e8fb89450e9421d2cd9fa566f9",
+     "name": "Rustbucket (Desert Gonk Droid)",
+     "author": "dbugg1138",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 11348
+    },
+    {
+     "uid": "d8f34d9ece52441384c9c2d760b3d618",
+     "name": "JABBA The Hutt From Star Wars Return of the Jedi",
+     "author": "wayneartist",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 558470
+    },
+    {
+     "uid": "6683fe3852f74a77bec5cc67ffea8b2d",
+     "name": "T7-01 Star Wars The Old Republic Droid",
+     "author": "DarthNid",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 10384
+    },
+    {
+     "uid": "942e52cd3a1241089dc351f318eec283",
+     "name": "Phase 3 Dark Trooper [Star Wars The Mandalorian]",
+     "author": "SpiritedSpy",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 36274
+    },
+    {
+     "uid": "8f1595c75e154bac97c1a4cfdd36fa5c",
+     "name": "Kylo Ren Skin (Leaked)",
+     "author": "SSLeaker",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 40356
+    },
+    {
+     "uid": "ec8478adc99942d7a0f4f27e2291cfa3",
+     "name": "Kylo Ren",
+     "author": "mindmulchforthemasses",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 7559
+    },
+    {
+     "uid": "2fb5a943b7b24ac0b195a74d1a3c6c8d",
+     "name": "Master Yoda",
+     "author": "blazer003",
+     "license": "CC Attribution-NonCommercial",
+     "downloadable": true,
+     "faces": 190156
+    },
+    {
+     "uid": "0b63cacb1ab540b397a70a9cfa026010",
+     "name": "BB-8",
+     "author": "raphi14",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 315254
+    },
+    {
+     "uid": "fea41f8063b5490790767e68f787de11",
+     "name": "Star Wars: Knights of the Old Republic - T3-M4",
+     "author": "the_table",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 44896
+    },
+    {
+     "uid": "d589e71d16334782b57127312388da89",
+     "name": "BB-9E Star Wars Abejorro",
+     "author": "pablosanco",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 3216
+    },
+    {
+     "uid": "1a281d7f0fa94ceda83fcac3c40f7438",
+     "name": "Fortnite X Star Wars (Encrypted Skin)",
+     "author": "SSLeaker",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 32847
+    },
+    {
+     "uid": "65383411ba6f4a56aac823d5d014df20",
+     "name": "Mandalorian - Star Wars",
+     "author": "GRIP420",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 21472
+    },
+    {
+     "uid": "4fc7c836c348440fa654a7adc6efee55",
+     "name": "Star Wars 7 Storm Trooper",
+     "author": "dpalme",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 114640
+    },
+    {
+     "uid": "1f937a4ce6e94de597e9950a7f6960c2",
+     "name": "TIE Pilot 3D Model",
+     "author": "dylantrooper7",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 50065
+    },
+    {
+     "uid": "94b9776efaf8414aa6f051ce8de9de61",
+     "name": "Swtor Revan Reborn",
+     "author": "tscftw",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 8011
+    },
+    {
+     "uid": "ef7449eae42648a2859e6b70a83ffcba",
+     "name": "Revan",
+     "author": "garith",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 7900
+    },
+    {
+     "uid": "c00a201b49ac46cc8a95c828b76865ba",
+     "name": "Emperor Palpatine / Darth Sidious",
+     "author": "mindmulchforthemasses",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 6724
+    },
+    {
+     "uid": "4bc72588c38c4373a54940b0ff97f168",
+     "name": "Tusken Raider",
+     "author": "Jimzorb",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 352443
+    },
+    {
+     "uid": "59c66eb5d470436f9d29d5720c9b402a",
+     "name": "Orson Callan Krennic",
+     "author": "mindmulchforthemasses",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 6752
+    },
+    {
+     "uid": "97aa462f55264301801da438fd268de3",
+     "name": "Boba Fett",
+     "author": "lil_cj_5888",
+     "license": "Editorial",
+     "downloadable": false,
+     "faces": 44317
+    },
+    {
+     "uid": "8ee61e679d2446e59ff48735e0df7b4a",
+     "name": "Boba fett",
+     "author": "rodrigoscar",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 83606
+    },
+    {
+     "uid": "9a1f91e4c4934386820542a7260776d4",
+     "name": "Droideka",
+     "author": "Dekustikk",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 50140
+    },
+    {
+     "uid": "98873410df1546c4ab36ebe3d83a2248",
+     "name": "First order trooper Rigged and textured",
+     "author": "javawockee",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 40307
+    },
+    {
+     "uid": "8d7e698218174e2b9e40f8c4c1acceba",
+     "name": "Star Wars Rigged StormTrooper Model",
+     "author": "beberlekhey",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 72859
+    },
+    {
+     "uid": "52cccefa9b1b4ca29b5d85593c9ea0f1",
+     "name": "First Order Stormtrooper non rigged",
+     "author": "javawockee",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 72859
+    },
+    {
+     "uid": "9fb0032b1f7048c7b50f023e1f247ef1",
+     "name": "Clone Sandtrooper Commander",
+     "author": "jcarpenter48",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 4916
+    },
+    {
+     "uid": "5e098a79422b476388f59b189c5bbd4e",
+     "name": "B1 Battle Droid",
+     "author": "SmeagolGollum",
+     "license": "CC Attribution-ShareAlike",
+     "downloadable": true,
+     "faces": 1708
+    },
+    {
+     "uid": "289df371f562417a8639a92becf02149",
+     "name": "OOM-9 Battle Droid Commander Diorama (StarWars)",
+     "author": "JackJohn2942",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 29383
+    },
+    {
+     "uid": "9b0d260e63174ac8873cb56919cc76f9",
+     "name": "Star Wars Clone Trooper",
+     "author": "reizer",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 4123
+    },
+    {
+     "uid": "fd9ade37c6bb4e298bb933a5d6805024",
+     "name": "Clone Trooper Phase II",
+     "author": "thomas_125",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 15442
+    },
+    {
+     "uid": "f0e7abfa029e4a80844a7160bbcc53ec",
+     "name": "Clone Trooper V3",
+     "author": "dylantrooper7",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 4726
+    },
+    {
+     "uid": "ab81bac300dd403ba998ae8c3065bf87",
+     "name": "327th Star Corps",
+     "author": "thomas_125",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 37364
+    },
+    {
+     "uid": "85880f7a45404d2ea536d4b2d79511b4",
+     "name": "Clone Trooper 327th Legion (OLD)",
+     "author": "j4ceee",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 5662
+    },
+    {
+     "uid": "46a00518f88c4e9b9a4516954d9dd491",
+     "name": "Clone Trooper 501st Legion (OLD)",
+     "author": "j4ceee",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 5662
+    },
+    {
+     "uid": "6cbe743c36024b0792cbfc672dacca12",
+     "name": "snow clone trooper",
+     "author": "coltonhughes",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 4948
+    },
+    {
+     "uid": "76783e87f9fa41e4b1bd776b5977d1f9",
+     "name": "Clone vulcanic shock trooper Phase II",
+     "author": "thomas_125",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 39180
+    },
+    {
+     "uid": "9776a92b56684a24acfa0186f89dcb79",
+     "name": "Clone Cold Assault Trooper",
+     "author": "weren",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 3952
+    },
+    {
+     "uid": "f56a05f611fa4d50970655224b5076b1",
+     "name": "Clone Sandtrooper",
+     "author": "jcarpenter48",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 3830
+    },
+    {
+     "uid": "631b759ce00a4496a1960ae0ff49cde0",
+     "name": "Clone scout trooper",
+     "author": "thomas_125",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 44348
+    },
+    {
+     "uid": "9a1651485a384209bdd2656195abfc99",
+     "name": "Clone Trooper Catwalk Walk Turn 180 Tight",
+     "author": "nonny",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 35614
+    },
+    {
+     "uid": "26dcd2ac8088410ea7f351331fd2ab47",
+     "name": "Kamino Security Trooper",
+     "author": "shottz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 35614
+    },
+    {
+     "uid": "164e66cae1a54368a9aa86743ee844bd",
+     "name": "Scout Trooper - Star Wars",
+     "author": "pleonardo.benavidesg",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 6104
+    },
+    {
+     "uid": "476fe6527305404cb0d7e1ebe9eead63",
+     "name": "R2-D2 (Animated)",
+     "author": "SWU",
+     "license": "CC Attribution-NonCommercial-ShareAlike",
+     "downloadable": true,
+     "faces": 66298
+    },
+    {
+     "uid": "a5b37a5bcd314c5a82dd037555419c4c",
+     "name": "R2-D2 low-poly",
+     "author": "IgorLethe",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 18050
+    },
+    {
+     "uid": "01ba1ddf7c834632a68f37d466a4ac60",
+     "name": "Astromech Droid C2-b5 Jedi Fallen Order",
+     "author": "D.R.E.A.M.",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 22280
+    },
+    {
+     "uid": "98c128f403e74387a60d31eb7ebea151",
+     "name": "Imperial MSE/Mouse Droid",
+     "author": "nial2001",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 3102
+    },
+    {
+     "uid": "2d1bf74e06a347449a20c8f2181aac78",
+     "name": "R5-J2 Imperial Astromech Droid",
+     "author": "hunterwiltse",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 86330
+    },
+    {
+     "uid": "25ee6c50c91443a4beb6e12fb7cea666",
+     "name": "Mandalorian & Grogu | The Fortnite Season 6 Skin",
+     "author": "sketchsupreme",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 57389
+    },
+    {
+     "uid": "92cc2754e8d649b4846047175f234566",
+     "name": "Mandalorian | The Fortnite Season 6 Skin UPDATED",
+     "author": "sketchsupreme",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 37242
+    },
+    {
+     "uid": "3a9a2a7897d240ecabe0638c3844cd67",
+     "name": "Imperial Deathtrooper",
+     "author": "dylantrooper7",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 66575
+    },
+    {
+     "uid": "b68009ff665b4e04bb6bd51d6f9b6788",
+     "name": "E-3P0",
+     "author": "Stym",
+     "license": "CC Attribution-NonCommercial-ShareAlike",
+     "downloadable": true,
+     "faces": 122467
+    },
+    {
+     "uid": "ce96ea38dfb54199be3b8f8ecef7a6b8",
+     "name": "DRK-1 Probe Droid",
+     "author": "nick.dob",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 17264
+    },
+    {
+     "uid": "5eec865d11874e9096930bf2a8965699",
+     "name": "Cloneswamptrooper",
+     "author": "thomas_125",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 55216
+    },
+    {
+     "uid": "102ed10dfcd441029b4586bf4c88ec20",
+     "name": "Darth Maul",
+     "author": "cgnoobmaster",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 43374
+    },
+    {
+     "uid": "62a4273131f949ed9559721f7fb9cf14",
+     "name": "Darth Vader",
+     "author": "cgnoobmaster",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 32956
+    },
+    {
+     "uid": "6bd74c35b8c8486d87796b09f5dfe43c",
+     "name": "CL TR P2 327th star corps light infantry",
+     "author": "thomas_125",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 22346
+    },
+    {
+     "uid": "001f369aea9044499943d5966b7090e3",
+     "name": "CL TR P2 212th attack battalion",
+     "author": "thomas_125",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 22346
+    },
+    {
+     "uid": "2fde289b3e6e4daca4ac9271fd0b809f",
+     "name": "Clone Trooper Phase1 (212th)",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 33247
+    },
+    {
+     "uid": "8af3b896135c41279b5e523992952081",
+     "name": "Clone Commando (Base)",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 24323
+    },
+    {
+     "uid": "259e8d4aface4ca987a334445d688700",
+     "name": "Clone Trooper Tup (Phase2)",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 35614
+    },
+    {
+     "uid": "31d6f5554c8e4981bfa17a0e69d49986",
+     "name": "Clone Trooper Phase2 (501st)",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 35614
+    },
+    {
+     "uid": "aae018747b054186bd48e460b0ad1192",
+     "name": "Clone Trooper Phase1 (Shiny) [Updated]",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 33247
+    },
+    {
+     "uid": "ece97956b8134ca0b3fad3612573161d",
+     "name": "Clone Trooper Phase 2 (Shiny) [Updated]",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 35614
+    },
+    {
+     "uid": "4ee65de6131f4a0f9ab9296e8429175d",
+     "name": "Clone Trooper Hardcase (Phase2)",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 35614
+    },
+    {
+     "uid": "0614b4965e2c4b249b683dc4da29471b",
+     "name": "Clone Trooper Phase1 (501st)",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 33247
+    },
+    {
+     "uid": "ad9bcd5f4c77449fb035924f5a9d091d",
+     "name": "Clone Trooper Dogma (Phase2)",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 35614
+    },
+    {
+     "uid": "b523a380441f4269ba5da15450b3af69",
+     "name": "Clone Trooper Phase2 (Coruscant Guard)",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 35614
+    },
+    {
+     "uid": "772883ba6a0d4744bf6e404f6e07eb49",
+     "name": "Clone Trooper Phase2 (212th)",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 35614
+    },
+    {
+     "uid": "d1b99496719447179c5015fedaf32389",
+     "name": "Clone Trooper Phase1 (Coruscant Guard)",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 33247
+    },
+    {
+     "uid": "e7f2a1fbfdcd41f59ba03fe48ae39004",
+     "name": "Clone Trooper Kix (Phase2)",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 35534
+    },
+    {
+     "uid": "a255c4d9fbf04bdcada41b497f8d201c",
+     "name": "Clone Trooper Appo (Phase2)",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 35614
+    },
+    {
+     "uid": "49e56ac8273341c4a359cb4f8b0afa15",
+     "name": "Clone Trooper Phase2 (332nd)",
+     "author": "marr_velz",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 35614
+    },
+    {
+     "uid": "d67b698acba24a829e00fdd4409e1836",
+     "name": "Star Wars Jedi Fallen Order BD1",
+     "author": "haykal12321",
+     "license": "CC Attribution-NonCommercial",
+     "downloadable": true,
+     "faces": 4813
+    },
+    {
+     "uid": "939daac943324c10b5e245e0580752e3",
+     "name": "Buzz Droïd Star Wars",
+     "author": "loichuet1",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 21252
+    },
+    {
+     "uid": "1f49d4f09768498e9a95886891698739",
+     "name": "Battle Droid B2",
+     "author": "kuiperesteve",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 13388
+    },
+    {
+     "uid": "51341f3ba62a4d76a9216b4c36d673c5",
+     "name": "Battle Droid",
+     "author": "santyfrow",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 27514
+    },
+    {
+     "uid": "d35313348ba246e892c3eef18dd0aee7",
+     "name": "Star Wars B1 Battle Droid",
+     "author": "eknightger",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 138397
+    },
+    {
+     "uid": "99e5fe9631d74b0aaa3ff0b8223c72d3",
+     "name": "GNK Droid",
+     "author": "alanaguidry05",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 56837
+    },
+    {
+     "uid": "f6b41f2f3efe4143a51a2dfe901d7bb9",
+     "name": "Eyegee Droid",
+     "author": "urizel",
+     "license": "CC Attribution-NonCommercial",
+     "downloadable": true,
+     "faces": 72872
+    },
+    {
+     "uid": "7db6b438deba4cf3ac947e336cb88554",
+     "name": "**OLD** Phase II Clone Trooper + DC-15s (Rigged)",
+     "author": "mckechniegreg6",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 23094
+    },
+    {
+     "uid": "2d246f4920fe4893a78129bb3b00b096",
+     "name": "Star Wars Battlefront 3 X2",
+     "author": "clonetrooper37",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 5152
+    },
+    {
+     "uid": "4d5c2b9e93f84aca98b619895604a8ff",
+     "name": "GNK Droid",
+     "author": "wesleymjames",
+     "license": "Editorial",
+     "downloadable": false,
+     "faces": 200000
+    },
+    {
+     "uid": "a65084fe14944ee5b00b0928b5fe4b8a",
+     "name": "Luke Skywalker (Mandalorian)",
+     "author": "denis_cliofas",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 49529
+    },
+    {
+     "uid": "1cbbc8a231154426ade7d3b11cf5bb0e",
+     "name": "Mandalorian - Grogu ( The force )",
+     "author": "Nestaeric",
+     "license": "CC Attribution",
+     "downloadable": true,
+     "faces": 376004
+    }
+   ]
+  }
+ ]
+}

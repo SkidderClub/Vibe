@@ -2,19 +2,20 @@ package dev.vibe.event;
 
 import dev.vibe.Vibe;
 import dev.vibe.launcher.LauncherBridge;
-import dev.vibe.ui.GamertagSetupGui;
-import dev.vibe.ui.AccountManagerGui;
-import dev.vibe.ui.MainMenuShaderManager;
-import dev.vibe.ui.ShaderMenuGui;
-import dev.vibe.ui.MainMenuPresentation;
-import dev.vibe.ui.MenuThemesGui;
-import dev.vibe.ui.VibeMenuButton;
-import dev.vibe.ui.LicensesGui;
-import static dev.vibe.ui.MainMenuPresentation.CHANGELOG_BUTTON_ID;
-import static dev.vibe.ui.MainMenuPresentation.DISCORD_BUTTON_ID;
-import static dev.vibe.ui.MainMenuPresentation.SHADER_BUTTON_ID;
-import static dev.vibe.ui.MainMenuPresentation.THEMES_BUTTON_ID;
-import static dev.vibe.ui.MainMenuPresentation.LICENSES_BUTTON_ID;
+import dev.vibe.ui.menu.GamertagSetupGui;
+import dev.vibe.ui.account.AccountManagerGui;
+import dev.vibe.ui.menu.MainMenuShaderManager;
+import dev.vibe.ui.menu.ShaderMenuGui;
+import dev.vibe.ui.menu.MainMenuPresentation;
+import dev.vibe.ui.menu.MenuThemesGui;
+import dev.vibe.ui.menu.VibeMenuButton;
+import dev.vibe.ui.menu.LicensesGui;
+import dev.vibe.ui.menu.LanguagePickerGui;
+import static dev.vibe.ui.menu.MainMenuPresentation.CHANGELOG_BUTTON_ID;
+import static dev.vibe.ui.menu.MainMenuPresentation.DISCORD_BUTTON_ID;
+import static dev.vibe.ui.menu.MainMenuPresentation.SHADER_BUTTON_ID;
+import static dev.vibe.ui.menu.MainMenuPresentation.THEMES_BUTTON_ID;
+import static dev.vibe.ui.menu.MainMenuPresentation.LICENSES_BUTTON_ID;
 import java.awt.Desktop;
 import java.lang.reflect.Field;
 import java.net.URI;
@@ -61,8 +62,11 @@ public final class MainMenuEvents {
             event.gui = new AccountManagerGui(event.gui, shaders, Vibe.getInstance().getAccountManager());
         } else if (LauncherBridge.consumeGta7Request(mc.mcDataDir)) {
             LauncherBridge.clearGta7Request(mc.mcDataDir);
-            event.gui = new dev.vibe.ui.Gta7Gui(Vibe.getInstance().getModuleManager()
-                    .getModule(dev.vibe.module.impl.Gta7Module.class));
+            event.gui = new dev.vibe.ui.game.Gta7Gui(Vibe.getInstance().getModuleManager()
+                    .getModule(dev.vibe.module.impl.meme.Gta7Module.class));
+        } else if (LauncherBridge.consumeGta8Request(mc.mcDataDir)) {
+            event.gui = new dev.vibe.ui.game.Gta8Gui(Vibe.getInstance().getModuleManager()
+                    .getModule(dev.vibe.module.impl.meme.Gta8Module.class));
         }
     }
 
@@ -120,6 +124,11 @@ public final class MainMenuEvents {
         Minecraft mc = Minecraft.getMinecraft();
         int x = Mouse.getEventX() * event.gui.width / mc.displayWidth;
         int y = event.gui.height - Mouse.getEventY() * event.gui.height / mc.displayHeight - 1;
+        if (Mouse.getEventButton() == 0 && Mouse.getEventButtonState() && presentation.isLanguageHit(x, y, event.gui.height)) {
+            mc.displayGuiScreen(new LanguagePickerGui(event.gui, shaders));
+            event.setCanceled(true);
+            return;
+        }
         if (Mouse.getEventButton() == 0 && Mouse.getEventButtonState() && presentation.isAccountHit(x, y)) {
             mc.displayGuiScreen(new AccountManagerGui(event.gui, shaders, Vibe.getInstance().getAccountManager()));
             event.setCanceled(true);
@@ -131,8 +140,8 @@ public final class MainMenuEvents {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onMenuKey(GuiScreenEvent.KeyboardInputEvent.Pre event) {
         // Menus consume key events before Forge's in-world KeyInputEvent.
-        dev.vibe.module.impl.ClickGuiModule click = Vibe.getInstance().getModuleManager()
-                .getModule(dev.vibe.module.impl.ClickGuiModule.class);
+        dev.vibe.module.impl.client.ClickGuiModule click = Vibe.getInstance().getModuleManager()
+                .getModule(dev.vibe.module.impl.client.ClickGuiModule.class);
         if (Minecraft.getMinecraft().theWorld == null && Keyboard.getEventKeyState()
                 && !Keyboard.isRepeatEvent() && click != null && click.getKey() != Keyboard.KEY_NONE
                 && Keyboard.getEventKey() == click.getKey()

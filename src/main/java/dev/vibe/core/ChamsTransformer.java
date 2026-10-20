@@ -7,7 +7,7 @@ import org.objectweb.asm.tree.*;
 
 /** Reuses vanilla's posed models and bound textures, including Forge armor models. */
 public final class ChamsTransformer implements IClassTransformer, Opcodes {
-    private static final String HOOK = "dev/vibe/ui/ChamsRenderer";
+    private static final String HOOK = "dev/vibe/ui/render/esp/ChamsRenderer";
 
     @Override public byte[] transform(String name, String transformedName, byte[] bytes) {
         if (bytes == null) return null;

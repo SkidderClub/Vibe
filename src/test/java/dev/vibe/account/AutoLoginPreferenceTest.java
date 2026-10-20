@@ -23,4 +23,14 @@ public class AutoLoginPreferenceTest {
         preference.set(null);
         assertFalse(new AutoLoginPreference(directory).matches(second));
     }
+
+    @Test public void accessTokenAccountIsDistinctFromMicrosoftAccountOfTheSameProfile() throws Exception {
+        java.util.UUID id = java.util.UUID.randomUUID();
+        Account pasted = Account.token("Example", id, MinecraftTokenTest.jwt("{}"));
+        AutoLoginPreference preference = new AutoLoginPreference(temporary.newFolder().toPath());
+        preference.set(pasted);
+        assertTrue(preference.matches(Account.token("Renamed", id, MinecraftTokenTest.jwt("{\"exp\":1}"))));
+        assertFalse(preference.matches(new Account("Example", id, "synthetic-refresh")));
+        assertFalse(preference.matches(new Account("Example", id, "")));
+    }
 }

@@ -10,7 +10,14 @@ import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
 public final class MoveFixLoadingPlugin implements IFMLLoadingPlugin {
     @Override
     public String[] getASMTransformerClass() {
-        return new String[] {"dev.vibe.core.MoveFixTransformer", "dev.vibe.core.ScaffoldTransformer", "dev.vibe.core.ChamsTransformer"};
+        return new String[] {
+                "dev.vibe.core.MoveFixTransformer",
+                "dev.vibe.core.ChamsTransformer",
+                "dev.vibe.core.FontLocalizationTransformer",
+                "dev.vibe.core.CustomModelTransformer",
+                "dev.vibe.core.RavenFeatureTransformer",
+                "dev.vibe.core.FreecamTransformer"
+        };
     }
 
     @Override public String getModContainerClass() { return null; }

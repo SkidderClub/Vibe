@@ -17,12 +17,17 @@ public final class WorldWalkTerrain implements WalkPathfinder.Terrain {
     public WorldWalkTerrain(World world, Entity player) { this.world=world;this.player=player; }
 
     public boolean canStand(BlockPos feet) {
+        return canStand(feet, standingY(feet));
+    }
+    /** Allows a bounded-search caller to reuse its cached support height. */
+    public boolean canStand(BlockPos feet, double y) {
         if (!loadedAndSafe(feet.down()) || !loadedAndSafe(feet)) return false;
-        double y=standingY(feet);
         return !Double.isNaN(y) && clear(body(feet,y));
     }
     public boolean canMove(BlockPos from, BlockPos to) {
-        double fromY=standingY(from),toY=standingY(to);
+        return canMove(from, to, standingY(from), standingY(to));
+    }
+    public boolean canMove(BlockPos from, BlockPos to, double fromY, double toY) {
         if(Double.isNaN(fromY))fromY=from.getY();
         if(Double.isNaN(toY)||toY-fromY>1.1||fromY-toY>3)return false;
         double height = Math.max(fromY,toY);
@@ -58,7 +63,13 @@ public final class WorldWalkTerrain implements WalkPathfinder.Terrain {
     }
     private List<AxisAlignedBB> collisions(AxisAlignedBB box) {
         List<AxisAlignedBB> result = new ArrayList<>();
+        // Shape implementations (stairs, panes, fences) inspect neighbouring blocks too.
+        for (int x = 0; x < 2; x++) for (int z = 0; z < 2; z++)
+            if (!world.isBlockLoaded(new BlockPos((x == 0 ? box.minX - 1 : box.maxX + 1), box.minY,
+                    (z == 0 ? box.minZ - 1 : box.maxZ + 1)))) return java.util.Collections.singletonList(box);
         for (BlockPos pos : BlockPos.getAllInBox(new BlockPos(box.minX,box.minY-1,box.minZ),new BlockPos(box.maxX,box.maxY,box.maxZ))) {
+            // Unknown terrain is closed, not air. In particular standingY must never request a chunk.
+            if (!world.isBlockLoaded(pos)) return java.util.Collections.singletonList(box);
             IBlockState state=world.getBlockState(pos);
             state.getBlock().addCollisionBoxesToList(world,pos,state,box,result,player);
         }

@@ -1,10 +1,15 @@
 package dev.vibe.ui;
 
 import dev.vibe.Vibe;
+import dev.vibe.hud.MusicHudRenderer;
+import dev.vibe.hud.MusicVisualizer;
 import dev.vibe.module.ModuleManager;
-import dev.vibe.module.impl.*;
+import dev.vibe.module.impl.client.MusicModule;
+import dev.vibe.module.impl.visual.CustomCrosshairModule;
+import dev.vibe.module.impl.visual.FogModule;
 import dev.vibe.ui.effect.*;
 import dev.vibe.media.*;
+import dev.vibe.ui.render.CustomCrosshairRenderer;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.lang.reflect.*;

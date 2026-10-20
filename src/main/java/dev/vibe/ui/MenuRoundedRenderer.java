@@ -12,12 +12,12 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 
 /** One antialiased nine-slice mask keeps circular corners smooth at every GUI scale. */
-final class MenuRoundedRenderer {
+public final class MenuRoundedRenderer {
     private static ResourceLocation mask;
 
     private MenuRoundedRenderer() { }
 
-    static void rect(int x, int y, int width, int height, int radius, int color) {
+    public static void rect(int x, int y, int width, int height, int radius, int color) {
         if (width <= 0 || height <= 0) return;
         Minecraft mc = Minecraft.getMinecraft();
         if (mask == null) {

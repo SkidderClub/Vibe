@@ -4,7 +4,7 @@ Build an offline Cosmetica catalogue for Vibe.
 The upstream 1.16.5 source contains the Cosmetica client/UI assets but not the
 creator-owned catalogue models. This script reads the public catalogue once,
 then downloads every published accessory's model, texture and thumbnail into
-src/main/resources/assets/vibe/cosmetica so Gradle packages them inside the Vibe JAR. It is resumable:
+extensions/cosmetica/src/main/resources/assets/vibe/cosmetica so Gradle packages them inside the Cosmetica extension JAR. It is resumable:
 already downloaded files are never requested again.
 #>
 param(
@@ -19,7 +19,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$destination = Join-Path $projectRoot 'src\main\resources\assets\vibe\cosmetica'
+$destination = Join-Path $projectRoot 'extensions\cosmetica\src\main\resources\assets\vibe\cosmetica'
 $modelDirectory = Join-Path $destination 'models'
 $textureDirectory = Join-Path $destination 'textures'
 $thumbnailDirectory = Join-Path $destination 'thumbnails'
@@ -119,7 +119,7 @@ $result = $missing | ForEach-Object -Parallel {
 $failed = @($result | Where-Object { -not $_.Ok })
 if ($failed.Count -gt 0) {
     $failed | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $destination 'download-failures.json') -Encoding utf8
-    Write-Warning ("[Cosmetica] {0} assets failed; rerun the script to resume them. See src/main/resources/assets/vibe/cosmetica/download-failures.json" -f $failed.Count)
+    Write-Warning ("[Cosmetica] {0} assets failed; rerun the script to resume them. See extensions/cosmetica/src/main/resources/assets/vibe/cosmetica/download-failures.json" -f $failed.Count)
 } else {
     Remove-Item -LiteralPath (Join-Path $destination 'download-failures.json') -Force -ErrorAction SilentlyContinue
     Write-Host '[Cosmetica] Offline catalogue dump completed.'

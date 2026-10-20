@@ -1,7 +1,7 @@
 package dev.vibe.media;
 
 import dev.vibe.module.Module;
-import dev.vibe.module.impl.MusicModule;
+import dev.vibe.module.impl.client.MusicModule;
 import dev.vibe.setting.BooleanSetting;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

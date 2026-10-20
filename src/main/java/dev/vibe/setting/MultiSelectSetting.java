@@ -3,6 +3,7 @@ package dev.vibe.setting;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -12,6 +13,8 @@ import java.util.function.BooleanSupplier;
 public final class MultiSelectSetting extends Setting<Set<String>> {
 
     private final List<String> options;
+    /** Mirrors options for constant-time membership checks. */
+    private final Set<String> optionSet;
 
     public MultiSelectSetting(String name, Collection<String> options, Collection<String> selected) {
         this(name, options, selected, null);
@@ -21,6 +24,7 @@ public final class MultiSelectSetting extends Setting<Set<String>> {
             BooleanSupplier visibleWhen) {
         super(name, new LinkedHashSet<String>(selected == null ? Collections.<String>emptyList() : selected), visibleWhen);
         this.options = new ArrayList<String>(options == null ? Collections.<String>emptyList() : options);
+        this.optionSet = new HashSet<String>(this.options);
         setValue(new LinkedHashSet<String>(selected == null ? Collections.<String>emptyList() : selected));
     }
 
@@ -31,6 +35,11 @@ public final class MultiSelectSetting extends Setting<Set<String>> {
 
     public List<String> getOptions() {
         return Collections.unmodifiableList(options);
+    }
+
+    /** Same answer as getOptions().contains(value), without scanning the list. */
+    public boolean hasOption(String value) {
+        return optionSet.contains(value);
     }
 
     public boolean isSelected(String value) {
@@ -53,8 +62,9 @@ public final class MultiSelectSetting extends Setting<Set<String>> {
     }
 
     public void addOption(String value) {
-        if (value != null && !value.trim().isEmpty() && !options.contains(value)) {
+        if (value != null && !value.trim().isEmpty() && !optionSet.contains(value)) {
             options.add(value);
+            optionSet.add(value);
         }
     }
 

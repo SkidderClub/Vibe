@@ -1,6 +1,6 @@
 package dev.vibe.game.battlefront;
 
-import dev.vibe.ui.Battlefront3Gui;
+import dev.vibe.ui.game.Battlefront3Gui;
 import java.io.File;
 import java.lang.reflect.*;
 import java.nio.*;
@@ -122,12 +122,12 @@ public final class BattlefrontRenderCheck {
         String[] titles={"Hip fire","Aim","Body hit","Headshot","Elimination","Reload"};
         for(int row=0;row<2;row++)for(int i=0;i<6;i++){
             demo.aiming=i==1;demo.recoil=0;demo.hitMarker=i>=2&&i<=4?.16:0;demo.lastHitHead=i==3;demo.lastHitKill=i==4;demo.reload=i==5?1:0;demo.reloadDuration=2;
-            int x=54+i*106,y=87+row*179;dev.vibe.ui.BattlefrontReticle.draw(demo,x,y);mc.fontRendererObj.drawString(titles[i],x-titles[i].length()*3,y+48,row==0?0xFFE1E8EA:0xFF283238);
+            int x=54+i*106,y=87+row*179;dev.vibe.ui.game.BattlefrontReticle.draw(demo,x,y);mc.fontRendererObj.drawString(titles[i],x-titles[i].length()*3,y+48,row==0?0xFFE1E8EA:0xFF283238);
         }snapshot("combat-feedback");
         basis();GL11.glClearColor(.06f,.07f,.08f,1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);demo.hitMarker=0;demo.reload=0;demo.aiming=false;
-        progress.purchase(Weapon.BOWCASTER);dev.vibe.ui.BattlefrontReticle.draw(demo,190,165);mc.fontRendererObj.drawString("Bowcaster spread",145,212,0xFFE1E8EA);
-        progress.purchase(Weapon.DLT19X);demo.aiming=true;dev.vibe.ui.BattlefrontReticle.draw(demo,450,165);mc.fontRendererObj.drawString("Marksman aim",414,212,0xFFE1E8EA);snapshot("weapon-reticles");progress.purchase(previous);
-        basis();GL11.glClearColor(.045f,.05f,.058f,1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);dev.vibe.ui.BattlefrontIcons icons=new dev.vibe.ui.BattlefrontIcons();
+        progress.purchase(Weapon.BOWCASTER);dev.vibe.ui.game.BattlefrontReticle.draw(demo,190,165);mc.fontRendererObj.drawString("Bowcaster spread",145,212,0xFFE1E8EA);
+        progress.purchase(Weapon.DLT19X);demo.aiming=true;dev.vibe.ui.game.BattlefrontReticle.draw(demo,450,165);mc.fontRendererObj.drawString("Marksman aim",414,212,0xFFE1E8EA);snapshot("weapon-reticles");progress.purchase(previous);
+        basis();GL11.glClearColor(.045f,.05f,.058f,1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);dev.vibe.ui.game.BattlefrontIcons icons=new dev.vibe.ui.game.BattlefrontIcons();
         try{String[] names={"operations","army","arsenal","record","manual","planet","forest","shield","tactics","appearance","weapon","helmet","upgrade","deploy","credits","arrow","exit","check","plus","minus","support","scout","pack","settings"};
             for(int i=0;i<names.length;i++){int x=48+i%6*106,y=22+i/6*87;icons.draw(names[i],x,y,30,0xFFFFA1C9);mc.fontRendererObj.drawString(names[i],x-9,y+43,0xFFB0ACA9);}snapshot("svg-icon-sheet");
         }finally{icons.close();}

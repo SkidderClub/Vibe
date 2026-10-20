@@ -2,6 +2,8 @@
 .gradle-local/
 .gradle/
 build/
+extensions/*/build/
+extensions/*/.gradle/
 out/
 build-artifact/
 
@@ -14,6 +16,11 @@ accounts.key
 vibe/cookies/
 
 # Local development files
+# Private, separately distributed extension (sources and assets)
+/extensions/lego/
+Vibe-Lego-*.jar*
 context/
 .idea/
 *.iml
+**/__pycache__/
+*.pyc

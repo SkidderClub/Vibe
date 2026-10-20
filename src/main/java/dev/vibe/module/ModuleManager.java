@@ -1,94 +1,39 @@
 package dev.vibe.module;
 
-import dev.vibe.module.impl.SprintModule;
-import dev.vibe.module.impl.AutoClickerModule;
-import dev.vibe.module.impl.AimAssistModule;
-import dev.vibe.module.impl.ChestEspModule;
-import dev.vibe.module.impl.ClickGuiModule;
-import dev.vibe.module.impl.EagleModule;
-import dev.vibe.module.impl.EspModule;
-import dev.vibe.module.impl.FastPlaceModule;
-import dev.vibe.module.impl.FovChangerModule;
-import dev.vibe.module.impl.FullBrightModule;
-import dev.vibe.module.impl.HudEditorModule;
-import dev.vibe.module.impl.HudModule;
-import dev.vibe.module.impl.ReachModule;
-import dev.vibe.module.impl.WTapModule;
-import dev.vibe.module.impl.DebugModule;
-import dev.vibe.module.impl.LanguageModule;
-import dev.vibe.module.impl.NameProtectModule;
-import dev.vibe.module.impl.NoJumpDelayModule;
-import dev.vibe.module.impl.NoSlowModule;
-import dev.vibe.module.impl.MoveFixModule;
-import dev.vibe.module.impl.TestModule;
-import dev.vibe.module.impl.KillAuraModule;
-import dev.vibe.module.impl.ItemEspModule;
-import dev.vibe.module.impl.Gta7Module;
-import dev.vibe.module.impl.Battlefront3Module;
-import dev.vibe.module.impl.GirlfriendModule;
-import dev.vibe.module.impl.TargetsModule;
-import dev.vibe.module.impl.TargetEspModule;
-import dev.vibe.module.impl.CosmeticsModule;
-import dev.vibe.module.impl.CosmeticsEditorModule;
-import dev.vibe.module.impl.VelocityModule;
-import dev.vibe.module.impl.FlyModule;
-import dev.vibe.module.impl.SpeedModule;
-import dev.vibe.module.impl.LongJumpModule;
-import dev.vibe.module.impl.NoFallModule;
-import dev.vibe.module.impl.BlurModule;
-import dev.vibe.module.impl.WaifuModule;
-import dev.vibe.module.impl.CustomCrosshairModule;
-import dev.vibe.module.impl.CustomCosmeticsModule;
-import dev.vibe.module.impl.AnimationsModule;
-import dev.vibe.module.impl.ParticlesModule;
-import dev.vibe.module.impl.QolModule;
-import dev.vibe.module.impl.HitmarkerModule;
-import dev.vibe.module.impl.InventoryEditorModule;
-import dev.vibe.module.impl.InventoryManagerModule;
-import dev.vibe.module.impl.ChestStealerModule;
-import dev.vibe.module.impl.AutoToolModule;
-import dev.vibe.module.impl.BedAuraModule;
-import dev.vibe.module.impl.FastBreakModule;
-import dev.vibe.module.impl.FriendsModule;
-import dev.vibe.module.impl.FriendEditorModule;
-import dev.vibe.module.impl.ConfigEditorModule;
-import dev.vibe.module.impl.KeybindEditorModule;
-import dev.vibe.module.impl.EspEditorModule;
-import dev.vibe.module.impl.AmbienceModule;
-import dev.vibe.module.impl.NesEmulatorModule;
-import dev.vibe.module.impl.BacktrackModule;
-import dev.vibe.module.impl.LagRangeModule;
-import dev.vibe.module.impl.TickBaseModule;
-import dev.vibe.module.impl.TimerRangeModule;
-import dev.vibe.module.impl.BedEspModule;
-import dev.vibe.module.impl.BlockChangeEspModule;
-import dev.vibe.module.impl.BlockOverlayModule;
-import dev.vibe.module.impl.CuteVisualsModule;
-import dev.vibe.module.impl.TrajectoriesModule;
-import dev.vibe.module.impl.ScriptsModule;
-import dev.vibe.module.impl.ChessModule;
-import dev.vibe.module.impl.TicTacToeModule;
-import dev.vibe.module.impl.FourWinsModule;
-import dev.vibe.module.impl.SlotsModule;
-import dev.vibe.module.impl.StatisticsModule;
-import dev.vibe.module.impl.FlagDetectorModule;
-import dev.vibe.module.impl.HypixelModule;
+import dev.vibe.module.impl.client.*;
+import dev.vibe.module.impl.combat.*;
+import dev.vibe.module.impl.meme.*;
+import dev.vibe.module.impl.movement.*;
+import dev.vibe.module.impl.visual.*;
+import dev.vibe.module.impl.world.*;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 public final class ModuleManager {
 
     private final List<Module> modules = new ArrayList<Module>();
+    /** Marks a type with no matching module, so misses are remembered too. */
+    private static final Object NO_MODULE = new Object();
+    private static final AtomicReferenceFieldUpdater<ModuleManager, TypeIndex> TYPE_INDEX =
+            AtomicReferenceFieldUpdater.newUpdater(ModuleManager.class, TypeIndex.class, "typeIndex");
+    /**
+     * getModule(Class) answers from here instead of scanning every module; renderers ask for
+     * modules many times per frame. It belongs to one list instance and is replaced whenever
+     * that list changes. Null until the first lookup.
+     */
+    private volatile TypeIndex typeIndex;
 
     public ModuleManager() {
         register(new EspModule());
         register(new EspEditorModule());
         register(new TargetEspModule());
+        register(new PathModule());
         register(new ItemEspModule());
         register(new HitmarkerModule());
-        register(new CosmeticsModule());
-        register(new CosmeticsEditorModule());
         register(new ChestEspModule());
         register(new BedEspModule());
         register(new BlockChangeEspModule());
@@ -96,11 +41,14 @@ public final class ModuleManager {
         register(new CuteVisualsModule());
         register(new TrajectoriesModule());
         register(new FullBrightModule());
+        register(new SaturationModule());
+        register(new BreakProgressModule());
         register(new FovChangerModule());
         register(new CustomCrosshairModule());
         register(new CustomCosmeticsModule());
-        register(new dev.vibe.module.impl.FogModule());
-        register(new dev.vibe.module.impl.MusicModule());
+        register(new CustomModelRendererModule());
+        register(new FogModule());
+        register(new MusicModule());
         register(new AnimationsModule());
         register(new AmbienceModule());
         register(new TargetsModule());
@@ -116,22 +64,24 @@ public final class ModuleManager {
         register(new SprintModule());
         register(new NoSlowModule());
         register(new MoveFixModule());
-        register(new TestModule());
         register(new KillAuraModule());
         register(new SpeedModule());
         register(new FlyModule());
+        register(new FreecamModule());
         register(new LongJumpModule());
         register(new NoFallModule());
         register(new BlurModule());
         register(new WaifuModule());
         register(new NesEmulatorModule());
         register(new Gta7Module());
+        register(new Gta8Module());
         register(new Battlefront3Module());
         register(new GirlfriendModule());
         register(new ChessModule());
         register(new TicTacToeModule());
         register(new FourWinsModule());
         register(new SlotsModule());
+        register(new dev.vibe.module.impl.fun.PhoneModule());
         register(new HypixelModule());
         register(new StatisticsModule());
         register(new FlagDetectorModule());
@@ -141,12 +91,12 @@ public final class ModuleManager {
         register(new QolModule());
         register(new NoJumpDelayModule());
         register(new EagleModule());
-        register(new dev.vibe.module.impl.ScaffoldModule());
         register(new FastPlaceModule());
+        register(new ScaffoldModule());
         register(new InventoryManagerModule());
         register(new ChestStealerModule());
         register(new AutoToolModule());
-        register(new dev.vibe.module.impl.PickenSwitchModule());
+        register(new PickenSwitchModule());
         register(new BedAuraModule());
         register(new FastBreakModule());
         register(new FriendsModule());
@@ -166,21 +116,28 @@ public final class ModuleManager {
 
     private void register(Module module) {
         modules.add(module);
+        moduleListChanged();
     }
 
     /** Registers a module supplied by the local scripting runtime. */
     public void registerDynamic(Module module) {
         if (module != null && !modules.contains(module)) {
             modules.add(module);
+            moduleListChanged();
         }
     }
 
-    /** Removes an obsolete compiled script module during a reload. */
+    /** Removes a script or extension module even when its disable callback fails. */
     public void unregisterDynamic(Module module) {
         if (module != null) {
-            if (module.isEnabled()) module.setEnabled(false);
-            modules.remove(module);
+            try { if (module.isEnabled()) module.setEnabled(false); }
+            finally { modules.remove(module); moduleListChanged(); }
         }
+    }
+
+    /** A fresh index (never null), so a lookup that began before the change cannot store its stale answer. */
+    private void moduleListChanged() {
+        typeIndex = new TypeIndex(modules, Collections.<Class<?>, Object>emptyMap());
     }
 
     public List<Module> getModules() {
@@ -211,11 +168,30 @@ public final class ModuleManager {
 
     @SuppressWarnings("unchecked")
     public <T extends Module> T getModule(Class<T> type) {
-        for (Module module : modules) {
+        List<Module> current = modules;
+        TypeIndex index = typeIndex;
+        boolean valid = index != null && index.modules == current;
+        if (valid) {
+            Object cached = index.byType.get(type);
+            if (cached != null) return cached == NO_MODULE ? null : (T) cached;
+        }
+        T found = null;
+        for (Module module : current) {
             if (type.isInstance(module)) {
-                return (T) module;
+                found = (T) module;
+                break;
             }
         }
-        return null;
+        Map<Class<?>, Object> next = new HashMap<Class<?>, Object>(valid ? index.byType : Collections.<Class<?>, Object>emptyMap());
+        next.put(type, found == null ? NO_MODULE : found);
+        // Only store the answer if the list did not change while it was computed.
+        TYPE_INDEX.compareAndSet(this, index, new TypeIndex(current, next));
+        return found;
+    }
+
+    private static final class TypeIndex {
+        final List<Module> modules;
+        final Map<Class<?>, Object> byType;
+        TypeIndex(List<Module> modules, Map<Class<?>, Object> byType) { this.modules = modules; this.byType = byType; }
     }
 }

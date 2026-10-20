@@ -1,6 +1,6 @@
 package dev.vibe.media;
 
-import dev.vibe.module.impl.MusicModule;
+import dev.vibe.module.impl.client.MusicModule;
 
 /** Owns one current radio and one helper per OS data source. Configuration changes cancel old work. */
 public final class MusicService implements AutoCloseable {

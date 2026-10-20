@@ -1,0 +1,8 @@
+{
+  "apiVersion": 1,
+  "id": "cosmetica",
+  "name": "Cosmetica cosmetics",
+  "version": "${version}",
+  "vibeVersion": "${vibeVersion}",
+  "entrypoint": "dev.vibe.extension.cosmetica.CosmeticaExtension"
+}

@@ -4,7 +4,7 @@ import dev.vibe.Vibe;
 import dev.vibe.core.MoveFixTransformer;
 import dev.vibe.module.Module;
 import dev.vibe.module.ModuleManager;
-import dev.vibe.module.impl.PickenSwitchModule;
+import dev.vibe.module.impl.combat.PickenSwitchModule;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -43,7 +43,7 @@ public class PickenSwitchHooksTest implements Opcodes {
     private static final List<String> calls = new ArrayList<String>();
     private static boolean failLocal;
 
-    @BeforeClass public static void bootstrap() throws Exception { dev.vibe.module.impl.PickenSwitchTest.bootstrap(); }
+    @BeforeClass public static void bootstrap() throws Exception { dev.vibe.module.impl.combat.PickenSwitchTest.bootstrap(); }
     @Before public void setup() throws Exception {
         previous = Minecraft.getMinecraft();
         oldVibe = Vibe.getInstance();
@@ -114,7 +114,7 @@ public class PickenSwitchHooksTest implements Opcodes {
 
     public static void networkAttack() { sync(); calls.add("attack:" + mc.thePlayer.inventory.currentItem); if (failLocal) throw new IllegalStateException("Fixture"); }
     private static int server;
-    public static void sync() { int next = dev.vibe.module.impl.AutoToolModule.serverSlotHook(mc.thePlayer.inventory.currentItem); if (next != server) { calls.add("slot:" + next); server = next; } }
+    public static void sync() { int next = dev.vibe.module.impl.world.AutoToolModule.serverSlotHook(mc.thePlayer.inventory.currentItem); if (next != server) { calls.add("slot:" + next); server = next; } }
     private static final class Controller extends PlayerControllerMP { Controller(Minecraft minecraft) { super(minecraft, null); } @Override public void updateController() { sync(); } }
     public static final class Victim extends EntityOtherPlayerMP {
         private Victim() { super(null, null); }

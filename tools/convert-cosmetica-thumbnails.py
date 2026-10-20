@@ -55,7 +55,7 @@ def convert(directory, force=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("directory", help="The src/main/resources/assets/vibe/cosmetica/thumbnails directory")
+    parser.add_argument("directory", help="The extensions/cosmetica/src/main/resources/assets/vibe/cosmetica/thumbnails directory")
     parser.add_argument("--force", action="store_true", help="Regenerate existing PNG preview files")
     arguments = parser.parse_args()
     raise SystemExit(convert(arguments.directory, arguments.force))

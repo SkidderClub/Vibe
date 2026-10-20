@@ -5,7 +5,7 @@
  */
 package dev.vibe.ui.effect;
 
-import dev.vibe.module.impl.HitmarkerModule;
+import dev.vibe.module.impl.visual.HitmarkerModule;
 import java.nio.IntBuffer;
 import java.util.List;
 import net.minecraft.client.Minecraft;

@@ -131,14 +131,16 @@ public final class AccountManager {
         start("Signing in as " + account.getName() + "...", ticket -> {
             // An in-flight folder import may update this profile before the queued login starts.
             Account current = getAccounts().stream().filter(account::sameIdentity).findFirst().orElse(account);
-            if (!current.isMicrosoft()) {
+            if (!current.isOnline()) {
                 finish(ticket, () -> activate(current, "0"));
                 return;
             }
-            MicrosoftLogin.Result result = auth.refresh(current, updated -> {
-                try { persist(ticket, updated); }
-                catch (IOException e) { throw new UncheckedIOException(e); }
-            }, message -> progress(ticket, message));
+            MicrosoftLogin.Result result = current.isToken()
+                    ? auth.fromAccessToken(current.token(), message -> progress(ticket, message))
+                    : auth.refresh(current, updated -> {
+                        try { persist(ticket, updated); }
+                        catch (IOException e) { throw new UncheckedIOException(e); }
+                    }, message -> progress(ticket, message));
             persist(ticket, result.account);
             finish(ticket, () -> activate(result.account, result.accessToken()));
         });
@@ -328,6 +330,24 @@ public final class AccountManager {
         if (ticket != generation || Thread.currentThread().isInterrupted()) throw new CancellationException();
     }
 
+    public void addToken(MinecraftToken token) {
+        if (token == null) return;
+        start("Checking Minecraft access token...", ticket -> {
+            MicrosoftLogin.Result result = auth.fromAccessToken(token, message -> progress(ticket, message));
+            persist(ticket, result.account);
+            finish(ticket, () -> activate(result.account, result.accessToken()));
+        });
+    }
+
+    public void addRefreshToken(MicrosoftRefreshToken token) {
+        if (token == null) return;
+        start("Checking Microsoft refresh token...", ticket -> {
+            MicrosoftLogin.Result result = auth.fromRefreshToken(token, message -> progress(ticket, message));
+            persist(ticket, result.account);
+            finish(ticket, () -> activate(result.account, result.accessToken()));
+        });
+    }
+
     /** Activate an ephemeral offline identity without touching the vault or auto-login preference. */
     public synchronized boolean useTemporaryOffline(String name) {
         if (name == null || !name.matches("[A-Za-z0-9_]{3,16}")) return false;
@@ -344,8 +364,9 @@ public final class AccountManager {
     private void activate(Account account, String accessToken) {
         try {
             setSession(new Session(account.getName(), account.getUuid().toString().replace("-", ""), accessToken,
-                    account.isMicrosoft() ? "mojang" : "legacy"));
-            status = "Active: " + account.getName() + (account.isMicrosoft() ? " (Microsoft)." : " (offline / local servers only).");
+                    account.isOnline() ? "mojang" : "legacy"));
+            status = "Active: " + account.getName() + (account.isToken() ? " (access token)."
+                    : account.isMicrosoft() ? " (Microsoft)." : " (offline / local servers only).");
             error = false;
         } catch (IOException e) { report(e.getMessage()); }
     }

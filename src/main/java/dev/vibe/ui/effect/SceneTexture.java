@@ -19,6 +19,21 @@ public final class SceneTexture implements AutoCloseable {
             GL11.glCopyTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, x, y, w, h);
         }
     }
+    /**
+     * Keeps a full-size colour texture but refreshes only one rectangle, at the same texel
+     * offsets. For shaders that provably sample nothing outside that rectangle this equals
+     * {@link #capture} of the whole target, without copying every other pixel.
+     */
+    public void captureRegion(int w, int h, int regionX, int regionY, int regionWidth, int regionHeight) {
+        if (color == 0 || width != w || height != h) {
+            close(); width = w; height = h;
+            color = allocate(w, h, false);
+        }
+        if (regionWidth <= 0 || regionHeight <= 0) return;
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, color);
+        GL11.glCopyTexSubImage2D(GL11.GL_TEXTURE_2D, 0, regionX, regionY, regionX, regionY, regionWidth, regionHeight);
+    }
+
     public static int allocate(int w, int h, boolean depth) {
         int texture = GL11.glGenTextures(); GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, depth ? GL11.GL_NEAREST : GL11.GL_LINEAR);

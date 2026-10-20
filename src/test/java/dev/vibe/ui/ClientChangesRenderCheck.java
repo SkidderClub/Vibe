@@ -5,9 +5,22 @@ import dev.vibe.Vibe;
 import dev.vibe.game.meme.ConnectFourState;
 import dev.vibe.game.meme.GameType;
 import dev.vibe.game.meme.TicTacToeState;
+import dev.vibe.hud.ArrayListRenderer;
+import dev.vibe.hud.MusicHudRenderer;
 import dev.vibe.module.Module;
 import dev.vibe.module.ModuleManager;
-import dev.vibe.module.impl.*;
+import dev.vibe.module.impl.client.BlurModule;
+import dev.vibe.module.impl.client.ClickGuiModule;
+import dev.vibe.module.impl.client.HudModule;
+import dev.vibe.module.impl.client.MusicModule;
+import dev.vibe.module.impl.meme.ChessModule;
+import dev.vibe.module.impl.meme.HypixelModule;
+import dev.vibe.module.impl.meme.MemeGameModule;
+import dev.vibe.module.impl.visual.TrajectoriesModule;
+import dev.vibe.ui.account.SkinHeads;
+import dev.vibe.ui.clickgui.VibeClickGui;
+import dev.vibe.ui.game.MemeGameGui;
+import dev.vibe.ui.render.TrajectoriesRenderer;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.lang.reflect.*;
@@ -73,10 +86,6 @@ public final class ClientChangesRenderCheck {
             Vibe vibe = new Vibe(); set(Vibe.class,null,"instance",vibe);
             ModuleManager modules = instance(ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<Module>()); set(Vibe.class,vibe,"moduleManager",modules);
-            if (args.length>0 && args[0].equals("scaffold")) {
-                testScaffoldCounter(vibe);
-                return;
-            }
             if (args.length>0 && args[0].equals("hud-editor")) {
                 HudModule hud = new HudModule();
                 set(ModuleManager.class,modules,"modules",new ArrayList<Module>(Collections.<Module>singletonList(hud)));
@@ -92,6 +101,31 @@ public final class ClientChangesRenderCheck {
                 editor.setWorldAndResolution(mc,683,384);
                 editor.drawScreen(320,190,0);
                 save("hud-editor-compact.png");
+                // Every widget is drawn by its in-game renderer; without a world the ones lacking data show samples.
+                // Armor is left out: this fixture has no item renderer.
+                MusicModule music = new MusicModule();
+                set(Module.class,music,"enabled",true);
+                set(ModuleManager.class,modules,"modules",new ArrayList<Module>(Arrays.asList(hud,music)));
+                for (String id : hud.getHudElements().getOptions())
+                    if (!id.equals(dev.vibe.hud.HudManager.ARMOR) && !hud.getHudElements().isSelected(id)) hud.getHudElements().toggle(id);
+                hud.getHealthHideFull().setEnabled(true);
+                mc.displayWidth=1280; mc.displayHeight=720;
+                frame(1280,720);
+                editor.setWorldAndResolution(mc,1280,720);
+                editor.drawScreen(630,330,0);
+                save("hud-editor-all.png");
+                for (String id : manager.getElementIds()) {
+                    dev.vibe.hud.HudManager.HudElement element = manager.getElement(id);
+                    if (manager.isEnabled(id) && (element.getWidth() <= 1 || element.getHeight() <= 1))
+                        throw new AssertionError("HUD editor preview is missing " + id);
+                }
+                // Without framebuffers the editor draws the HUD directly into the scaled canvas.
+                mc.gameSettings.fboEnable = false;
+                frame(1280,720);
+                editor.drawScreen(630,330,0);
+                save("hud-editor-unbuffered.png");
+                mc.gameSettings.fboEnable = true;
+                if (GL11.glIsEnabled(GL11.GL_SCISSOR_TEST)) throw new AssertionError("HUD editor leaked clipping state");
                 dev.vibe.hud.HudManager.HudElement anchored = manager.getElement(dev.vibe.hud.HudManager.ARMOR);
                 anchored.setScale(1.5F);
                 net.minecraft.client.gui.ScaledResolution resolution = new net.minecraft.client.gui.ScaledResolution(mc);
@@ -135,20 +169,20 @@ public final class ClientChangesRenderCheck {
                 prepareHeads(players);
                 render(gui,"lobby-"+dimensions[0]+".png");
                 int x = integer(gui,"listRight")-5, bottom = integer(gui,"listBottom")-5;
-                gui.mouseClicked(scaled(gui,x),scaled(gui,bottom),0);
-                gui.mouseClickMove(scaled(gui,x),scaled(gui,bottom+1000),0,1); gui.mouseReleased(0,0,0);
+                GuiInput.mouseClicked(gui,scaled(gui,x),scaled(gui,bottom),0);
+                GuiInput.mouseClickMove(gui,scaled(gui,x),scaled(gui,bottom+1000),0,1); GuiInput.mouseReleased(gui,0,0,0);
                 if (integer(gui,"playerScroll") < 1000) throw new AssertionError("Player list cannot reach the last row");
                 prepareHeads(players);
                 render(gui,"lobby-end-"+dimensions[0]+".png");
                 // Select the last player in the scrolled viewport, exercising transformed mouse coordinates.
                 int rowX = integer(gui,"listLeft")+30;
-                gui.mouseClicked(scaled(gui,rowX),scaled(gui,bottom-16),0);
+                GuiInput.mouseClicked(gui,scaled(gui,rowX),scaled(gui,bottom-16),0);
                 if (!"Player100".equals(get(MemeGameGui.class,gui,"selectedPlayer"))) throw new AssertionError("Last player not clickable");
                 set(MemeGameModule.class,chess,"pendingOpponent","Player100");
                 render(gui,"invite-"+dimensions[0]+".png");
                 x=integer(gui,"contentRight")-5;
-                gui.mouseClicked(scaled(gui,x),scaled(gui,integer(gui,"listBottom")-40),0);
-                gui.mouseClickMove(scaled(gui,x),scaled(gui,bottom+1000),0,1); gui.mouseReleased(0,0,0);
+                GuiInput.mouseClicked(gui,scaled(gui,x),scaled(gui,integer(gui,"listBottom")-40),0);
+                GuiInput.mouseClickMove(gui,scaled(gui,x),scaled(gui,bottom+1000),0,1); GuiInput.mouseReleased(gui,0,0,0);
                 render(gui,"invite-end-"+dimensions[0]+".png");
                 set(MemeGameModule.class,chess,"pendingOpponent",null);
             }
@@ -161,7 +195,7 @@ public final class ClientChangesRenderCheck {
             MemeGameModule four = new MemeGameModule("Four", "", GameType.CONNECT_FOUR, new ConnectFourState()){};
             four.startRobot(true); gui = new MemeGameGui(four); gui.setWorldAndResolution(mc,960,540);
             int x=integer(gui,"left")+24, y=integer(gui,"top")+45+240;
-            gui.mouseClicked(x,y,0);
+            GuiInput.mouseClicked(gui,x,y,0);
             if (((ConnectFourState)four.getGame()).get(5,0) != 'R') throw new AssertionError("Lower column click was ignored");
             render(gui,"connect-four.png");
             testImpacts();
@@ -178,7 +212,7 @@ public final class ClientChangesRenderCheck {
     @SuppressWarnings("unchecked") private static void prepareHeads(Map<UUID,NetworkPlayerInfo> players) throws Exception {
         // Offline fixture heads: never query external skin services from a rendering check.
         Map<UUID,Object> heads = (Map<UUID,Object>)get(SkinHeads.class,null,"HEADS");
-        Class<?> headType = Class.forName("dev.vibe.ui.SkinHeads$Head");
+        Class<?> headType = Class.forName("dev.vibe.ui.account.SkinHeads$Head");
         Constructor<?> ctor = headType.getDeclaredConstructor(ResourceLocation.class); ctor.setAccessible(true);
         for (UUID id : players.keySet()) {
             Object head = ctor.newInstance(new ResourceLocation("textures/entity/steve.png"));
@@ -423,16 +457,16 @@ public final class ClientChangesRenderCheck {
                 draw.setAccessible(true);
                 frame(960,540);
                 draw.invoke(gui,hypixel.getPitTarget(),500,740,160,0xFF00CCFF,name.equals("Futuristic"),name.equals("Skeet"));
-                gui.mouseClicked(625,168,0);
-                for(char ch:"Player_123".toCharArray())gui.keyTyped(ch,0);
+                GuiInput.mouseClicked(gui,625,168,0);
+                for(char ch:"Player_123".toCharArray())GuiInput.keyTyped(gui,ch,0);
                 if(!hypixel.getPitTarget().getValue().equals("Player_123"))throw new AssertionError(name+" cannot type PitBot name");
-                gui.keyTyped('\0',org.lwjgl.input.Keyboard.KEY_LEFT);
-                gui.keyTyped('\0',org.lwjgl.input.Keyboard.KEY_BACK);
+                GuiInput.keyTyped(gui,'\0',org.lwjgl.input.Keyboard.KEY_LEFT);
+                GuiInput.keyTyped(gui,'\0',org.lwjgl.input.Keyboard.KEY_BACK);
                 if(!hypixel.getPitTarget().getValue().equals("Player_13"))throw new AssertionError(name+" cursor/backspace failed");
-                gui.keyTyped('\0',org.lwjgl.input.Keyboard.KEY_END);
-                for(int i=0;i<30;i++)gui.keyTyped('x',0);
+                GuiInput.keyTyped(gui,'\0',org.lwjgl.input.Keyboard.KEY_END);
+                for(int i=0;i<30;i++)GuiInput.keyTyped(gui,'x',0);
                 if(hypixel.getPitTarget().getValue().length()!=16)throw new AssertionError(name+" ignores player-name limit");
-                gui.keyTyped('\0',org.lwjgl.input.Keyboard.KEY_RETURN);
+                GuiInput.keyTyped(gui,'\0',org.lwjgl.input.Keyboard.KEY_RETURN);
                 if(get(VibeClickGui.class,gui,"editing")!=null)throw new AssertionError(name+" did not finish editing");
             }
         } finally { set(org.lwjgl.input.Keyboard.class,null,"created",keyboardCreated); }
@@ -458,39 +492,6 @@ public final class ClientChangesRenderCheck {
             if(!game.play(moves[i]))throw new AssertionError("Restored move cannot be replayed");
         }
     }
-    private static void testScaffoldCounter(Vibe vibe) throws Exception {
-        // This fixture checks the actual copied font/GLSL/counter. Item rendering
-        // is a marked stand-in; model/atlas loading is outside this check.
-        set(net.minecraft.init.Bootstrap.class,null,"alreadyRegistered",true);
-        net.minecraft.block.Block.registerBlocks(); net.minecraft.item.Item.registerItems();
-        mc.thePlayer = instance(FixturePlayer.class);
-        mc.thePlayer.inventory = new net.minecraft.entity.player.InventoryPlayer(mc.thePlayer);
-        mc.thePlayer.inventoryContainer = new net.minecraft.inventory.ContainerPlayer(mc.thePlayer.inventory,false,mc.thePlayer);
-        mc.thePlayer.inventory.mainInventory[0] = new net.minecraft.item.ItemStack(net.minecraft.init.Blocks.wool, 48, 3);
-        set(Minecraft.class,mc,"renderItem",instance(CounterItemFixture.class));
-        dev.vibe.hud.HudManager hud = new dev.vibe.hud.HudManager(OUTPUT.resolve("scaffold-fixture").toFile());
-        set(Vibe.class,vibe,"hudManager",hud);
-        ScaffoldBlockCountRenderer renderer = new ScaffoldBlockCountRenderer();
-        mc.displayWidth=640; mc.displayHeight=360;
-        for (float scale : new float[]{1, 1.5F}) {
-            hud.getElement(dev.vibe.hud.HudManager.BLOCK_COUNT).setScale(scale);
-            for (int n=0;n<20;n++) { frame(640,360); renderer.render(new net.minecraft.client.gui.ScaledResolution(mc)); }
-            if (GL11.glGetError()!=GL11.GL_NO_ERROR) throw new AssertionError("Scaffold counter GL error");
-            if (GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM)!=0) throw new AssertionError("Counter shader leaked");
-            dev.vibe.hud.HudManager.HudElement element=hud.getElement(dev.vibe.hud.HudManager.BLOCK_COUNT);
-            if(element.getWidth()!=Math.round(154*scale)||element.getHeight()!=Math.round(30*scale)) throw new AssertionError("Counter bounds/scale mismatch");
-            save("scaffold-counter-"+scale+".png");
-        }
-        System.out.println("Gothaj counter font, shaders, animation, scaling and GL state passed.");
-    }
-
-    public static final class CounterItemFixture extends net.minecraft.client.renderer.entity.RenderItem {
-        private CounterItemFixture(){super(null,null);}
-        @Override public void renderItemAndEffectIntoGUI(net.minecraft.item.ItemStack item,int x,int y) {
-            net.minecraft.client.gui.Gui.drawRect(x,y,x+16,y+16,0xFF6FA9D0);
-        }
-    }
-
     private static void frame(int width,int height) throws Exception {
         Framebuffer target = mc.getFramebuffer();
         if (target==null || target.framebufferWidth!=width || target.framebufferHeight!=height) {

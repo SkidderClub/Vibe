@@ -114,6 +114,41 @@ public class MicrosoftLoginTest {
         assertEquals("new-refresh", rotated.get().refreshToken());
     }
 
+    @Test public void accessTokenLoginOnlyChecksTheMinecraftProfile() throws Exception {
+        String token = MinecraftTokenTest.jwt("{\"exp\":" + (System.currentTimeMillis() / 1000 + 3600) + "}");
+        MicrosoftLogin login = new MicrosoftLogin((url, type, body, bearer) -> {
+            assertEquals(MicrosoftLogin.PROFILE, url);
+            assertNull(body);
+            assertEquals(token, bearer);
+            return response(200, "{'id':'12345678123412341234123456789abc','name':'Example'}");
+        });
+        MicrosoftLogin.Result result = login.fromAccessToken(MinecraftToken.parse("Bearer " + token), ignored -> { });
+        assertEquals(PROFILE, result.account.getUuid());
+        assertEquals("Example", result.account.getName());
+        assertTrue(result.account.isToken());
+        assertTrue(result.account.isOnline());
+        assertFalse(result.account.isMicrosoft());
+        assertEquals(token, result.account.token().value());
+        assertEquals(token, result.accessToken());
+    }
+
+    @Test public void rejectedExpiredAndProfilelessAccessTokensAreActionable() {
+        MinecraftToken token = MinecraftToken.parse(MinecraftTokenTest.jwt("{}"));
+        for (int status : new int[] {401, 403}) {
+            MicrosoftLogin login = new MicrosoftLogin((url, type, body, bearer) -> response(status, "{'error':'synthetic-private-error'}"));
+            IOException failure = assertThrows(IOException.class, () -> login.fromAccessToken(token, ignored -> { }));
+            assertTrue(failure.getMessage(), failure.getMessage().contains("rejected this access token"));
+            assertFalse(failure.getMessage().contains("synthetic-private-error"));
+        }
+        MicrosoftLogin missing = new MicrosoftLogin((url, type, body, bearer) -> response(404, "{}"));
+        assertTrue(assertThrows(IOException.class, () -> missing.fromAccessToken(token, ignored -> { }))
+                .getMessage().contains("No Minecraft Java profile"));
+        MicrosoftLogin unused = new MicrosoftLogin((url, type, body, bearer) -> { throw new AssertionError("Unexpected request"); });
+        IOException expired = assertThrows(IOException.class, () -> unused.fromAccessToken(
+                MinecraftToken.parse(MinecraftTokenTest.jwt("{\"exp\":1000}")), ignored -> { }));
+        assertTrue(expired.getMessage().contains("expired"));
+    }
+
     @Test public void declinedRevokedMissingProfileAndFamilyErrorsAreActionable() {
         assertError(400, "{'error':'authorization_declined'}", "Microsoft", "declined");
         assertError(400, "{'error':'invalid_grant'}", "Microsoft", "revoked");
@@ -149,6 +184,44 @@ public class MicrosoftLoginTest {
     private static void assertError(int status, String json, String service, String expected) {
         IOException failure = assertThrows(IOException.class, () -> MicrosoftLogin.checked(response(status, json), service));
         assertTrue(failure.getMessage(), failure.getMessage().contains(expected));
+    }
+
+    @Test public void pastedRefreshTokenSignsInWithTheMinecraftApplicationAndKeepsTheRotation() throws Exception {
+        Queue<MicrosoftLogin.Response> responses = new ArrayDeque<>();
+        responses.add(response(200, "{'access_token':'synthetic-ms','refresh_token':'M.C508_BAY.0.U.rotated'}"));
+        responses.add(response(200, "{'Token':'synthetic-xbl','DisplayClaims':{'xui':[{'uhs':'123'}]}}"));
+        responses.add(response(200, "{'Token':'synthetic-xsts','DisplayClaims':{'xui':[{'uhs':'123'}]}}"));
+        responses.add(response(200, "{'access_token':'synthetic-minecraft'}"));
+        responses.add(response(200, "{'id':'12345678123412341234123456789abc','name':'Example'}"));
+        MicrosoftLogin login = new MicrosoftLogin((url, type, body, bearer) -> {
+            if (url.endsWith("/oauth20_token.srf")) {
+                assertTrue(body.contains("client_id=00000000402b5328"));
+                assertTrue(body.contains("grant_type=refresh_token"));
+                assertTrue(body.contains("M.C508_BAY.0.U.MsaArtifacts"));
+            }
+            if (url.endsWith("/user/authenticate")) assertTrue(body.contains("t=synthetic-ms"));
+            return responses.remove();
+        });
+        MicrosoftLogin.Result result = login.fromRefreshToken(
+                MicrosoftRefreshToken.parse("M.C508_BAY.0.U.MsaArtifacts"), ignored -> { });
+        assertTrue(responses.isEmpty());
+        assertEquals(PROFILE, result.account.getUuid());
+        assertTrue(result.account.isMicrosoft());
+        assertEquals("M.C508_BAY.0.U.rotated", result.account.refreshToken());
+        assertEquals(MicrosoftApplication.MINECRAFT, result.account.application());
+        assertEquals("synthetic-minecraft", result.accessToken());
+    }
+
+    @Test public void refreshTokenParsingAcceptsCommonFormsAndRejectsOthers() {
+        String token = "M.C508_BAY.0.U.MsaArtifacts";
+        for (String input : new String[] {token, "  " + token + "\r\n", "\"" + token + "\"", "refresh_token: " + token,
+                token.substring(0, 10) + "\n" + token.substring(10)}) {
+            assertNotNull(input, MicrosoftRefreshToken.parse(input));
+        }
+        assertNull(MicrosoftRefreshToken.parse(null));
+        assertNull(MicrosoftRefreshToken.parse("M.C"));
+        assertNull(MicrosoftRefreshToken.parse("eyJhbGciOiJSUzI1NiJ9.e30.c2ln"));
+        assertFalse(MicrosoftRefreshToken.parse(token).preview().contains("MsaArtifacts"));
     }
 
     private static MicrosoftLogin.Response response(int status, String json) {

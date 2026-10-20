@@ -5,8 +5,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.vibe.Vibe;
 import dev.vibe.module.ModuleManager;
-import dev.vibe.module.impl.SpeedModule;
-import dev.vibe.module.impl.VelocityModule;
+import dev.vibe.module.impl.movement.SpeedModule;
+import dev.vibe.module.impl.combat.VelocityModule;
 import dev.vibe.setting.ModeSetting;
 import dev.vibe.setting.MultiSelectSetting;
 import dev.vibe.setting.Setting;
@@ -82,6 +82,13 @@ public class VibeConfigFirstRunTest {
         assertEquals(1, modes.getValue().size());
         ModeSetting speedMode = setting(manager.getModule(SpeedModule.class), "Mode", ModeSetting.class);
         assertEquals("Custom", speedMode.getValue());
+
+        assertTrue(config.save("legacy", manager));
+        JsonObject migrated = new JsonParser().parse(new String(Files.readAllBytes(
+                new File(config.getDirectory(), "legacy.json").toPath()), StandardCharsets.UTF_8)).getAsJsonObject();
+        for (com.google.gson.JsonElement element : migrated.getAsJsonArray("modules"))
+            assertFalse("A migrated alias must not be retained as an absent extension",
+                    "bhop".equalsIgnoreCase(element.getAsJsonObject().get("id").getAsString()));
 
         assertTrue(config.save("round-trip", manager));
         JsonObject saved = new JsonParser().parse(new String(Files.readAllBytes(

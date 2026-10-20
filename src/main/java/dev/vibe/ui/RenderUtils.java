@@ -3,6 +3,9 @@ package dev.vibe.ui;
 import java.awt.Color;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.WorldRenderer;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import org.lwjgl.opengl.GL11;
 
 public final class RenderUtils {
@@ -55,6 +58,16 @@ public final class RenderUtils {
         // produces a genuine circular corner at every GUI scale.
         int r = Math.max(1, Math.min(Math.round(radius), Math.min(right - left, bottom - top) / 2));
         double radiusSquared = r * r;
+        // The rows are Gui.drawRect quads with its state, colour and vertex order, collected
+        // into a single draw instead of one draw (and two state round trips) per pixel row.
+        Tessellator tessellator = Tessellator.getInstance();
+        WorldRenderer world = tessellator.getWorldRenderer();
+        GlStateManager.enableBlend();
+        GlStateManager.disableTexture2D();
+        GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
+        GlStateManager.color((float) (color >> 16 & 255) / 255.0F, (float) (color >> 8 & 255) / 255.0F,
+                (float) (color & 255) / 255.0F, (float) (color >> 24 & 255) / 255.0F);
+        world.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION);
         for (int y = top; y < bottom; y++) {
             double distanceFromCorner = Math.min(y - top + 0.5D, bottom - y - 0.5D);
             int inset = 0;
@@ -62,8 +75,21 @@ public final class RenderUtils {
                 double horizontal = Math.sqrt(Math.max(0.0D, radiusSquared - (r - distanceFromCorner) * (r - distanceFromCorner)));
                 inset = Math.max(0, r - (int) Math.ceil(horizontal));
             }
-            Gui.drawRect(left + inset, y, right - inset, y + 1, color);
+            rectVertices(world, left + inset, y, right - inset, y + 1);
         }
+        tessellator.draw();
+        GlStateManager.enableTexture2D();
+        GlStateManager.disableBlend();
+    }
+
+    /** Gui.drawRect's corner normalisation and vertex order, without its state changes or draw. */
+    private static void rectVertices(WorldRenderer world, int left, int top, int right, int bottom) {
+        if (left < right) { int swap = left; left = right; right = swap; }
+        if (top < bottom) { int swap = top; top = bottom; bottom = swap; }
+        world.pos(left, bottom, 0.0D).endVertex();
+        world.pos(right, bottom, 0.0D).endVertex();
+        world.pos(right, top, 0.0D).endVertex();
+        world.pos(left, top, 0.0D).endVertex();
     }
 
     /** A rounded fill whose lower edge remains square, useful for panel headers. */

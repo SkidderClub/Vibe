@@ -1,7 +1,7 @@
 package dev.vibe.ui;
 
-import dev.vibe.module.impl.BedEspModule;
-import dev.vibe.module.impl.CuteVisualsModule;
+import dev.vibe.module.impl.visual.BedEspModule;
+import dev.vibe.module.impl.visual.CuteVisualsModule;
 import org.junit.Test;
 import static org.junit.Assert.*;
 

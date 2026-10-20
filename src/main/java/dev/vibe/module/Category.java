@@ -8,6 +8,7 @@ public enum Category {
     MOVEMENT("Movement"),
     WORLD("World"),
     MEME("Meme"),
+    FUN("Fun"),
     CLIENT("Client"),
     /**
      * Runtime Java scripts are deliberately kept separate from Client tools.

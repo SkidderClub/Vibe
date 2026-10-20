@@ -1,7 +1,7 @@
 package dev.vibe.game.gta;
 
-import dev.vibe.module.impl.EspModule;
-import dev.vibe.ui.EspRenderer;
+import dev.vibe.module.impl.visual.EspModule;
+import dev.vibe.ui.render.esp.EspRenderer;
 import java.nio.FloatBuffer;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -129,7 +129,7 @@ public final class Gta7Renderer {
             for (Gta7Game.Npc npc : game.npcs) if(actorVisible(npc.x,npc.y+1,npc.z,2.5,game,110)) {
                 if(npc.cop && npc.health>0 && esp!=null && esp.isEnabled() && esp.getModes().isSelected("Chams")) {
                     shadow(npc.x+.1,npc.z-.08,.42,.3,npc.y+.003);
-                    dev.vibe.ui.ChamsRenderer.drawNative(esp, () -> personModel(npc,npc.y));
+                    dev.vibe.ui.render.esp.ChamsRenderer.drawNative(esp, () -> personModel(npc,npc.y));
                 } else person(npc,npc.y);
             }
             drops(game);

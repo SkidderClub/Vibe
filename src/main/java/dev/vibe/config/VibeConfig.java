@@ -6,8 +6,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import dev.vibe.Vibe;
-import dev.vibe.module.impl.HudModule;
-import dev.vibe.module.impl.NameProtectModule;
+import dev.vibe.module.impl.client.HudModule;
+import dev.vibe.module.impl.client.NameProtectModule;
 import dev.vibe.module.Module;
 import dev.vibe.module.ModuleManager;
 import dev.vibe.setting.BooleanSetting;
@@ -154,6 +154,18 @@ public final class VibeConfig {
             }
             data.add("settings", settings);
             modules.add(data);
+        }
+        // Removing an optional extension must not erase its settings/keybinds from the profile.
+        if (previous.has("modules") && previous.get("modules").isJsonArray()) {
+            java.util.Set<String> written = new java.util.HashSet<String>();
+            for (Module module : manager.getModules()) written.add(module.getId());
+            for (JsonElement entry : previous.getAsJsonArray("modules")) {
+                if (!entry.isJsonObject()) continue;
+                JsonObject data = entry.getAsJsonObject();
+                String id = getString(data, "id", "");
+                if (!id.isEmpty() && findModule(manager, id) == null
+                        && written.add(id.toLowerCase(java.util.Locale.ROOT))) modules.add(data);
+            }
         }
         root.add("modules", modules);
         File temporary = new File(directory, "." + safeName + ".json.tmp");
@@ -430,6 +442,7 @@ public final class VibeConfig {
             }
             JsonArray modules = getArray(root, "modules");
             EspConfigMigration.migrate(modules);
+            ScaffoldConfigMigration.migrate(modules);
             for (JsonElement element : modules) {
                 if (!element.isJsonObject()) continue;
                 JsonObject data = element.getAsJsonObject();
@@ -439,7 +452,7 @@ public final class VibeConfig {
                 if (module == null) continue;
                 if (withKeybinds && data.has("key")) module.setKey(getInt(data, "key", module.getKey()));
                 if (!withVisuals && (module.getCategory() == dev.vibe.module.Category.VISUAL
-                        || module instanceof HudModule || module instanceof dev.vibe.module.impl.ClickGuiModule)) continue;
+                        || module instanceof HudModule || module instanceof dev.vibe.module.impl.client.ClickGuiModule)) continue;
                 JsonObject settings = data.has("settings") && data.get("settings").isJsonObject()
                         ? data.getAsJsonObject("settings") : new JsonObject();
                 for (Setting<?> setting : module.getSettings()) {

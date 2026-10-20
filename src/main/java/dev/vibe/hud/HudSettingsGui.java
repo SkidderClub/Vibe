@@ -1,7 +1,7 @@
 package dev.vibe.hud;
 
 import dev.vibe.Vibe;
-import dev.vibe.module.impl.HudModule;
+import dev.vibe.module.impl.client.HudModule;
 import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ModeSetting;
 import dev.vibe.setting.MultiSelectSetting;
@@ -32,11 +32,8 @@ public final class HudSettingsGui extends GuiScreen {
         this.manager = manager;
         this.element = element;
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
-        if (HudManager.BLOCK_COUNT.equals(element)) {
-            dev.vibe.module.impl.ScaffoldModule scaffold = dev.vibe.module.impl.ScaffoldModule.instance();
-            if (scaffold != null) settings.add(scaffold.getRenderCount());
-        } else if (HudManager.MUSIC.equals(element)) {
-            dev.vibe.module.impl.MusicModule music = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.MusicModule.class);
+        if (HudManager.MUSIC.equals(element)) {
+            dev.vibe.module.impl.client.MusicModule music = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.MusicModule.class);
             if (music != null) {
                 settings.add(music.hudWidth); settings.add(music.hudScale); settings.add(music.cover);
                 settings.add(music.coverBackground); settings.add(music.progress); settings.add(music.scroll); settings.add(music.hideIdle);
@@ -83,6 +80,7 @@ public final class HudSettingsGui extends GuiScreen {
             fontRendererObj.drawStringWithShadow(setting.getName(), left + 12, y + 4, 0xFFD5E1F5);
             String state = describe(setting);
             int color = setting instanceof BooleanSetting && ((BooleanSetting) setting).isEnabled() ? 0xFF2DE2C2 : 0xFF8FA5C4;
+            state = dev.vibe.language.LanguageManager.translate(state);
             fontRendererObj.drawStringWithShadow(state, left + 228 - fontRendererObj.getStringWidth(state), y + 4, color);
             if (setting instanceof NumberSetting) {
                 NumberSetting number = (NumberSetting) setting;
@@ -106,7 +104,7 @@ public final class HudSettingsGui extends GuiScreen {
             }
         }
         }
-        fontRendererObj.drawStringWithShadow("Scroll | Click color to enter #RRGGBBAA", left + 4, height - 10, 0xFF8FA5C4);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Scroll | Click color to enter #RRGGBBAA"), left + 4, height - 10, 0xFF8FA5C4);
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
@@ -133,7 +131,7 @@ public final class HudSettingsGui extends GuiScreen {
                         editing = (StringSetting) setting; editBuffer = editing.getValue();
                     }
                     Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
-                    dev.vibe.ui.ArrayListRenderer.applyPreset(Vibe.getInstance().getModuleManager().getModule(HudModule.class));
+                    dev.vibe.hud.ArrayListRenderer.applyPreset(Vibe.getInstance().getModuleManager().getModule(HudModule.class));
                     return;
                 }
                 y += rowHeight;

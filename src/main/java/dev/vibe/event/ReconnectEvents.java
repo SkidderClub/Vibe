@@ -2,6 +2,7 @@ package dev.vibe.event;
 
 import dev.vibe.Vibe;
 import dev.vibe.account.RandomUsername;
+import dev.vibe.language.LanguageManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.*;
 import net.minecraft.client.multiplayer.GuiConnecting;
@@ -35,8 +36,8 @@ public final class ReconnectEvents {
     @SubscribeEvent public void init(GuiScreenEvent.InitGuiEvent.Post event) {
         if (!(event.gui instanceof GuiDisconnected)) return;
         int w = Math.min(140, Math.max(90, event.gui.width - 16)), x = event.gui.width - w - 8;
-        GuiButton reconnect = new GuiButton(RECONNECT, x, event.gui.height - 52, w, 20, "Reconnect");
-        GuiButton random = new GuiButton(RANDOM, x, event.gui.height - 28, w, 20, "Random username");
+        GuiButton reconnect = new GuiButton(RECONNECT, x, event.gui.height - 52, w, 20, LanguageManager.translate("Reconnect"));
+        GuiButton random = new GuiButton(RANDOM, x, event.gui.height - 28, w, 20, LanguageManager.translate("Random username"));
         reconnect.enabled = random.enabled = lastServer != null;
         event.buttonList.add(reconnect); event.buttonList.add(random);
     }

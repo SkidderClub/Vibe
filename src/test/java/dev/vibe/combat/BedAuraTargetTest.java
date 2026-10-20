@@ -1,6 +1,6 @@
 package dev.vibe.combat;
 
-import dev.vibe.module.impl.BedAuraModule;
+import dev.vibe.module.impl.world.BedAuraModule;
 import java.lang.reflect.*;
 import java.util.HashMap;
 import java.util.Map;

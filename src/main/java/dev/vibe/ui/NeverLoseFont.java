@@ -9,50 +9,68 @@ import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+import dev.vibe.language.LanguageManager;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import org.lwjgl.opengl.GL11;
 
 /** Lazy glyph pages, rasterized at twice the GUI resolution. No per-label textures. */
-final class NeverLoseFont {
-    static final NeverLoseFont REGULAR = new NeverLoseFont(Font.PLAIN);
-    static final NeverLoseFont BOLD = new NeverLoseFont(Font.BOLD);
+public final class NeverLoseFont {
+    public static final NeverLoseFont REGULAR = new NeverLoseFont(Font.PLAIN);
+    public static final NeverLoseFont BOLD = new NeverLoseFont(Font.BOLD);
     private static final int CELL = 32, SIZE = CELL * 16;
     private final Font font;
-    private final FontMetrics metrics;
+    private Font activeFont;
+    private FontMetrics metrics;
+    private String activeScript = "";
     private final Map<Integer, Page> pages = new HashMap<Integer, Page>();
     private final Map<Character,float[]> inkMetrics=new HashMap<Character,float[]>();
     private Font fallback;
+    /** advance() per character, by high byte; NaN marks a value not computed for the current pages yet. */
+    private final float[][] advances = new float[256][];
+    private boolean inRun, runAlphaKnown, runAlpha;
 
     private NeverLoseFont(int style) {
         this(style, 20);
     }
 
-    NeverLoseFont(int style, int rasterSize) {
+    public NeverLoseFont(int style, int rasterSize) {
         this(Font.SANS_SERIF, style, rasterSize);
     }
 
-    NeverLoseFont(String family, int style, int rasterSize) {
+    public NeverLoseFont(String family, int style, int rasterSize) {
         font = new Font(family, style, rasterSize);
-        BufferedImage sample = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = sample.createGraphics();
-        g.setFont(font); metrics = g.getFontMetrics(); g.dispose();
+        activeFont = font;
+        metrics = metrics(font);
     }
 
-    float width(String text) {
+    private static FontMetrics metrics(Font target) {
+        BufferedImage sample = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = sample.createGraphics();
+        g.setFont(target);
+        FontMetrics result = g.getFontMetrics();
+        g.dispose();
+        return result;
+    }
+
+    public float width(String text) {
+        prepareScript();
+        text = LanguageManager.scriptFontText(text);
         float width = 0;
         for (int i = 0; i < text.length(); i++) width += advance(text.charAt(i));
         return width;
     }
-    float inkTop(String text){return inkBounds(text)[0];}
-    float inkHeight(String text){float[] bounds=inkBounds(text);return Math.max(1,bounds[1]-bounds[0]);}
+    public float inkTop(String text){return inkBounds(text)[0];}
+    public float inkHeight(String text){float[] bounds=inkBounds(text);return Math.max(1,bounds[1]-bounds[0]);}
     private float[] inkBounds(String text){
+        prepareScript();
+        text = LanguageManager.scriptFontText(text);
         float top=Float.POSITIVE_INFINITY,bottom=Float.NEGATIVE_INFINITY;
         for(int i=0;i<text.length();i++){
             char ch=text.charAt(i);if(Character.isWhitespace(ch)||Character.isISOControl(ch))continue;
             float[] bounds=inkMetrics.get(ch);
             if(bounds==null){
-                Font selected=font.canDisplay(ch)?font:fallback();
+                Font selected=activeFont.canDisplay(ch)?activeFont:fallback();
                 java.awt.geom.Rectangle2D ink=selected.createGlyphVector(new java.awt.font.FontRenderContext(null,true,false),new char[]{ch}).getVisualBounds();
                 bounds=new float[]{(metrics.getAscent()+(float)ink.getMinY())*.5F,(metrics.getAscent()+(float)ink.getMaxY())*.5F};inkMetrics.put(ch,bounds);
             }
@@ -60,9 +78,11 @@ final class NeverLoseFont {
         }
         return top==Float.POSITIVE_INFINITY?new float[]{0,1}:new float[]{top,bottom};
     }
-    void close(){for(Page page:pages.values())page.texture.deleteGlTexture();pages.clear();}
+    public void close(){clearPages();}
 
-    String fit(String text, float available) {
+    public String fit(String text, float available) {
+        prepareScript();
+        text = LanguageManager.scriptFontText(text);
         if (width(text) <= available) return text;
         float used = width("...");
         if (used > available) return "";
@@ -72,14 +92,35 @@ final class NeverLoseFont {
     }
 
     private float advance(char c) {
-        return font.canDisplay(c) ? metrics.charWidth(c) * .5F : page(c >> 8).advances[c & 255];
+        float[] row = advances[c >> 8];
+        if (row == null) { row = new float[256]; java.util.Arrays.fill(row, Float.NaN); advances[c >> 8] = row; }
+        float value = row[c & 255];
+        if (value != value) {
+            value = activeFont.canDisplay(c) ? metrics.charWidth(c) * .5F : page(c >> 8).advances[c & 255];
+            row[c & 255] = value;
+        }
+        return value;
     }
 
-    void draw(String text, float x, float y, int color) {
+    /**
+     * Starts a run of draw calls with no other alpha-test changes in between. draw() leaves the
+     * alpha test as it found it, so the first draw's driver query answers for the whole run.
+     */
+    public void beginRun() { inRun = true; runAlphaKnown = false; }
+    public void endRun() { inRun = false; runAlphaKnown = false; }
+
+    public void draw(String text, float x, float y, int color) {
+        prepareScript();
+        text = LanguageManager.scriptFontText(text);
         if (text.isEmpty()) return;
         GlStateManager.enableTexture2D(); GlStateManager.enableBlend();
         GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
-        boolean alpha = GL11.glIsEnabled(GL11.GL_ALPHA_TEST);
+        boolean alpha;
+        if (inRun && runAlphaKnown) alpha = runAlpha;
+        else {
+            alpha = GL11.glIsEnabled(GL11.GL_ALPHA_TEST);
+            if (inRun) { runAlpha = alpha; runAlphaKnown = true; }
+        }
         GlStateManager.disableAlpha();
         GlStateManager.color((color >> 16 & 255) / 255F, (color >> 8 & 255) / 255F, (color & 255) / 255F, (color >>> 24) / 255F);
         for (int i = 0; i < text.length(); i++) {
@@ -111,7 +152,7 @@ final class NeverLoseFont {
         float[] advances = new float[256];
         for (int i = 0; i < 256; i++) {
             char c = (char) ((number << 8) | i);
-            Font selected = font.canDisplay(c) ? font : fallback();
+            Font selected = activeFont.canDisplay(c) ? activeFont : fallback();
             g.setFont(selected);
             advances[i] = g.getFontMetrics().charWidth(c) * .5F;
             int cellX = (i % 16) * CELL, cellY = (i / 16) * CELL;
@@ -136,6 +177,34 @@ final class NeverLoseFont {
             } catch (Exception ignored) { /* Logical fonts still cover Latin and Cyrillic. */ }
         }
         return fallback;
+    }
+
+    private void prepareScript() {
+        String language = LanguageManager.selectedLanguage();
+        String next = LanguageManager.usesScriptFont(language) ? language : "";
+        if (next.equals(activeScript)) return;
+        clearPages();
+        inkMetrics.clear();
+        activeScript = next;
+        activeFont = next.isEmpty() ? font : loadScriptFont(next);
+        metrics = metrics(activeFont);
+    }
+
+    private Font loadScriptFont(String language) {
+        String resource = "Enchantment Table".equals(language)
+                ? "/assets/vibe/fonts/StandardGalactic-Regular.ttf"
+                : "/assets/vibe/fonts/Aurebesh-Rodian.otf";
+        try (InputStream input = NeverLoseFont.class.getResourceAsStream(resource)) {
+            if (input != null) return Font.createFont(Font.TRUETYPE_FONT, input)
+                    .deriveFont(font.getStyle(), font.getSize2D());
+        } catch (Exception ignored) { /* Unicode fallback remains usable if a bundled font cannot load. */ }
+        return font;
+    }
+
+    private void clearPages() {
+        for (Page page : pages.values()) page.texture.deleteGlTexture();
+        pages.clear();
+        java.util.Arrays.fill(advances, null);
     }
 
     private static final class Page {

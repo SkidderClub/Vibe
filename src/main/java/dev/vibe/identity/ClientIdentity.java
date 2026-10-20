@@ -1,5 +1,6 @@
 package dev.vibe.identity;
 
+import dev.vibe.language.LanguageManager;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -28,14 +29,9 @@ public final class ClientIdentity {
     public String getLanguage() { return language; }
 
     public void setLanguage(String value) {
-        if (value == null) return;
-        for (String language : new String[] {"English", "Chinese", "Russian", "Japanese", "Bavarian"}) {
-            if (language.equalsIgnoreCase(value.trim())) {
-                this.language = language;
-                save();
-                return;
-            }
-        }
+        if (value == null || !LanguageManager.isSupported(value)) return;
+        this.language = LanguageManager.normalizeLanguage(value);
+        save();
     }
 
     public boolean setGamertag(String value) {
@@ -93,12 +89,6 @@ public final class ClientIdentity {
     }
 
     private void setLanguageInternal(String value) {
-        if (value == null) return;
-        for (String candidate : new String[] {"English", "Chinese", "Russian", "Japanese", "Bavarian"}) {
-            if (candidate.equalsIgnoreCase(value.trim())) {
-                language = candidate;
-                return;
-            }
-        }
+        if (value != null && LanguageManager.isSupported(value)) language = LanguageManager.normalizeLanguage(value);
     }
 }

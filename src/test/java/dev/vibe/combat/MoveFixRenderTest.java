@@ -1,6 +1,6 @@
 package dev.vibe.combat;
 
-import dev.vibe.module.impl.MoveFixModule;
+import dev.vibe.module.impl.movement.MoveFixModule;
 import java.lang.reflect.Field;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
@@ -105,6 +105,23 @@ public class MoveFixRenderTest {
         float[] vanilla = pose();
         moveFix.beginPlayerRender(player);
         assertArrayEquals(vanilla, pose(), 0.0F);
+    }
+
+    @Test public void smoothBackRotateTurnsBackAtItsSpeedOrReturnsAtOnce() throws Exception {
+        moveFix.beginRotationTick();
+        moveFix.setFakeRotation("scaffold", 100, 40);
+        moveFix.clearFakeRotation("scaffold");
+        moveFix.getRotateBackSpeed().setRange(30, 30);
+        assertTrue(moveFix.getRotateBackSpeed().isVisible());
+        moveFix.tick();
+        assertEquals(70.0F, moveFix.getRotationYaw(), 0.001F);
+        assertEquals(10.0F, moveFix.getRotationPitch(), 0.001F);
+
+        moveFix.getSmoothBackRotate().setEnabled(false);
+        assertFalse("The speed only applies to a smooth return", moveFix.getRotateBackSpeed().isVisible());
+        moveFix.tick();
+        assertEquals(0.0F, moveFix.getRotationYaw(), 0.0F);
+        assertEquals(0.0F, moveFix.getRotationPitch(), 0.0F);
     }
 
     @Test public void changingPlayerDiscardsPreviousWorldRotation() throws Exception {

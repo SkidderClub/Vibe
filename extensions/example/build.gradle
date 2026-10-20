@@ -1,0 +1,42 @@
+// Standalone extension template. Core's build also compiles this source folder independently.
+plugins {
+    id 'java'
+    id 'xyz.wagyourtail.unimined' version '1.4.1'
+}
+group = 'dev.vibe.extensions'
+version = '1.0.0'
+def vibeVersion = providers.gradleProperty('vibeVersion').getOrElse('0.0.6')
+def vibeJar = providers.gradleProperty('vibeJar').map { file(it) }.getOrElse(
+        file("../../build/libs/Vibe-1.8.9-${vibeVersion}-dev.jar"))
+base { archivesName = 'Vibe-Example' }
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+tasks.withType(JavaCompile).configureEach { options.release = 8; options.encoding = 'UTF-8' }
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.minecraftforge.net/' }
+    maven { url = 'https://maven.wagyourtail.xyz/releases' }
+}
+dependencies {
+    // Compile against the development JAR, never the remapped release JAR. Do not shade Vibe.
+    compileOnly files(vibeJar)
+    testImplementation files(vibeJar, provider { sourceSets.main.compileClasspath })
+    testImplementation 'junit:junit:4.13.2'
+}
+unimined.minecraft {
+    version = '1.8.9'
+    mappings { searge(); mcp('stable', '22-1.8.9') }
+    minecraftForge { loader '11.15.1.2318-1.8.9'; useToolchains = false }
+    defaultRemapJar = true
+}
+tasks.named('compileJava') {
+    doFirst { if (!vibeJar.isFile()) throw new GradleException('Build Vibe first, or pass -PvibeJar=<Vibe development JAR>') }
+}
+processResources {
+    inputs.property 'version', project.version
+    inputs.property 'vibeVersion', vibeVersion
+    filesMatching('META-INF/vibe-extension.json') { expand version: project.version, vibeVersion: vibeVersion }
+}

@@ -30,5 +30,7 @@ public final class AutoLoginPreference {
         } finally { Files.deleteIfExists(temporary); }
     }
 
-    private static String key(Account account) { return (account.isMicrosoft() ? "microsoft:" : "offline:") + account.getUuid(); }
+    private static String key(Account account) {
+        return (account.isToken() ? "token:" : account.isMicrosoft() ? "microsoft:" : "offline:") + account.getUuid();
+    }
 }

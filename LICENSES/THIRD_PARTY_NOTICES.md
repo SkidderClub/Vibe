@@ -16,6 +16,7 @@ installation and use; the following files have distinct legal/documentation role
 | [LGPL-3.0.txt](LGPL-3.0.txt) | LGPLv3 reference text for IAS and MinecraftAuth; incorporates GPL-3.0.txt. These libraries are not bundled. |
 | [webgl-noise-MIT.txt](webgl-noise-MIT.txt) | Complete MIT permission/warranty text with the Ashima Arts and Stefan Gustavson copyright notices for the noise implementation. |
 | [OFL-1.1.txt](OFL-1.1.txt) | SIL Open Font License for the bundled Noto Sans CJK font. |
+| [FONT_NOTICES.md](FONT_NOTICES.md) | Bundled Standard Galactic and Aurebesh display-font attribution and local license links. |
 | [SCHIZOID.md](SCHIZOID.md) | File-by-file Schizoid provenance, adaptations and source-distribution instructions. |
 
 The license texts differ in length and structure because they are different
@@ -110,9 +111,7 @@ explicit in the index.
 | --- | --- | --- | --- |
 | Janino and Commons Compiler | 3.1.12 | Compile local Java scripts | [BSD-3-Clause](https://github.com/janino-compiler/janino/blob/master/LICENSE) |
 | WebP ImageIO (Sejda/Luciad) | 0.1.6 | Read WebP images, including native decoding | [Apache-2.0](https://github.com/sejda-pdf/webp-imageio/blob/master/LICENSE) |
-| Nashorn Core (OpenJDK) | 15.4 | JavaScript runtime for the NES emulator | [GPL-2.0 with Classpath Exception](https://github.com/openjdk/nashorn/blob/main/LICENSE) |
-| Rhino and Rhino Engine (Mozilla) | 1.7.15 | Alternative JavaScript runtime | [MPL-2.0](https://github.com/mozilla/rhino/blob/Rhino1_7_15_Release/LICENSE.txt) |
-| ASM (OW2) | Resolved by Gradle | Bytecode support for bundled runtimes and Forge | [BSD-3-Clause](https://asm.ow2.io/license.html) |
+| Rhino and Rhino Engine (Mozilla) | 1.7.15 | JavaScript runtime for the NES emulator | [MPL-2.0](https://github.com/mozilla/rhino/blob/Rhino1_7_15_Release/LICENSE.txt) |
 | imgui-java bindings and Windows/Linux/macOS natives (SpaiR) | 1.86.11 | Augustus interface | [Apache-2.0](https://github.com/SpaiR/imgui-java/blob/v1.86.11/LICENSE) |
 | JLayer (JavaZoom) | 1.0.1 | MP3 playback | [LGPL, as declared in the published POM](https://repo.maven.apache.org/maven2/javazoom/jlayer/1.0.1/jlayer-1.0.1.pom) |
 
@@ -147,15 +146,31 @@ is the unmodified Noto Sans CJK SC Regular font from
 Augustus now uses Minecraft's bitmap font resources. The [SIL Open Font License 1.1](OFL-1.1.txt)
 is stored in `LICENSES/OFL-1.1.txt` and included in the JAR.
 
+### Standard Galactic and Aurebesh display fonts
+
+[`StandardGalactic-Regular.ttf`](../src/main/resources/assets/vibe/fonts/StandardGalactic-Regular.ttf)
+provides the exact Standard Galactic Alphabet used by the optional **Enchantment
+Table** language. It comes from
+[standardgalactic/alphabet](https://github.com/standardgalactic/alphabet) under
+CC0 1.0; the complete text is stored in
+[`STANDARD-GALACTIC-CC0-1.0.txt`](STANDARD-GALACTIC-CC0-1.0.txt).
+
+[`Aurebesh-Rodian.otf`](../src/main/resources/assets/vibe/fonts/Aurebesh-Rodian.otf)
+is the screen-oriented font used by the optional **Aurebesh** language. It comes
+from [AurekFonts/Aurebesh_Rodian](https://github.com/AurekFonts/Aurebesh_Rodian)
+under the MIT license; the complete text is stored in
+[`AUREBESH-RODIAN-MIT.txt`](AUREBESH-RODIAN-MIT.txt). See
+[`FONT_NOTICES.md`](FONT_NOTICES.md) for the compact offline inventory.
+
 ### Cosmetica
 
-[`src/main/resources/assets/vibe/cosmetica/`](../src/main/resources/assets/vibe/cosmetica) contains an offline catalogue from `api.cloaks.gg`
+[`extensions/cosmetica/src/main/resources/assets/vibe/cosmetica/`](../extensions/cosmetica/src/main/resources/assets/vibe/cosmetica) contains the optional extension's offline catalogue from `api.cloaks.gg`
 and `cdn.cosmetica.cc`. Accessory IDs and creator metadata are retained in
-[`catalog.json`](../src/main/resources/assets/vibe/cosmetica/catalog.json). Models, textures, thumbnails and skins
+[`catalog.json`](../extensions/cosmetica/src/main/resources/assets/vibe/cosmetica/catalog.json). Models, textures, thumbnails and skins
 remain the work of their respective creators; the snapshot does not record a
 license for each asset.
 
-The client/UI assets under [`upstream-ui/`](../src/main/resources/assets/vibe/cosmetica/upstream-ui) come from
+The client/UI assets under [`upstream-ui/`](../extensions/cosmetica/src/main/resources/assets/vibe/cosmetica/upstream-ui) come from
 [Cosmetica-2](https://github.com/Cosmetica-cc/Cosmetica-2), whose
 [Apache-2.0 license](https://github.com/Cosmetica-cc/Cosmetica-2/blob/1.16.5/LICENSE)
 and [NOTICE](https://github.com/Cosmetica-cc/Cosmetica-2/blob/1.16.5/NOTICE) cover that
@@ -237,6 +252,13 @@ The [`keystrokesmod`](../src/main/java/keystrokesmod) package exposes compatibil
 types for the [Raven scripting API](https://blowsy.gitbook.io/raven). The exact
 upstream revision and provenance of individual compatibility helpers are not
 recorded; the API name alone is not a license statement.
+
+The Hypixel autoblock/scaffold profiles, Saturation and BreakProgress were
+ported from a user-supplied Raven bS beta 17 source reconstruction. Source
+mapping, adaptation boundaries and reference hashes are recorded in
+[RavenBS feature port](../docs/RAVENBS_PORT.md). No upstream license grant was
+established from that reconstruction; redistribution rights remain an open
+distribution issue.
 
 ## External runtime and build tools
 
