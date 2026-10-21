@@ -57,6 +57,16 @@ public class ModuleFeedbackTest {
         manager.registerDynamic(action); action.setEnabled(true);
         assertFalse(action.isEnabled()); assertEquals(2, active().size());
     }
+    @Test public void phoneMessagesRespectTheHudWidgetAndCarryTheirOwnContent() {
+        HudModule hud = new HudModule(); manager.registerDynamic(hud); vibe.getFeedback().start();
+        ModuleFeedback.message("phone.message", "ESound", "Blame Lucky. I'm buying groceries.");
+        assertEquals(1, active().size());
+        ModuleNotifications.Entry message = active().get(0);
+        assertTrue(message.message); assertEquals("ESound", message.name);
+        assertEquals("Blame Lucky. I'm buying groceries.", message.detail);
+        vibe.getFeedback().notifications().clear(); hud.getHudElements().toggle("notifications");
+        ModuleFeedback.message("phone.message", "ESound", "Missed your call."); assertTrue(active().isEmpty());
+    }
     @Test public void profilesAndExtensionRegistrationStaySilent() throws Exception {
         Module module = new Module("Example", "", Category.CLIENT, 0) { };
         manager.registerDynamic(module); vibe.getFeedback().start();

@@ -3,8 +3,12 @@
 Enable **Meme → Phone** in ClickGUI (Right Shift), or type `.toggle Phone` in chat.
 Bind the module to any toggle key in ClickGUI or with `.bind Phone P`.
 The phone raises into your left hand in first person. It uses your player's skin
-and shows the normal world and held item alongside it. Menus and third person hide
-the phone; a game in progress pauses while you use another app or menu.
+and shows the normal world and held item alongside it. **Hide sometimes** is on
+by default: menus, third person, and F1 hide the phone. Turn it off to keep the
+phone visible in those situations. The phone still requires a loaded world and
+player. Menus retain their own keyboard input and pause the phone's game.
+**Hide Thumb** is off by default. The upright, articulated thumb follows selection
+and taps, with a connected grip that settles back after an interaction.
 
 ## Controls
 
@@ -24,7 +28,7 @@ by the phone is consumed so it does not also drop an item or toggle another modu
 ## Apps
 
 - **Settings:** phone finish, wallpaper style, the top and bottom gradient colors,
-  brightness, size, hints, shutter sound, and every control. Phone's ClickGUI
+  brightness, size, hints, shutter sound, Hide sometimes, Hide Thumb, and every control. Phone's ClickGUI
   settings also accept custom colors. Changes use your existing Vibe profile.
 - **Camera:** live world viewfinder, focus marks, composition grid and shutter
   flash. Press Select to capture. Images are full-resolution PNGs captured before
@@ -39,13 +43,26 @@ by the phone is consumed so it does not also drop an item or toggle another modu
   including when the phone is tilted or scaled.
 - **Contacts:** ESound is the only contact, at `+67 1874/2069`. Select the contact,
   then choose Call or Message with left/right and Select.
-- **Telephone:** Select calls ESound. The call stays on the calling screen forever;
-  it never connects. Home returns to your apps; reopening Telephone returns to the
-  call. Disabling Phone ends the call.
+- **Telephone:** Select calls ESound and plays the supplied ringing clip once.
+  The call ends after the final audio samples finish, then ESound types a
+  passive-aggressive reply. **Call again** starts a new call. Home returns to your
+  apps while the clip continues. Disabling Phone or disconnecting stops playback.
+  **Call volume** and Minecraft's master volume control the clip. An unavailable
+  audio device ends the attempt cleanly instead of trapping you in a call.
 - **Messages:** Select (Numpad 5 by default) sends one of seven preset messages to
   ESound. The Discord image message includes the supplied image attachment.
-  Up/down scroll the conversation. The last 64 messages persist locally in
+  Replies arrive after an animated typing indicator, with fictional banter about
+  daily chores, Augustus, and Lucky's Polar patches. Incoming messages have gray
+  bubbles; your messages are blue. New replies play a soft chime (controlled by
+  **Message sound**) and use the HUD notification widget when it is selected.
+  Those cards follow the widget's Vibe, Skeet, or LiquidGlass theme, colors,
+  duration and stack settings. The home screen shows an unread Messages badge.
+  Opening Messages marks the conversation read; scrolling up preserves your place
+  when another reply arrives. Up/down scroll the conversation. The last 64 messages persist locally in
   `<game directory>/vibe/phone/messages.json`. Calls and messages are VibeOS-only.
+  Existing outgoing-message files remain readable, and incoming messages and their
+  read state survive relaunches. Replies continue in other apps or while the phone
+  is hidden; disabling Phone cancels replies that have not arrived yet.
 - **Internet:** opens [@heisthacksjp on YouTube](https://www.youtube.com/@heisthacksjp)
   in your system browser. The phone has a channel card and an Open YouTube button
   to reopen it. Playback and sign-in happen in that browser.
@@ -55,9 +72,16 @@ Photos live in `<game directory>/vibe/phone/photos/`. With `run.bat` this is
 The four supplied gallery pictures are installed once per profile. Deleting them
 in Photos keeps them deleted. The avatar, attachment and gallery assets are bundled
 under `assets/vibe/`; the temporary import directory is no longer needed.
+The user-supplied ringing MP3 is bundled unchanged as
+`assets/vibe/phone/call-ringing.mp3`; its original loose file has been moved there.
+It is decoded by the existing JLayer library on a cancellable background thread.
 
 The bottom-left control overlay is off by default. Enable **Show controls** in the
-phone's Settings app if you want it back. In-app button labels remain visible.
+phone's Settings app if you want it back. Every displayed key uses a bordered
+keycap, including remapped keys and the cancel key during rebinding.
+Apps fill the display, with larger text and home icons. There is no offset shadow
+behind the phone or inset background panel around apps. ItemGlow remains a
+separate, optional effect controlled by its own module.
 
 The launch animation includes a VibeOS boot screen, and the wallpaper is generated
 locally. The camera preview is copied on the GPU only while Camera is open. Photo

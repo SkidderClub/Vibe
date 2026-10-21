@@ -6,6 +6,8 @@ import dev.vibe.module.Module;
 import dev.vibe.phone.FlappyGame;
 import dev.vibe.phone.PhonePhotoLibrary;
 import dev.vibe.phone.PhoneConversation;
+import dev.vibe.phone.PhoneCallAudio;
+import dev.vibe.phone.PhoneCallPlayer;
 import dev.vibe.setting.*;
 import java.awt.Desktop;
 import java.net.URI;
@@ -31,7 +33,11 @@ public final class PhoneModule extends Module {
     public final NumberSetting size = addSetting(new NumberSetting("Phone Size", 1, .65, 1.35, .05));
     public final NumberSetting brightness = addSetting(new NumberSetting("Brightness", 100, 30, 100, 5));
     public final BooleanSetting hints = addSetting(new BooleanSetting("Control Hints", false));
+    public final BooleanSetting hideSometimes = addSetting(new BooleanSetting("Hide sometimes", true));
+    public final BooleanSetting hideThumb = addSetting(new BooleanSetting("Hide Thumb", false));
     public final BooleanSetting sounds = addSetting(new BooleanSetting("Camera Sound", true));
+    public final BooleanSetting messageSounds = addSetting(new BooleanSetting("Message Sound", true));
+    public final NumberSetting callVolume = addSetting(new NumberSetting("Call Volume", 70, 0, 100, 5));
     public final NumberSetting bestScore = addSetting(new NumberSetting("Flappy Best", 0, 0, 1000000, 1));
     private final StringSetting[] keys = new StringSetting[Action.values().length];
     private App app = App.HOME;
@@ -47,6 +53,10 @@ public final class PhoneModule extends Module {
     private boolean contactOpen, calling;
     private int contactAction, messageScroll;
     private long callStartedAt;
+    private boolean callEnded;
+    private PhoneCallPlayer callAudio = new PhoneCallAudio();
+    private long interactionAt;
+    private Action lastAction;
     private final FlappyGame flappy = new FlappyGame();
 
     public PhoneModule() {
@@ -58,10 +68,12 @@ public final class PhoneModule extends Module {
     @Override protected void onEnable() {
         openedAt = System.currentTimeMillis(); appAt = openedAt;
         app = App.HOME; homeSelection = 0; binding = -1; shutterRequested = confirmDelete = false;
-        contactOpen = calling = false; contactAction = messageScroll = 0;
+        contactOpen = calling = callEnded = false; contactAction = messageScroll = 0;
+        interactionAt = 0; lastAction = null;
+        conversation();
     }
     @Override protected void onDisable() {
-        shutterRequested = false; binding = -1; confirmDelete = calling = false;
+        shutterRequested = false; binding = -1; confirmDelete = false; stopCommunications();
     }
     public boolean handleKey(int key, boolean repeat) {
         if (!isEnabled()) return false;
@@ -77,6 +89,7 @@ public final class PhoneModule extends Module {
         return false;
     }
     public void act(Action action) {
+        interactionAt = System.currentTimeMillis(); lastAction = action;
         if (action == Action.HOME) { open(App.HOME); return; }
         if (confirmDelete) {
             if (action == Action.SELECT) {
@@ -108,7 +121,7 @@ public final class PhoneModule extends Module {
                 if (action == Action.DOWN) settingSelection = Math.min(settingsCount() - 1, settingSelection + 1);
                 if (action == Action.LEFT || action == Action.RIGHT || action == Action.SELECT) {
                     if (settingSelection >= 8 && settingSelection < 16) {
-                        if (action == Action.SELECT) { binding = settingSelection - 8; toast("Press a key; Esc cancels"); }
+                        if (action == Action.SELECT) binding = settingSelection - 8;
                     } else changeSetting(action == Action.LEFT ? -1 : 1);
                 }
                 break;
@@ -164,7 +177,7 @@ public final class PhoneModule extends Module {
         app = next; appAt = System.currentTimeMillis(); binding = -1; confirmDelete = false;
         if (next == App.PHOTOS) { photos().refresh(); photoOpen = false; }
         if (next == App.CONTACTS) { contactOpen = false; contactAction = 0; }
-        if (next == App.MESSAGES) { conversation(); messageScroll = 0; }
+        if (next == App.MESSAGES) { conversation().markRead(); messageScroll = 0; }
         shutterRequested = false;
     }
     public void advance(double seconds) {
@@ -183,6 +196,50 @@ public final class PhoneModule extends Module {
             lastPhotoRevision = library.revision();
             photoSelection = Math.min(photoSelection, Math.max(0, library.photos().size() - 1));
         }
+    }
+    /** Communications keep running in other apps, menus and hidden-phone contexts. */
+    public void tickCommunications() {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (!isEnabled()) return;
+        if (mc == null || mc.theWorld == null || mc.thePlayer == null) { stopCommunications(); return; }
+        boolean reading = app == App.MESSAGES && messageScroll == 0 && mc.currentScreen == null
+                && allowsContext(false, mc.gameSettings.thirdPersonView != 0, mc.gameSettings.hideGUI);
+        updateCommunications(reading);
+    }
+    public void updateCommunications(boolean reading) {
+        if (!isEnabled()) return;
+        if (calling) {
+            callAudio.setVolume(playbackVolume());
+            if (callAudio.isFinished()) {
+                String error = callAudio.error();
+                calling = false; callEnded = true; callAudio.close();
+                conversation().afterCall(); toast(error.isEmpty() ? "Call ended" : error);
+            }
+        }
+        if (conversation == null) return;
+        PhoneConversation.Message reply = conversation.advance();
+        if (reply != null) {
+            if (app == App.MESSAGES && messageScroll > 0)
+                messageScroll = Math.min(conversation.messages().size() - 1, messageScroll + 1);
+            if (!reading) toast(PhoneConversation.CONTACT + ": " + reply.text);
+            dev.vibe.feedback.ModuleFeedback.message("phone.message", PhoneConversation.CONTACT, reply.text);
+            Minecraft mc = Minecraft.getMinecraft();
+            if (messageSounds.isEnabled() && mc != null && mc.getSoundHandler() != null) {
+                try { mc.getSoundHandler().playSound(net.minecraft.client.audio.PositionedSoundRecord.create(
+                        new net.minecraft.util.ResourceLocation("vibe", "phone.message"), 1)); }
+                catch (RuntimeException ignored) { /* Messaging still works without an audio device. */ }
+            }
+        }
+        if (reading) conversation.markRead();
+    }
+    public void stopCommunications() {
+        callAudio.close(); calling = false;
+        if (conversation != null) conversation.cancelPending();
+    }
+    private float playbackVolume() {
+        Minecraft mc = Minecraft.getMinecraft();
+        float master = mc == null || mc.gameSettings == null ? 1 : mc.gameSettings.getSoundLevel(net.minecraft.client.audio.SoundCategory.MASTER);
+        return callVolume.getFloat() / 100 * master;
     }
     private void rebind(int key) {
         if (key == Keyboard.KEY_ESCAPE) { binding = -1; toast("Key binding cancelled"); return; }
@@ -205,6 +262,12 @@ public final class PhoneModule extends Module {
             case 6: hints.toggle(); break;
             case 7: sounds.toggle(); break;
             case 16:
+                hideSometimes.toggle(); break;
+            case 17:
+                hideThumb.toggle(); break;
+            case 18: messageSounds.toggle(); break;
+            case 19: callVolume.setValue(callVolume.getDouble() + direction * 5); break;
+            case 20:
                 for (StringSetting key : keys) key.resetToDefault();
                 toast("Default controls restored"); break;
             default: break;
@@ -216,10 +279,10 @@ public final class PhoneModule extends Module {
         for (int i = 0; i < values.length; i++) if (value == values[i]) index = i;
         return values[(index + direction + values.length) % values.length];
     }
-    public int settingsCount() { return 17; }
+    public int settingsCount() { return 21; }
     public String settingLabel(int index) {
         String[] labels = {"Phone finish", "Wallpaper", "Background top", "Background bottom", "Brightness", "Phone size", "Show controls", "Shutter sound",
-                "Home", "Up", "Down", "Left", "Right", "Select / shutter", "Back", "Delete photo", "Reset controls"};
+                "Home", "Up", "Down", "Left", "Right", "Select", "Back", "Delete photo", "Hide sometimes", "Hide Thumb", "Message sound", "Call volume", "Reset controls"};
         return labels[index];
     }
     public String settingValue(int index) {
@@ -234,7 +297,11 @@ public final class PhoneModule extends Module {
             case 5: return Math.round(size.getDouble() * 100) + "%";
             case 6: return hints.isEnabled() ? "On" : "Off";
             case 7: return sounds.isEnabled() ? "On" : "Off";
-            case 16: return "Restore";
+            case 16: return hideSometimes.isEnabled() ? "On" : "Off";
+            case 17: return hideThumb.isEnabled() ? "On" : "Off";
+            case 18: return messageSounds.isEnabled() ? "On" : "Off";
+            case 19: return callVolume.getInt() + "%";
+            case 20: return "Restore";
             default: return index >= 8 && index < 16 ? displayKey(Action.values()[index - 8]) : "";
         }
     }
@@ -254,6 +321,12 @@ public final class PhoneModule extends Module {
         return name.isEmpty() ? "None" : Character.toUpperCase(name.charAt(0)) + name.substring(1);
     }
     public StringSetting keySetting(Action action) { return keys[action.ordinal()]; }
+    /** Menus, third person and F1 keep their existing behavior unless explicitly opted out. */
+    public boolean allowsContext(boolean screenOpen, boolean thirdPerson, boolean hudHidden) {
+        return !hideSometimes.isEnabled() || !(screenOpen || thirdPerson || hudHidden);
+    }
+    public long interactionAt() { return interactionAt; }
+    public Action lastAction() { return lastAction; }
     public PhonePhotoLibrary photos() {
         if (library == null) {
             Minecraft mc = Minecraft.getMinecraft();
@@ -278,7 +351,10 @@ public final class PhoneModule extends Module {
     }
     private void call() {
         open(App.TELEPHONE);
-        if (!calling) { calling = true; callStartedAt = System.currentTimeMillis(); }
+        if (!calling) {
+            calling = true; callEnded = false; callStartedAt = System.currentTimeMillis();
+            callAudio.start(playbackVolume());
+        }
     }
     private void openInternet() {
         toast("Opening YouTube in your browser");
@@ -324,6 +400,8 @@ public final class PhoneModule extends Module {
     public boolean isContactOpen() { return contactOpen; }
     public int contactAction() { return contactAction; }
     public boolean isCalling() { return calling; }
+    public boolean hasCallEnded() { return callEnded; }
+    public int unreadMessages() { return conversation == null ? 0 : conversation.unreadCount(); }
     public long callStartedAt() { return callStartedAt; }
     public int messageScroll() { return messageScroll; }
 }

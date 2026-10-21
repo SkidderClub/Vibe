@@ -77,6 +77,11 @@ public final class FeedbackRenderCheck {
                 frame(target); renderer.drawPreview(widget, null);
                 save("editor-" + theme.toLowerCase(java.util.Locale.ROOT) + ".png"); check();
             }
+            for (String theme : new String[]{"Vibe", "Skeet", "LiquidGlass"}) {
+                widget.setTheme(theme); vibe.getFeedback().notifications().clear();
+                vibe.getFeedback().notifications().addMessage("phone.message", "ESound", "Blame Lucky. I'm buying groceries.", System.nanoTime() / 1000000L - 700);
+                frame(target); renderer.drawNotifications(); save("phone-message-" + theme.toLowerCase(java.util.Locale.ROOT) + ".png"); check();
+            }
             Object glass = field(HudManager.class, "liquidGlass").get(renderer);
             if (field(glass.getClass(), "failed").getBoolean(glass) || field(glass.getClass(), "program").get(glass) == null)
                 throw new AssertionError("Live LiquidGlass notifications did not use the real glass shader");

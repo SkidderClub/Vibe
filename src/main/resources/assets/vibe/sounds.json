@@ -8,5 +8,6 @@
   "toggle.pop.on": { "category": "master", "sounds": ["vibe:toggle/pop_on"] },
   "toggle.pop.off": { "category": "master", "sounds": ["vibe:toggle/pop_off"] },
   "toggle.chime.on": { "category": "master", "sounds": ["vibe:toggle/chime_on"] },
-  "toggle.chime.off": { "category": "master", "sounds": ["vibe:toggle/chime_off"] }
+  "toggle.chime.off": { "category": "master", "sounds": ["vibe:toggle/chime_off"] },
+  "phone.message": { "category": "master", "sounds": [{ "name": "vibe:toggle/chime_on", "volume": 0.5, "pitch": 1.2 }] }
 }

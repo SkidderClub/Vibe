@@ -28,10 +28,11 @@ public final class PhoneRenderer {
     public static final int WIDTH = 232, HEIGHT = 456;
     private static final ResourceLocation ESOUND = new ResourceLocation("vibe", "textures/phone/esound.jpg");
     private static final ResourceLocation DISCORD_IMAGES = new ResourceLocation("vibe", "textures/phone/fake-discord-scams.gif");
-    private final PhoneFont TEXT = new PhoneFont(Font.PLAIN, 9.5F);
-    private final PhoneFont SMALL = new PhoneFont(Font.PLAIN, 8.5F);
-    private final PhoneFont TITLE = new PhoneFont(Font.BOLD, 14);
-    private final PhoneFont CLOCK = new PhoneFont(Font.PLAIN, 32.25F);
+    private final PhoneFont TEXT = new PhoneFont(Font.PLAIN, 10.5F);
+    private final PhoneFont SMALL = new PhoneFont(Font.PLAIN, 9.25F);
+    private final PhoneFont TITLE = new PhoneFont(Font.BOLD, 15.5F);
+    private final PhoneFont CLOCK = new PhoneFont(Font.PLAIN, 34);
+    private final PhoneFont KEY = new PhoneFont(Font.BOLD, 8.5F);
     private final PhoneCanvas canvas = new PhoneCanvas();
     private static final int WHITE = 0xFFF4F5FF, MUTED = 0xFF9EABC8, BLUE = 0xFF8ABEFF;
     private final Minecraft mc = Minecraft.getMinecraft();
@@ -42,13 +43,16 @@ public final class PhoneRenderer {
     private int wallpaperKey;
     private int previewTexture, previewWidth, previewHeight;
     private final LinkedHashMap<Path, PhotoTexture> textures = new LinkedHashMap<Path, PhotoTexture>(12, .75F, true);
-    private ModelRenderer arm, sleeve, slimArm, slimSleeve, thumb;
+    private ModelRenderer arm, sleeve, slimArm, slimSleeve, thumb, thumbTip;
+    private final PhoneHandPose handPose = new PhoneHandPose();
+    private long previousHandFrame;
     private float smoothedYaw;
 
     /** Called before ALL HUD elements: the preview and PNG contain the world, never the phone UI. */
     public void captureWorld(PhoneModule phone) {
         if (phone == null || !phone.isEnabled() || phone.app() != App.CAMERA || mc.theWorld == null
-                || mc.thePlayer == null || mc.currentScreen != null || mc.gameSettings.thirdPersonView != 0) return;
+                || mc.thePlayer == null || mc.currentScreen != null
+                || !phone.allowsContext(false, mc.gameSettings.thirdPersonView != 0, mc.gameSettings.hideGUI)) return;
         captureFramebuffer(phone);
     }
     public void captureFramebuffer(PhoneModule phone) {
@@ -97,15 +101,15 @@ public final class PhoneRenderer {
         double elapsed = previousFrame == 0 ? 0 : Math.min(.05, (now - previousFrame) / 1.0e9);
         previousFrame = now;
         boolean available = phone != null && phone.isEnabled() && mc.thePlayer != null && mc.theWorld != null
-                && mc.currentScreen == null && mc.gameSettings.thirdPersonView == 0 && !mc.gameSettings.hideGUI;
+                && phone.allowsContext(mc.currentScreen != null, mc.gameSettings.thirdPersonView != 0, mc.gameSettings.hideGUI);
         visibility += ((available ? 1 : 0) - visibility) * (float) (1 - Math.exp(-elapsed * 13));
         if (phone == null || visibility < .005F) {
             if (previewTexture != 0) releasePreview();
             canvas.close();
             return;
         }
-        if (available) phone.advance(elapsed);
-        float bottomMargin = phone.hints.isEnabled() ? 25 : 8;
+        if (available && mc.currentScreen == null) phone.advance(elapsed);
+        float bottomMargin = phone.hints.isEnabled() ? 32 : 8;
         float maximumHeight = resolution.getScaledHeight() - bottomMargin - 17;
         float scale = Math.min(maximumHeight * .8F / HEIGHT, resolution.getScaledWidth() * .32F / WIDTH) * phone.size.getFloat();
         scale = Math.max(.15F, Math.min(scale, maximumHeight / HEIGHT));
@@ -121,14 +125,16 @@ public final class PhoneRenderer {
             GlStateManager.rotate(-3.5F - travel * 17, 0, 0, 1);
             drawDevice(phone, true);
         } finally { GlStateManager.popMatrix(); restoreState(); }
-        if (available && phone.hints.isEnabled()) {
-            String help = phone.shortKey(Action.UP) + "/" + phone.shortKey(Action.DOWN) + "/" + phone.shortKey(Action.LEFT) + "/" + phone.shortKey(Action.RIGHT)
-                    + " move   " + phone.shortKey(Action.SELECT) + " select   " + phone.shortKey(Action.HOME) + " home   " + phone.shortKey(Action.BACK) + " back";
-            float x = 17, y = resolution.getScaledHeight() - 14;
-            text(SMALL, help, x, y, 0xDDE6EAFF);
+        if (available && phone.hints.isEnabled() && mc.currentScreen == null) {
+            float width = Math.min(480, resolution.getScaledWidth() - 34);
+            keyHints(17 + width / 2, resolution.getScaledHeight() - 24, width, WHITE,
+                    phone.shortKey(Action.UP), "", phone.shortKey(Action.DOWN), "", phone.shortKey(Action.LEFT), "", phone.shortKey(Action.RIGHT), "Move",
+                    phone.shortKey(Action.SELECT), "Select", phone.shortKey(Action.HOME), "Home", phone.shortKey(Action.BACK), "Back");
             restoreState();
         }
     }
+
+    public boolean isActive() { return visibility >= .005F; }
 
     /** Same device renderer used by offscreen verification. */
     public void drawDevice(PhoneModule phone, boolean drawHand) {
@@ -140,8 +146,7 @@ public final class PhoneRenderer {
         GlStateManager.enableBlend(); GlStateManager.tryBlendFuncSeparate(770, 771, 1, 771);
         GlStateManager.disableCull(); GlStateManager.disableLighting();
         GlStateManager.disableDepth(); GlStateManager.depthMask(false);
-        if (drawHand && mc.thePlayer != null) hand(false);
-        round(-7, 8, WIDTH + 13, HEIGHT + 8, 40, 0x40000000);
+        if (drawHand && mc.thePlayer != null) { updateHand(phone); hand(false); }
         int finish = phone.phoneColor.getArgb() | 0xFF000000;
         round(-1, -1, WIDTH + 2, HEIGHT + 2, 38, RenderUtils.blend(finish, 0xFFFFFFFF, .55F));
         round(0, 0, WIDTH, HEIGHT, 37, finish);
@@ -153,11 +158,12 @@ public final class PhoneRenderer {
         GlStateManager.bindTexture(wallpaperTexture.getGlTextureId());
         texturedRound(8, 9, 216, 437, 30, 0, 0, 1, 1);
         if (phone.app() != App.HOME) {
-            round(12, 47, 208, 365, 19, phone.app() == App.FLAPPY ? 0xFF132732 : 0xF20D1220);
+            // Apps own the whole display, including the status and navigation areas.
+            round(8, 9, 216, 437, 30, phone.app() == App.FLAPPY ? 0xFF132732 : 0xFA101927);
         }
         GlStateManager.pushMatrix();
         float enter = Math.min(1, Math.max(0, (System.currentTimeMillis() - phone.appAt()) / 180F));
-        float appScale = .97F + .03F * (1 - (1 - enter) * (1 - enter));
+        float appScale = .99F + .01F * (1 - (1 - enter) * (1 - enter));
         GlStateManager.translate(116, 230, 0); GlStateManager.scale(appScale, appScale, 1); GlStateManager.translate(-116, -230, 0);
         switch (phone.app()) {
             case HOME: home(phone); break;
@@ -176,14 +182,15 @@ public final class PhoneRenderer {
         round(82, 431, 68, 4, 2, 0xDDF5F5FF);
         String notification = phone.notification();
         if (!notification.isEmpty()) {
-            round(18, 379, 196, 35, 13, 0xF22D3650);
-            centered(SMALL, SMALL.fit(notification, 180), WIDTH / 2, 390, WHITE);
+            // A system banner leaves the navigation and current action unobstructed.
+            round(18, 43, 196, 35, 13, 0xFF2D3650);
+            centered(SMALL, SMALL.fit(notification, 180), WIDTH / 2, 54, WHITE);
         }
         double boot = (System.currentTimeMillis() - phone.openedAt()) / 1000.0;
         if (boot >= 0 && boot < .90) boot(boot);
         float shade = (100 - phone.brightness.getFloat()) / 100;
         if (shade > 0) round(8, 9, 216, 437, 30, ((int) (shade * 205) << 24));
-        if (drawHand && mc.thePlayer != null) hand(true);
+        if (drawHand && mc.thePlayer != null && !phone.hideThumb.isEnabled()) hand(true);
         GlStateManager.color(1, 1, 1, 1);
     }
 
@@ -228,18 +235,22 @@ public final class PhoneRenderer {
         centered(CLOCK, time, WIDTH / 2F, 64, WHITE);
         centered(SMALL, new SimpleDateFormat("EEEE, d MMMM", Locale.ENGLISH).format(new Date()), WIDTH / 2, 110, 0xE6E0E6FF);
         round(24, 133, 184, 42, 14, 0x24405188);
-        text(SMALL, "Your world. In your hand.", 35, 139, 0xE6D5E2FF);
-        text(TITLE, "VibeOS", 35, 152, WHITE);
+        text(SMALL, "Apps and shortcuts", 35, 137, 0xE6D5E2FF);
+        text(TITLE, "VibeOS", 35, 151, WHITE);
         for (int i = 0; i < PhoneModule.appCount(); i++) {
-            int x = 31 + (i % 3) * 65, y = 190 + (i / 3) * 66;
+            int x = 26 + (i % 3) * 66, y = 181 + (i / 3) * 68;
             boolean focused = phone.homeSelection() == i;
-            if (focused) round(x - 6, y - 5, 54, 64, 14, 0x3CFFFFFF);
-            icon(i, x, y, 42);
-            centered(SMALL, PhoneModule.appName(i), x + 21, y + 46, WHITE);
-            if (focused) round(x + 13, y + 58, 16, 2, 1, 0xE8DDEAFF);
+            if (focused) round(x - 5, y - 5, 58, 67, 15, 0x3CFFFFFF);
+            icon(i, x, y, 48);
+            if (i == 7 && phone.unreadMessages() > 0) {
+                String count = phone.unreadMessages() > 9 ? "9+" : String.valueOf(phone.unreadMessages());
+                round(x + 34, y - 4, 20, 17, 8, 0xFFF06078);
+                centered(KEY, count, x + 44, y - 2, WHITE);
+            }
+            centered(SMALL, PhoneModule.appName(i), x + 24, y + 49, WHITE);
+            if (focused) round(x + 16, y + 62, 16, 2, 1, 0xE8DDEAFF);
         }
-        round(37, 395, 158, 23, 11, 0x26323D67);
-        centered(SMALL, phone.shortKey(Action.SELECT) + " to open " + PhoneModule.appName(phone.homeSelection()), 116, 402, 0xE3F1F3FF);
+        keyHints(116, 400, 192, WHITE, phone.shortKey(Action.SELECT), "Open " + PhoneModule.appName(phone.homeSelection()));
     }
     private void status(PhoneModule phone) {
         text(SMALL, new SimpleDateFormat("HH:mm").format(new Date()), 25, 24, WHITE);
@@ -250,31 +261,34 @@ public final class PhoneRenderer {
         outline(190, 22, 17, 9, 2, 1, 0xCCFFFFFF); round(192, 24, 12, 5, 1, WHITE); round(208, 25, 2, 3, 1, 0xAAFFFFFF);
     }
     private void heading(String title, String subtitle) {
-        text(TITLE, title, 25, 61, WHITE);
-        text(SMALL, subtitle, 25, 83, MUTED);
+        text(TITLE, title, 22, 59, WHITE);
+        text(SMALL, SMALL.fit(subtitle, 192), 22, 83, MUTED);
     }
     private void settings(PhoneModule phone) {
-        heading("Settings", "Make this phone yours.");
+        heading("Settings", "Display, appearance and controls");
         int selected = phone.settingSelection();
         int first = Math.max(0, Math.min(phone.settingsCount() - 7, selected - 5));
         for (int i = first; i < Math.min(first + 7, phone.settingsCount()); i++) {
             int y = 108 + (i - first) * 38;
             boolean active = selected == i;
-            round(22, y, 188, 34, 9, active ? 0xFF283F66 : 0xFF192132);
-            text(TEXT, phone.settingLabel(i), 31, y + 5, active ? WHITE : 0xFFCAD3E7);
+            round(18, y, 194, 36, 9, active ? 0xFF283F66 : 0xFF192537);
+            text(TEXT, phone.settingLabel(i), 27, y + 3, active ? WHITE : 0xFFCAD3E7);
             String value = phone.binding() == i - 8 && i >= 8 && i < 16 ? "Press a key..." : phone.settingValue(i);
-            text(SMALL, value, 31, y + 20, active ? BLUE : MUTED);
+            if (i >= 8 && i < 16 && phone.binding() != i - 8) keycap(value, 27, y + 17, active ? WHITE : MUTED);
+            else text(SMALL, value, 27, y + 19, active ? BLUE : MUTED);
             if (i == 0 || i == 2 || i == 3) {
                 int color = i == 0 ? phone.phoneColor.getArgb() : i == 2 ? phone.backgroundTop.getArgb() : phone.backgroundBottom.getArgb();
                 round(181, y + 9, 17, 17, 5, color | 0xFF000000);
-            } else text(SMALL, i >= 8 && i < 16 ? "Key" : "<  >", 179, y + 14, active ? BLUE : MUTED);
+            } else text(SMALL, i >= 8 && i < 16 ? "Edit" : "<  >", 178, y + 13, active ? BLUE : MUTED);
         }
         round(214, 109, 2, 263, 1, 0xFF26314A);
-        round(214, 109 + (int) (selected * 235F / 16), 2, 28, 1, BLUE);
-        centered(SMALL, selected >= 8 && selected < 16 ? phone.shortKey(Action.SELECT) + " rebind  /  Esc cancel" : "Left / right to change", 116, 393, MUTED);
+        round(216, 109 + (int) (selected * 235F / (phone.settingsCount() - 1)), 2, 28, 1, BLUE);
+        if (phone.binding() >= 0) keyHints(116, 398, 194, MUTED, "Esc", "Cancel");
+        else if (selected >= 8 && selected < 16) keyHints(116, 398, 194, MUTED, phone.shortKey(Action.SELECT), "Rebind");
+        else keyHints(116, 398, 194, MUTED, phone.shortKey(Action.LEFT), "", phone.shortKey(Action.RIGHT), "Change");
     }
     private void camera(PhoneModule phone) {
-        heading("Camera", "Capture a moment in your world.");
+        heading("Camera", "World camera");
         round(21, 107, 190, 220, 15, 0xFF030608);
         if (previewTexture != 0) {
             GlStateManager.bindTexture(previewTexture);
@@ -294,7 +308,7 @@ public final class PhoneRenderer {
         centered(SMALL, "Photo", 116, 338, 0xFFFFD879);
         circle(116, 377, 25, WHITE); circle(116, 377, 21, 0xFF121927); circle(116, 377, 18, WHITE);
         icon(3, 35, 362, 27);
-        text(SMALL, phone.shortKey(Action.SELECT), 173, 372, MUTED);
+        keycap(phone.shortKey(Action.SELECT), 174, 369, WHITE);
         float flash = Math.max(0, 1 - (System.currentTimeMillis() - phone.flashAt()) / 220F);
         if (flash > 0) round(21, 107, 190, 220, 15, ((int) (flash * 220) << 24) | 0xFFFFFF);
         if (phone.photos().isSaving()) centered(SMALL, "Saving...", 116, 414, BLUE);
@@ -304,14 +318,14 @@ public final class PhoneRenderer {
         heading("Photos", photos.size() + (photos.size() == 1 ? " memory, saved locally" : " memories, saved locally"));
         if (photos.isEmpty()) {
             icon(3, 86, 153, 60);
-            centered(TITLE, "Your world, saved.", 116, 235, WHITE);
-            centered(SMALL, "Take your first photo in Camera.", 116, 260, MUTED);
+            centered(TITLE, "No photos yet", 116, 235, WHITE);
+            centered(SMALL, "Open Camera to take a photo.", 116, 260, MUTED);
         } else if (phone.isPhotoOpen()) {
             // Draw one immutable album snapshot even if a background refresh finishes now.
             PhonePhotoLibrary.Photo photo = photos.get(Math.min(phone.photoSelection(), photos.size() - 1));
             drawPhoto(phone, photo, 21, 112, 190, 210, false);
             centered(TEXT, new SimpleDateFormat("d MMM yyyy  HH:mm").format(new Date(photo.taken)), 116, 339, WHITE);
-            centered(SMALL, "PNG  /  " + Math.max(1, photo.bytes / 1024) + " KB", 116, 358, MUTED);
+            centered(SMALL, "PNG image · " + Math.max(1, photo.bytes / 1024) + " KB", 116, 358, MUTED);
             centered(SMALL, (phone.photoSelection() + 1) + " of " + photos.size(), 116, 382, BLUE);
         } else {
             int first = Math.max(0, (phone.photoSelection() / 2 - 2) * 2);
@@ -322,15 +336,16 @@ public final class PhoneRenderer {
                 text(SMALL, new SimpleDateFormat("MMM d, HH:mm").format(new Date(photos.get(i).taken)), x + 2, y + 76, MUTED);
             }
         }
-        centered(SMALL, phone.shortKey(Action.SELECT) + " view   " + phone.shortKey(Action.DELETE) + " delete", 116, 403, MUTED);
+        keyHints(116, 400, 194, MUTED, phone.shortKey(phone.isPhotoOpen() ? Action.BACK : Action.SELECT), phone.isPhotoOpen() ? "Album" : "View",
+                phone.shortKey(Action.DELETE), "Delete");
         if (phone.isConfirmDelete()) {
             round(13, 49, 206, 368, 20, 0xAB030613);
             round(27, 166, 178, 150, 18, 0xFF242D40);
             centered(TITLE, "Delete this photo?", 116, 187, WHITE);
             centered(SMALL, "This removes the saved PNG.", 116, 216, MUTED);
             round(40, 242, 152, 29, 9, 0xFFC74660);
-            centered(TEXT, phone.shortKey(Action.SELECT) + "  Delete photo", 116, 251, WHITE);
-            centered(SMALL, phone.shortKey(Action.BACK) + "  Keep it", 116, 287, 0xFFD2DCEE);
+            keyHints(116, 247, 142, WHITE, phone.shortKey(Action.SELECT), "Delete photo");
+            keyHints(116, 283, 142, 0xFFD2DCEE, phone.shortKey(Action.BACK), "Keep photo");
         }
     }
     private void drawPhoto(PhoneModule phone, PhonePhotoLibrary.Photo photo, int x, int y, int width, int height, boolean crop) {
@@ -361,21 +376,21 @@ public final class PhoneRenderer {
         }
     }
     private void internet(PhoneModule phone) {
-        heading("Internet", "A little window to the web.");
+        heading("Internet", "Your saved YouTube channel");
         round(22, 108, 188, 27, 12, 0xFF202B40);
         centered(SMALL, "youtube.com", 116, 117, 0xFFBAC8DF);
         round(77, 159, 78, 58, 17, 0xFFED3152);
         triangle(108, 174, 108, 202, 130, 188, WHITE);
         centered(TITLE, "@heisthacksjp", 116, 240, WHITE);
         centered(SMALL, "YouTube", 116, 266, MUTED);
-        centered(SMALL, "Watch in your regular browser.", 116, 291, MUTED);
+        centered(SMALL, "Opens in your browser", 116, 291, MUTED);
         round(31, 328, 170, 37, 12, 0xFF326ADB);
-        centered(TEXT, phone.shortKey(Action.SELECT) + "  Open YouTube", 116, 341, WHITE);
-        centered(SMALL, "Your game stays open.", 116, 384, MUTED);
+        keyHints(116, 338, 154, WHITE, phone.shortKey(Action.SELECT), "Open YouTube");
+        keyHints(116, 390, 194, MUTED, phone.shortKey(Action.HOME), "Home");
     }
     private void flappy(PhoneModule phone) {
-        heading("Flappy Bird", "Best " + phone.bestScore.getInt() + "  /  " + phone.shortKey(Action.SELECT) + " to flap");
-        GlStateManager.pushMatrix(); GlStateManager.translate(20, 107, 0);
+        heading("Flappy Bird", "Personal best: " + phone.bestScore.getInt());
+        GlStateManager.pushMatrix(); GlStateManager.translate(16, 107, 0); GlStateManager.scale(200F / 192, 200F / 192, 1);
         try (PhoneClip ignored = new PhoneClip(0, 0, FlappyGame.WIDTH, FlappyGame.HEIGHT)) {
             for (int y = 0; y < 252; y++) rect(0, y, 192, 1, RenderUtils.blend(0xFF71C8D7, 0xFFC6EADA, y / 252F));
             circle(37, 50, 14, 0xAFFFFFFF); circle(53, 48, 19, 0xAFFFFFFF); circle(71, 53, 13, 0xAFFFFFFF);
@@ -397,11 +412,11 @@ public final class PhoneRenderer {
             if (phone.game().getPhase() != FlappyGame.Phase.PLAYING) {
                 round(16, 125, 160, 78, 13, 0xEC1A2B3D);
                 centered(TITLE, phone.game().getPhase() == FlappyGame.Phase.OVER ? "One more try?" : "Ready to fly?", 96, 139, WHITE);
-                centered(SMALL, phone.shortKey(Action.SELECT) + (phone.game().getPhase() == FlappyGame.Phase.OVER ? " to restart" : " to flap"), 96, 169, 0xFFE7D994);
+                keyHints(96, 164, 144, 0xFFE7D994, phone.shortKey(Action.SELECT), phone.game().getPhase() == FlappyGame.Phase.OVER ? "Try again" : "Start playing");
                 if (phone.game().getPhase() == FlappyGame.Phase.OVER) centered(SMALL, "Score " + phone.game().getScore(), 96, 185, MUTED);
             }
         } finally { GlStateManager.popMatrix(); }
-        centered(SMALL, "Fly through the gaps. Stay curious.", 116, 384, MUTED);
+        keyHints(116, 390, 194, MUTED, phone.shortKey(Action.SELECT), "Flap", phone.shortKey(Action.HOME), "Home");
     }
     private static void pipe(float x, float y, float height) {
         if (height <= 0) return;
@@ -417,8 +432,7 @@ public final class PhoneRenderer {
             asset(ESOUND, 31, 126, 40, 40, 20);
             text(TEXT, PhoneConversation.CONTACT, 82, 126, WHITE);
             text(SMALL, PhoneConversation.NUMBER, 82, 146, MUTED);
-            centered(SMALL, phone.shortKey(Action.SELECT) + " View contact", 116, 203, BLUE);
-            centered(SMALL, "All your people, one little screen.", 116, 380, MUTED);
+            keyHints(116, 200, 194, BLUE, phone.shortKey(Action.SELECT), "View contact");
             return;
         }
         asset(ESOUND, 79, 112, 74, 74, 37);
@@ -431,33 +445,33 @@ public final class PhoneRenderer {
             else { round(x + 29, 286, 25, 18, 7, BLUE); triangle(x + 31, 300, x + 31, 308, x + 39, 300, BLUE); }
             centered(TEXT, i == 0 ? "Call" : "Message", x + 41, 319, WHITE);
         }
-        centered(SMALL, "Left / right to choose", 116, 365, MUTED);
-        centered(SMALL, phone.shortKey(Action.SELECT) + " Select   " + phone.shortKey(Action.BACK) + " Contacts", 116, 391, MUTED);
+        keyHints(116, 361, 194, MUTED, phone.shortKey(Action.LEFT), "", phone.shortKey(Action.RIGHT), "Choose");
+        keyHints(116, 393, 194, MUTED, phone.shortKey(Action.SELECT), "Select", phone.shortKey(Action.BACK), "Contacts");
     }
     private void telephone(PhoneModule phone) {
         if (phone.isCalling()) {
             centered(SMALL, "VibeOS telephone", 116, 70, MUTED);
             centered(TITLE, PhoneConversation.CONTACT, 116, 113, WHITE);
-            centered(TEXT, PhoneConversation.NUMBER, 116, 141, MUTED);
+            centered(TEXT, PhoneConversation.NUMBER, 116, 140, MUTED);
             float pulse = (float) (.5 + .5 * Math.sin((System.currentTimeMillis() - phone.callStartedAt()) / 500D));
-            circle(116, 204, 49 + pulse * 7, 0x1F68E5AD);
-            circle(116, 204, 44 + pulse * 3, 0x2868E5AD);
-            asset(ESOUND, 76, 164, 80, 80, 40);
-            centered(TITLE, "Calling...", 116, 275, WHITE);
-            centered(SMALL, "Waiting for ESound", 116, 301, MUTED);
-            for (int i = 0; i < 3; i++) circle(105 + i * 11, 331, 2.5F,
+            circle(116, 222, 56 + pulse * 7, 0x1F68E5AD);
+            circle(116, 222, 50 + pulse * 3, 0x2868E5AD);
+            asset(ESOUND, 72, 178, 88, 88, 44);
+            centered(TITLE, "Calling...", 116, 299, WHITE);
+            centered(SMALL, "Ringing", 116, 328, MUTED);
+            for (int i = 0; i < 3; i++) circle(105 + i * 11, 361, 2.5F,
                     ((System.currentTimeMillis() / 450) % 3) == i ? 0xFF84E6B1 : 0xFF334E4F);
-            centered(SMALL, phone.shortKey(Action.HOME) + " Home", 116, 391, MUTED);
+            keyHints(116, 393, 194, MUTED, phone.shortKey(Action.HOME), "Home");
             return;
         }
-        heading("Telephone", "Your contacts, a call away.");
+        heading("Telephone", "Contacts and calls");
         round(22, 113, 188, 67, 14, 0xFF213B3A);
         asset(ESOUND, 31, 126, 40, 40, 20);
         text(TEXT, PhoneConversation.CONTACT, 82, 126, WHITE);
         text(SMALL, PhoneConversation.NUMBER, 82, 146, MUTED);
-        centered(SMALL, "Ready to call", 116, 218, MUTED);
+        centered(SMALL, phone.hasCallEnded() ? "Call ended" : "Ready to call", 116, 218, MUTED);
         round(31, 254, 170, 42, 15, 0xFF2D8E61);
-        centered(TEXT, phone.shortKey(Action.SELECT) + " Call ESound", 116, 268, WHITE);
+        keyHints(116, 265, 154, WHITE, phone.shortKey(Action.SELECT), phone.hasCallEnded() ? "Call again" : "Call ESound");
         receiver(116, 344, .75F, 0xFF82D4A7);
         centered(SMALL, "ESound is your only contact.", 116, 391, MUTED);
     }
@@ -465,30 +479,43 @@ public final class PhoneRenderer {
         heading(PhoneConversation.CONTACT, PhoneConversation.NUMBER);
         asset(ESOUND, 178, 59, 28, 28, 14);
         List<PhoneConversation.Message> messages = phone.conversation().messages();
-        if (messages.isEmpty()) {
+        boolean typing = phone.conversation().isTyping() && phone.messageScroll() == 0;
+        if (messages.isEmpty() && !typing) {
             asset(ESOUND, 89, 155, 54, 54, 27);
             centered(TEXT, "Say hello to ESound", 116, 232, WHITE);
             centered(SMALL, "Send a message to get started.", 116, 255, MUTED);
         } else {
             try (PhoneClip ignored = new PhoneClip(21, 109, 190, 247)) {
                 int bottom = 354;
+                if (typing) {
+                    asset(ESOUND, 22, 326, 22, 22, 11);
+                    round(49, 326, 55, 25, 12, 0xFF2D3A50);
+                    for (int i = 0; i < 3; i++) {
+                        double phase = phone.conversation().typingElapsed() / 180D - i * .8;
+                        float bounce = (float) Math.max(0, Math.sin(phase)) * 3;
+                        circle(63 + i * 13, 339 - bounce, 2.5F, 0xFFABBED8);
+                    }
+                    bottom = 317;
+                }
                 for (int index = messages.size() - 1 - phone.messageScroll(); index >= 0 && bottom > 109; index--) {
                     PhoneConversation.Message message = messages.get(index);
                     List<String> lines = wrap(message.text, 154);
                     int height = 24 + lines.size() * 12 + (message.attachment ? 107 : 0);
                     int y = bottom - height;
-                    round(36, y, 172, height, 12, 0xFF285AA0);
-                    for (int line = 0; line < lines.size(); line++) text(TEXT, lines.get(line), 45, y + 8 + line * 12, WHITE);
-                    if (message.attachment) asset(DISCORD_IMAGES, 43, y + 11 + lines.size() * 12, 158, 101, 7);
+                    int left = message.incoming ? 22 : 38;
+                    round(left, y, 172, height, 12, message.incoming ? 0xFF2D3A50 : 0xFF285AA0);
+                    for (int line = 0; line < lines.size(); line++) text(TEXT, lines.get(line), left + 9, y + 8 + line * 12, WHITE);
+                    if (message.attachment) asset(DISCORD_IMAGES, left + 7, y + 11 + lines.size() * 12, 158, 101, 7);
                     String time = new SimpleDateFormat("HH:mm").format(new Date(message.sentAt));
-                    text(SMALL, time, 198 - SMALL.width(time), bottom - 14, 0xFFD1E3FF);
+                    text(SMALL, time, left + 162 - SMALL.width(time), bottom - 14, message.incoming ? 0xFFABBED8 : 0xFFD1E3FF);
                     bottom = y - 9;
                 }
             }
         }
+        if (typing) text(SMALL, "Typing...", 22, 99, BLUE);
         round(24, 368, 184, 31, 13, 0xFF253C58);
-        centered(TEXT, phone.shortKey(Action.SELECT) + " Send a message", 116, 377, WHITE);
-        centered(SMALL, phone.shortKey(Action.UP) + " / " + phone.shortKey(Action.DOWN) + " Scroll  /  Preset messages", 116, 402, MUTED);
+        keyHints(116, 375, 174, WHITE, phone.shortKey(Action.SELECT), "Send a message");
+        keyHints(116, 405, 194, MUTED, phone.shortKey(Action.UP), "", phone.shortKey(Action.DOWN), "Scroll");
     }
     private List<String> wrap(String value, float width) {
         List<String> lines = new ArrayList<String>();
@@ -522,6 +549,34 @@ public final class PhoneRenderer {
         round(64, 315, 104, 3, 1, 0xFF29304A);
         round(64, 315, (int) (104 * Math.min(1, seconds / .8)), 3, 1, 0xFFAEC3FF);
     }
+    private void updateHand(PhoneModule phone) {
+        long now = System.nanoTime();
+        double elapsed = previousHandFrame == 0 ? 1D / 60 : Math.min(.05, (now - previousHandFrame) / 1e9);
+        previousHandFrame = now;
+        float x = 48, y = 338;
+        switch (phone.app()) {
+            case HOME: x = 50 + phone.homeSelection() % 3 * 66; y = 205 + phone.homeSelection() / 3 * 68; break;
+            case SETTINGS:
+                int first = Math.max(0, Math.min(phone.settingsCount() - 7, phone.settingSelection() - 5));
+                x = 108; y = 126 + (phone.settingSelection() - first) * 38; break;
+            case CAMERA: x = 116; y = 377; break;
+            case FLAPPY: x = 78; y = 256; break;
+            case PHOTOS:
+                x = phone.isPhotoOpen() ? 116 : 67 + phone.photoSelection() % 2 * 95;
+                y = phone.isPhotoOpen() ? 380 : 146 + Math.min(2, phone.photoSelection() / 2) * 88; break;
+            case CONTACTS: x = phone.isContactOpen() ? 71 + phone.contactAction() * 90 : 106; y = phone.isContactOpen() ? 309 : 151; break;
+            case TELEPHONE: x = 116; y = phone.isCalling() ? 398 : 276; break;
+            case MESSAGES: x = 116; y = 384; break;
+            case INTERNET: x = 116; y = 347; break;
+            default: break;
+        }
+        if (phone.lastAction() == Action.HOME) { x = 116; y = 433; }
+        double age = phone.interactionAt() == 0 || phone.hideThumb.isEnabled() ? 10
+                : (System.currentTimeMillis() - phone.interactionAt()) / 1000D;
+        boolean press = phone.lastAction() == Action.SELECT || phone.lastAction() == Action.HOME
+                || phone.lastAction() == Action.BACK || phone.lastAction() == Action.DELETE;
+        handPose.advance(x, y, age, press, elapsed);
+    }
     private void hand(boolean front) {
         if (arm == null) {
             ModelBase model = new ModelBase() { }; model.textureWidth = model.textureHeight = 64;
@@ -529,7 +584,9 @@ public final class PhoneRenderer {
             sleeve = new ModelRenderer(model, 48, 48); sleeve.addBox(-2, 0, -2, 4, 12, 4, .25F);
             slimArm = new ModelRenderer(model, 32, 48); slimArm.addBox(-1.5F, 0, -2, 3, 12, 4);
             slimSleeve = new ModelRenderer(model, 48, 48); slimSleeve.addBox(-1.5F, 0, -2, 3, 12, 4, .25F);
-            thumb = new ModelRenderer(model, 34, 58); thumb.addBox(-1, -1, -1, 2, 4, 2);
+            thumb = new ModelRenderer(model, 34, 56); thumb.addBox(-1, -2, -1, 2, 2, 2);
+            thumbTip = new ModelRenderer(model, 34, 58); thumbTip.addBox(-1, -2, -1, 2, 2, 2);
+            thumbTip.setRotationPoint(0, -2, 0); thumb.addChild(thumbTip);
         }
         GlStateManager.pushMatrix();
         try {
@@ -540,10 +597,14 @@ public final class PhoneRenderer {
             GlStateManager.enableRescaleNormal();
             RenderHelper.enableGUIStandardItemLighting();
             if (front) {
-                GlStateManager.translate(18, 344, 75); GlStateManager.rotate(-18, 0, 0, 1);
-                GlStateManager.rotate(24, 0, 1, 0); GlStateManager.scale(165, 165, 165); thumb.render(.0625F);
+                // Negative local Y puts the fingertip above its base. Rotate it
+                // inward toward the screen, then flex the distal joint to tap.
+                GlStateManager.translate(handPose.gripX, handPose.gripY, 75);
+                GlStateManager.rotate(handPose.angle, 0, 0, 1);
+                GlStateManager.rotate(24, 0, 1, 0); GlStateManager.scale(175, 175, 175);
+                thumbTip.rotateAngleX = handPose.curl; thumb.render(.0625F);
             } else {
-                GlStateManager.translate(53, 505, 35); GlStateManager.rotate(-19, 0, 0, 1);
+                GlStateManager.translate(handPose.gripX + 47, handPose.gripY + 161, 35); GlStateManager.rotate(-19, 0, 0, 1);
                 GlStateManager.rotate(-12, 0, 1, 0); GlStateManager.scale(235, -235, 235);
                 boolean slim = "slim".equals(mc.thePlayer.getSkinType());
                 (slim ? slimArm : arm).render(.0625F);
@@ -587,6 +648,30 @@ public final class PhoneRenderer {
                     for (int i = -1; i <= 1; i++) circle(i * 8, -1, 2, 0xFF36A98B);
                     break;
                 default: break;
+            }
+        } finally { GlStateManager.popMatrix(); }
+    }
+    private float keyWidth(String key) { return Math.max(16, KEY.width(key) + 10); }
+    private void keycap(String key, float x, float y, int foreground) {
+        int width = (int) Math.ceil(keyWidth(key));
+        round(Math.round(x), Math.round(y), width, 17, 4, 0xCC71849E);
+        round(Math.round(x) + 1, Math.round(y) + 1, width - 2, 14, 3, 0xFF28384E);
+        centered(KEY, key, x + width / 2F, y + 2, foreground);
+    }
+    /** Alternating key/label pairs; every key gets the same visible keycap. */
+    private void keyHints(float centerX, float y, float available, int foreground, String... pairs) {
+        float width = 0;
+        for (int i = 0; i < pairs.length; i += 2)
+            width += keyWidth(pairs[i]) + (pairs[i + 1].isEmpty() ? 0 : 5 + SMALL.width(pairs[i + 1])) + (i == 0 ? 0 : 10);
+        float scale = Math.min(1, available / Math.max(1, width));
+        GlStateManager.pushMatrix();
+        try {
+            GlStateManager.translate(centerX - width * scale / 2, y, 0); GlStateManager.scale(scale, scale, 1);
+            float x = 0;
+            for (int i = 0; i < pairs.length; i += 2) {
+                if (i > 0) x += 10;
+                keycap(pairs[i], x, 0, WHITE); x += keyWidth(pairs[i]);
+                if (!pairs[i + 1].isEmpty()) { x += 5; text(SMALL, pairs[i + 1], x, 2, foreground); x += SMALL.width(pairs[i + 1]); }
             }
         } finally { GlStateManager.popMatrix(); }
     }
@@ -681,7 +766,8 @@ public final class PhoneRenderer {
     private void releasePreview() { GlStateManager.deleteTexture(previewTexture); previewTexture = previewWidth = previewHeight = 0; }
     public void close() {
         visibility = 0; previousFrame = 0;
-        canvas.close(); TEXT.close(); SMALL.close(); TITLE.close(); CLOCK.close();
+        canvas.close(); TEXT.close(); SMALL.close(); TITLE.close(); CLOCK.close(); KEY.close();
+        handPose.reset(); previousHandFrame = 0;
         if (previewTexture != 0) releasePreview();
         if (wallpaperLocation != null) mc.getTextureManager().deleteTexture(wallpaperLocation);
         wallpaperTexture = null;

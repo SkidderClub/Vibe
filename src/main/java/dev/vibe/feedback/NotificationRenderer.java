@@ -25,7 +25,7 @@ public final class NotificationRenderer {
     private final NeverLoseFont state = new NeverLoseFont(Font.BOLD, 16);
     private final NeverLoseFont regularTitle = new NeverLoseFont(Font.PLAIN, 20);
     private final NeverLoseFont regularState = new NeverLoseFont(Font.PLAIN, 16);
-    private final ResourceLocation[] icons = new ResourceLocation[2];
+    private final ResourceLocation[] icons = new ResourceLocation[3];
 
     public void draw(ModuleNotifications.Entry entry, int x, int y, int width, float opacity,
                      long now, String theme, NotificationSettings settings, Runnable glassSurface) {
@@ -69,14 +69,14 @@ public final class NotificationRenderer {
             if (settings.icons.isEnabled()) {
                 int iconY = Math.round(centerY - 11);
                 if (!square) rounded(x + 10, iconY, 22, 22, 11, 0xFF2A323C, glass ? 160 : 235, opacity);
-                drawIcon(entry.enabled, x + 10, iconY, tint(accent, opacity));
+                drawIcon(entry.message ? 2 : entry.enabled ? 1 : 0, x + 10, iconY, tint(accent, opacity));
             }
 
             NeverLoseFont nameFont = settings.font.is("Regular") ? regularTitle : title;
             NeverLoseFont stateFont = settings.font.is("Regular") ? regularState : state;
             int textLeft = x + (settings.icons.isEnabled() ? 42 : 12);
             int textRight = x + width - 12;
-            if (settings.status.isEnabled()) {
+            if (settings.status.isEnabled() && !entry.message) {
                 String label = LanguageManager.translate(entry.enabled ? "Enabled" : "Disabled");
                 int pillWidth = Math.round(stateFont.width(label)) + (square ? 0 : 14);
                 int pillX = x + width - 10 - pillWidth;
@@ -88,8 +88,13 @@ public final class NotificationRenderer {
                 textRight = pillX - 8;
             }
             String name = nameFont.fit(entry.name, Math.max(0, textRight - textLeft));
-            if (glass) centered(nameFont, name, textLeft + .5F, centerY + .5F, color(0xFF000000, 140, opacity));
-            centered(nameFont, name, textLeft, centerY, tint(settings.text.getArgb(), opacity));
+            float nameY = centerY - (entry.message ? 6 : 0);
+            if (glass) centered(nameFont, name, textLeft + .5F, nameY + .5F, color(0xFF000000, 140, opacity));
+            centered(nameFont, name, textLeft, nameY, tint(settings.text.getArgb(), opacity));
+            if (entry.message) {
+                String detail = regularState.fit(entry.detail, Math.max(0, textRight - textLeft));
+                centered(regularState, detail, textLeft, centerY + 6, tint(RenderUtils.blend(settings.text.getArgb(), accent, .22F), opacity));
+            }
 
             if (settings.progress.isEnabled()) {
                 int inset = square ? 4 : 11;
@@ -116,9 +121,8 @@ public final class NotificationRenderer {
     private static void rounded(int x, int y, int width, int height, int radius, int rgb, int alpha, float opacity) {
         MenuRoundedRenderer.rect(x, y, width, height, radius, color(rgb, alpha, opacity));
     }
-    private void drawIcon(boolean enabled, int x, int y, int color) {
+    private void drawIcon(int index, int x, int y, int color) {
         Minecraft mc = Minecraft.getMinecraft();
-        int index = enabled ? 1 : 0;
         if (icons[index] == null) {
             BufferedImage image = new BufferedImage(88, 88, BufferedImage.TYPE_INT_ARGB);
             Graphics2D g = image.createGraphics();
@@ -126,7 +130,10 @@ public final class NotificationRenderer {
             g.scale(4, 4); g.setColor(Color.WHITE);
             g.setStroke(new BasicStroke(1.8F, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
             Path2D.Float path = new Path2D.Float();
-            if (enabled) {
+            if (index == 2) {
+                path.moveTo(5, 6.5); path.lineTo(17, 6.5); path.lineTo(17, 15.5); path.lineTo(5, 15.5); path.closePath();
+                path.moveTo(5.5, 7.5); path.lineTo(11, 12); path.lineTo(16.5, 7.5);
+            } else if (index == 1) {
                 path.moveTo(6.5, 11); path.lineTo(9.5, 14); path.lineTo(15.5, 8);
             } else { path.moveTo(7, 11); path.lineTo(15, 11); }
             g.draw(path); g.dispose();

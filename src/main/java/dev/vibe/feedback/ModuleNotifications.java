@@ -10,13 +10,16 @@ public final class ModuleNotifications {
     private static final long MOVE_DURATION = 240;
     public static final class Entry {
         public final String id, name;
+        public final String detail;
+        public final boolean message;
         public final boolean enabled;
         public final long started;
         public final long duration;
         private float fromSlot, targetSlot;
         private long moved;
-        private Entry(String id, String name, boolean enabled, long started, float initialSlot, long duration) {
+        private Entry(String id, String name, boolean enabled, String detail, long started, float initialSlot, long duration) {
             this.id = id; this.name = name; this.enabled = enabled; this.started = started;
+            this.detail = detail == null ? "" : detail; message = detail != null;
             this.duration = duration;
             fromSlot = initialSlot; moved = started;
         }
@@ -52,11 +55,17 @@ public final class ModuleNotifications {
     }
 
     public synchronized void add(String id, String name, boolean enabled, long now) {
+        addEntry(id, name, enabled, null, now);
+    }
+    public synchronized void addMessage(String id, String title, String body, long now) {
+        addEntry(id, title, true, body, now);
+    }
+    private void addEntry(String id, String name, boolean enabled, String detail, long now) {
         prune(now);
         // Enter below the previous bottom card. Retargeting both by the same easing
         // preserves their spacing even when several modules toggle in one frame.
         float initialSlot = entries.isEmpty() ? -.35F : entries.get(entries.size() - 1).slot(now) - 1;
-        entries.add(new Entry(id, name, enabled, now, initialSlot, duration));
+        entries.add(new Entry(id, name, enabled, detail, now, initialSlot, duration));
         while (entries.size() > limit) entries.remove(0);
         layout(now);
     }

@@ -58,6 +58,7 @@ public final class PhoneRenderCheck {
             set(Vibe.class, vibe, "moduleManager", manager);
             target = new Framebuffer(1100, 600, true); set(Minecraft.class, mc, "framebufferMc", target);
             PhoneModule phone = new PhoneModule(); phone.setEnabled(true);
+            set(PhoneModule.class, phone, "callAudio", new CallFixture());
             set(PhoneModule.class, phone, "openedAt", System.currentTimeMillis() - 2000);
             PhoneRenderer renderer = new PhoneRenderer();
             try {
@@ -71,6 +72,7 @@ public final class PhoneRenderCheck {
                         || capture.getRGB(20, 580) != 0xFF3480B0) throw new AssertionError("Camera color/orientation/framebuffer mismatch");
                 phone.advance(0);
                 set(PhoneModule.class, phone, "notificationUntil", 0L);
+                set(PhoneModule.class, phone, "interactionAt", 0L);
                 frame();
                 ByteBuffer beforeHand = pixels();
                 Method hand = PhoneRenderer.class.getDeclaredMethod("hand", boolean.class); hand.setAccessible(true);
@@ -83,6 +85,7 @@ public final class PhoneRenderCheck {
                         || beforeHand.get(i + 1) != afterHand.get(i + 1) || beforeHand.get(i + 2) != afterHand.get(i + 2)) changed++;
                 if (changed < 500) throw new AssertionError("Skin hand did not render: " + changed + " pixels");
                 save("hand-isolated.png");
+                verifyNoShadow(renderer, phone);
                 for (PhoneModule.App app : PhoneModule.App.values()) {
                     phone.open(app); phone.advance(0);
                     set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
@@ -100,7 +103,9 @@ public final class PhoneRenderCheck {
                 phone.act(PhoneModule.Action.SELECT);
                 set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
                 frame(); draw(renderer, phone, 1); save("calling.png"); check();
+                verifyThumb(renderer, phone);
                 verifyFlappyClipping(renderer, phone);
+                verifyReplies(renderer, phone);
                 phone.open(PhoneModule.App.PHOTOS); phone.act(PhoneModule.Action.DELETE);
                 frame(); draw(renderer, phone, 1); save("delete-confirmation.png"); check();
                 phone.open(PhoneModule.App.HOME); frame(); draw(renderer, phone, .67F); save("compact.png"); check();
@@ -118,16 +123,19 @@ public final class PhoneRenderCheck {
                 set(PhoneModule.class, phone, "openedAt", System.currentTimeMillis() - 350);
                 frame(); draw(renderer, phone, 1); save("boot.png"); check();
                 System.out.println("VibeOS: all apps, contacts, calling, message attachment, Flappy clipping, skin hand, boot, tilted views, deletion dialog, GL state and camera PNG round-trip passed.");
-            } finally { renderer.close(); phone.photos().close(); }
+            } finally { renderer.close(); phone.stopCommunications(); phone.photos().close(); }
         } finally { if (target != null) target.deleteFramebuffer(); buffer.destroy(); }
     }
     private static void draw(PhoneRenderer renderer, PhoneModule phone, float scale) {
         drawTilted(renderer, phone, scale, 0);
     }
     private static void drawTilted(PhoneRenderer renderer, PhoneModule phone, float scale, float angle) {
+        drawTilted(renderer, phone, scale, angle, true);
+    }
+    private static void drawTilted(PhoneRenderer renderer, PhoneModule phone, float scale, float angle, boolean hand) {
         int destination = GL11.glGetInteger(0x8CA6);
         GlStateManagerBridge.push(65, 42, scale);
-        try { GL11.glRotatef(angle, 0, 0, 1); renderer.drawDevice(phone, true); }
+        try { GL11.glRotatef(angle, 0, 0, 1); renderer.drawDevice(phone, hand); }
         finally { net.minecraft.client.renderer.GlStateManager.popMatrix(); }
         if (GL11.glGetInteger(0x8CA6) != destination)
             throw new AssertionError("Phone lost the caller's framebuffer");
@@ -169,15 +177,15 @@ public final class PhoneRenderCheck {
         float previousY = game.getBirdY(); FlappyGame.Phase previousPhase = game.getPhase();
         try {
             set(FlappyGame.class, game, "phase", FlappyGame.Phase.PLAYING);
-            frame(); draw(renderer, phone, 1); ByteBuffer baseline = pixels();
+            frame(); drawTilted(renderer, phone, 1, 0, false); ByteBuffer baseline = pixels();
             game.getPipes().get(0).x = -12; game.getPipes().get(1).x = 180;
             for (float birdY : new float[]{-10, FlappyGame.HEIGHT + 8}) {
                 set(FlappyGame.class, game, "birdY", birdY);
-                frame(); draw(renderer, phone, 1); ByteBuffer image = pixels();
+                frame(); drawTilted(renderer, phone, 1, 0, false); ByteBuffer image = pixels();
                 int outside = 0;
                 for (int y = 120; y < 420; y++) for (int x = 60; x < 310; x++) {
                     // Allow the final antialias filter's footprint at the playfield edge.
-                    if (x >= 82 && x <= 280 && y >= 146 && y <= 404) continue;
+                    if (x >= 78 && x <= 284 && y >= 146 && y <= 415) continue;
                     int at = ((599 - y) * 1100 + x) * 4;
                     for (int channel = 0; channel < 3; channel++)
                         if (Math.abs((baseline.get(at + channel) & 255) - (image.get(at + channel) & 255)) > 3) { outside++; break; }
@@ -192,6 +200,88 @@ public final class PhoneRenderCheck {
             for (int i = 0; i < positions.length; i++) game.getPipes().get(i).x = positions[i];
             set(FlappyGame.class, game, "birdY", previousY); set(FlappyGame.class, game, "phase", previousPhase);
         }
+    }
+    private static void verifyNoShadow(PhoneRenderer renderer, PhoneModule phone) throws Exception {
+        frame(); GL11.glClearColor(0, 0, 0, 0); GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        drawTilted(renderer, phone, 1, 0, false);
+        ByteBuffer image = pixels();
+        for (int y = 130; y < 420; y++) if ((image.get(((599 - y) * 1100 + 59) * 4 + 3) & 255) > 4)
+            throw new AssertionError("Phone still draws its offset background shadow");
+        check();
+    }
+    private static void verifyThumb(PhoneRenderer renderer, PhoneModule phone) throws Exception {
+        Field field = PhoneRenderer.class.getDeclaredField("handPose"); field.setAccessible(true);
+        PhoneHandPose pose = (PhoneHandPose) field.get(renderer);
+        phone.open(PhoneModule.App.HOME); set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
+        set(PhoneModule.class, phone, "interactionAt", 0L); pose.reset();
+        frame(); draw(renderer, phone, 1); ByteBuffer shown = pixels(); save("thumb-rest.png");
+        phone.hideThumb.setEnabled(true); pose.reset();
+        frame(); draw(renderer, phone, 1); ByteBuffer hidden = pixels(); save("thumb-hidden.png");
+        int changed = 0;
+        for (int y = 300; y < 425; y++) for (int x = 60; x < 145; x++) {
+            int at = ((599 - y) * 1100 + x) * 4;
+            for (int c = 0; c < 3; c++) if (Math.abs((shown.get(at + c) & 255) - (hidden.get(at + c) & 255)) > 8) { changed++; break; }
+        }
+        if (changed < 100) throw new AssertionError("Hide Thumb did not remove the visible thumb: " + changed);
+        phone.hideThumb.setEnabled(false); phone.act(PhoneModule.Action.RIGHT);
+        set(PhoneModule.class, phone, "interactionAt", System.currentTimeMillis() - 120);
+        for (int i = 0; i < 12; i++) pose.advance(116, 205, .12, false, .05);
+        frame(); draw(renderer, phone, 1); save("thumb-navigation.png"); check();
+        phone.act(PhoneModule.Action.SELECT); set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
+        set(PhoneModule.class, phone, "interactionAt", System.currentTimeMillis() - 120);
+        for (int i = 0; i < 12; i++) pose.advance(116, 377, .12, true, .05);
+        frame(); draw(renderer, phone, 1); save("thumb-tap.png"); check();
+        phone.open(PhoneModule.App.SETTINGS);
+        for (int i = 0; i < 8; i++) phone.act(PhoneModule.Action.DOWN);
+        phone.act(PhoneModule.Action.SELECT); phone.hideThumb.setEnabled(true);
+        set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
+        frame(); draw(renderer, phone, 1); save("settings-rebind.png"); check();
+        phone.hideThumb.setEnabled(false); phone.cancelBinding();
+        set(PhoneModule.class, phone, "notificationUntil", 0L); set(PhoneModule.class, phone, "interactionAt", 0L); pose.reset();
+        System.out.println("Phone shadow removed; visible/hidden thumb pixels, navigation, tap and boxed rebinding controls passed.");
+    }
+    private static void verifyReplies(PhoneRenderer renderer, PhoneModule phone) throws Exception {
+        phone.stopCommunications();
+        Path path = OUTPUT.resolve("fixture-profile/reply-preview.json"); Files.deleteIfExists(path);
+        java.util.concurrent.atomic.AtomicLong time = new java.util.concurrent.atomic.AtomicLong(1000);
+        PhoneConversation conversation = new PhoneConversation(path, time::get, new Random(17));
+        set(PhoneModule.class, phone, "conversation", conversation);
+        phone.open(PhoneModule.App.MESSAGES); conversation.sendPreset(2); time.addAndGet(1600);
+        set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
+        frame(); draw(renderer, phone, 1); ByteBuffer first = pixels(); save("messages-typing.png");
+        time.addAndGet(180);
+        frame(); draw(renderer, phone, 1); ByteBuffer second = pixels(); save("messages-typing-next.png");
+        int changed = 0;
+        for (int y = 365; y < 398; y++) for (int x = 110; x < 175; x++) {
+            int at = ((599 - y) * 1100 + x) * 4;
+            for (int c = 0; c < 3; c++) if (Math.abs((first.get(at + c) & 255) - (second.get(at + c) & 255)) > 8) { changed++; break; }
+        }
+        if (changed < 15) throw new AssertionError("Typing dots did not animate: " + changed);
+        time.addAndGet(10000); phone.updateCommunications(false);
+        if (phone.unreadMessages() != 1 || !conversation.messages().get(1).incoming) throw new AssertionError("Missing incoming reply");
+        set(PhoneModule.class, phone, "notificationUntil", 0L);
+        frame(); draw(renderer, phone, 1); save("messages-reply.png"); check();
+        phone.open(PhoneModule.App.HOME); set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
+        frame(); draw(renderer, phone, 1); save("messages-unread.png"); check();
+        phone.open(PhoneModule.App.MESSAGES); if (phone.unreadMessages() != 0) throw new AssertionError("Messages stayed unread after opening");
+        phone.open(PhoneModule.App.TELEPHONE); phone.act(PhoneModule.Action.SELECT);
+        Field audio = PhoneModule.class.getDeclaredField("callAudio"); audio.setAccessible(true);
+        ((CallFixture) audio.get(phone)).finished = true; phone.updateCommunications(false);
+        if (phone.isCalling() || !phone.hasCallEnded()) throw new AssertionError("Call did not end after playback");
+        set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
+        set(PhoneModule.class, phone, "notificationUntil", 0L);
+        frame(); draw(renderer, phone, 1); save("call-ended.png"); check();
+        phone.act(PhoneModule.Action.SELECT); if (!phone.isCalling()) throw new AssertionError("Cannot call again");
+        phone.stopCommunications(); set(PhoneModule.class, phone, "interactionAt", 0L);
+        System.out.println("Phone replies: animated typing pixels, two-way bubbles, unread badge/read state, ended call and redial passed.");
+    }
+    private static final class CallFixture implements PhoneCallPlayer {
+        boolean finished;
+        @Override public void start(float volume) { finished = false; }
+        @Override public void setVolume(float volume) { }
+        @Override public boolean isFinished() { return finished; }
+        @Override public String error() { return ""; }
+        @Override public void close() { }
     }
     private static void frame() {
         target.bindFramebuffer(true); GL11.glDepthMask(true); GL11.glClearColor(.04F, .065F, .105F, 1);

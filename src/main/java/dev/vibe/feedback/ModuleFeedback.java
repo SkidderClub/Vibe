@@ -13,6 +13,19 @@ public final class ModuleFeedback {
     public void start() { notifications.clear(); ready = true; }
     public ModuleNotifications notifications() { return notifications; }
 
+    /** Message cards share the configured widget, themes and stacking with toggle feedback. */
+    public static void message(String id, String sender, String body) {
+        Vibe vibe = Vibe.getInstance();
+        if (vibe == null || vibe.getFeedback() == null || !vibe.getFeedback().ready || vibe.getModuleManager() == null
+                || (vibe.getConfig() != null && vibe.getConfig().isLoading())) return;
+        dev.vibe.module.impl.client.HudModule hud = vibe.getModuleManager().getModule(dev.vibe.module.impl.client.HudModule.class);
+        if (hud == null || !hud.getHudElements().isSelectedIgnoreCase("notifications")) return;
+        long now = System.nanoTime() / 1000000L;
+        ModuleNotifications queue = vibe.getFeedback().notifications;
+        queue.configure(hud.notifications.limit.getInt(), hud.notifications.durationMillis(), now);
+        queue.addMessage(id, sender, body, now);
+    }
+
     public static void changed(Module module) {
         Vibe vibe = Vibe.getInstance();
         if (vibe == null || vibe.getFeedback() == null || !vibe.getFeedback().ready

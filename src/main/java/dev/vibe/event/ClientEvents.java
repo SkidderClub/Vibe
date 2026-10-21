@@ -164,6 +164,7 @@ public final class ClientEvents {
         int key = Keyboard.getEventKey();
         dev.vibe.module.impl.meme.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class);
         if (minecraft.currentScreen == null && minecraft.thePlayer != null && phone != null
+                && phone.allowsContext(false, minecraft.gameSettings.thirdPersonView != 0, minecraft.gameSettings.hideGUI)
                 && phone.handleKey(key, Keyboard.isRepeatEvent())) {
             // Rebound phone controls own their key; a key such as Q must not
             // also drop an item while changing a phone setting.
@@ -197,6 +198,10 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            dev.vibe.module.impl.meme.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class);
+            if (phone != null) phone.tickCommunications();
+        }
         if (event.phase == TickEvent.Phase.START) {
             dev.vibe.module.impl.client.MusicModule music = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.MusicModule.class);
             if (music != null) music.tick();
@@ -384,7 +389,21 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onRenderTick(TickEvent.RenderTickEvent event) {
-        if (event.phase == TickEvent.Phase.END) return;
+        if (event.phase == TickEvent.Phase.END) {
+            // F1 can skip the entire HUD event. Draw once after the frame so the
+            // Phone's visibility preference also works with hidden HUDs and menus.
+            if (minecraft.theWorld != null && minecraft.thePlayer != null && !FreecamModule.hideHudHook()
+                    && !dev.vibe.module.impl.meme.HypixelModule.visualsSuppressed()) {
+                dev.vibe.module.impl.meme.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class);
+                if ((phone != null && phone.isEnabled()) || phoneRenderer.isActive()) {
+                    if (minecraft.gameSettings.hideGUI && minecraft.currentScreen == null) phoneRenderer.captureWorld(phone);
+                    minecraft.entityRenderer.setupOverlayRendering();
+                    dev.vibe.ui.GuiRenderState.prepare(false);
+                    phoneRenderer.render(phone, new net.minecraft.client.gui.ScaledResolution(minecraft));
+                }
+            }
+            return;
+        }
         KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
         if (aura != null) aura.hypixelFrame();
         TimerRangeModule timerRange = Vibe.getInstance().getModuleManager().getModule(TimerRangeModule.class);
@@ -438,7 +457,6 @@ public final class ClientEvents {
                 if (!pitBot) {
                     Vibe.getInstance().getHudManager().drawScoreboard(event.partialTicks);
                     qolRenderer.capture();
-                    phoneRenderer.render(Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class), event.resolution);
                     if (minecraft.currentScreen == null) Vibe.getInstance().getHudManager().drawNotifications();
                 }
             }
@@ -918,6 +936,8 @@ public final class ClientEvents {
     public void onScriptDisconnect(FMLNetworkEvent.ClientDisconnectionFromServerEvent event) {
         minecraft.addScheduledTask(() -> {
             fogRenderer.close(); hitmarkerRenderer.close(); phoneRenderer.close();
+            dev.vibe.module.impl.meme.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class);
+            if (phone != null) phone.stopCommunications();
             dev.vibe.ui.render.ItemGlowRenderer.closeActive();
             if (Vibe.getInstance().getFeedback() != null) Vibe.getInstance().getFeedback().notifications().clear();
             HitmarkerModule markers = Vibe.getInstance().getModuleManager().getModule(HitmarkerModule.class);
