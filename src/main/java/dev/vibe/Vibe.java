@@ -53,6 +53,7 @@ public final class Vibe {
     private StatisticsService statistics;
     private ExtensionManager extensions;
     private boolean extensionLoading;
+    private final dev.vibe.feedback.ModuleFeedback feedback = new dev.vibe.feedback.ModuleFeedback();
     private int loadedModuleCount;
     private int loadedSettingCount;
 
@@ -105,6 +106,7 @@ public final class Vibe {
         // so a broken or removed .java file can never prevent Vibe itself
         // from starting. The runtime retains Raven's source-level API.
         scriptRuntime.reload();
+        feedback.start();
         refreshLoadedCounts();
         LanguageModule language = moduleManager.getModule(LanguageModule.class);
         if (language != null) identity.setLanguage(language.getLanguage().getValue());
@@ -129,6 +131,7 @@ public final class Vibe {
     public ModuleManager getModuleManager() {
         return moduleManager;
     }
+    public dev.vibe.feedback.ModuleFeedback getFeedback() { return feedback; }
 
     public VibeConfig getConfig() {
         return config;

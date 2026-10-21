@@ -49,8 +49,8 @@ public final class HudModule extends Module {
             () -> true));
 
     private final MultiSelectSetting hudElements = addSetting(new MultiSelectSetting("HUD Elements",
-                        Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph"),
-            Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard")));
+                        Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph", "notifications"),
+            Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "notifications")));
 
     private final BooleanSetting replaceScoreboardServer = addSetting(new BooleanSetting("Replace Scoreboard Server", false,
             () -> true));

@@ -2,5 +2,11 @@
   "battlefront.fire": { "category": "player", "sounds": [{ "name": "vibe:battlefront/fire", "volume": 0.45 }] },
   "battlefront.distant": { "category": "player", "sounds": [{ "name": "vibe:battlefront/fire", "volume": 0.10 }] },
   "battlefront.blast": { "category": "player", "sounds": [{ "name": "vibe:battlefront/blast", "volume": 0.65 }] },
-  "battlefront.confirm": { "category": "player", "sounds": [{ "name": "vibe:battlefront/confirm", "volume": 0.35 }] }
+  "battlefront.confirm": { "category": "player", "sounds": [{ "name": "vibe:battlefront/confirm", "volume": 0.35 }] },
+  "toggle.soft.on": { "category": "master", "sounds": ["vibe:toggle/soft_on"] },
+  "toggle.soft.off": { "category": "master", "sounds": ["vibe:toggle/soft_off"] },
+  "toggle.pop.on": { "category": "master", "sounds": ["vibe:toggle/pop_on"] },
+  "toggle.pop.off": { "category": "master", "sounds": ["vibe:toggle/pop_off"] },
+  "toggle.chime.on": { "category": "master", "sounds": ["vibe:toggle/chime_on"] },
+  "toggle.chime.off": { "category": "master", "sounds": ["vibe:toggle/chime_off"] }
 }

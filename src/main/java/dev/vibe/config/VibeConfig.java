@@ -118,6 +118,7 @@ public final class VibeConfig {
         // Version 3 distinguishes deliberate selections from the incomplete
         // stock ArrayList selection recovered when older profiles are loaded.
         root.addProperty("format", FORMAT_VERSION);
+        root.addProperty("toggleFeedbackVersion", 1);
         root.addProperty("profile", safeName);
         File output = getFile(safeName);
         boolean created = !output.isFile();
@@ -479,7 +480,14 @@ public final class VibeConfig {
                         }
                     } else readSetting(setting, savedSetting);
                 }
-                if (module instanceof HudModule && getInt(root, "format", 1) < 3) ((HudModule) module).migrateLegacyArrayListModules();
+                if (module instanceof HudModule) {
+                    if (getInt(root, "format", 1) < 3) ((HudModule) module).migrateLegacyArrayListModules();
+                    // Opt older profiles into the new widget once; saved off choices remain off.
+                    if (!root.has("toggleFeedbackVersion")) {
+                        Set<String> elements = ((HudModule) module).getHudElements().copyValue();
+                        elements.add("notifications"); ((HudModule) module).getHudElements().setValue(elements);
+                    }
+                }
                 if (data.has("enabled")) module.setEnabled(getBoolean(data, "enabled", module.isEnabled()));
             }
             return true;

@@ -439,6 +439,7 @@ public final class ClientEvents {
                     Vibe.getInstance().getHudManager().drawScoreboard(event.partialTicks);
                     qolRenderer.capture();
                     phoneRenderer.render(Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.fun.PhoneModule.class), event.resolution);
+                    if (minecraft.currentScreen == null) Vibe.getInstance().getHudManager().drawNotifications();
                 }
             }
         } finally {
@@ -474,6 +475,8 @@ public final class ClientEvents {
         WaifuRenderer.draw(event.gui);
         drawChestCursor(event.gui);
         drawInventoryCursor(event.gui);
+        if (!(event.gui instanceof dev.vibe.hud.HudEditorGui) && !dev.vibe.module.impl.meme.HypixelModule.visualsSuppressed()
+                && !FreecamModule.hideHudHook()) Vibe.getInstance().getHudManager().drawNotifications();
     }
 
     /**
@@ -915,6 +918,7 @@ public final class ClientEvents {
     public void onScriptDisconnect(FMLNetworkEvent.ClientDisconnectionFromServerEvent event) {
         minecraft.addScheduledTask(() -> {
             fogRenderer.close(); hitmarkerRenderer.close(); phoneRenderer.close();
+            if (Vibe.getInstance().getFeedback() != null) Vibe.getInstance().getFeedback().notifications().clear();
             HitmarkerModule markers = Vibe.getInstance().getModuleManager().getModule(HitmarkerModule.class);
             if (markers != null) markers.clear();
         });

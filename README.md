@@ -22,6 +22,8 @@ Use modules only where permitted by the server's rules. Vibe is client-only.
 - **`.help`** lists chat commands; **Tab** completes them.
 - **Alt Manager** in the main menu or server list manages accounts.
 - **Fun → Phone** raises a phone running VibeOS. See [Phone controls and apps](docs/PHONE.md).
+- **Visual → NoHurtCam**, **Client → ToggleSound**, and movable **HUD notifications**
+  provide camera and toggle feedback. See [Controls and settings](docs/TOGGLE_FEEDBACK.md).
 
 See the [GTA7 guide](docs/GTA7.md) for the expanded map, controls, upgrades, skins and save backups.
 See the [GTA8 guide](docs/GTA8.md) for Los Vibes, a realistic open city with driving physics, traffic, police, weather and its own shader renderer.

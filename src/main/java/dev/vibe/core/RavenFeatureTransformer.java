@@ -35,6 +35,9 @@ public final class RavenFeatureTransformer implements net.minecraft.launchwrappe
                 guard(method, AURA, "hypixelUseHook", false, false);
             }
             if (!renderer) continue;
+            if (method.desc.equals("(F)V") && named(method, "hurtCameraEffect", "func_78482_e", "d")) {
+                guard(method, "dev/vibe/module/impl/visual/NoHurtCamModule", "suppressHook", false, false);
+            }
             if (method.desc.equals("()Z") && named(method, "isShaderActive", "func_147702_a", "a")) {
                 for (AbstractInsnNode instruction : method.instructions.toArray()) if (instruction.getOpcode() == IRETURN)
                     method.instructions.insertBefore(instruction, new MethodInsnNode(INVOKESTATIC, SATURATION, "shaderActiveHook", "(Z)Z", false));

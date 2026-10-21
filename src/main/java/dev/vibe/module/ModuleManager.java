@@ -44,6 +44,7 @@ public final class ModuleManager {
         register(new SaturationModule());
         register(new BreakProgressModule());
         register(new FovChangerModule());
+        register(new NoHurtCamModule());
         register(new CustomCrosshairModule());
         register(new CustomCosmeticsModule());
         register(new CustomModelRendererModule());
@@ -101,6 +102,7 @@ public final class ModuleManager {
         register(new FastBreakModule());
         register(new FriendsModule());
         register(new HudModule());
+        register(new ToggleSoundModule());
         register(new HudEditorModule());
         register(new NameProtectModule());
         register(new InventoryEditorModule());

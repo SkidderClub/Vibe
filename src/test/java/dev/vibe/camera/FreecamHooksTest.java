@@ -45,6 +45,20 @@ public class FreecamHooksTest implements Opcodes {
             if (calls(method, null) > 0) new Analyzer(new BasicVerifier()).analyze(after.name, method);
         }
         if (kind == 0) {
+            int hurtHooks = 0;
+            for (Object entry : after.methods) {
+                MethodNode candidate = (MethodNode) entry;
+                for (AbstractInsnNode instruction : candidate.instructions.toArray()) {
+                    if (!(instruction instanceof MethodInsnNode)) continue;
+                    MethodInsnNode call = (MethodInsnNode) instruction;
+                    if (!call.owner.equals("dev/vibe/module/impl/visual/NoHurtCamModule")) continue;
+                    hurtHooks++;
+                    assertEquals(obfuscated ? "d" : "hurtCameraEffect", candidate.name);
+                    assertEquals("(F)V", candidate.desc); assertEquals("suppressHook", call.name);
+                    new Analyzer(new BasicVerifier()).analyze(after.name, candidate);
+                }
+            }
+            assertEquals("Exactly the damage-camera method is guarded", 1, hurtHooks);
             assertEquals(1, calls(method(after, obfuscated ? "f" : "orientCamera", "(F)V"), "orientCameraHook"));
             assertEquals(2, calls(method(after, obfuscated ? "a" : "updateCameraAndRender", "(FJ)V"), "mouseLookHook"));
             assertEquals(1, calls(method(after, obfuscated ? "b" : "renderHand", "(FI)V"), "cameraActiveHook"));

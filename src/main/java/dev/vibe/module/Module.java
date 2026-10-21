@@ -14,6 +14,7 @@ public abstract class Module {
     private final Category category;
     private int key;
     private boolean enabled;
+    private int toggleDepth;
     private final List<Setting<?>> settings = new ArrayList<Setting<?>>();
 
     protected Module(String name, String description, Category category, int key) {
@@ -37,12 +38,13 @@ public abstract class Module {
         if (this.enabled == enabled) {
             return;
         }
+        boolean previous = this.enabled;
         this.enabled = enabled;
-        if (enabled) {
-            onEnable();
-        } else {
-            onDisable();
-        }
+        toggleDepth++;
+        try { if (enabled) onEnable(); else onDisable(); }
+        finally { toggleDepth--; }
+        // Self-reverting GUI/action modules do not produce a pair of fake toggle toasts.
+        if (toggleDepth == 0 && this.enabled != previous) dev.vibe.feedback.ModuleFeedback.changed(this);
         if (Vibe.getInstance() != null && Vibe.getInstance().getConfig() != null
                 && Vibe.getInstance().getModuleManager() != null && !Vibe.getInstance().getConfig().isLoading()
                 && !Vibe.getInstance().isExtensionLoading()) {

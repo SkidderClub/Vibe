@@ -61,6 +61,7 @@ public final class HudManager {
     public static final String HEALTH = "health";
     public static final String CPS = "cps";
     public static final String CPS_GRAPH = "cpsgraph";
+    public static final String NOTIFICATIONS = "notifications";
 
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final File layoutFile;
@@ -81,6 +82,9 @@ public final class HudManager {
     private final HudElement health = new HudElement(HEALTH, 0, 18, false, false, true);
     private final HudElement cps = new HudElement(CPS, 0, 36, false, false, true);
     private final HudElement cpsGraph = new HudElement(CPS_GRAPH, 9, 190, true, false);
+    private final HudElement notifications = new HudElement(NOTIFICATIONS, 12, 48, true, true);
+    private final dev.vibe.feedback.ModuleNotifications notificationSamples = new dev.vibe.feedback.ModuleNotifications();
+    private final dev.vibe.feedback.NotificationRenderer notificationRenderer = new dev.vibe.feedback.NotificationRenderer();
     public static final String MUSIC = "Music";
     private final HudElement music = new HudElement(MUSIC, 12, 88, true, true);
     private final dev.vibe.hud.MusicHudRenderer musicRenderer = new dev.vibe.hud.MusicHudRenderer();
@@ -103,6 +107,9 @@ public final class HudManager {
     private int hudTransformX, hudTransformY;
 
     public HudManager(File minecraftConfigDirectory) {
+        notificationSamples.add("nohurtcam", "NoHurtCam", true, 0);
+        notificationSamples.add("sprint", "Sprint", false, 0);
+        notificationSamples.add("togglesound", "ToggleSound", true, 0);
         layoutFile = new File(new File(minecraftConfigDirectory, "vibe"), "hud.json");
         load();
     }
@@ -152,6 +159,61 @@ public final class HudManager {
         if (hud.getHudElements().isSelectedIgnoreCase(CPS_GRAPH)) {
             renderScaled(cpsGraph, resolution, () -> drawCpsGraph(hud, resolution, font));
         }
+    }
+
+    /** Toggle feedback remains visible when HUD itself is switched off. The widget selector owns it. */
+    public void drawNotifications() {
+        HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        if (hud == null || (!previewingHud && (!hud.getHudElements().isSelectedIgnoreCase(NOTIFICATIONS)
+                || minecraft.gameSettings.hideGUI))) return;
+        ScaledResolution resolution = new ScaledResolution(minecraft);
+        renderScaled(notifications, resolution, () -> drawNotificationContents(hud, resolution));
+    }
+
+    private void drawNotificationContents(HudModule hud, ScaledResolution resolution) {
+        dev.vibe.feedback.ModuleFeedback feedback = Vibe.getInstance().getFeedback();
+        long now = previewingHud ? 1000 : System.nanoTime() / 1000000L;
+        List<dev.vibe.feedback.ModuleNotifications.Entry> entries = previewingHud ? notificationSamples.active(now)
+                : feedback == null ? Collections.emptyList() : feedback.notifications().active(now);
+        if (entries.isEmpty()) return;
+        int width = Math.max(140, Math.min(dev.vibe.feedback.NotificationRenderer.WIDTH, resolution.getScaledWidth() - 24));
+        int height = entries.size() * dev.vibe.feedback.NotificationRenderer.STRIDE - dev.vibe.feedback.NotificationRenderer.GAP;
+        notifications.ensureOnScreen(resolution, width, height);
+        int left = notifications.left(resolution, width), top = notifications.top(resolution, height);
+        if (hideForDebug(notifications, left, top, width, height, 0)) return;
+        String style = theme(notifications, hud);
+        for (int i = 0; i < entries.size(); i++) {
+            dev.vibe.feedback.ModuleNotifications.Entry entry = entries.get(i);
+            float opacity = previewingHud ? 1 : entry.visibility(now);
+            float slot = previewingHud ? entries.size() - 1 - i : entry.slot(now);
+            int x = left + Math.round((1 - opacity) * 12);
+            int y = top + height - dev.vibe.feedback.NotificationRenderer.HEIGHT
+                    - Math.round(slot * dev.vibe.feedback.NotificationRenderer.STRIDE);
+            notificationRenderer.draw(entry, x, y, width, opacity, now, style,
+                    "LiquidGlass".equalsIgnoreCase(style) ? () -> drawNotificationGlass(hud, x, y, width, opacity) : null);
+        }
+        GlStateManager.color(1, 1, 1, 1); GlStateManager.enableAlpha();
+        GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
+    }
+
+    private void drawNotificationGlass(HudModule hud, int x, int y, int width, float opacity) {
+        int height = dev.vibe.feedback.NotificationRenderer.HEIGHT;
+        int left = x, top = y, right = x + width, bottom = y + height;
+        float radius = 9;
+        if (scalingHud && !previewingHud) {
+            left = Math.round(hudTransformX + (left - hudTransformX) * hudTransformScale);
+            top = Math.round(hudTransformY + (top - hudTransformY) * hudTransformScale);
+            right = Math.round(hudTransformX + (right - hudTransformX) * hudTransformScale);
+            bottom = Math.round(hudTransformY + (bottom - hudTransformY) * hudTransformScale);
+            radius *= hudTransformScale;
+        }
+        if (!previewingHud && liquidGlass.draw(left, top, right, bottom, radius,
+                hud.getLiquidGlassBlur().isEnabled() ? hud.getLiquidGlassBlurStrength().getFloat() : 0,
+                hud.getLiquidGlassRefraction().getFloat(), hud.getLiquidGlassOpacity().getFloat() * opacity,
+                hud.getLiquidGlassTint().getArgb())) return;
+        dev.vibe.ui.MenuRoundedRenderer.rect(x, y, width, height, 9, RenderUtils.alpha(0xFFCAD8EB, Math.round(95 * opacity)));
+        dev.vibe.ui.MenuRoundedRenderer.rect(x + 1, y + 1, width - 2, height - 2, 8,
+                RenderUtils.alpha(hud.getLiquidGlassTint().getArgb(), Math.round(170 * opacity)));
     }
 
     /** Scale around the element's anchor so right/bottom aligned widgets stay aligned. */
@@ -852,6 +914,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     public HudElement getElement(String id) {
+        if (NOTIFICATIONS.equals(id)) return notifications;
         if (MUSIC.equals(id)) return music;
         if (WATERMARK.equals(id)) {
             return watermark;
@@ -893,7 +956,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     public String[] getElementIds() {
         return new String[] {WATERMARK, ARRAY_LIST, COORDINATES, SCOREBOARD, CLOCK, SESSION_INFO, MOTION_GRAPH, STALKER,
-                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, MUSIC};
+                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, NOTIFICATIONS, MUSIC};
     }
 
     public boolean isEnabled(String id) {
@@ -917,7 +980,8 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         ScaledResolution resolution = new ScaledResolution(minecraft);
         previewingHud = true;
         try {
-            if (element == arrayList) arrayRenderer.draw(hud, arrayList, resolution, true);
+            if (element == notifications) drawNotifications();
+            else if (element == arrayList) arrayRenderer.draw(hud, arrayList, resolution, true);
             else if (element == watermark) renderScaled(element, resolution, () -> drawWatermark(hud, resolution, font));
             else if (element == coordinates) renderScaled(element, resolution, () -> drawCoordinates(hud, resolution, font));
             else if (element == clock) renderScaled(element, resolution, () -> drawClock(hud, resolution, font));
@@ -990,6 +1054,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         root.add(HEALTH, health.toJson());
         root.add(CPS, cps.toJson());
         root.add(CPS_GRAPH, cpsGraph.toJson());
+        root.add(NOTIFICATIONS, notifications.toJson());
         root.add(MUSIC, music.toJson());
         return root;
     }
@@ -1014,6 +1079,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         }
         cps.fromJson(root.has(CPS) && root.get(CPS).isJsonObject() ? root.getAsJsonObject(CPS) : null);
         cpsGraph.fromJson(root.has(CPS_GRAPH) && root.get(CPS_GRAPH).isJsonObject() ? root.getAsJsonObject(CPS_GRAPH) : null);
+        notifications.fromJson(root.has(NOTIFICATIONS) && root.get(NOTIFICATIONS).isJsonObject() ? root.getAsJsonObject(NOTIFICATIONS) : null);
         music.fromJson(root.has(MUSIC) && root.get(MUSIC).isJsonObject() ? root.getAsJsonObject(MUSIC) : null);
         // Move only entries that still match the exact v0.0.2 defaults. A
         // deliberately placed element stays untouched; untouched layouts are
