@@ -3,7 +3,7 @@ package dev.vibe.phone;
 import dev.vibe.Vibe;
 import dev.vibe.module.Module;
 import dev.vibe.module.ModuleManager;
-import dev.vibe.module.impl.fun.PhoneModule;
+import dev.vibe.module.impl.meme.PhoneModule;
 import dev.vibe.ui.GuiRenderState;
 import java.awt.image.BufferedImage;
 import java.io.File;

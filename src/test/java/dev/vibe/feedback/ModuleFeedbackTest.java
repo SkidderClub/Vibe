@@ -119,6 +119,68 @@ public class ModuleFeedbackTest {
         assertEquals(0, newest.slot(ModuleNotifications.DURATION), 0);
         assertEquals(1000, newest.started);
     }
+    @Test public void configuredLifetimeAndLimitApplyWithoutResettingOlderCards() {
+        ModuleNotifications queue = new ModuleNotifications();
+        queue.configure(6, 1200, 0);
+        for (int i = 0; i < 6; i++) queue.add("item" + i, "Item", true, 0);
+        assertEquals(6, queue.active(500).size());
+        queue.configure(6, 5000, 500); queue.add("new", "New", false, 500);
+        assertEquals(6, queue.active(1199).size());
+        assertEquals(1, queue.active(1200).size());
+        assertEquals(5000, queue.active(1200).get(0).duration);
+        assertTrue(queue.active(5500).isEmpty());
+        for (int i = 0; i < 6; i++) queue.add("item" + i, "Item", true, 6000);
+        queue.configure(2, 2000, 6000);
+        assertEquals(2, queue.active(6000).size());
+        assertEquals("item4", queue.active(6000).get(0).id);
+        assertEquals("item5", queue.active(6000).get(1).id);
+    }
+    @Test public void actualModuleTogglesUseHudNotificationPreferences() {
+        HudModule hud = new HudModule(); manager.registerDynamic(hud);
+        hud.notifications.duration.setValue(1.4D); hud.notifications.limit.setValue(2D);
+        Module module = new Module("Example", "", Category.CLIENT, 0) { };
+        manager.registerDynamic(module); vibe.getFeedback().start();
+        module.setEnabled(true); module.setEnabled(false); module.setEnabled(true);
+        assertEquals(2, active().size());
+        assertFalse(active().get(0).enabled); assertTrue(active().get(1).enabled);
+        assertEquals(1400, active().get(1).duration);
+    }
+    @Test public void notificationPreferencesRoundTripThroughProfiles() throws Exception {
+        HudModule hud = new HudModule(); manager.registerDynamic(hud);
+        NotificationSettings settings = hud.notifications;
+        settings.duration.setValue(5D); settings.limit.setValue(6D); settings.width.setValue(270D);
+        settings.height.setValue(46D); settings.gap.setValue(12D); settings.radius.setValue(15D);
+        settings.opacity.setValue(.55D); settings.font.setValue("Regular");
+        settings.icons.setEnabled(false); settings.status.setEnabled(false); settings.progress.setEnabled(false);
+        settings.animation.setEnabled(false); settings.shadow.setEnabled(false); settings.border.setEnabled(false);
+        settings.enabledColor.setValue(0xCC659FFF); settings.disabledColor.setValue(0xCCFFBA77);
+        settings.background.setValue(0xDD202630); settings.text.setValue(0xFFE2F5FF);
+        Map<String, Object> saved = new LinkedHashMap<String, Object>();
+        for (dev.vibe.setting.Setting<?> setting : settings.all) saved.put(setting.getRawName(), setting.getValue());
+        assertTrue(config.save("notifications", manager));
+        for (dev.vibe.setting.Setting<?> setting : settings.all) setting.resetToDefault();
+        assertTrue(config.load("notifications", manager));
+        for (dev.vibe.setting.Setting<?> setting : settings.all) assertEquals(setting.getRawName(), saved.get(setting.getRawName()), setting.getValue());
+    }
+    @Test public void notificationInspectorExposesSettingsAndSelectedThemeControls() throws Exception {
+        HudModule hud = new HudModule(); manager.registerDynamic(hud);
+        dev.vibe.hud.HudManager renderer = new dev.vibe.hud.HudManager(temporary.newFolder("layout"));
+        dev.vibe.hud.HudManager.HudElement widget = renderer.getElement(dev.vibe.hud.HudManager.NOTIFICATIONS);
+        dev.vibe.hud.HudEditorGui editor = allocate(dev.vibe.hud.HudEditorGui.class);
+        field(dev.vibe.hud.HudEditorGui.class, "selected").set(editor, widget);
+        java.lang.reflect.Method inspector = dev.vibe.hud.HudEditorGui.class.getDeclaredMethod("settingsFor", String.class);
+        inspector.setAccessible(true);
+        for (String theme : Arrays.asList("Vibe", "Skeet", "LiquidGlass")) {
+            widget.setTheme(theme);
+            List<?> controls = (List<?>) inspector.invoke(editor, dev.vibe.hud.HudManager.NOTIFICATIONS);
+            assertTrue(controls.contains(hud.notifications.width)); assertTrue(controls.contains(hud.notifications.duration));
+            assertTrue(controls.contains(hud.notifications.enabledColor));
+            assertEquals(!"Skeet".equals(theme), controls.contains(hud.notifications.radius));
+            assertEquals("LiquidGlass".equals(theme), controls.contains(hud.getLiquidGlassTint()));
+        }
+        dev.vibe.hud.HudSettingsGui legacy = new dev.vibe.hud.HudSettingsGui(renderer, dev.vibe.hud.HudManager.NOTIFICATIONS);
+        assertTrue(((List<?>) field(dev.vibe.hud.HudSettingsGui.class, "settings").get(legacy)).containsAll(hud.notifications.all));
+    }
     private static void assertSpaced(List<ModuleNotifications.Entry> entries, long now) {
         for (int i = 1; i < entries.size(); i++)
             assertTrue("Cards overlap at " + now, entries.get(i - 1).slot(now) - entries.get(i).slot(now) >= .999F);

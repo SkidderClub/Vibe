@@ -10,7 +10,7 @@ import org.lwjgl.opengl.*;
 
 /** Supersamples the phone and hand together, then filters their coverage when tilted/scaled. */
 final class PhoneCanvas {
-    private static final int LEFT = -72, TOP = -16, WIDTH = 336, HEIGHT = 584;
+    static final int LEFT = -72, TOP = -16, WIDTH = 336, HEIGHT = 584;
     private int framebuffer, texture, depth, width, height;
     private boolean unavailable;
     private final IntBuffer viewport = BufferUtils.createIntBuffer(16);
@@ -64,6 +64,7 @@ final class PhoneCanvas {
             GL11.glTexCoord2f(1, 0); GL11.glVertex2f(LEFT + WIDTH, TOP + HEIGHT);
             GL11.glTexCoord2f(1, 1); GL11.glVertex2f(LEFT + WIDTH, TOP);
             GL11.glEnd();
+            dev.vibe.ui.render.ItemGlowRenderer.phone(texture, LEFT, TOP, WIDTH, HEIGHT);
         } finally {
             GlStateManager.bindTexture(previousTexture); GL20.glUseProgram(program);
             GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);

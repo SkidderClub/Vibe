@@ -29,7 +29,7 @@ final class XanaxWorkspace {
     private static final NeverLoseFont FONT = new NeverLoseFont(java.awt.Font.PLAIN, 24);
     private static final NeverLoseFont BOLD = new NeverLoseFont(java.awt.Font.BOLD, 24);
     private static final Category[] TABS = {Category.COMBAT, Category.MOVEMENT, Category.VISUAL,
-            Category.WORLD, Category.MEME, Category.FUN, Category.CLIENT, Category.SCRIPTS};
+            Category.WORLD, Category.MEME, Category.CLIENT, Category.SCRIPTS};
     private static int savedX = -1, savedY = -1, savedConfigX = -1, savedConfigY = -1;
     private static int savedScreenWidth, savedScreenHeight;
     private static int savedWidth = -1, savedHeight = 598, savedConfigWidth = CONFIG_WIDTH, savedConfigHeight = CONFIG_HEIGHT;

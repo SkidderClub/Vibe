@@ -66,7 +66,6 @@ final class NeverLoseStyle {
                 line(color, x + 6, y, x + 2, y + 6, x + 6, y + 6, x + 4, y + 11, x + 10, y + 4, x + 6, y + 4, x + 6, y); break;
             case WORLD:
                 line(color, x, y + 3, x + 5, y, x + 10, y + 3, x + 10, y + 9, x + 5, y + 12, x, y + 9, x, y + 3, x + 5, y + 6, x + 10, y + 3); line(color, x + 5, y + 6, x + 5, y + 12); break;
-            case FUN:
             case MEME:
                 circle(x + 5, y + 5, 5, color);
                 // Filled pupils stay readable at the small sidebar scale.

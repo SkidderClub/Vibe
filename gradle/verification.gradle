@@ -61,6 +61,8 @@ registerRenderCheck('verifyVisualRendering', 'dev.vibe.ui.VisualRenderCheck', 'v
         'Checks inventory and GUI rendering state.')
 registerRenderCheck('verifyPhoneRendering', 'dev.vibe.phone.PhoneRenderCheck', 'phone-render-check',
         'Checks VibeOS apps, the phone hand, photo capture and graphics state.')
+registerRenderCheck('verifyItemGlow', 'dev.vibe.ui.render.ItemGlowRenderCheck', 'item-glow-check',
+        'Checks held-item glow, the actual Phone offhand, depth/state preservation, resizing and GPU buffer reuse.')
 registerRenderCheck('verifyToggleFeedback', 'dev.vibe.feedback.FeedbackRenderCheck', 'feedback-render-check',
         'Checks module notification rendering, editor bounds, themes and graphics state.')
 registerRenderCheck('verifyFreecamRendering', 'dev.vibe.camera.FreecamRenderCheck', 'freecam-render-check',

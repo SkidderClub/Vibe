@@ -45,6 +45,7 @@ public final class ModuleManager {
         register(new BreakProgressModule());
         register(new FovChangerModule());
         register(new NoHurtCamModule());
+        register(new ItemGlowModule());
         register(new CustomCrosshairModule());
         register(new CustomCosmeticsModule());
         register(new CustomModelRendererModule());
@@ -82,7 +83,7 @@ public final class ModuleManager {
         register(new TicTacToeModule());
         register(new FourWinsModule());
         register(new SlotsModule());
-        register(new dev.vibe.module.impl.fun.PhoneModule());
+        register(new dev.vibe.module.impl.meme.PhoneModule());
         register(new HypixelModule());
         register(new StatisticsModule());
         register(new FlagDetectorModule());

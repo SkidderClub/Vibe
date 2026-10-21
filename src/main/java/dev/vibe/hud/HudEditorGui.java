@@ -842,7 +842,12 @@ public final class HudEditorGui extends GuiScreen {
         else if (HudManager.SCOREBOARD.equals(element)) settings.add(hud.getReplaceScoreboardServer());
         else if (HudManager.ARMOR.equals(element)) settings.add(hud.getArmorDisplayMode());
         else if (HudManager.HEALTH.equals(element)) { settings.add(hud.getHealthMaximumColor()); settings.add(hud.getHealthMinimumColor()); settings.add(hud.getHealthAbsorption()); settings.add(hud.getHealthAbsorptionColor()); settings.add(hud.getHealthHideFull()); }
+        else if (HudManager.NOTIFICATIONS.equals(element)) {
+            settings.addAll(hud.notifications.all);
+            if (selected != null && "Skeet".equalsIgnoreCase(effectiveTheme(selected))) settings.remove(hud.notifications.radius);
+        }
         if (selected != null && "LiquidGlass".equalsIgnoreCase(effectiveTheme(selected))) {
+            if (HudManager.NOTIFICATIONS.equals(element)) settings.remove(hud.notifications.background);
             settings.add(hud.getLiquidGlassBlur()); settings.add(hud.getLiquidGlassBlurStrength());
             settings.add(hud.getLiquidGlassRefraction()); settings.add(hud.getLiquidGlassOpacity()); settings.add(hud.getLiquidGlassTint());
         }
@@ -862,6 +867,7 @@ public final class HudEditorGui extends GuiScreen {
     private String displayName(Setting<?> setting, String element) {
         String value = setting.getRawName();
         if (HudManager.ARRAY_LIST.equals(element)) value = value.replaceFirst("(?i)^ArrayList\\s*", "").replaceFirst("(?i)^Array\\s*", "");
+        else if (HudManager.NOTIFICATIONS.equals(element)) value = value.replaceFirst("(?i)^Notifications\\s+", "");
         else if (element != null) {
             // The inspector already names the element, so "Watermark Outline" reads as "Outline" when that is translated too.
             String shortName = value.replaceFirst("(?i)^" + java.util.regex.Pattern.quote(element) + "\\s+", "");

@@ -1,8 +1,8 @@
 package dev.vibe.phone;
 
-import dev.vibe.module.impl.fun.PhoneModule;
-import dev.vibe.module.impl.fun.PhoneModule.Action;
-import dev.vibe.module.impl.fun.PhoneModule.App;
+import dev.vibe.module.impl.meme.PhoneModule;
+import dev.vibe.module.impl.meme.PhoneModule.Action;
+import dev.vibe.module.impl.meme.PhoneModule.App;
 import dev.vibe.ui.RenderUtils;
 import java.awt.Font;
 import java.awt.image.BufferedImage;

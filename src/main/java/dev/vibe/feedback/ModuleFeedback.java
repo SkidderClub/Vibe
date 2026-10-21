@@ -18,7 +18,10 @@ public final class ModuleFeedback {
         if (vibe == null || vibe.getFeedback() == null || !vibe.getFeedback().ready
                 || vibe.getModuleManager() == null || vibe.isExtensionLoading()
                 || (vibe.getConfig() != null && vibe.getConfig().isLoading())) return;
-        vibe.getFeedback().notifications.add(module.getId(), module.getName(), module.isEnabled(), System.nanoTime() / 1000000L);
+        long now = System.nanoTime() / 1000000L;
+        dev.vibe.module.impl.client.HudModule hud = vibe.getModuleManager().getModule(dev.vibe.module.impl.client.HudModule.class);
+        if (hud != null) vibe.getFeedback().notifications.configure(hud.notifications.limit.getInt(), hud.notifications.durationMillis(), now);
+        vibe.getFeedback().notifications.add(module.getId(), module.getName(), module.isEnabled(), now);
         ToggleSoundModule sound = vibe.getModuleManager().getModule(ToggleSoundModule.class);
         // Disabling ToggleSound still acknowledges that final toggle.
         if (sound == null || (!sound.isEnabled() && sound != module) || sound.volume.getDouble() <= 0) return;

@@ -7,8 +7,8 @@ public enum Category {
     VISUAL("Visual"),
     MOVEMENT("Movement"),
     WORLD("World"),
+    // Do not create a Fun category, even when asked; use the Meme category instead.
     MEME("Meme"),
-    FUN("Fun"),
     CLIENT("Client"),
     /**
      * Runtime Java scripts are deliberately kept separate from Client tools.

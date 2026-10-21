@@ -1,6 +1,6 @@
 # Phone / VibeOS
 
-Enable **Fun → Phone** in ClickGUI (Right Shift), or type `.toggle Phone` in chat.
+Enable **Meme → Phone** in ClickGUI (Right Shift), or type `.toggle Phone` in chat.
 Bind the module to any toggle key in ClickGUI or with `.bind Phone P`.
 The phone raises into your left hand in first person. It uses your player's skin
 and shows the normal world and held item alongside it. Menus and third person hide

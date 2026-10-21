@@ -21,7 +21,7 @@ Use modules only where permitted by the server's rules. Vibe is client-only.
 - **H** opens the HUD editor. Both default keybinds can be changed.
 - **`.help`** lists chat commands; **Tab** completes them.
 - **Alt Manager** in the main menu or server list manages accounts.
-- **Fun → Phone** raises a phone running VibeOS. See [Phone controls and apps](docs/PHONE.md).
+- **Meme → Phone** raises a phone running VibeOS. See [Phone controls and apps](docs/PHONE.md).
 - **Visual → NoHurtCam**, **Client → ToggleSound**, and movable **HUD notifications**
   provide camera and toggle feedback. See [Controls and settings](docs/TOGGLE_FEEDBACK.md).
 

@@ -72,24 +72,80 @@ public final class FeedbackRenderCheck {
             frame(target); renderer.drawNotifications(); save("single.png"); check();
             if (widget.getHeight() != NotificationRenderer.HEIGHT) throw new AssertionError("Single-card bounds are wrong");
             for (String theme : new String[]{"Vibe", "Skeet", "LiquidGlass"}) {
-                widget.setTheme(theme); frame(target); renderer.drawPreview(widget, null);
+                widget.setTheme(theme); seedStack(vibe); frame(target); renderer.drawNotifications();
                 save(theme.toLowerCase(java.util.Locale.ROOT) + ".png"); check();
+                frame(target); renderer.drawPreview(widget, null);
+                save("editor-" + theme.toLowerCase(java.util.Locale.ROOT) + ".png"); check();
             }
+            Object glass = field(HudManager.class, "liquidGlass").get(renderer);
+            if (field(glass.getClass(), "failed").getBoolean(glass) || field(glass.getClass(), "program").get(glass) == null)
+                throw new AssertionError("Live LiquidGlass notifications did not use the real glass shader");
+            // A per-element choice wins over the legacy fallback, including after serialization.
+            widget.setTheme("Skeet"); hud.getMode().setValue("Vibe");
+            frame(target); renderer.drawPreview(widget, null); int selectedSkeet = surfacePixel(widget);
+            widget.setTheme(null); hud.getMode().setValue("Skeet");
+            frame(target); renderer.drawPreview(widget, null);
+            if (surfacePixel(widget) != selectedSkeet) throw new AssertionError("Legacy theme fallback disagrees with the selected theme");
+            hud.getMode().setValue("Vibe"); frame(target); renderer.drawPreview(widget, null);
+            if (surfacePixel(widget) == selectedSkeet) throw new AssertionError("Theme selection did not update the surface");
             widget.setTheme("Vibe"); widget.setScale(1.35F);
             frame(target); renderer.drawPreview(widget, null); save("scaled.png"); check();
             if (widget.getWidth() != Math.round(NotificationRenderer.WIDTH * 1.35F)) throw new AssertionError("HUD editor scaling lost notification bounds");
             widget.setScale(1); mc.gameSettings.guiScale = 3;
             seedStack(vibe); frame(target); renderer.drawNotifications(); save("small-gui.png"); check();
             assertStackVisible(widget, 4);
+            mc.gameSettings.guiScale = 2;
+            NotificationSettings options = hud.notifications;
+            options.width.setValue(240D); options.height.setValue(46D); options.gap.setValue(12D);
+            options.limit.setValue(2D); options.font.setValue("Regular");
+            options.icons.setEnabled(false); options.status.setEnabled(false); options.progress.setEnabled(false);
+            options.shadow.setEnabled(false); options.border.setEnabled(false); options.animation.setEnabled(false);
+            options.radius.setValue(14D); options.opacity.setValue(.65D);
+            options.background.setValue(0xFF173249); options.text.setValue(0xFFC3E7FF);
+            frame(target); renderer.drawPreview(widget, null); save("custom-minimal.png"); check();
+            if (widget.getWidth() != 240 || widget.getHeight() != 104) throw new AssertionError("Custom notification dimensions/gap/limit were ignored");
+            frame(target);
+            vibe.getFeedback().notifications().clear();
+            vibe.getFeedback().notifications().add("instant", "Instant toggle", true, System.nanoTime() / 1000000L);
+            renderer.drawNotifications(); check();
+            if (surfacePixel(widget) > 65) throw new AssertionError("Disabling animation did not show a fresh notification immediately");
+            options.icons.setEnabled(true); options.status.setEnabled(true); options.progress.setEnabled(true);
+            options.enabledColor.setValue(0xFF93B4FF); options.disabledColor.setValue(0xFFFFC38C);
+            for (String theme : new String[]{"Vibe", "Skeet", "LiquidGlass"}) {
+                widget.setTheme(theme); seedStack(vibe, 2); frame(target); renderer.drawNotifications();
+                save("custom-" + theme.toLowerCase(java.util.Locale.ROOT) + ".png"); check();
+            }
+            widget.setTheme("Vibe");
+            // An eight-card request at a large HUD scale must display only the newest cards that fit.
+            options.limit.setValue(8D); options.height.setValue(60D); options.gap.setValue(16D); options.width.setValue(320D);
+            widget.setScale(1.5F); mc.gameSettings.guiScale = 3;
+            seedStack(vibe, 8); frame(target); renderer.drawNotifications(); save("large-stack-fit.png"); check();
+            ScaledResolution small = new ScaledResolution(mc);
+            if (widget.getLeft() < 0 || widget.getTop() < 0 || widget.getLeft() + widget.getWidth() > small.getScaledWidth()
+                    || widget.getTop() + widget.getHeight() > small.getScaledHeight()) throw new AssertionError("Large stack or width overflowed the screen");
+            if (widget.getHeight() != 204) throw new AssertionError("The stack did not adapt its visible count to the screen");
+            for (dev.vibe.setting.Setting<?> setting : options.all) setting.resetToDefault();
             mc.gameSettings.guiScale = 2; widget.setScale(1.35F);
             frame(target); renderer.drawPreview(widget, null);
             widget.moveTo(20, 25, new ScaledResolution(mc));
             HudManager reloaded = new HudManager(new File(fixture, "other")); reloaded.fromJson(renderer.toJson());
             if (reloaded.getElement(HudManager.NOTIFICATIONS).getScale() != 1.35F) throw new AssertionError("Notification layout did not round trip");
+            widget.setScale(1); options.limit.setValue(1D);
+            frame(target); renderer.drawPreview(widget, null); frame(target);
+            dev.vibe.ui.NeverLoseFont headings = new dev.vibe.ui.NeverLoseFont(java.awt.Font.BOLD, 20);
+            String[] themes = {"Vibe", "Skeet", "LiquidGlass"};
+            for (int i = 0; i < themes.length; i++) {
+                widget.setTheme(themes[i]); widget.moveTo(16 + i * 210, 50, new ScaledResolution(mc));
+                headings.draw(themes[i], 28 + i * 210, 29, 0xFFFFFFFF);
+                seedStack(vibe); renderer.drawNotifications();
+                reloaded.fromJson(renderer.toJson());
+                if (!themes[i].equals(reloaded.getElement(HudManager.NOTIFICATIONS).getTheme())) throw new AssertionError("Notification theme was not saved");
+            }
+            saveRegion("themes-preview.png", 16, 40, 1248, 160); check();
             hud.getHudElements().toggle(HudManager.NOTIFICATIONS);
             frame(target); ByteBuffer before = pixels(); renderer.drawNotifications(); ByteBuffer after = pixels();
             for (int i = 0; i < before.capacity(); i++) if (before.get(i) != after.get(i)) throw new AssertionError("Disabled notifications still render");
-            System.out.println("Toggle feedback: four simultaneous cards, repeated module toggles, GUI scales 2/3, all HUD themes, editor scale/layout, GL state and hidden widget passed.");
+            System.out.println("Toggle feedback: theme selection/fallback/persistence, real LiquidGlass shader, custom appearance, eight-card screen fitting, GUI scales 2/3, editor scale/layout, GL state and hidden widget passed.");
         } finally { if (target != null) target.deleteFramebuffer(); buffer.destroy(); }
     }
     private static void frame(Framebuffer target) {
@@ -107,12 +163,20 @@ public final class FeedbackRenderCheck {
         }
     }
     private static void seedStack(Vibe vibe) {
+        seedStack(vibe, 4);
+    }
+    private static void seedStack(Vibe vibe, int count) {
         long now = System.nanoTime() / 1000000L;
+        HudModule hud = vibe.getModuleManager().getModule(HudModule.class);
         vibe.getFeedback().notifications().clear();
-        vibe.getFeedback().notifications().add("scaffold", "Scaffold", true, now - 1000);
-        vibe.getFeedback().notifications().add("scaffold", "Scaffold", false, now - 900);
-        vibe.getFeedback().notifications().add("nohurtcam", "NoHurtCam", true, now - 800);
-        vibe.getFeedback().notifications().add("togglesound", "ToggleSound", true, now - 700);
+        vibe.getFeedback().notifications().configure(hud.notifications.limit.getInt(), hud.notifications.durationMillis(), now);
+        String[] names = {"Scaffold", "Scaffold", "NoHurtCam", "ToggleSound"};
+        for (int i = 0; i < count; i++) vibe.getFeedback().notifications().add(names[i % 4], names[i % 4], i % 4 != 1, now - 1000 + i * 40);
+    }
+    private static int surfacePixel(HudManager.HudElement widget) {
+        int scale = new ScaledResolution(Minecraft.getMinecraft()).getScaleFactor();
+        int at = ((HEIGHT - 1 - (widget.getTop() + NotificationRenderer.HEIGHT / 2) * scale) * WIDTH + (widget.getLeft() + 4) * scale) * 4;
+        return pixels().get(at) & 255;
     }
     private static void assertStackVisible(HudManager.HudElement widget, int count) {
         ScaledResolution resolution = new ScaledResolution(Minecraft.getMinecraft());
@@ -145,15 +209,17 @@ public final class FeedbackRenderCheck {
     private static void savePreview(HudManager.HudElement widget) throws Exception {
         int scale = new ScaledResolution(Minecraft.getMinecraft()).getScaleFactor();
         int width = widget.getWidth() * scale + 16, height = widget.getHeight() * scale + 20;
+        saveRegion("stack-preview.png", widget.getLeft() * scale - 8, widget.getTop() * scale - 8, width, height);
+    }
+    private static void saveRegion(String name, int left, int top, int width, int height) throws Exception {
         ByteBuffer pixels = BufferUtils.createByteBuffer(width * height * 4);
-        GL11.glReadPixels(widget.getLeft() * scale - 8, HEIGHT - widget.getTop() * scale - height + 8,
-                width, height, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
+        GL11.glReadPixels(left, HEIGHT - top - height, width, height, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         for (int y = 0; y < height; y++) for (int x = 0; x < width; x++) {
             int at = ((height - 1 - y) * width + x) * 4;
             image.setRGB(x, y, 0xFF000000 | (pixels.get(at) & 255) << 16 | (pixels.get(at + 1) & 255) << 8 | pixels.get(at + 2) & 255);
         }
-        ImageIO.write(image, "png", OUTPUT.resolve("stack-preview.png").toFile());
+        ImageIO.write(image, "png", OUTPUT.resolve(name).toFile());
     }
     private static Field field(Class<?> type, String name) throws Exception { Field f = type.getDeclaredField(name); f.setAccessible(true); return f; }
     private static <T> T create(Class<T> type) throws Exception { return type.cast(allocate.invoke(unsafe, type)); }

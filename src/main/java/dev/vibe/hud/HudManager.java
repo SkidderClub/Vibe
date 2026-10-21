@@ -10,6 +10,9 @@ import dev.vibe.module.impl.client.NameProtectModule;
 import dev.vibe.module.impl.client.BlurModule;
 import dev.vibe.module.impl.visual.EspModule;
 import dev.vibe.friend.FriendManager;
+import dev.vibe.feedback.ModuleNotifications;
+import dev.vibe.feedback.NotificationRenderer;
+import dev.vibe.feedback.NotificationSettings;
 import dev.vibe.target.TargetManager;
 import dev.vibe.ui.RenderUtils;
 import dev.vibe.ui.DebugOverlay;
@@ -83,8 +86,8 @@ public final class HudManager {
     private final HudElement cps = new HudElement(CPS, 0, 36, false, false, true);
     private final HudElement cpsGraph = new HudElement(CPS_GRAPH, 9, 190, true, false);
     private final HudElement notifications = new HudElement(NOTIFICATIONS, 12, 48, true, true);
-    private final dev.vibe.feedback.ModuleNotifications notificationSamples = new dev.vibe.feedback.ModuleNotifications();
-    private final dev.vibe.feedback.NotificationRenderer notificationRenderer = new dev.vibe.feedback.NotificationRenderer();
+    private final ModuleNotifications notificationSamples = new ModuleNotifications();
+    private final NotificationRenderer notificationRenderer = new NotificationRenderer();
     public static final String MUSIC = "Music";
     private final HudElement music = new HudElement(MUSIC, 12, 88, true, true);
     private final dev.vibe.hud.MusicHudRenderer musicRenderer = new dev.vibe.hud.MusicHudRenderer();
@@ -107,9 +110,6 @@ public final class HudManager {
     private int hudTransformX, hudTransformY;
 
     public HudManager(File minecraftConfigDirectory) {
-        notificationSamples.add("nohurtcam", "NoHurtCam", true, 0);
-        notificationSamples.add("sprint", "Sprint", false, 0);
-        notificationSamples.add("togglesound", "ToggleSound", true, 0);
         layoutFile = new File(new File(minecraftConfigDirectory, "vibe"), "hud.json");
         load();
     }
@@ -167,29 +167,43 @@ public final class HudManager {
         if (hud == null || (!previewingHud && (!hud.getHudElements().isSelectedIgnoreCase(NOTIFICATIONS)
                 || minecraft.gameSettings.hideGUI))) return;
         ScaledResolution resolution = new ScaledResolution(minecraft);
-        renderScaled(notifications, resolution, () -> drawNotificationContents(hud, resolution));
+        NotificationSettings settings = hud.notifications;
+        dev.vibe.feedback.ModuleFeedback feedback = Vibe.getInstance().getFeedback();
+        long now = previewingHud ? settings.durationMillis() / 3 : System.nanoTime() / 1000000L;
+        float scale = notifications.getScale();
+        int width = Math.min(settings.width.getInt(), (int) ((resolution.getScaledWidth() - 16) / scale));
+        int capacity = Math.max(1, ((int) ((resolution.getScaledHeight() - 16) / scale) + settings.gap.getInt()) / settings.stride());
+        int visibleCount = Math.min(settings.limit.getInt(), capacity);
+        ModuleNotifications queue = previewingHud ? notificationSamples : feedback == null ? null : feedback.notifications();
+        if (queue == null) return;
+        queue.configure(settings.limit.getInt(), settings.durationMillis(), previewingHud ? 0 : now);
+        if (previewingHud) {
+            queue.clear();
+            String[] names = {"Scaffold", "NoHurtCam", "Sprint", "ToggleSound"};
+            for (int i = 0; i < visibleCount; i++) queue.add(names[i % names.length], names[i % names.length], i % 3 != 1, 0);
+        }
+        List<ModuleNotifications.Entry> all = queue.active(now);
+        List<ModuleNotifications.Entry> entries = all.subList(Math.max(0, all.size() - visibleCount), all.size());
+        if (entries.isEmpty()) return;
+        int height = entries.size() * settings.stride() - settings.gap.getInt();
+        // Clamp before applying the widget transform, including large stacks and HUD scale changes.
+        notifications.ensureScaledOnScreen(resolution, width, height);
+        renderScaled(notifications, resolution, () -> drawNotificationContents(hud, resolution, entries, now, width, height));
     }
 
-    private void drawNotificationContents(HudModule hud, ScaledResolution resolution) {
-        dev.vibe.feedback.ModuleFeedback feedback = Vibe.getInstance().getFeedback();
-        long now = previewingHud ? 1000 : System.nanoTime() / 1000000L;
-        List<dev.vibe.feedback.ModuleNotifications.Entry> entries = previewingHud ? notificationSamples.active(now)
-                : feedback == null ? Collections.emptyList() : feedback.notifications().active(now);
-        if (entries.isEmpty()) return;
-        int width = Math.max(140, Math.min(dev.vibe.feedback.NotificationRenderer.WIDTH, resolution.getScaledWidth() - 24));
-        int height = entries.size() * dev.vibe.feedback.NotificationRenderer.STRIDE - dev.vibe.feedback.NotificationRenderer.GAP;
-        notifications.ensureOnScreen(resolution, width, height);
+    private void drawNotificationContents(HudModule hud, ScaledResolution resolution, List<ModuleNotifications.Entry> entries,
+                                          long now, int width, int height) {
+        NotificationSettings settings = hud.notifications;
         int left = notifications.left(resolution, width), top = notifications.top(resolution, height);
         if (hideForDebug(notifications, left, top, width, height, 0)) return;
         String style = theme(notifications, hud);
         for (int i = 0; i < entries.size(); i++) {
-            dev.vibe.feedback.ModuleNotifications.Entry entry = entries.get(i);
-            float opacity = previewingHud ? 1 : entry.visibility(now);
-            float slot = previewingHud ? entries.size() - 1 - i : entry.slot(now);
+            ModuleNotifications.Entry entry = entries.get(i);
+            float opacity = previewingHud || !settings.animation.isEnabled() ? 1 : entry.visibility(now);
+            float slot = previewingHud || !settings.animation.isEnabled() ? entries.size() - 1 - i : entry.slot(now);
             int x = left + Math.round((1 - opacity) * 12);
-            int y = top + height - dev.vibe.feedback.NotificationRenderer.HEIGHT
-                    - Math.round(slot * dev.vibe.feedback.NotificationRenderer.STRIDE);
-            notificationRenderer.draw(entry, x, y, width, opacity, now, style,
+            int y = top + height - settings.height.getInt() - Math.round(slot * settings.stride());
+            notificationRenderer.draw(entry, x, y, width, opacity, now, style, settings,
                     "LiquidGlass".equalsIgnoreCase(style) ? () -> drawNotificationGlass(hud, x, y, width, opacity) : null);
         }
         GlStateManager.color(1, 1, 1, 1); GlStateManager.enableAlpha();
@@ -197,9 +211,10 @@ public final class HudManager {
     }
 
     private void drawNotificationGlass(HudModule hud, int x, int y, int width, float opacity) {
-        int height = dev.vibe.feedback.NotificationRenderer.HEIGHT;
+        NotificationSettings settings = hud.notifications;
+        int height = settings.height.getInt();
         int left = x, top = y, right = x + width, bottom = y + height;
-        float radius = 9;
+        float radius = Math.min(settings.radius.getFloat(), height / 2F);
         if (scalingHud && !previewingHud) {
             left = Math.round(hudTransformX + (left - hudTransformX) * hudTransformScale);
             top = Math.round(hudTransformY + (top - hudTransformY) * hudTransformScale);
@@ -209,11 +224,11 @@ public final class HudManager {
         }
         if (!previewingHud && liquidGlass.draw(left, top, right, bottom, radius,
                 hud.getLiquidGlassBlur().isEnabled() ? hud.getLiquidGlassBlurStrength().getFloat() : 0,
-                hud.getLiquidGlassRefraction().getFloat(), hud.getLiquidGlassOpacity().getFloat() * opacity,
+                hud.getLiquidGlassRefraction().getFloat(), hud.getLiquidGlassOpacity().getFloat() * settings.opacity.getFloat() * opacity,
                 hud.getLiquidGlassTint().getArgb())) return;
-        dev.vibe.ui.MenuRoundedRenderer.rect(x, y, width, height, 9, RenderUtils.alpha(0xFFCAD8EB, Math.round(95 * opacity)));
-        dev.vibe.ui.MenuRoundedRenderer.rect(x + 1, y + 1, width - 2, height - 2, 8,
-                RenderUtils.alpha(hud.getLiquidGlassTint().getArgb(), Math.round(170 * opacity)));
+        int tint = RenderUtils.blend(settings.background.getArgb(), hud.getLiquidGlassTint().getArgb(), .14F);
+        dev.vibe.ui.MenuRoundedRenderer.rect(x, y, width, height, Math.round(Math.min(settings.radius.getFloat(), height / 2F)),
+                RenderUtils.alpha(tint, Math.round(165 * settings.opacity.getFloat() * opacity)));
     }
 
     /** Scale around the element's anchor so right/bottom aligned widgets stay aligned. */
@@ -1180,6 +1195,20 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             }
         }
 
+        /** Keep a dynamically sized stack visible without discarding its saved alignment or scale. */
+        private void ensureScaledOnScreen(ScaledResolution resolution, int expectedWidth, int expectedHeight) {
+            int anchorX = centred ? resolution.getScaledWidth() / 2 + x : rightAnchored ? resolution.getScaledWidth() - x : x;
+            int anchorY = verticallyCentred || centred ? resolution.getScaledHeight() / 2 + y
+                    : bottomAnchored ? resolution.getScaledHeight() - y : y;
+            int actualLeft = Math.round(anchorX + (left(resolution, expectedWidth) - anchorX) * scale);
+            int actualTop = Math.round(anchorY + (top(resolution, expectedHeight) - anchorY) * scale);
+            int actualWidth = Math.round(expectedWidth * scale), actualHeight = Math.round(expectedHeight * scale);
+            int dx = Math.max(8, Math.min(resolution.getScaledWidth() - actualWidth - 8, actualLeft)) - actualLeft;
+            int dy = Math.max(8, Math.min(resolution.getScaledHeight() - actualHeight - 8, actualTop)) - actualTop;
+            x += rightAnchored && !centred ? -dx : dx;
+            y += bottomAnchored && !centred && !verticallyCentred ? -dy : dy;
+        }
+
         public void moveTo(int desiredLeft, int desiredTop, ScaledResolution resolution) {
             int safeLeft = Math.max(0, Math.min(resolution.getScaledWidth() - Math.max(1, width), desiredLeft));
             int safeTop = Math.max(0, Math.min(resolution.getScaledHeight() - Math.max(1, height), desiredTop));
@@ -1259,7 +1288,8 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         public void setScale(float value) { scale = Math.max(0.50F, Math.min(2.00F, value)); }
         public String getTheme() { return theme; }
         public void setTheme(String value) {
-            if ("Vibe".equalsIgnoreCase(value)) theme = "Vibe";
+            if (value == null) theme = null;
+            else if ("Vibe".equalsIgnoreCase(value)) theme = "Vibe";
             else if ("Skeet".equalsIgnoreCase(value)) theme = "Skeet";
             else if ("LiquidGlass".equalsIgnoreCase(value)) theme = "LiquidGlass";
         }

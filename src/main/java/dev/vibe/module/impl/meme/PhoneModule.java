@@ -1,4 +1,4 @@
-package dev.vibe.module.impl.fun;
+package dev.vibe.module.impl.meme;
 
 import dev.vibe.Vibe;
 import dev.vibe.module.Category;
@@ -50,7 +50,7 @@ public final class PhoneModule extends Module {
     private final FlappyGame flappy = new FlappyGame();
 
     public PhoneModule() {
-        super("Phone", "Hold a phone running VibeOS", Category.FUN, Keyboard.KEY_NONE);
+        super("Phone", "Hold a phone running VibeOS", Category.MEME, Keyboard.KEY_NONE);
         String[] defaults = {"NUMPAD0", "NUMPAD8", "NUMPAD2", "NUMPAD4", "NUMPAD6", "NUMPAD5", "DECIMAL", "NUMPAD7"};
         String[] labels = {"Home", "Up", "Down", "Left", "Right", "Select", "Back", "Delete"};
         for (int i = 0; i < keys.length; i++) keys[i] = addSetting(new StringSetting(labels[i] + " Key", defaults[i], 24, null));

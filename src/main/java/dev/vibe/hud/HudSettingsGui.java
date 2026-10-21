@@ -59,6 +59,8 @@ public final class HudSettingsGui extends GuiScreen {
             settings.add(hud.getHealthAbsorption());
             settings.add(hud.getHealthAbsorptionColor());
             settings.add(hud.getHealthHideFull());
+        } else if (HudManager.NOTIFICATIONS.equals(element)) {
+            settings.addAll(hud.notifications.all);
         }
     }
 
@@ -163,7 +165,10 @@ public final class HudSettingsGui extends GuiScreen {
         if (editingColor != null) {
             if (keyCode == Keyboard.KEY_ESCAPE) { editingColor = null; return; }
             if (keyCode == Keyboard.KEY_RETURN) {
-                if (editingColor.setHex(editBuffer)) { editingColor = null; manager.save(); } return;
+                if (editingColor.setHex(editBuffer)) {
+                    editingColor = null; manager.save();
+                    Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
+                } return;
             }
             if (keyCode == Keyboard.KEY_BACK && !editBuffer.isEmpty()) editBuffer = editBuffer.substring(0,editBuffer.length()-1);
             else if ("#0123456789abcdefABCDEF".indexOf(typedChar)>=0 && editBuffer.length()<9) editBuffer += typedChar;

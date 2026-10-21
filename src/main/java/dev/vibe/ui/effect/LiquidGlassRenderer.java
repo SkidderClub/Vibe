@@ -44,7 +44,8 @@ public final class LiquidGlassRenderer implements AutoCloseable {
             program.vec2("Texel", 1.0F / width, 1.0F / height);
             program.scalar("Blur", blurStrength);
             program.scalar("Refraction", refractionStrength);
-            program.scalar("Opacity", Math.max(.15F, Math.min(1.0F, opacity)));
+            // Fade animated panes all the way out; the HUD setting still supplies its own minimum.
+            program.scalar("Opacity", Math.max(0.0F, Math.min(1.0F, opacity)));
             program.vec3("Tint", ((tint >> 16) & 255) / 255.0F, ((tint >> 8) & 255) / 255.0F, (tint & 255) / 255.0F);
             GL11.glViewport(0, 0, width, height);
             GL11.glEnable(GL11.GL_SCISSOR_TEST);

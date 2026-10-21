@@ -52,7 +52,7 @@ public final class AnimationItemRenderer extends ItemRenderer {
     public void renderItemInFirstPerson(float partialTicks) {
         EntityPlayerSP visualPlayer = AuraBlockVisual.begin();
         try {
-            renderWithAnimation(partialTicks);
+            ItemGlowRenderer.held(() -> renderWithAnimation(partialTicks));
         } finally {
             AuraBlockVisual.end(visualPlayer);
         }

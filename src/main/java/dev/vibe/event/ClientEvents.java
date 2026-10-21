@@ -162,7 +162,7 @@ public final class ClientEvents {
             return;
         }
         int key = Keyboard.getEventKey();
-        dev.vibe.module.impl.fun.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.fun.PhoneModule.class);
+        dev.vibe.module.impl.meme.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class);
         if (minecraft.currentScreen == null && minecraft.thePlayer != null && phone != null
                 && phone.handleKey(key, Keyboard.isRepeatEvent())) {
             // Rebound phone controls own their key; a key such as Q must not
@@ -408,7 +408,7 @@ public final class ClientEvents {
     @SubscribeEvent
     public void onPhoneCapture(RenderGameOverlayEvent.Pre event) {
         if (event.type == RenderGameOverlayEvent.ElementType.ALL)
-            phoneRenderer.captureWorld(Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.fun.PhoneModule.class));
+            phoneRenderer.captureWorld(Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class));
     }
 
     @SubscribeEvent
@@ -438,7 +438,7 @@ public final class ClientEvents {
                 if (!pitBot) {
                     Vibe.getInstance().getHudManager().drawScoreboard(event.partialTicks);
                     qolRenderer.capture();
-                    phoneRenderer.render(Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.fun.PhoneModule.class), event.resolution);
+                    phoneRenderer.render(Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class), event.resolution);
                     if (minecraft.currentScreen == null) Vibe.getInstance().getHudManager().drawNotifications();
                 }
             }
@@ -864,7 +864,7 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onGuiOpen(GuiOpenEvent event) {
-        dev.vibe.module.impl.fun.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.fun.PhoneModule.class);
+        dev.vibe.module.impl.meme.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class);
         if (phone != null && phone.isEnabled() && phone.binding() >= 0
                 && event.gui instanceof net.minecraft.client.gui.GuiIngameMenu) {
             phone.cancelBinding(); event.setCanceled(true); return;
@@ -918,6 +918,7 @@ public final class ClientEvents {
     public void onScriptDisconnect(FMLNetworkEvent.ClientDisconnectionFromServerEvent event) {
         minecraft.addScheduledTask(() -> {
             fogRenderer.close(); hitmarkerRenderer.close(); phoneRenderer.close();
+            dev.vibe.ui.render.ItemGlowRenderer.closeActive();
             if (Vibe.getInstance().getFeedback() != null) Vibe.getInstance().getFeedback().notifications().clear();
             HitmarkerModule markers = Vibe.getInstance().getModuleManager().getModule(HitmarkerModule.class);
             if (markers != null) markers.clear();

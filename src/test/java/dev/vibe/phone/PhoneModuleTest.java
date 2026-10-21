@@ -1,9 +1,9 @@
 package dev.vibe.phone;
 
 import dev.vibe.module.Category;
-import dev.vibe.module.impl.fun.PhoneModule;
-import dev.vibe.module.impl.fun.PhoneModule.Action;
-import dev.vibe.module.impl.fun.PhoneModule.App;
+import dev.vibe.module.impl.meme.PhoneModule;
+import dev.vibe.module.impl.meme.PhoneModule.Action;
+import dev.vibe.module.impl.meme.PhoneModule.App;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Field;
 import org.junit.*;
@@ -38,7 +38,7 @@ public class PhoneModuleTest {
     }
     @Test public void navigatesHomeAndRebindsWithoutConflictingControls() throws Exception {
         PhoneModule phone = enabled();
-        assertEquals(Category.FUN, phone.getCategory());
+        assertEquals(Category.MEME, phone.getCategory());
         assertTrue(phone.handleKey(Keyboard.KEY_NUMPAD6, false));
         assertEquals(1, phone.homeSelection());
         phone.handleKey(Keyboard.KEY_NUMPAD5, false);

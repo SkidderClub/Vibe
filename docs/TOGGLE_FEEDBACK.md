@@ -13,8 +13,22 @@ Press **H** to open the HUD editor. Select **Notifications** to move it, drag it
 resize handle to scale it, or choose its appearance. The editor shows sample
 notifications, so it can be positioned without toggling modules.
 
+Select **Notifications** in the editor to customize duration (1–10 seconds), maximum
+cards (1–8), width, height, spacing, font weight, animations, icons, status labels,
+progress bars, shadows, borders, corner radius, background opacity and colors.
+All controls are also registered on the HUD module for ClickGUI and chat commands,
+and save with your profile. Layout, scale and the selected theme save in the HUD layout.
+
+The editor's **Vibe / Skeet / Glass** selector controls the notification theme:
+Vibe uses rounded cards and status badges; Skeet uses flat rectangular frames,
+an accent line and plain status text; LiquidGlass uses the refractive glass shader.
+Glass blur, refraction, opacity and tint appear in the inspector when Glass is
+selected. Glass Tint controls the glass surface color; Background Color controls
+the Vibe and Skeet surfaces. Corners apply to Vibe and Glass. The preview updates
+as you edit. Large stacks automatically show the newest cards that fit on screen.
+
 Notifications work with keybinds, chat commands, ClickGUI, scripts and extensions.
-The stack keeps the most recent four changes for 3.2 seconds each, with the newest
+By default the stack keeps the most recent four changes for 3.2 seconds each, with the newest
 at the bottom. Every toggle gets a separate card, including rapid enable/disable
 changes to the same module. Older cards slide upward with consistent spacing.
 Centered check/minus icons and state pills distinguish enabled and disabled cards.

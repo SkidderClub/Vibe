@@ -407,7 +407,7 @@ public final class VibeClickGui extends GuiScreen {
         // labels.  Using getLabel() made Skeet try to load paths such as a
         // Chinese category name whenever Language was enabled.
         String icon = category == Category.VISUAL ? "visuals" : category == Category.CLIENT ? "utilities"
-                : category == Category.SCRIPTS ? "scripts" : category == Category.MEME || category == Category.FUN ? "meme"
+                : category == Category.SCRIPTS ? "scripts" : category == Category.MEME ? "meme"
                 : category.name().toLowerCase(java.util.Locale.ROOT);
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_LINE_BIT | GL11.GL_CURRENT_BIT | GL11.GL_COLOR_BUFFER_BIT);
         try {

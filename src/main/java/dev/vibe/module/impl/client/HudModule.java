@@ -81,6 +81,7 @@ public final class HudModule extends Module {
             () -> true));
 
     public final dev.vibe.hud.ArrayListSettings array = new dev.vibe.hud.ArrayListSettings(this::addSetting);
+    public final dev.vibe.feedback.NotificationSettings notifications = new dev.vibe.feedback.NotificationSettings(this::addSetting);
 
     public HudModule() {
         super("HUD", "Customizable Vibe HUD", Category.CLIENT, Keyboard.KEY_NONE);
