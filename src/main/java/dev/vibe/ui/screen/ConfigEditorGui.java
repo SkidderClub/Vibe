@@ -2,6 +2,7 @@ package dev.vibe.ui.screen;
 
 import dev.vibe.Vibe;
 import dev.vibe.config.VibeConfig.ConfigInfo;
+import dev.vibe.config.OnlineConfigService;
 import dev.vibe.module.impl.client.BlurModule;
 import dev.vibe.module.impl.client.ConfigEditorModule;
 import dev.vibe.ui.RenderUtils;
@@ -13,6 +14,7 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 
 /** Searchable profile manager with creator/audit metadata. */
 public final class ConfigEditorGui extends GuiScreen {
@@ -23,6 +25,9 @@ public final class ConfigEditorGui extends GuiScreen {
     private GuiTextField search;
     private String selected;
     private int left, top, panelWidth;
+    private boolean onlineTab, fetching;
+    private int scroll, request;
+    private String status = "Changes are saved only when you choose Save or New.";
     private static boolean loadWithKeybinds = true, loadWithVisuals = true;
 
     public ConfigEditorGui(ConfigEditorModule module) { this.module = module; }
@@ -44,8 +49,36 @@ public final class ConfigEditorGui extends GuiScreen {
     }
 
     private void refresh() {
-        configs.clear(); configs.addAll(Vibe.getInstance().getConfig().list());
+        configs.clear();
+        if (onlineTab) {
+            for (OnlineConfigService.Entry entry : Vibe.getInstance().getOnlineConfigs().getEntries()) configs.add(entry.getName());
+        } else configs.addAll(Vibe.getInstance().getConfig().list());
         if (selected != null && !configs.contains(selected)) selected = null;
+        scroll = Math.min(scroll, Math.max(0, visibleConfigs().size() - 9));
+    }
+
+    private void refreshOnline(boolean force) {
+        int token = ++request;
+        fetching = true; status = "Fetching online configs...";
+        Vibe.getInstance().getOnlineConfigs().refresh(force).whenComplete((entries, error) -> mc.addScheduledTask(() -> {
+            if (token != request) return;
+            fetching = false;
+            status = error == null ? entries.size() + " online config(s) available." : OnlineConfigService.errorMessage(error);
+            refresh();
+        }));
+    }
+
+    private void loadOnline() {
+        if (selected == null || fetching) return;
+        String chosen = selected; boolean keys = loadWithKeybinds, visuals = loadWithVisuals;
+        int token = ++request; fetching = true; status = "Loading " + chosen + "...";
+        Vibe.getInstance().getOnlineConfigs().fetch(chosen).whenComplete((root, error) -> mc.addScheduledTask(() -> {
+            if (token != request) return;
+            fetching = false;
+            if (error != null) { status = OnlineConfigService.errorMessage(error); return; }
+            boolean loaded = Vibe.getInstance().getConfig().loadOnline(chosen, root, Vibe.getInstance().getModuleManager(), keys, visuals);
+            status = loaded ? "Loaded " + chosen + ". Use New or .config save <name> to save locally." : "Could not apply online config.";
+        }));
     }
 
     private List<String> visibleConfigs() {
@@ -60,7 +93,7 @@ public final class ConfigEditorGui extends GuiScreen {
         SkeetEditorStyle.backdrop(this, BlurModule.CONFIG_EDITOR, partialTicks);
         net.minecraft.client.renderer.GlStateManager.pushMatrix();
         net.minecraft.client.renderer.GlStateManager.scale(uiScale, uiScale, 1);
-        SkeetEditorStyle.window(left, top, left + panelWidth, top + 365, "Config editor", "profiles • metadata • authors");
+        SkeetEditorStyle.window(left, top, left + panelWidth, top + 380, "Config editor", "local • online • manual saving");
         fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Search"), left + 14, top + 39, SkeetEditorStyle.MUTED);
         SkeetEditorStyle.input(left + 12, top + 50, left + 242, top + 70);
         search.drawTextBox();
@@ -71,24 +104,30 @@ public final class ConfigEditorGui extends GuiScreen {
         SkeetEditorStyle.input(left + 12, top + 326, left + 206, top + 348);
         name.drawTextBox();
         button(left + 212, top + 328, "New", 0xFF2DE2C2);
+        fontRendererObj.drawStringWithShadow(trim(status, panelWidth - 28), left + 14, top + 361, SkeetEditorStyle.MUTED);
         net.minecraft.client.renderer.GlStateManager.popMatrix();
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
     private void drawConfigList() {
         int listLeft = left + 12, listTop = top + 75, listRight = left + 252, listBottom = top + 306;
-        SkeetEditorStyle.panel(listLeft, listTop, listRight, listBottom, "Configs");
+        SkeetEditorStyle.panel(listLeft, listTop, listRight, listBottom, "");
+        tab(listLeft + 4, listTop + 3, "Local", !onlineTab);
+        tab(listLeft + 70, listTop + 3, "Online", onlineTab);
+        if (onlineTab) button(listLeft + 146, listTop + 1, "Refresh", 0xFF60D5FF);
         // Reserve the panel caption strip.  Starting rows inside it made the
         // first config name visually overlap the "Configs" label.
-        int y = listTop + 20;
-        for (String config : visibleConfigs()) {
+        int y = listTop + 25;
+        List<String> visible = visibleConfigs();
+        scroll = Math.min(scroll, Math.max(0, visible.size() - 9));
+        for (String config : visible.subList(scroll, visible.size())) {
             if (y + 21 > listBottom) break;
             boolean active = config.equals(selected);
             SkeetEditorStyle.row(listLeft + 4, y, listRight - 4, y + 19, active, false);
             fontRendererObj.drawStringWithShadow(trim(config + ".json", listRight - listLeft - 18), listLeft + 10, y + 6, active ? SkeetEditorStyle.accent(0.1F) : SkeetEditorStyle.TEXT);
             y += 22;
         }
-        if (visibleConfigs().isEmpty()) fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("No matching configs"), listLeft + 12, listTop + 22, RenderUtils.MUTED);
+        if (visible.isEmpty()) fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate(fetching ? "Loading..." : "No matching configs"), listLeft + 12, listTop + 27, RenderUtils.MUTED);
     }
 
     private void drawMetadata() {
@@ -96,6 +135,16 @@ public final class ConfigEditorGui extends GuiScreen {
         SkeetEditorStyle.panel(detailsLeft, top + 42, detailsRight, top + 306, "Details");
         if (selected == null) {
             fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Select a configuration to inspect it."), detailsLeft + 13, top + 62, RenderUtils.MUTED);
+            return;
+        }
+        if (onlineTab) {
+            fontRendererObj.drawStringWithShadow(trim(selected + ".json", detailsRight - detailsLeft - 24), detailsLeft + 13, top + 63, SkeetEditorStyle.accent(0.1F));
+            metadataLine("Repository", "SkidderClub/VibeConfig", detailsLeft + 13, top + 86, detailsRight - detailsLeft - 26);
+            fontRendererObj.drawStringWithShadow("Loads into the current session.", detailsLeft + 13, top + 122, SkeetEditorStyle.TEXT);
+            fontRendererObj.drawStringWithShadow("Local configs stay unchanged.", detailsLeft + 13, top + 140, SkeetEditorStyle.MUTED);
+            button(detailsLeft + 13, top + 198, fetching ? "Loading..." : "Load", 0xFF2DE2C2);
+            toggle(detailsLeft + 13, top + 249, "Load with Keybinds", loadWithKeybinds);
+            toggle(detailsLeft + 13, top + 277, "Load with Visuals", loadWithVisuals);
             return;
         }
         ConfigInfo info = Vibe.getInstance().getConfig().getInfo(selected);
@@ -121,6 +170,10 @@ public final class ConfigEditorGui extends GuiScreen {
     }
 
     private int buttonWidth(String text) { return Math.max(46, fontRendererObj.getStringWidth(dev.vibe.language.LanguageManager.translate(text)) + 18); }
+    private void tab(int x, int y, String text, boolean active) {
+        SkeetEditorStyle.row(x, y, x + 62, y + 18, active, false);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate(text), x + 8, y + 5, active ? SkeetEditorStyle.accent(0) : SkeetEditorStyle.MUTED);
+    }
     private void button(int x, int y, String text, int color) {
         int w = buttonWidth(text);
         RenderUtils.roundedRect(x, y, x + w, y + 22, 4, 0xFF252329);
@@ -141,23 +194,39 @@ public final class ConfigEditorGui extends GuiScreen {
         mouseX = Math.round(mouseX / uiScale); mouseY = Math.round(mouseY / uiScale);
         search.mouseClicked(mouseX, mouseY, mouseButton); name.mouseClicked(mouseX, mouseY, mouseButton);
         if (mouseButton != 0) { super.mouseClicked(mouseX, mouseY, mouseButton); return; }
-        int y = top + 95;
-        for (String config : visibleConfigs()) {
+        if (in(left + 16, top + 78, 62, 18, mouseX, mouseY) || in(left + 82, top + 78, 62, 18, mouseX, mouseY)) {
+            boolean next = mouseX >= left + 82;
+            if (next != onlineTab) {
+                request++; fetching = false;
+                onlineTab = next; selected = null; scroll = 0; search.setText(""); refresh();
+                if (onlineTab) refreshOnline(false);
+            }
+            return;
+        }
+        if (onlineTab && in(left + 158, top + 76, buttonWidth("Refresh"), 22, mouseX, mouseY)) { refreshOnline(true); return; }
+        int y = top + 100;
+        List<String> visible = visibleConfigs();
+        scroll = Math.min(scroll, Math.max(0, visible.size() - 9));
+        for (String config : visible.subList(scroll, visible.size())) {
             if (y + 19 > top + 306) break;
-            if (in(left + 16, y, 232, 19, mouseX, mouseY)) { selected = config; name.setText(config); return; }
+            if (in(left + 16, y, 232, 19, mouseX, mouseY)) { selected = config; name.setText(config.replace('/', '-')); return; }
             y += 22;
         }
         String typed = name.getText().trim();
         int detailsLeft = left + 270;
         if (in(left + 212, top + 328, buttonWidth("New"), 22, mouseX, mouseY)) {
-            if (!typed.isEmpty() && Vibe.getInstance().getConfig().save(typed, Vibe.getInstance().getModuleManager())) { selected = typed; refresh(); }
+            request++; fetching = false;
+            if (!typed.isEmpty() && Vibe.getInstance().getConfig().save(typed, Vibe.getInstance().getModuleManager())) {
+                onlineTab = false; selected = typed; search.setText(""); refresh(); status = "Saved " + typed + ".";
+            } else status = "Could not save config. Enter a valid name.";
         } else if (selected != null && in(detailsLeft + 13, top + 198, buttonWidth("Load"), 22, mouseX, mouseY)) {
-            Vibe.getInstance().getConfig().load(selected, Vibe.getInstance().getModuleManager(), loadWithKeybinds, loadWithVisuals);
-        } else if (selected != null && in(detailsLeft + 19 + buttonWidth("Load"), top + 198, buttonWidth("Save"), 22, mouseX, mouseY)) {
-            Vibe.getInstance().getConfig().save(selected, Vibe.getInstance().getModuleManager()); refresh();
-        } else if (selected != null && in(detailsLeft + 25 + buttonWidth("Load") + buttonWidth("Save"), top + 198, buttonWidth("Delete"), 22, mouseX, mouseY)) {
+            if (onlineTab) loadOnline();
+            else status = Vibe.getInstance().getConfig().load(selected, Vibe.getInstance().getModuleManager(), loadWithKeybinds, loadWithVisuals) ? "Loaded " + selected + "." : "Could not load config.";
+        } else if (!onlineTab && selected != null && in(detailsLeft + 19 + buttonWidth("Load"), top + 198, buttonWidth("Save"), 22, mouseX, mouseY)) {
+            status = Vibe.getInstance().getConfig().save(selected, Vibe.getInstance().getModuleManager()) ? "Saved " + selected + "." : "Could not save config."; refresh();
+        } else if (!onlineTab && selected != null && in(detailsLeft + 25 + buttonWidth("Load") + buttonWidth("Save"), top + 198, buttonWidth("Delete"), 22, mouseX, mouseY)) {
             Vibe.getInstance().getConfig().delete(selected); refresh();
-        } else if (selected != null && !typed.isEmpty() && in(detailsLeft + 13, top + 223, buttonWidth("Rename"), 22, mouseX, mouseY)) {
+        } else if (!onlineTab && selected != null && !typed.isEmpty() && in(detailsLeft + 13, top + 223, buttonWidth("Rename"), 22, mouseX, mouseY)) {
             if (Vibe.getInstance().getConfig().rename(selected, typed)) { selected = typed; refresh(); }
         } else if (in(left + panelWidth - 14 - buttonWidth("Open folder"), top + 328, buttonWidth("Open folder"), 22, mouseX, mouseY)) {
             Vibe.getInstance().getConfig().openDirectory();
@@ -166,10 +235,16 @@ public final class ConfigEditorGui extends GuiScreen {
         else super.mouseClicked(mouseX, mouseY, mouseButton);
     }
 
+    @Override public void handleMouseInput() throws IOException {
+        super.handleMouseInput();
+        int wheel = Mouse.getEventDWheel();
+        if (wheel != 0) scroll = Math.max(0, Math.min(Math.max(0, visibleConfigs().size() - 9), scroll + (wheel < 0 ? 1 : -1)));
+    }
+
     @Override protected void keyTyped(char typedChar, int keyCode) throws IOException {
         if (keyCode == Keyboard.KEY_ESCAPE) { mc.displayGuiScreen(null); return; }
         if (search.isFocused()) search.textboxKeyTyped(typedChar, keyCode); else name.textboxKeyTyped(typedChar, keyCode);
     }
-    @Override public void onGuiClosed() { if (module.isEnabled()) module.setEnabled(false); super.onGuiClosed(); }
+    @Override public void onGuiClosed() { request++; fetching = false; if (module != null && module.isEnabled()) module.setEnabled(false); super.onGuiClosed(); }
     @Override public boolean doesGuiPauseGame() { return false; }
 }

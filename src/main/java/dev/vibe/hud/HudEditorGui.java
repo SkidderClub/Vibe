@@ -556,7 +556,7 @@ public final class HudEditorGui extends GuiScreen {
         boolean saved = System.currentTimeMillis() - savedAt < 2000L;
         int middle = statusTop + statusHeight / 2;
         RenderUtils.roundedRect(innerLeft + 9, middle - 2, innerLeft + 13, middle + 2, 2, saved ? SUCCESS : ACCENT);
-        String state = saved ? LanguageManager.translate("Saved") : "";
+        String state = saved ? LanguageManager.translate("Changed") : "";
         int stateWidth = saved ? fontRendererObj.getStringWidth(state) + 16 : 0;
         AccountScreenStyle.rawText(AccountScreenStyle.fit("Drag elements • ESC to save and return", innerWidth - 32 - stateWidth),
                 innerLeft + 20, middle - 4, MUTED);
@@ -733,7 +733,6 @@ public final class HudEditorGui extends GuiScreen {
 
     private void close() {
         if (editingText != null) commitText();
-        manager.save();
         mc.displayGuiScreen(null);
     }
 
@@ -854,7 +853,7 @@ public final class HudEditorGui extends GuiScreen {
         return settings;
     }
     private void toggleElement(String id) { if (HudManager.MUSIC.equals(id)) { MusicModule music = Vibe.getInstance().getModuleManager().getModule(MusicModule.class); if (music != null) { boolean enable = !manager.isEnabled(id); music.hud.setEnabled(enable); if (enable && !music.isEnabled()) music.setEnabled(true); } } else { HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); if (hud != null) hud.getHudElements().toggle(id); } persist(); }
-    private void persist() { manager.save(); if (Vibe.getInstance().getConfig() != null) Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager()); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); if (hud != null) ArrayListRenderer.applyPreset(hud); savedAt = System.currentTimeMillis(); }
+    private void persist() { HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); if (hud != null) ArrayListRenderer.applyPreset(hud); savedAt = System.currentTimeMillis(); }
     private static int headerHeight(Setting<?> setting) { return setting instanceof NumberSetting || setting instanceof RangeSetting ? SLIDER_ROW : setting instanceof StringSetting ? TEXT_ROW : ROW; }
     private int settingHeight(Setting<?> setting) {
         if (setting instanceof ModeSetting && openMode == setting) return ROW + ((ModeSetting) setting).getModes().size() * OPTION + 4;

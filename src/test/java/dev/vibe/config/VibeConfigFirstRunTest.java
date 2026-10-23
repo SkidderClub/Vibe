@@ -103,6 +103,57 @@ public class VibeConfigFirstRunTest {
         fail("Velocity was not persisted");
     }
 
+    @Test public void editsCommandsAndLegacyAutosavesNeverRewriteProfilesUntilExplicitSave() throws Exception {
+        Vibe vibe = new Vibe(); vibeField.set(null, vibe);
+        ModuleManager manager = new ModuleManager(); VibeConfig config = new VibeConfig(temporary.newFolder("manual"));
+        field(Vibe.class, "moduleManager").set(vibe, manager); field(Vibe.class, "config").set(vibe, config);
+        config.load(manager);
+        dev.vibe.module.Module speed = manager.getModule(SpeedModule.class);
+        speed.setKey(23); config.save(manager);
+        assertFalse(config.getDirectory().exists());
+        assertTrue(config.save("manual", manager));
+        File saved = new File(config.getDirectory(), "manual.json");
+        byte[] before = Files.readAllBytes(saved.toPath()); long modified = saved.lastModified();
+        speed.setEnabled(true); speed.setEnabled(false); speed.setKey(24);
+        new dev.vibe.command.CommandManager().execute(".speed Mode Custom");
+        config.save(manager);
+        assertArrayEquals(before, Files.readAllBytes(saved.toPath())); assertEquals(modified, saved.lastModified());
+        assertTrue(config.load("manual", manager)); assertEquals(23, speed.getKey());
+        speed.setKey(25);
+        assertTrue(config.save("manual", manager));
+        assertFalse(java.util.Arrays.equals(before, Files.readAllBytes(saved.toPath())));
+        speed.setKey(26); assertTrue(config.load("manual", manager)); assertEquals(25, speed.getKey());
+    }
+
+    @Test public void onlineLoadsAreInMemoryAndRespectKeybindAndVisualChoices() throws Exception {
+        Vibe vibe = new Vibe(); vibeField.set(null, vibe);
+        ModuleManager manager = new ModuleManager(); VibeConfig config = new VibeConfig(temporary.newFolder("online"));
+        field(Vibe.class, "moduleManager").set(vibe, manager); field(Vibe.class, "config").set(vibe, config);
+        assertTrue(config.save("local", manager));
+        File saved = new File(config.getDirectory(), "local.json"); byte[] before = Files.readAllBytes(saved.toPath());
+        File marker = new File(config.getDirectory().getParentFile(), "active-profile.txt"); byte[] remembered = Files.readAllBytes(marker.toPath());
+        JsonObject root = OnlineConfigService.parseProfile("{\"modules\":[{\"id\":\"speed\",\"key\":45,\"settings\":{\"Mode\":\"Custom\"}},{\"id\":\"esp\",\"enabled\":true}]}");
+        dev.vibe.module.Module speed = manager.getModule(SpeedModule.class), esp = manager.getModule("esp");
+        esp.setEnabled(false); int key = speed.getKey();
+        assertTrue(config.loadOnline("hypixel", root, manager, false, false));
+        assertEquals(key, speed.getKey()); assertFalse(esp.isEnabled());
+        assertEquals("Custom", setting(speed, "Mode", ModeSetting.class).getValue());
+        assertEquals("online/hypixel", config.getActiveName());
+        assertTrue(config.loadOnline("hypixel", root, manager, true, true)); assertEquals(45, speed.getKey()); assertTrue(esp.isEnabled());
+        config.save(manager);
+        assertArrayEquals(before, Files.readAllBytes(saved.toPath())); assertArrayEquals(remembered, Files.readAllBytes(marker.toPath()));
+        assertEquals(java.util.Collections.singletonList("local"), config.list());
+        assertFalse(config.loadOnline("invalid", new JsonObject(), manager, true, true)); assertFalse(config.isLoading());
+        assertTrue(config.save("online-copy", manager)); assertEquals(2, config.list().size());
+    }
+
+    @Test public void malformedLocalProfileDoesNotLeaveConfigLoadingFlagSet() throws Exception {
+        VibeConfig config = new VibeConfig(temporary.newFolder("invalid"));
+        Files.createDirectories(config.getDirectory().toPath());
+        Files.write(new File(config.getDirectory(), "bad.json").toPath(), "{bad json".getBytes(StandardCharsets.UTF_8));
+        assertFalse(config.load("bad", new ModuleManager())); assertFalse(config.isLoading());
+    }
+
     private static JsonObject module(String id, String setting, String value) {
         JsonObject data = new JsonObject();
         data.addProperty("id", id);

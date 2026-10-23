@@ -86,6 +86,39 @@ public final class ClientChangesRenderCheck {
             Vibe vibe = new Vibe(); set(Vibe.class,null,"instance",vibe);
             ModuleManager modules = instance(ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<Module>()); set(Vibe.class,vibe,"moduleManager",modules);
+            if (args.length > 0 && args[0].equals("configs")) {
+                dev.vibe.config.VibeConfig config = new dev.vibe.config.VibeConfig(OUTPUT.resolve("config-editor-fixture").toFile());
+                set(Vibe.class, vibe, "config", config);
+                set(ModuleManager.class, modules, "modules", new ArrayList<Module>(Collections.singletonList(new dev.vibe.module.impl.movement.SpeedModule())));
+                if (!config.save("local-example", modules)) throw new AssertionError("Cannot create config fixture");
+                File local = new File(config.getDirectory(), "local-example.json"); byte[] before = Files.readAllBytes(local.toPath());
+                dev.vibe.config.OnlineConfigService online = vibe.getOnlineConfigs();
+                java.lang.reflect.Constructor<?> entry = dev.vibe.config.OnlineConfigService.Entry.class.getDeclaredConstructor(String.class, String.class);
+                entry.setAccessible(true);
+                List<Object> entries = new ArrayList<Object>();
+                entries.add(entry.newInstance("hypixel", "https://example.invalid/hypixel.json"));
+                for (int i = 1; i <= 20; i++) entries.add(entry.newInstance("server-" + i, "https://example.invalid/fixture.json"));
+                set(dev.vibe.config.OnlineConfigService.class, online, "entries", Collections.unmodifiableList(entries));
+                for (int[] dimensions : new int[][] {{960,540},{560,400},{400,300}}) {
+                    mc.displayWidth = dimensions[0]; mc.displayHeight = dimensions[1];
+                    dev.vibe.ui.screen.ConfigEditorGui editor = new dev.vibe.ui.screen.ConfigEditorGui(null);
+                    editor.setWorldAndResolution(mc, dimensions[0], dimensions[1]);
+                    set(editor.getClass(), editor, "selected", "local-example");
+                    render(editor, "config-local-" + dimensions[0] + ".png");
+                    set(editor.getClass(), editor, "onlineTab", true);
+                    java.lang.reflect.Method refresh = editor.getClass().getDeclaredMethod("refresh"); refresh.setAccessible(true); refresh.invoke(editor);
+                    set(editor.getClass(), editor, "selected", "hypixel");
+                    set(editor.getClass(), editor, "status", "21 online configs available. Changes require an explicit save.");
+                    render(editor, "config-online-" + dimensions[0] + ".png");
+                    set(editor.getClass(), editor, "scroll", 12);
+                    render(editor, "config-online-scrolled-" + dimensions[0] + ".png");
+                    editor.onGuiClosed();
+                }
+                if (!Arrays.equals(before, Files.readAllBytes(local.toPath()))) throw new AssertionError("Editor rewrote a profile");
+                online.close();
+                System.out.println("Config editor local/online layouts rendered; profile bytes unchanged.");
+                return;
+            }
             if (args.length>0 && args[0].equals("hud-editor")) {
                 HudModule hud = new HudModule();
                 set(ModuleManager.class,modules,"modules",new ArrayList<Module>(Collections.<Module>singletonList(hud)));

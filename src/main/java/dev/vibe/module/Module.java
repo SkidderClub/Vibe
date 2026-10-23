@@ -49,7 +49,6 @@ public abstract class Module {
                 && Vibe.getInstance().getModuleManager() != null && !Vibe.getInstance().getConfig().isLoading()
                 && !Vibe.getInstance().isExtensionLoading()) {
             if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordModuleToggle();
-            Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
         }
     }
 
@@ -86,11 +85,6 @@ public abstract class Module {
 
     public void setKey(int key) {
         this.key = key;
-        if (Vibe.getInstance() != null && Vibe.getInstance().getConfig() != null
-                && Vibe.getInstance().getModuleManager() != null && !Vibe.getInstance().getConfig().isLoading()
-                && !Vibe.getInstance().isExtensionLoading()) {
-            Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
-        }
     }
 
     public boolean isEnabled() {

@@ -16,7 +16,7 @@ import org.lwjgl.input.Keyboard;
 /** Local dot-prefixed commands. They never leave the client as chat messages. */
 public final class CommandManager {
 
-    private static final List<String> ROOTS = Arrays.asList(".toggle", ".t", ".bind", ".b", ".binds", ".config", ".c", ".ign", ".waifu", ".friend", ".f", ".target", ".script", ".scripts", ".models", ".model", ".extensions", ".source", ".help");
+    private static final List<String> ROOTS = Arrays.asList(".toggle", ".t", ".bind", ".b", ".binds", ".config", ".c", ".onlineconfig", ".ign", ".waifu", ".friend", ".f", ".target", ".script", ".scripts", ".models", ".model", ".extensions", ".source", ".help");
 
     public boolean execute(String message) {
         if (message == null || !message.trim().startsWith(".")) {
@@ -32,6 +32,8 @@ public final class CommandManager {
             binds();
         } else if (".config".equals(command) || ".c".equals(command)) {
             config(parts);
+        } else if (".onlineconfig".equals(command)) {
+            onlineConfig(parts);
         } else if (".ign".equals(command)) {
             copyIgn();
         } else if (".waifu".equals(command)) {
@@ -125,6 +127,13 @@ public final class CommandManager {
                         results.add(replaceLastToken(input, profile));
                     }
                 }
+            }
+        } else if (".onlineconfig".equals(root)) {
+            if (parts.length == 2) addMatchingTokens(results, input, Arrays.asList("list", "load"), needle);
+            else if ("load".equalsIgnoreCase(parts[1])) {
+                String prefix = joinParts(parts, 2, parts.length).toLowerCase(java.util.Locale.ROOT);
+                for (dev.vibe.config.OnlineConfigService.Entry entry : Vibe.getInstance().getOnlineConfigs().getEntries())
+                    if (entry.getName().toLowerCase(java.util.Locale.ROOT).startsWith(prefix)) results.add(root + " load " + entry.getName());
             }
         } else if (".friend".equals(root) || ".f".equals(root)) {
             if (parts.length == 2) addMatchingTokens(results, input, Arrays.asList("add", "remove", "rename", "list"), needle);
@@ -247,6 +256,28 @@ public final class CommandManager {
         }
     }
 
+    private void onlineConfig(String[] parts) {
+        dev.vibe.config.OnlineConfigService online = Vibe.getInstance().getOnlineConfigs();
+        Minecraft mc = Minecraft.getMinecraft();
+        if (parts.length == 1 || (parts.length == 2 && "list".equalsIgnoreCase(parts[1]))) {
+            say("Fetching online configs...");
+            online.refresh(true).whenComplete((entries, error) -> mc.addScheduledTask(() -> {
+                if (error != null) { say("§c" + dev.vibe.config.OnlineConfigService.errorMessage(error)); return; }
+                List<String> names = new ArrayList<String>();
+                for (dev.vibe.config.OnlineConfigService.Entry entry : entries) names.add(entry.getName());
+                say("Online configs: §b" + (names.isEmpty() ? "none" : join(names)));
+            }));
+        } else if (parts.length >= 3 && "load".equalsIgnoreCase(parts[1])) {
+            String name = joinParts(parts, 2, parts.length);
+            say("Loading online config §b" + name + "§7...");
+            online.fetch(name).whenComplete((root, error) -> mc.addScheduledTask(() -> {
+                if (error != null) { say("§c" + dev.vibe.config.OnlineConfigService.errorMessage(error)); return; }
+                boolean loaded = Vibe.getInstance().getConfig().loadOnline(name, root, Vibe.getInstance().getModuleManager(), true, true);
+                say(loaded ? "Loaded online config §b" + name + "§7. Use .config save <name> to save a local copy." : "§cCould not apply online config.");
+            }));
+        } else say("Usage: §b.onlineconfig <list|load <name>>");
+    }
+
     private void help() {
         say("§b.extensions§7 — list loaded extensions and load errors");
         say(".source - source archive, repository and GPLv3/AGPLv3 licenses");
@@ -254,6 +285,7 @@ public final class CommandManager {
         say("§b.b <module> <key|none>§7 — set a module keybind");
         say("§b.binds§7 — display all active keybinds");
         say("§b.c <save|load|list|delete|rename|openFolder>§7 — manage JSON profiles");
+        say("§b.onlineconfig <list|load <name>>§7 — browse or load community configs");
         say("§b.ign§7 — copy your in-game name to the clipboard");
         say("§b.f <add|remove|rename|list>§7 — manage friends and aliases");
         say("§b.target <add|remove|list>§7 — manage priority targets");
@@ -269,9 +301,6 @@ public final class CommandManager {
         if (module == null) { say("§cModule is unavailable."); return; }
         ModuleSettingCommands.Result result = ModuleSettingCommands.apply(module, joinParts(parts, from, parts.length));
         say(result.message);
-        if (result.changed && !Vibe.getInstance().getConfig().save(Vibe.getInstance().getConfig().getActiveName(), Vibe.getInstance().getModuleManager())) {
-            say("§cSetting changed, but the active profile could not be saved.");
-        }
     }
 
     private void friend(String[] parts) {
@@ -390,7 +419,6 @@ public final class CommandManager {
             for (String option : setting.getModes()) if (option.equalsIgnoreCase(name)) match = option;
             if (match == null) { say("§cUnknown model §f" + name); return; }
             setting.setValue(match);
-            Vibe.getInstance().getConfig().save(Vibe.getInstance().getConfig().getActiveName(), Vibe.getInstance().getModuleManager());
             say("Selected §b" + match + (module.isEnabled() ? "" : " §7(enable CustomModelRenderer to see it)"));
         } else if ("reload".equals(action)) {
             manager.reload();

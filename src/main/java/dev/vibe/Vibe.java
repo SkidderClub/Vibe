@@ -43,6 +43,7 @@ public final class Vibe {
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private ModuleManager moduleManager;
     private VibeConfig config;
+    private final dev.vibe.config.OnlineConfigService onlineConfigs = new dev.vibe.config.OnlineConfigService();
     private CommandManager commandManager;
     private HudManager hudManager;
     private ClientIdentity identity;
@@ -136,6 +137,8 @@ public final class Vibe {
     public VibeConfig getConfig() {
         return config;
     }
+
+    public dev.vibe.config.OnlineConfigService getOnlineConfigs() { return onlineConfigs; }
 
     public CommandManager getCommandManager() {
         return commandManager;

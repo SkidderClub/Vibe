@@ -465,15 +465,7 @@ final class XanaxWorkspace {
         } else if ("Save".equals(action)) status(config.save(selectedProfile, Vibe.getInstance().getModuleManager()) ? "Saved" : "Could not save config");
         else if ("Delete".equals(action)) {
             if (!selectedProfile.equals(deleteCandidate)) { deleteCandidate = selectedProfile; return; }
-            boolean active = selectedProfile.equals(config.getActiveName());
             boolean deleted = config.delete(selectedProfile); deleteCandidate = null;
-            if (deleted && active) {
-                // Autosave must not recreate a profile the user just deleted or overwrite another profile.
-                String replacement = "default"; int suffix = 1;
-                List<String> existing = config.list();
-                while (existing.contains(replacement) || replacement.equals(selectedProfile)) replacement = "default-" + suffix++;
-                config.save(replacement, Vibe.getInstance().getModuleManager());
-            }
             refreshProfiles(); status(deleted ? "Deleted" : "Could not delete config");
         }
     }

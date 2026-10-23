@@ -100,6 +100,10 @@ registerRenderCheck('verifyLicensesRendering', 'dev.vibe.ui.menu.LicensesRenderC
         'Checks offline license reading, scrolling and menu layout.')
 registerRenderCheck('verifyClientChanges', 'dev.vibe.ui.ClientChangesRenderCheck', 'client-changes-check',
         'Checks recent client screens, including a muted live radio smoke test.')
+registerRenderCheck('verifyConfigRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'config-render-check',
+        'Checks local/online config tabs, scrolling and compact layouts without rewriting profiles.', false) {
+    args 'configs'
+}
 registerRenderCheck('verifyPitMediaRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'pit-media-check',
         'Checks the PitBot editor, ArrayList and media covers.', false) {
     args 'pit-media-array'
@@ -122,6 +126,15 @@ tasks.register('verifyMusicIntegration', JavaExec) {
 }
 
 // Compatibility check for an external Raven script folder:
+tasks.register('verifyOnlineConfigs', JavaExec) {
+    group = 'verification'
+    description = 'Checks the live public config catalogue and hypixel config over Java 8 HTTPS.'
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.vibe.config.OnlineConfigIntegrationCheck'
+}
+
 // .\gradlew.bat verifyRavenScripts -PvibeScriptDir=C:\path\to\scripts
 tasks.register('verifyRavenScripts') {
     group = 'verification'

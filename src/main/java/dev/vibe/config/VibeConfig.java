@@ -102,14 +102,29 @@ public final class VibeConfig {
             return true;
         } catch (Exception ignored) {
             return false;
+        } finally {
+            loading = false;
         }
     }
 
+    /** Kept for binary compatibility with extensions that previously requested autosaves.
+     * Profile contents are written only by the explicit, named save operation. */
+    @Deprecated
     public void save(ModuleManager manager) {
-        save(activeName, manager);
+        // Runtime edits remain in memory until the user saves a named profile.
+    }
+
+    /** Applies a downloaded profile without creating or overwriting any local file. */
+    public boolean loadOnline(String name, JsonObject root, ModuleManager manager, boolean withKeybinds, boolean withVisuals) {
+        if (!OnlineConfigService.isProfile(root) || !apply(root, manager, withKeybinds, withVisuals)) return false;
+        activeName = "online/" + name;
+        if (Vibe.getInstance() != null && Vibe.getInstance().getStatistics() != null)
+            Vibe.getInstance().getStatistics().recordConfigLoad();
+        return true;
     }
 
     public boolean save(String name, ModuleManager manager) {
+        if (loading || manager == null) return false;
         String safeName = normalizeName(name);
         if (safeName == null || !ensureDirectory()) {
             return false;
@@ -433,9 +448,8 @@ public final class VibeConfig {
     /** Shared reader for saved profiles and the compiled first-run profile. */
     private boolean apply(JsonObject root, ModuleManager manager, boolean withKeybinds, boolean withVisuals) {
         if (root == null || manager == null) return false;
-        // Module enable callbacks normally persist a profile. Suppress that
-        // side effect while applying either an existing file or first-run
-        // values, otherwise a clean install would materialize default.json.
+        // Suppress editor/action callbacks while applying settings. Loading a
+        // profile never writes its contents back to disk.
         loading = true;
         try {
             if (withVisuals && root.has("hud") && root.get("hud").isJsonObject() && Vibe.getInstance().getHudManager() != null) {
