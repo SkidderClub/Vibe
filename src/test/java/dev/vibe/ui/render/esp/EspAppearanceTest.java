@@ -29,6 +29,9 @@ public class EspAppearanceTest {
     @Test public void disabledModesElementsAndInheritedTextHideDetails() {
         EspModule esp=new EspModule();Esp2DSettings s=esp.get2D();
         assertFalse(s.name.scale.isVisible());esp.getModes().toggle("2D");assertTrue(s.name.scale.isVisible());
+        s.name.backgroundEnabled.setValue(true);
+        assertFalse(s.name.backgroundEnabled.isVisible());assertFalse(s.name.background.isVisible());
+        assertTrue(s.healthBar.backgroundEnabled.isVisible());
         assertFalse(s.name.text.font.isVisible());s.name.useDefaultText.setValue(false);assertTrue(s.name.text.font.isVisible());
         s.name.enabled.setValue(false);assertFalse(s.name.scale.isVisible());assertFalse(s.name.text.font.isVisible());
         assertFalse(esp.getSkeletal().getColor().isVisible());esp.getModes().toggle("Skeletal");assertTrue(esp.getSkeletal().getColor().isVisible());

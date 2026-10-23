@@ -4,7 +4,6 @@ import dev.vibe.module.Category;
 import dev.vibe.module.Module;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.play.server.S08PacketPlayerPosLook;
-import net.minecraft.util.ChatComponentText;
 import org.lwjgl.input.Keyboard;
 
 /** Reports small server position corrections after a world has settled. */
@@ -35,6 +34,6 @@ public final class FlagDetectorModule extends Module {
         if (relative.contains(S08PacketPlayerPosLook.EnumFlags.Z)) dz = packet.getZ();
         if (dx * dx + dy * dy + dz * dz > 9.0D) return;
         flags++;
-        minecraft.thePlayer.addChatMessage(new ChatComponentText("§8[§bVibe§8] §fflag detected: §b" + flags));
+        dev.vibe.chat.ClientChat.send("§fFlag detected: §b" + flags);
     }
 }

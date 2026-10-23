@@ -78,9 +78,9 @@ public class ScriptDefaults {
         public static void async(Runnable runnable) { if(executor==null)executor=Executors.newCachedThreadPool();executor.execute(runnable); }
         public static int getFPS() { return Minecraft.getDebugFPS(); }
         public static void chat(String message) { if(mc.thePlayer!=null)mc.thePlayer.sendChatMessage(message); }
-        public static void print(String value) { if(mc.thePlayer!=null)mc.thePlayer.addChatMessage(new net.minecraft.util.ChatComponentText(value)); }
+        public static void print(String value) { dev.vibe.chat.ClientChat.send(value); }
         public static void print(Object value) { print(String.valueOf(value)); }
-        public static void print(Message value) { if(mc.thePlayer!=null&&value!=null)mc.thePlayer.addChatMessage(value.component); }
+        public static void print(Message value) { if(value!=null)dev.vibe.chat.ClientChat.send(value.component); }
         public static boolean isDiagonal() { return mc.thePlayer!=null&&mc.thePlayer.movementInput.moveForward!=0&&mc.thePlayer.movementInput.moveStrafe!=0; }
         public static void setTimer(float value) { /* no global timer mutation: Vibe preserves vanilla timing */ }
         public static boolean isCreative() { return mc.thePlayer!=null&&mc.thePlayer.capabilities.isCreativeMode; }

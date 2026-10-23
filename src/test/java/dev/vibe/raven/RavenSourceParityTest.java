@@ -23,7 +23,7 @@ public class RavenSourceParityTest {
         String vibe = read(Paths.get("src/main/java/dev/vibe/module/impl/combat/HypixelAutoblock.java"));
         for (String method : new String[]{"onPrePlayerInteract","onForceAttack","checkConditions","shouldPredictiveBlock",
                 "shouldBlockVanillaUse","startBlocking","stopBlocking","isCooldownActive","isAlwaysUnblockMode","resetState"})
-            assertEquals(method, normalizeBlock(body(raven, method)), normalizeBlock(body(vibe, method)));
+            assertEquals(method, normalizeBlock(body(raven, method)), blockWithoutOwnedReset(method, normalizeBlock(body(vibe, method))));
     }
     @Test public void autoclickerDelayRetainsRavensRandomization() throws Exception {
         org.junit.Assume.assumeTrue(Files.isRegularFile(SOURCE.resolve("module/impl/combat/AutoClicker.java")));
@@ -53,10 +53,16 @@ public class RavenSourceParityTest {
     }
 
     private static String normalizeBlock(String body) {
-        return tokens(body.replace("ModuleManager.bedAura", "bedAura()").replace("ModuleManager.killAura", "owner")
+        return tokens(body.replaceAll("(?m)//[^\\r\\n]*", "").replace("ModuleManager.bedAura", "bedAura()").replace("ModuleManager.killAura", "owner")
                 .replace("!owner.isRequireMouseDown()", "true").replace("Utils.nullCheck()", "RavenBlockAccess.nullCheck()")
                 .replace("Utils.holdingSword()", "holdingSword()").replace("Mouse.isButtonDown(0)", "mouseDown(0)")
                 .replace("Mouse.isButtonDown(1)", "mouseDown(1)").replace("CombatTargeting.", "RavenCombatAccess."));
+    }
+    /** Intentional ownership fix, behaviorally covered by InactiveMovementTest.
+     * Keep the remaining reset state machine checked against the supplied source. */
+    private static String blockWithoutOwnedReset(String method, String body) {
+        return method.equals("resetState") ? body.replace("this.stopBlocking(releaseUseKey&&this.isBlocking);",
+                "this.stopBlocking(releaseUseKey);") : body;
     }
     private static String normalizeScaffold(String body) {
         body = removeDebugBlocks(body);

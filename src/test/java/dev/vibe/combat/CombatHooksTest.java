@@ -28,6 +28,7 @@ public class CombatHooksTest {
     private static final String PLAYER = "net.minecraft.client.entity.EntityPlayerSP";
     private static final String LIVING = "net.minecraft.entity.EntityLivingBase";
     private static final String SCAFFOLD = "dev/vibe/module/impl/world/ScaffoldModule";
+    private static final String BED_AURA = "dev/vibe/module/impl/world/BedAuraModule";
     private static final String RENDERER = "net.minecraft.client.renderer.entity.RenderPlayer";
     private static final String AUTO_TOOL = "dev/vibe/module/impl/world/AutoToolModule";
 
@@ -87,7 +88,8 @@ public class CombatHooksTest {
     private void verifyInput(ClassNode node, boolean obfuscated) throws Exception {
         MethodNode method = method(node, obfuscated ? "s" : "runTick", "()V");
         verify(node, method);
-        assertEquals(1, calls(method, "prepareInputHook"));
+        assertEquals(2, calls(method, "prepareInputHook"));
+        assertEquals(1, calls(method, "prepareInputHook", BED_AURA));
         assertEquals(1, calls(method, "allowInputHook"));
         assertTrue(calls(method, "guiClickCounterHook") >= 1);
         int hook = callIndex(method, "prepareInputHook");
@@ -97,13 +99,19 @@ public class CombatHooksTest {
         // Scaffold restores the visible slot after the click pass, before the
         // renderer samples the held item for the first-person equip animation.
         assertEquals(1, calls(method, "finishInputHook", SCAFFOLD));
-        int finish = callIndex(method, "finishInputHook", SCAFFOLD);
+        int finish = callIndex(method, "finishInputHook", BED_AURA);
+        assertEquals(1, calls(method, "finishInputHook", BED_AURA));
+        assertTrue(finish > callIndex(method,"finishInputHook",SCAFFOLD));
         assertTrue(finish > callIndex(method, obfuscated ? "aw" : "clickMouse", node.name));
         assertTrue(finish > callIndex(method, obfuscated ? "b" : "sendClickBlockToController", node.name));
         AbstractInsnNode renderer = method.instructions.get(finish).getNext();
         assertTrue(renderer instanceof MethodInsnNode);
         assertEquals(obfuscated ? "e" : "updateRenderer", ((MethodInsnNode) renderer).name);
-        AbstractInsnNode next = method.instructions.get(hook).getNext();
+        int bedPrepare = callIndex(method,"prepareInputHook",BED_AURA);
+        assertTrue(bedPrepare > hook);
+        assertTrue(bedPrepare < callIndex(method,obfuscated ? "aw" : "clickMouse",node.name));
+        if (!obfuscated) assertTrue(finish < callIndex(method,"updateEntities","net/minecraft/client/multiplayer/WorldClient"));
+        AbstractInsnNode next = method.instructions.get(bedPrepare).getNext();
         assertTrue(next instanceof MethodInsnNode);
         assertEquals(obfuscated ? "bS" : "isUsingItem", ((MethodInsnNode) next).name);
         MethodNode click = method(node, obfuscated ? "aw" : "clickMouse", "()V");

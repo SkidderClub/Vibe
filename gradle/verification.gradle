@@ -104,6 +104,14 @@ registerRenderCheck('verifyConfigRendering', 'dev.vibe.ui.ClientChangesRenderChe
         'Checks local/online config tabs, scrolling and compact layouts without rewriting profiles.', false) {
     args 'configs'
 }
+registerRenderCheck('verifyMurderMysteryRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'murder-mystery-render-check',
+        'Checks Murder Mystery weapon variants, icon grid, compact layouts, drafts, reset and search.', false) {
+    args 'murder'
+}
+registerRenderCheck('verifyChatInventoryRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'chat-inventory-render-check',
+        'Checks animated chat prefix pixels, wrapping/fading, slot pulse and container/GUI-scale alignment.', false) {
+    args 'chat-inventory'
+}
 registerRenderCheck('verifyPitMediaRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'pit-media-check',
         'Checks the PitBot editor, ArrayList and media covers.', false) {
     args 'pit-media-array'

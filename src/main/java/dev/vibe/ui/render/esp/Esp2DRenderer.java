@@ -160,7 +160,6 @@ public final class Esp2DRenderer {
     }
     private void drawText(Esp2DSettings settings,Element e,String value,EspLayout.Rect r,float scale,Actor actor,int w,int h,double seconds) {
         TextStyle t=e.resolvedText();float size=t.size.getFloat()/9*scale,opacity=actor.opacity;
-        if(e.backgroundEnabled.isEnabled())solid(r.expand(2*scale),alpha(resolve(e.background,actor),opacity));
         GlStateManager.pushMatrix();GlStateManager.translate(r.x,r.y-(t.font.is("Minecraft")?0:font(t).inkTop(value)*size),0);GlStateManager.scale(size,size,1);
         try {
             // The outline and shadow passes are plain glyph draws; one alpha-test query serves them.

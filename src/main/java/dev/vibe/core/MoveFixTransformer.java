@@ -19,6 +19,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
     private static final String MINECRAFT = "net/minecraft/client/Minecraft";
     private static final String PLAYER_RENDERER = "net/minecraft/client/renderer/entity/RenderPlayer";
     private static final String AURA_HOOK = "dev/vibe/module/impl/combat/KillAuraModule";
+    private static final String BED_AURA_HOOK = "dev/vibe/module/impl/world/BedAuraModule";
     private static final String INPUT = "net/minecraft/util/MovementInput";
     private static final String HOOK = "dev/vibe/module/impl/movement/MoveFixModule";
     private static final String SCAFFOLD_HOOK = "dev/vibe/module/impl/world/ScaffoldModule";
@@ -172,6 +173,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
                     && (PLAYER.equals(owner) || "bew".equals(owner))
                     && ("isUsingItem".equals(name) || "func_71039_bw".equals(name) || "bS".equals(name))) {
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, AURA_HOOK, "prepareInputHook", "()V", false);
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, BED_AURA_HOOK, "prepareInputHook", "()V", false);
                 prepared = true;
             }
             // The click/use section is over before the renderer samples the
@@ -180,6 +182,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
                     && (ENTITY_RENDERER.equals(owner) || "bfk".equals(owner))
                     && ("updateRenderer".equals(name) || "func_78464_a".equals(name) || "e".equals(name))) {
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, SCAFFOLD_HOOK, "finishInputHook", "()V", false);
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, BED_AURA_HOOK, "finishInputHook", "()V", false);
                 finished = true;
             }
             super.visitMethodInsn(opcode, owner, name, descriptor, itf);

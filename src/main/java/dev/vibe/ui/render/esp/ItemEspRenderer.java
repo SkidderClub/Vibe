@@ -3,6 +3,7 @@ package dev.vibe.ui.render.esp;
 import dev.vibe.Vibe;
 import dev.vibe.module.impl.world.InventoryManagerModule;
 import dev.vibe.module.impl.visual.ItemEspModule;
+import dev.vibe.module.impl.meme.HypixelModule;
 import dev.vibe.ui.WorldRenderUtils;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -18,7 +19,10 @@ public final class ItemEspRenderer {
 
     public void render(RenderWorldLastEvent event) {
         ItemEspModule module = Vibe.getInstance().getModuleManager().getModule(ItemEspModule.class);
-        if (module == null || !module.isEnabled() || minecraft.theWorld == null || minecraft.thePlayer == null) return;
+        HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(HypixelModule.class);
+        boolean itemEsp = module != null && module.isEnabled();
+        boolean murderGold = hypixel != null && hypixel.isMurderMysteryActive() && hypixel.getHighlightGold().isEnabled();
+        if ((!itemEsp && !murderGold) || minecraft.theWorld == null || minecraft.thePlayer == null) return;
         WorldRenderUtils.begin(true);
         try {
             List<?> entities = minecraft.theWorld.loadedEntityList;
@@ -26,19 +30,23 @@ public final class ItemEspRenderer {
                 if (!(value instanceof EntityItem)) continue;
                 EntityItem item = (EntityItem) value;
                 ItemStack stack = item.getEntityItem();
-                if (stack == null || !shouldDraw(module, stack)) continue;
-                AxisAlignedBB box = item.getEntityBoundingBox().offset(-minecraft.getRenderManager().viewerPosX,
-                        -minecraft.getRenderManager().viewerPosY, -minecraft.getRenderManager().viewerPosZ).expand(0.04D, 0.04D, 0.04D);
+                boolean gold = murderGold && hypixel.shouldHighlightGold(item);
+                if (item.isDead || stack == null || (!gold && (!itemEsp || !shouldDraw(module, stack)))) continue;
+                double x = item.lastTickPosX + (item.posX - item.lastTickPosX) * event.partialTicks;
+                double y = item.lastTickPosY + (item.posY - item.lastTickPosY) * event.partialTicks;
+                double z = item.lastTickPosZ + (item.posZ - item.lastTickPosZ) * event.partialTicks;
+                AxisAlignedBB box = item.getEntityBoundingBox().offset(x - item.posX - minecraft.getRenderManager().viewerPosX,
+                        y - item.posY - minecraft.getRenderManager().viewerPosY, z - item.posZ - minecraft.getRenderManager().viewerPosZ).expand(0.04D, 0.04D, 0.04D);
                 // The configured alpha is the fill alpha.  The previous
                 // implicit quarter-alpha conversion made the colour picker
                 // lie and made fully opaque fills permanently translucent.
-                int itemColor = specialColor(stack, module.getColor().getArgb());
+                int itemColor = gold ? hypixel.getGoldColor().getArgb() : specialColor(stack, module.getColor().getArgb());
                 int fill = itemColor;
                 // Valuable drops intentionally keep their recognizable
                 // Minecraft material colour for both parts of the ESP.
-                int outline = module.getOutline().isEnabled()
+                int outline = gold ? 0xFF000000 | (itemColor & 0xFFFFFF) : module.getOutline().isEnabled()
                         ? specialColor(stack, module.getOutlineColor().getArgb()) : 0x00000000;
-                WorldRenderUtils.box(box, outline, fill, module.getLineWidth().getFloat());
+                WorldRenderUtils.box(box, outline, fill, gold ? 1.5F : module.getLineWidth().getFloat());
             }
         } finally {
             WorldRenderUtils.end(true);

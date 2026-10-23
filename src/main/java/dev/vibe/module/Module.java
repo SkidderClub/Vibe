@@ -41,7 +41,13 @@ public abstract class Module {
         boolean previous = this.enabled;
         this.enabled = enabled;
         toggleDepth++;
-        try { if (enabled) onEnable(); else onDisable(); }
+        try {
+            if (enabled) onEnable();
+            else {
+                try { onDisable(); }
+                finally { dev.vibe.module.impl.movement.MoveFixModule.producerDisabled(this); }
+            }
+        }
         finally { toggleDepth--; }
         // Self-reverting GUI/action modules do not produce a pair of fake toggle toasts.
         if (toggleDepth == 0 && this.enabled != previous) dev.vibe.feedback.ModuleFeedback.changed(this);

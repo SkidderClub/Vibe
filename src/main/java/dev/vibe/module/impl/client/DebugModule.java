@@ -5,7 +5,6 @@ import dev.vibe.module.Module;
 import dev.vibe.setting.MultiSelectSetting;
 import java.util.Arrays;
 import net.minecraft.client.Minecraft;
-import net.minecraft.util.ChatComponentText;
 import org.lwjgl.input.Keyboard;
 
 /** Optional local diagnostics for timing-sensitive combat helpers. */
@@ -28,7 +27,7 @@ public final class DebugModule extends Module {
         minecraft.addScheduledTask(new Runnable() {
             @Override public void run() {
                 if (minecraft.thePlayer != null) {
-                    minecraft.thePlayer.addChatMessage(new ChatComponentText("§8[§bVibe Debug§8] §7" + mode + " §f" + message));
+                    dev.vibe.chat.ClientChat.send("§7Debug · " + mode + " §f" + message);
                 }
             }
         });

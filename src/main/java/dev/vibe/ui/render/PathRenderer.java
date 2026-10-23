@@ -8,8 +8,11 @@ import dev.vibe.ui.effect.EffectState;
 import java.util.Arrays;
 import java.util.List;
 import net.minecraft.client.Minecraft;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
+import dev.vibe.module.impl.meme.HypixelModule;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.Vec3;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
@@ -24,24 +27,38 @@ public final class PathRenderer {
         Minecraft mc = Minecraft.getMinecraft();
         PathModule module = Vibe.getInstance().getModuleManager().getModule(PathModule.class);
         if (module == null || !module.isEnabled() || mc.thePlayer == null || mc.theWorld == null) return;
+        Vec3 player = interpolate(mc.thePlayer, event.partialTicks);
+        Vec3 origin = new Vec3(mc.getRenderManager().viewerPosX, mc.getRenderManager().viewerPosY, mc.getRenderManager().viewerPosZ);
         EntityLivingBase target = module.getTarget();
-        if (target == null || target.worldObj != mc.theWorld || target.isDead
-                || mc.theWorld.getEntityByID(target.getEntityId()) != target) return;
-        TargetsModule filters = Vibe.getInstance().getModuleManager().getModule(TargetsModule.class);
-        int team = filters != null && target instanceof EntityPlayer ? filters.teamColor((EntityPlayer) target) : 0;
-        draw(module.getRoute(), module,
-                interpolate(mc.thePlayer, event.partialTicks), interpolate(target, event.partialTicks),
-                new Vec3(mc.getRenderManager().viewerPosX, mc.getRenderManager().viewerPosY, mc.getRenderManager().viewerPosZ),
-                team, target.hurtTime > 0);
+        if (target != null && target.worldObj == mc.theWorld && !target.isDead
+                && mc.theWorld.getEntityByID(target.getEntityId()) == target) {
+            TargetsModule filters = Vibe.getInstance().getModuleManager().getModule(TargetsModule.class);
+            int team = filters != null && target instanceof EntityPlayer ? filters.teamColor((EntityPlayer) target) : 0;
+            draw(module.getRoute(), module, player, interpolate(target, event.partialTicks), origin, team, target.hurtTime > 0);
+        }
+        EntityItem gold = module.getGoldTarget();
+        HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(HypixelModule.class);
+        if (gold != null && hypixel != null && hypixel.isGoldPathTarget(gold) && gold.worldObj == mc.theWorld
+                && mc.theWorld.getEntityByID(gold.getEntityId()) == gold)
+            drawGold(module.getGoldRoute(), module, player, interpolate(gold, event.partialTicks), origin, hypixel.getGoldColor().getArgb());
     }
 
     /** The same world-space path is used by offscreen GL checks, including Freecam's player-relative origin. */
     public void draw(PathRoute route, PathModule module, Vec3 player, Vec3 target, Vec3 origin, int team, boolean hurt) {
+        draw(route, module, player, target, origin, team, hurt, 0);
+    }
+
+    public void drawGold(PathRoute route, PathModule module, Vec3 player, Vec3 target, Vec3 origin, int color) {
+        draw(route, module, player, target, origin, 0, false, 0xFF000000 | (color & 0xFFFFFF));
+    }
+
+    private void draw(PathRoute route, PathModule module, Vec3 player, Vec3 target, Vec3 origin, int team, boolean hurt, int override) {
         if (route.points.isEmpty() || !route.complete && !module.getPartial().isEnabled()) return;
         prepareVertices(route, player, target);
         if (count < 2) return;
         int first = route.complete ? module.getColor().resolve(team, hurt) : module.getPartialColor().getArgb();
         int last = route.complete && module.getGradient().isEnabled() ? module.getEndColor().resolve(team, hurt) : first;
+        if (override != 0) first = last = override;
         double height = module.getHeightOffset().getDouble();
         double length = 0;
         for (int i = 1; i < count; i++) length += length(i - 1, i);
@@ -176,7 +193,7 @@ public final class PathRenderer {
     }
     private static void color(int color) { GL11.glColor4f((color>>16&255)/255F, (color>>8&255)/255F, (color&255)/255F, (color>>>24)/255F); }
     private static double clamp(double value) { return Math.max(0, Math.min(1, value)); }
-    private static Vec3 interpolate(EntityLivingBase entity, float partial) {
+    private static Vec3 interpolate(Entity entity, float partial) {
         return new Vec3(entity.lastTickPosX+(entity.posX-entity.lastTickPosX)*partial,
                 entity.lastTickPosY+(entity.posY-entity.lastTickPosY)*partial,
                 entity.lastTickPosZ+(entity.posZ-entity.lastTickPosZ)*partial);

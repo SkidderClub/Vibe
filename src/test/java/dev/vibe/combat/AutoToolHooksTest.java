@@ -81,7 +81,7 @@ public class AutoToolHooksTest implements Opcodes {
         return true;
     }
 
-    @Test public void bedAuraSuppressesOnlyItsOwnIdleMiningReset() throws Exception {
+    @Test public void bedAuraDoesNotSuppressVanillasControllerReset() throws Exception {
         dev.vibe.module.impl.world.BedAuraModule bed = new dev.vibe.module.impl.world.BedAuraModule();
         set(Module.class, bed, "enabled", true);
         set(bed.getClass(), bed, "owner", minecraft.thePlayer);
@@ -103,10 +103,8 @@ public class AutoToolHooksTest implements Opcodes {
         Object fixture = allocate(type);
         Method method = type.getMethod("resetBlockRemoving");
         method.invoke(fixture);
-        assertEquals(0,type.getField("resets").getInt(fixture));
-        set(bed.getClass(), bed, "resetting", true); method.invoke(fixture);
-        assertEquals("Explicit target cancellation must reach vanilla",1,type.getField("resets").getInt(fixture));
-        set(bed.getClass(), bed, "resetting", false); set(Module.class,bed,"enabled",false); method.invoke(fixture);
+        assertEquals("Native release/cancel must reach vanilla even with BedAura ready",1,type.getField("resets").getInt(fixture));
+        set(Module.class,bed,"enabled",false); method.invoke(fixture);
         assertEquals("Disabled BedAura must not alter ordinary mining",2,type.getField("resets").getInt(fixture));
     }
     private static void set(Class<?> type,Object object,String name,Object value) throws Exception {

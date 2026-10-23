@@ -65,7 +65,7 @@ public final class CommandManager {
             ChatComponentText link = new ChatComponentText("Vibe source repository (local builds may differ)");
             link.getChatStyle().setUnderlined(true).setChatClickEvent(new net.minecraft.event.ClickEvent(
                     net.minecraft.event.ClickEvent.Action.OPEN_URL, dev.vibe.ui.menu.LicenseDocuments.REPOSITORY));
-            if (Minecraft.getMinecraft().thePlayer != null) Minecraft.getMinecraft().thePlayer.addChatMessage(link);
+            dev.vibe.chat.ClientChat.send(link);
         } else if (".help".equals(command)) {
             help();
         } else {
@@ -454,21 +454,7 @@ public final class CommandManager {
     }
 
     private void say(String text) {
-        Minecraft minecraft = Minecraft.getMinecraft();
-        if (minecraft.thePlayer != null) {
-            minecraft.thePlayer.addChatMessage(new ChatComponentText(rainbowPrefix() + " §7" + text));
-        }
-    }
-
-    private String rainbowPrefix() {
-        String[] colors = {"§c", "§6", "§e", "§a", "§b", "§9", "§d"};
-        int offset = (int) ((System.currentTimeMillis() / 120L) % colors.length);
-        String word = "Vibe";
-        StringBuilder builder = new StringBuilder("§8[");
-        for (int index = 0; index < word.length(); index++) {
-            builder.append(colors[(offset + index) % colors.length]).append(word.charAt(index));
-        }
-        return builder.append("§8]").toString();
+        dev.vibe.chat.ClientChat.send(text);
     }
 
     private void addMatching(List<String> output, List<String> options, String needle) {

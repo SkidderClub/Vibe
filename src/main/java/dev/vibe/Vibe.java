@@ -100,13 +100,17 @@ public final class Vibe {
         extensionLoading = true;
         try { extensions.load(); }
         finally { extensionLoading = false; }
-        Runtime.getRuntime().addShutdownHook(new Thread(extensions::shutdown, "Vibe-Extensions-Shutdown"));
 
         config.load(moduleManager);
         // Script modules are registered after the normal profile is loaded,
         // so a broken or removed .java file can never prevent Vibe itself
         // from starting. The runtime retains Raven's source-level API.
         scriptRuntime.reload();
+        config.restoreSession(moduleManager);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try { config.saveSession(moduleManager); }
+            finally { extensions.shutdown(); }
+        }, "Vibe-Shutdown"));
         feedback.start();
         refreshLoadedCounts();
         LanguageModule language = moduleManager.getModule(LanguageModule.class);

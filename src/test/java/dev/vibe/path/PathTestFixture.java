@@ -50,6 +50,7 @@ public final class PathTestFixture implements AutoCloseable {
 
     public Player addPlayer(int id, String name, double x, double y, double z) throws Exception {
         Player entity = allocate(Player.class); entity.setEntityId(id); entity.name = name;
+        entity.localMessages = new ArrayList<String>(); entity.sentMessages = new ArrayList<String>();
         entity.width = .6F; entity.height = 1.8F; entity.alive = true; entity.worldObj = world;
         entity.posX = entity.lastTickPosX = x; entity.posY = entity.lastTickPosY = y; entity.posZ = entity.lastTickPosZ = z;
         world.entities.put(id, entity); world.loadedEntityList.add(entity); world.playerEntities.add(entity);
@@ -60,7 +61,11 @@ public final class PathTestFixture implements AutoCloseable {
         for (int x = minX; x <= maxX; x++) for (int z = minZ; z <= maxZ; z++) block(x, y, z, Blocks.stone.getDefaultState());
     }
     public void block(int x, int y, int z, IBlockState state) { world.blocks.put(new BlockPos(x, y, z), state); }
-    public void forceReplan() throws Exception { set(PathModule.class, module, "nextSearch", 0L); set(PathModule.class, module, "nextSelection", 0L); }
+    public void forceReplan() throws Exception { setRouteState("nextSearch", 0L); set(PathModule.class, module, "nextSelection", 0L); }
+    public void setRouteState(String name, Object value) throws Exception {
+        Field field = PathModule.class.getDeclaredField("mainPath"); field.setAccessible(true);
+        Object state = field.get(module); set(state.getClass(), state, name, value);
+    }
     public void finishRoute() { for (int i = 0; i < 200 && module.getRoute().points.isEmpty(); i++) module.tick(); }
 
     @Override public void close() throws Exception {
@@ -76,11 +81,16 @@ public final class PathTestFixture implements AutoCloseable {
 
     public static class Player extends EntityPlayerSP {
         String name; boolean alive, hidden;
+        public List<String> localMessages, sentMessages;
         private Player() { super(null, null, null, null); }
         @Override public String getName() { return name; }
         @Override public boolean isEntityAlive() { return alive && !isDead; }
         @Override public boolean isInvisible() { return hidden; }
         @Override public float getEyeHeight() { return 1.62F; }
+        @Override public void addChatMessage(net.minecraft.util.IChatComponent message) {
+            localMessages.add(net.minecraft.util.EnumChatFormatting.getTextWithoutFormattingCodes(message.getUnformattedText()));
+        }
+        @Override public void sendChatMessage(String message) { sentMessages.add(message); }
     }
 
     public static class FixtureWorld extends WorldClient {

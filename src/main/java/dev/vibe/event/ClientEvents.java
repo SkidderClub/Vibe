@@ -199,6 +199,8 @@ public final class ClientEvents {
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
+            if (Vibe.getInstance().getConfig() != null)
+                Vibe.getInstance().getConfig().tickSession(Vibe.getInstance().getModuleManager());
             dev.vibe.module.impl.meme.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class);
             if (phone != null) phone.tickCommunications();
         }
@@ -532,19 +534,8 @@ public final class ClientEvents {
         ChestStealerModule module = Vibe.getInstance().getModuleManager().getModule(ChestStealerModule.class);
         InventoryEditorModule editor = Vibe.getInstance().getModuleManager().getModule(InventoryEditorModule.class);
         if (module == null || editor == null || !editor.getDrawPosition().isEnabled() || !module.shouldDrawCursor()) return;
-        net.minecraft.inventory.ContainerChest chest = (net.minecraft.inventory.ContainerChest) minecraft.thePlayer.openContainer;
-        int rows = Math.max(1, (chest.getLowerChestInventory().getSizeInventory() + 8) / 9);
-        ScaledResolution resolution = new ScaledResolution(minecraft);
-        int left = (resolution.getScaledWidth() - 176) / 2;
-        int top = (resolution.getScaledHeight() - (rows * 18 + 114)) / 2;
-        int x = Math.round(left + module.getCursorX());
-        int y = Math.round(top + module.getCursorY());
-        int color = editor.getPositionColor().getArgb();
-        Gui.drawRect(x - 7, y - 7, x + 8, y - 6, color);
-        Gui.drawRect(x - 7, y + 6, x + 8, y + 7, color);
-        Gui.drawRect(x - 7, y - 7, x - 6, y + 8, color);
-        Gui.drawRect(x + 6, y - 7, x + 7, y + 8, color);
-        Gui.drawRect(x - 1, y - 1, x + 2, y + 2, RenderUtils.alpha(color, 245));
+        dev.vibe.ui.render.InventoryHighlightRenderer.draw((net.minecraft.client.gui.inventory.GuiContainer) screen,
+                module.getCursorX(), module.getCursorY(), editor.getPositionColor().getArgb());
     }
 
     /**
@@ -571,18 +562,13 @@ public final class ClientEvents {
         InventoryEditorModule editor = Vibe.getInstance().getModuleManager().getModule(InventoryEditorModule.class);
         InventoryManagerModule manager = Vibe.getInstance().getModuleManager().getModule(InventoryManagerModule.class);
         if (editor == null || manager == null || !editor.getDrawPosition().isEnabled() || !manager.shouldDrawCursor()) return;
-        net.minecraft.inventory.Slot slot = minecraft.thePlayer.inventoryContainer.getSlot(manager.getCursorSlot());
+        net.minecraft.client.gui.inventory.GuiContainer container = (net.minecraft.client.gui.inventory.GuiContainer) screen;
+        int cursorSlot = manager.getCursorSlot();
+        if (cursorSlot < 0 || cursorSlot >= container.inventorySlots.inventorySlots.size()) return;
+        net.minecraft.inventory.Slot slot = container.inventorySlots.getSlot(cursorSlot);
         if (slot == null) return;
-        ScaledResolution resolution = new ScaledResolution(minecraft);
-        int left = (resolution.getScaledWidth() - 176) / 2;
-        int top = (resolution.getScaledHeight() - 166) / 2;
-        int x = left + slot.xDisplayPosition + 8;
-        int y = top + slot.yDisplayPosition + 8;
-        int color = editor.getPositionColor().getArgb();
-        Gui.drawRect(x - 7, y - 7, x + 8, y - 6, color);
-        Gui.drawRect(x - 7, y + 6, x + 8, y + 7, color);
-        Gui.drawRect(x - 7, y - 7, x - 6, y + 8, color);
-        Gui.drawRect(x + 6, y - 7, x + 7, y + 8, color);
+        dev.vibe.ui.render.InventoryHighlightRenderer.draw(container,
+                slot.xDisplayPosition + 8, slot.yDisplayPosition + 8, editor.getPositionColor().getArgb());
     }
 
     @SubscribeEvent

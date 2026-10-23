@@ -23,6 +23,7 @@ public final class FontLocalizationTransformer implements IClassTransformer, Opc
     private static final String FONT_RENDERER = "net/minecraft/client/gui/FontRenderer";
     private static final String LANGUAGE_MANAGER = "dev/vibe/language/LanguageManager";
     private static final String SCRIPT_RENDERER = "dev/vibe/ui/ScriptTextRenderer";
+    private static final String CHAT_RENDERER = "dev/vibe/chat/ClientChatRenderer";
     private static final int UNHANDLED = Integer.MIN_VALUE;
 
     @Override
@@ -55,7 +56,8 @@ public final class FontLocalizationTransformer implements IClassTransformer, Opc
                 // Give the two custom Vibe scripts their real bundled fonts,
                 // but only when the string came from Vibe's own catalog.
                 if ("(Ljava/lang/String;FFIZ)I".equals(method.desc)) {
-                    insertScriptDrawHook(method);
+                    insertDrawHook(method, SCRIPT_RENDERER);
+                    insertDrawHook(method, CHAT_RENDERER);
                 } else if ("(Ljava/lang/String;)I".equals(method.desc)) {
                     insertScriptWidthHook(method);
                 }
@@ -69,7 +71,7 @@ public final class FontLocalizationTransformer implements IClassTransformer, Opc
         }
     }
 
-    private static void insertScriptDrawHook(MethodNode method) {
+    private static void insertDrawHook(MethodNode method, String owner) {
         LabelNode vanilla = new LabelNode();
         InsnList hook = new InsnList();
         hook.add(new VarInsnNode(ALOAD, 0));
@@ -78,7 +80,7 @@ public final class FontLocalizationTransformer implements IClassTransformer, Opc
         hook.add(new VarInsnNode(FLOAD, 3));
         hook.add(new VarInsnNode(ILOAD, 4));
         hook.add(new VarInsnNode(ILOAD, 5));
-        hook.add(new MethodInsnNode(INVOKESTATIC, SCRIPT_RENDERER, "draw",
+        hook.add(new MethodInsnNode(INVOKESTATIC, owner, "draw",
                 "(Ljava/lang/Object;Ljava/lang/String;FFIZ)I", false));
         hook.add(new VarInsnNode(ISTORE, 6));
         hook.add(new VarInsnNode(ILOAD, 6));

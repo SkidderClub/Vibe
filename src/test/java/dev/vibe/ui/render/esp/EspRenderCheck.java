@@ -109,9 +109,11 @@ public final class EspRenderCheck {
             s.text.font.setValue(font);EspLayout.Rect r=renderer.draw(s,actor(20,20),new EspLayout.Rect(140+col++*270,250,80,180),W,H,true).elements.get("Name");
             int minY=H,maxY=0;
             for(int y=(int)r.y-2;y<=r.bottom()+2;y++)for(int x=(int)r.x-2;x<=r.right()+2;x++)if((pixel(x,y)&0xFF00)>0x1000){minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
-            if(minY>maxY||Math.abs((minY-r.y)-(r.bottom()-1-maxY))>2)throw new AssertionError("Text background off-center: "+font);
+            if(minY>maxY)throw new AssertionError("Text glyphs disappeared: "+font);
+            for(int y=(int)r.y-2;y<r.bottom()+2;y++)for(int x=(int)r.x-2;x<r.right()+2;x++)
+                if((pixel(x,y)>>16&255)>32)throw new AssertionError("Legacy text background was drawn: "+font);
         }
-        save("text-background-centering.png");
+        save("text-without-background.png");
     }
     private static void gradientMask()throws Exception {
         Esp2DSettings s=esp.get2D();s.healthBar.enabled.setValue(false);s.box.enabled.setValue(true);s.box.corners.setValue(false);s.box.width.setValue(6D);s.box.outline.setValue(false);s.box.color.mode.setValue("Global Gradient");
@@ -178,6 +180,9 @@ public final class EspRenderCheck {
         frame();gui.drawScreen(0,0,0);save("editor-targets-inherited.png");
     }
     private static void installItemRenderer()throws Exception {
+        installItemRenderer(mc);
+    }
+    public static void installItemRenderer(Minecraft mc)throws Exception {
         // A simple baked quad runs the real RenderItem path without Forge's resource-loader bootstrap.
         int[] vertices=new int[28];float[][] points={{0,1,0,0,0},{0,0,0,0,1},{1,0,0,1,1},{1,1,0,1,0}};
         for(int v=0;v<4;v++){int i=v*7;vertices[i]=Float.floatToRawIntBits(points[v][0]);vertices[i+1]=Float.floatToRawIntBits(points[v][1]);vertices[i+2]=Float.floatToRawIntBits(points[v][2]);vertices[i+3]=-1;vertices[i+4]=Float.floatToRawIntBits(points[v][3]);vertices[i+5]=Float.floatToRawIntBits(points[v][4]);vertices[i+6]=0x007F0000;}

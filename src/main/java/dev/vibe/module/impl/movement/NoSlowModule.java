@@ -53,7 +53,7 @@ public final class NoSlowModule extends Module {
     public void installInputHook() {
         Minecraft minecraft = Minecraft.getMinecraft();
         EntityPlayerSP player = minecraft.thePlayer;
-        if (player == null || player == hookedPlayer || player.movementInput instanceof VibeMovementInput) {
+        if (player == null || player.movementInput == null || player == hookedPlayer || player.movementInput instanceof VibeMovementInput) {
             return;
         }
         player.movementInput = new VibeMovementInput(player.movementInput, this);
@@ -68,6 +68,10 @@ public final class NoSlowModule extends Module {
         private VibeMovementInput(MovementInput vanillaInput, NoSlowModule module) {
             this.vanillaInput = vanillaInput;
             this.module = module;
+            moveStrafe = vanillaInput.moveStrafe;
+            moveForward = vanillaInput.moveForward;
+            jump = vanillaInput.jump;
+            sneak = vanillaInput.sneak;
         }
 
         @Override

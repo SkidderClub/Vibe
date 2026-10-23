@@ -1,6 +1,7 @@
 package dev.vibe.module.impl.world;
 
 import dev.vibe.Vibe;
+import dev.vibe.input.VanillaClicks;
 import dev.vibe.module.Category;
 import dev.vibe.module.Module;
 import dev.vibe.module.impl.movement.MoveFixModule;
@@ -11,6 +12,8 @@ import dev.vibe.setting.NumberSetting;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockBed;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.settings.KeyBinding;
+import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.BlockPos;
@@ -20,7 +23,7 @@ import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
 import org.lwjgl.input.Keyboard;
 
-/** Selects a bed/defence at tick start and mines after vanilla sends its rotation. */
+/** Plans rotations at tick start; Minecraft's normal held-attack input owns all digging and swings. */
 public final class BedAuraModule extends Module {
     private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Raycast", "Raycast", "Vanilla", "Hypixel"));
     private final NumberSetting range = addSetting(new NumberSetting("Range", 5, 2, 8, .1));
@@ -31,10 +34,12 @@ public final class BedAuraModule extends Module {
     private final ColorSetting targetColor = addSetting(new ColorSetting("Target Color", 0x78FF4F6D, () -> renderTarget.isEnabled()));
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private BlockPos bed, target;
-    private MovingObjectPosition plannedHit;
+    private float plannedYaw, plannedPitch;
     private long nextScan;
     private int previousSlot = -1;
-    private boolean ready, resetting, mining;
+    private boolean ready, inputPrepared, inputOwned, holdingAttack;
+    private MovingObjectPosition savedMouseOver;
+    private Entity savedPointedEntity;
     private net.minecraft.client.entity.EntityPlayerSP owner;
 
     public BedAuraModule() {
@@ -42,64 +47,85 @@ public final class BedAuraModule extends Module {
     }
 
     public void tick() {
+        restoreInput();
+        inputPrepared = false;
         ready = false;
-        if (owner != minecraft.thePlayer) { target = bed = null; previousSlot = -1; mining = false; nextScan = 0; owner = minecraft.thePlayer; }
+        if (owner != minecraft.thePlayer) { target = bed = null; previousSlot = -1; holdingAttack = false; nextScan = 0; owner = minecraft.thePlayer; }
         if (!isEnabled() || owner == null || minecraft.theWorld == null || minecraft.currentScreen != null
-                || !owner.capabilities.allowEdit || owner.isUsingItem() || minecraft.gameSettings.keyBindAttack.isKeyDown()) {
+                || !owner.capabilities.allowEdit || owner.isUsingItem() || VanillaClicks.physicallyDown(minecraft.gameSettings.keyBindAttack)
+                || ScaffoldModule.isActive()) {
             reset(); return;
         }
         if (!validBed(bed)) {
-            stopMining(); bed = null;
+            bed = null;
             long now = System.currentTimeMillis();
             if (now >= nextScan) { bed = findBed(); nextScan = now + scanRate.getInt(); }
         }
         MovingObjectPosition hit = bed == null ? null : selectHit(bed);
         if (hit == null || !breakable(hit.getBlockPos())) { reset(); return; }
-        if (!hit.getBlockPos().equals(target)) stopMining();
-        target = hit.getBlockPos(); plannedHit = hit;
-        equipTool();
+        target = hit.getBlockPos();
         float[] angles = rotations(hit.hitVec);
         MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
         if (moveFix == null) { reset(); return; }
+        // Like KillAura, select the rotation before MoveFix samples keyboard
+        // input. Keep it through moveFlying/jump and the walking packet.
         moveFix.setFakeRotation(getId(), angles[0], angles[1]);
+        plannedYaw = moveFix.getRotationYaw();
+        plannedPitch = moveFix.getRotationPitch();
         ready = true;
     }
 
-    /** Movement has updated the eyes by now; refresh the aim before C03 is serialized. */
-    public void beforeWalkingUpdate(Object entity) {
-        if (!ready || entity != owner || owner != minecraft.thePlayer || !isEnabled()) return;
-        MovingObjectPosition hit = bed == null ? null : selectHit(bed);
-        if (hit == null || !breakable(hit.getBlockPos()) || !withinReach(hit.hitVec)) { reset(); return; }
-        if (!hit.getBlockPos().equals(target)) stopMining();
-        target = hit.getBlockPos(); plannedHit = hit;
-        MoveFixModule fix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
-        if (fix == null) { reset(); return; }
-        float[] angles = rotations(hit.hitVec);
-        fix.setFakeRotation(getId(), angles[0], angles[1]);
+    /** Same pre-dispatch boundary as KillAura: supply a hit and held key, never send dig/animation packets. */
+    private void prepareInput() {
+        if (inputPrepared) return;
+        inputPrepared = true;
+        if (!ready || !isEnabled() || owner == null || owner != minecraft.thePlayer || !minecraft.inGameHasFocus
+                || minecraft.currentScreen != null || minecraft.playerController == null || !breakable(target)
+                || owner.isUsingItem() || minecraft.gameSettings.keyBindUseItem.isKeyDown()
+                || VanillaClicks.physicallyDown(minecraft.gameSettings.keyBindAttack) || ScaffoldModule.isActive()) {
+            holdingAttack = ready = false;
+            return;
+        }
+        MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
+        if (moveFix == null || Math.abs(MathHelper.wrapAngleTo180_float(moveFix.getRotationYaw() - plannedYaw)) > .001F
+                || Math.abs(moveFix.getRotationPitch() - plannedPitch) > .001F) { holdingAttack = ready = false; return; }
+        // Input is handled before player movement. Raycast from this same
+        // position and leave the chosen rotation untouched through physics/C03.
+        Vec3 eyes = owner.getPositionEyes(1);
+        double yaw = Math.toRadians(plannedYaw), pitch = Math.toRadians(plannedPitch);
+        double reach = Math.min(range.getDouble(), minecraft.playerController.getBlockReachDistance());
+        Vec3 direction = new Vec3(-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+        Vec3 end = eyes.addVector(direction.xCoord * reach, direction.yCoord * reach, direction.zCoord * reach);
+        MovingObjectPosition actual = mode.is("Raycast")
+                ? minecraft.theWorld.rayTraceBlocks(eyes, end, false, true, false)
+                : box(target).calculateIntercept(eyes, end);
+        if (actual == null || (mode.is("Raycast") && !target.equals(actual.getBlockPos()))
+                || !withinReach(actual.hitVec)) { holdingAttack = ready = false; return; }
+        equipTool();
+        savedMouseOver = minecraft.objectMouseOver;
+        savedPointedEntity = minecraft.pointedEntity;
+        inputOwned = true;
+        minecraft.objectMouseOver = new MovingObjectPosition(actual.hitVec, actual.sideHit, target);
+        minecraft.pointedEntity = null;
+        KeyBinding attack = minecraft.gameSettings.keyBindAttack;
+        VanillaClicks.discardPresses(attack);
+        // One physical-style press starts the action. Continuing/retargeting
+        // holds LMB: vanilla owns START/ABORT/STOP, hit delay and conditional swings.
+        if (!holdingAttack) VanillaClicks.pulseAttack(attack);
+        else KeyBinding.setKeyBindState(attack.getKeyCode(), true);
+        holdingAttack = true;
     }
 
-    /** Called once after walking packets; use the vanilla controller for all dig state. */
-    public void afterWalkingUpdate(Object entity) {
-        if (!ready || entity != owner || owner != minecraft.thePlayer) return;
-        ready = false;
-        if (!isEnabled() || minecraft.currentScreen != null || !breakable(target)) { reset(); return; }
-        MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
-        float[] angles = rotations(plannedHit.hitVec);
-        if (moveFix == null || Math.abs(MathHelper.wrapAngleTo180_float(moveFix.getRotationYaw() - angles[0])) > .5F
-                || Math.abs(moveFix.getRotationPitch() - angles[1]) > .5F) { stopMining(); return; }
-        if (mode.is("Raycast")) {
-            Vec3 eyes = owner.getPositionEyes(1);
-            double yaw = Math.toRadians(moveFix.getRotationYaw()), pitch = Math.toRadians(moveFix.getRotationPitch());
-            double reach = Math.min(range.getDouble(), minecraft.playerController.getBlockReachDistance());
-            Vec3 direction = new Vec3(-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
-            MovingObjectPosition actual = minecraft.theWorld.rayTraceBlocks(eyes,
-                    eyes.addVector(direction.xCoord * reach, direction.yCoord * reach, direction.zCoord * reach), false, true, false);
-            if (actual == null || !target.equals(actual.getBlockPos()) || !withinReach(actual.hitVec)) { stopMining(); return; }
-            plannedHit = actual;
+    private void restoreInput() {
+        if (!inputOwned) return;
+        minecraft.objectMouseOver = savedMouseOver;
+        minecraft.pointedEntity = savedPointedEntity;
+        savedMouseOver = null; savedPointedEntity = null;
+        if (minecraft.gameSettings != null) {
+            VanillaClicks.discardPresses(minecraft.gameSettings.keyBindAttack);
+            VanillaClicks.restore(minecraft.gameSettings.keyBindAttack);
         }
-        // swingItem supplies both the first-person animation and C0A animation packet.
-        owner.swingItem();
-        mining = minecraft.playerController.onPlayerDamageBlock(target, plannedHit.sideHit);
+        inputOwned = false;
     }
 
     private BlockPos findBed() {
@@ -196,35 +222,30 @@ public final class BedAuraModule extends Module {
             owner.inventory.currentItem = best; minecraft.playerController.updateController();
         }
     }
-    private void stopMining() {
-        if (mining && minecraft.playerController != null && minecraft.thePlayer != null) {
-            resetting = true;
-            try { minecraft.playerController.resetBlockRemoving(); } finally { resetting = false; }
-        }
-        mining = false;
-    }
     private void reset() {
-        stopMining(); ready = false;
+        restoreInput(); holdingAttack = ready = false;
         if (switchBack.isEnabled() && previousSlot >= 0 && owner == minecraft.thePlayer && owner != null) {
-            owner.inventory.currentItem = previousSlot; minecraft.playerController.updateController();
+            // Vanilla's next input tick synchronizes the slot. Toggling after
+            // movement must not inject a post-C03 held-item-change packet.
+            owner.inventory.currentItem = previousSlot;
         }
         if (Vibe.getInstance() != null && Vibe.getInstance().getModuleManager() != null) {
             MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
             if (moveFix != null) moveFix.clearFakeRotation(getId());
         }
-        bed = target = null; plannedHit = null; previousSlot = -1;
+        bed = target = null; previousSlot = -1;
     }
-    /** Vanilla's idle attack-key path must not abort an owned mining action every tick. */
-    public static boolean keepBreakingHook() {
-        if (Vibe.getInstance() == null || Vibe.getInstance().getModuleManager() == null) return false;
-        BedAuraModule module = Vibe.getInstance().getModuleManager().getModule(BedAuraModule.class);
-        return module != null && module.isEnabled() && !module.resetting && (module.ready || module.mining)
-                && module.owner == module.minecraft.thePlayer && module.minecraft.currentScreen == null;
+    private static BedAuraModule module() {
+        if (Vibe.getInstance() == null || Vibe.getInstance().getModuleManager() == null) return null;
+        return Vibe.getInstance().getModuleManager().getModule(BedAuraModule.class);
     }
+    public static void prepareInputHook() { BedAuraModule module = module(); if (module != null) module.prepareInput(); }
+    public static void finishInputHook() { BedAuraModule module = module(); if (module != null) module.restoreInput(); }
+    public static boolean ownsMiningInput() { BedAuraModule module = module(); return module != null && module.isActivelyMining(); }
     @Override protected void onDisable() { reset(); nextScan = 0; }
     public ModeSetting getMode() { return mode; }
     public BlockPos getTarget() { return target; }
-    public boolean isActivelyMining() { return isEnabled() && owner == minecraft.thePlayer && (ready || mining) && target != null; }
+    public boolean isActivelyMining() { return isEnabled() && owner == minecraft.thePlayer && ready && target != null; }
     public float getAuraBreakProgress() {
         if (!isActivelyMining() || minecraft.playerController == null) return 0.0F;
         return dev.vibe.module.impl.visual.BreakProgressModule.controllerProgress(minecraft.playerController);

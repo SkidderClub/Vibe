@@ -177,15 +177,15 @@ public class PathModuleTest {
         PathRoute old = fixture.module.getRoute(); assertTrue(old.complete);
         for (int y=64;y<=66;y++) fixture.world.blocks.remove(new BlockPos(3,y,0));
         // Simulate a refresh inside the optimization cooldown without any sleeps.
-        PathTestFixture.set(PathModule.class,fixture.module,"nextOptimize",Long.MAX_VALUE);
+        fixture.setRouteState("nextOptimize",Long.MAX_VALUE);
         PathRoute stable = replan(old); assertTrue(stable.complete); assertEquals(old.nodes,stable.nodes);
-        PathTestFixture.set(PathModule.class,fixture.module,"nextOptimize",0L);
+        fixture.setRouteState("nextOptimize",0L);
         double[] state = state(); PathRoute improved = replan(stable);
         assertTrue(improved.complete); assertEquals(6,PathPlanner.routeCost(improved.nodes),1e-9);
         assertTrue(PathPlanner.routeCost(improved.nodes)<PathPlanner.routeCost(old.nodes)-1);
         assertSafe(improved); assertArrayEquals(state,state(),0);
         for (int i=0;i<5;i++) {
-            PathTestFixture.set(PathModule.class,fixture.module,"nextOptimize",0L);
+            fixture.setRouteState("nextOptimize",0L);
             PathRoute next = replan(improved); assertEquals(improved.nodes,next.nodes); improved=next;
         }
     }

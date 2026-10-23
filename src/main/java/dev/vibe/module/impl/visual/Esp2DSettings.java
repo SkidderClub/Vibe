@@ -84,9 +84,9 @@ public final class Esp2DSettings {
             outline = add(new BooleanSetting(prefix + "Outline", kind == Kind.BAR || kind == Kind.BOX, shown));
             outlineWidth = add(new NumberSetting(prefix + "Outline Width", 1, .25, 4, .25, () -> shown.getAsBoolean() && outline.isEnabled()));
             outlineColor = add(new ColorSetting(prefix + "Outline Color", 0xCF000000, () -> shown.getAsBoolean() && outline.isEnabled()));
-            backgroundEnabled=add(new BooleanSetting(prefix+"Background Enabled",false,shown));
+            backgroundEnabled=add(new BooleanSetting(prefix+"Background Enabled",false,() -> shown.getAsBoolean() && kind != Kind.TEXT));
             background = add(new ColorSetting(prefix + "Background", 0x80000000,
-                    () -> shown.getAsBoolean() && backgroundEnabled.isEnabled()));
+                    () -> shown.getAsBoolean() && kind != Kind.TEXT && backgroundEnabled.isEnabled()));
             corners = add(new BooleanSetting(prefix + "Corners Only", true, () -> shown.getAsBoolean() && kind == Kind.BOX));
             cornerLength = add(new NumberSetting(prefix + "Corner Length", .25, .05, .5, .01, () -> shown.getAsBoolean() && kind == Kind.BOX && corners.isEnabled()));
             cornerDistance = add(new NumberSetting(prefix + "Corner Distance", 0, 0, 100, 1, () -> shown.getAsBoolean() && kind == Kind.BOX && corners.isEnabled()));

@@ -5,7 +5,6 @@ import dev.vibe.combat.RotationMath;
 import dev.vibe.module.Category;
 import dev.vibe.module.Module;
 import dev.vibe.module.impl.combat.VelocityModule;
-import dev.vibe.module.impl.world.BedAuraModule;
 import dev.vibe.module.impl.world.ScaffoldModule;
 import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ModeSetting;
@@ -49,6 +48,8 @@ public final class MoveFixModule extends Module {
     private volatile FakeRotation fakeRotation;
     private FakeRotation previousRenderRotation;
     private volatile String rotationOwner;
+    // Retain the source during rotate-back so disabling it can end its correction immediately.
+    private volatile String rotationSource;
     // A producer may pin the movement policy for its own rotation. The pin
     // lasts through the rotate-back and ends with the fake rotation itself.
     private volatile String correctionOverride;
@@ -61,8 +62,6 @@ public final class MoveFixModule extends Module {
     private final Random rotationRandom = new Random();
     private EntityPlayerSP hookedPlayer;
     private EntityPlayerSP rotationPlayer;
-    private float transportYaw;
-    private boolean transported;
     private EntityPlayerSP packetPlayer;
     private float packetYaw;
     private float packetPitch;
@@ -98,7 +97,7 @@ public final class MoveFixModule extends Module {
     public void installInputHook() {
         Minecraft minecraft = Minecraft.getMinecraft();
         EntityPlayerSP player = minecraft.thePlayer;
-        if (player == null || player == hookedPlayer) {
+        if (player == null || player.movementInput == null || player == hookedPlayer) {
             return;
         }
         player.movementInput = new MoveFixInput(player.movementInput, this);
@@ -121,6 +120,7 @@ public final class MoveFixModule extends Module {
         }
         float continuousYaw = RotationMath.nearest(yaw, getRotationYaw());
         rotationOwner = owner;
+        rotationSource = owner;
         correctionOverride = correctionMode(correction);
         fakeRotation = new FakeRotation(continuousYaw, RotationMath.clamp(pitch, -90.0F, 90.0F));
     }
@@ -158,9 +158,9 @@ public final class MoveFixModule extends Module {
             fakeRotation = null;
             previousRenderRotation = null;
             rotationOwner = null;
+            rotationSource = null;
             correctionOverride = null;
             clearForcedMovement(null);
-            transported = false;
         }
     }
 
@@ -169,7 +169,7 @@ public final class MoveFixModule extends Module {
         syncRotationPlayer();
         FakeRotation current = activeRotation();
         float camera = rotationPlayer == null ? 0.0F : rotationPlayer.rotationYaw;
-        return current != null ? current.yaw : transported ? RotationMath.nearest(camera, transportYaw) : camera;
+        return current != null ? current.yaw : camera;
     }
 
     public float getRotationPitch() {
@@ -183,6 +183,20 @@ public final class MoveFixModule extends Module {
         if (owner == null || owner.equals(rotationOwner)) {
             rotationOwner = null;
         }
+    }
+
+    /** Explicitly disabling a producer leaves no rotate-back or input correction behind. */
+    public void discardOwnedState(String owner) {
+        if (owner != null && owner.equals(rotationSource)) {
+            fakeRotation = previousRenderRotation = null;
+            rotationOwner = rotationSource = correctionOverride = null;
+        }
+        clearForcedMovement(owner);
+    }
+
+    public static void producerDisabled(Module producer) {
+        MoveFixModule module = module();
+        if (module != null && producer != null) module.discardOwnedState(producer.getId());
     }
 
     /** Feed a controlled movement vector through the same silent rotation path as player input. */
@@ -344,16 +358,17 @@ public final class MoveFixModule extends Module {
         if (entity != minecraft.thePlayer || minecraft.thePlayer == null || packetPlayer != null) {
             return;
         }
-        float yaw = getRotationYaw();
-        float pitch = getRotationPitch();
+        syncRotationPlayer();
+        FakeRotation rotation = activeRotation();
+        // Equivalent yaw angles can take different float/trig paths in 1.8.9.
+        // Without a rotation request, vanilla must send its original fields bit for bit.
+        if (rotation == null) return;
         EntityPlayerSP player = minecraft.thePlayer;
         packetPlayer = player;
         packetYaw = player.rotationYaw;
         packetPitch = player.rotationPitch;
-        player.rotationYaw = yaw;
-        player.rotationPitch = pitch;
-        transportYaw = yaw;
-        transported = true;
+        player.rotationYaw = rotation.yaw;
+        player.rotationPitch = rotation.pitch;
     }
 
     /** Called by the walking-packet transformer at its POST boundary. */
@@ -505,6 +520,7 @@ public final class MoveFixModule extends Module {
         fakeRotation = null;
         previousRenderRotation = null;
         rotationOwner = null;
+        rotationSource = null;
         correctionOverride = null;
         clearForcedMovement(null);
         if (packetPlayer != null) {
@@ -522,8 +538,6 @@ public final class MoveFixModule extends Module {
         if (module != null) {
             ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
             if (scaffold != null) scaffold.beforeWalkingUpdate(entity);
-            BedAuraModule bedAura = Vibe.getInstance().getModuleManager().getModule(BedAuraModule.class);
-            if (bedAura != null) bedAura.beforeWalkingUpdate(entity);
             module.beginPacketRotation(entity);
             VelocityModule velocity = Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
             if (velocity != null) velocity.beforeWalkingUpdate(entity);
@@ -536,8 +550,6 @@ public final class MoveFixModule extends Module {
             VelocityModule velocity = Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
             if (velocity != null) velocity.afterWalkingUpdate(entity);
             module.endPacketRotation(entity);
-            BedAuraModule bedAura = Vibe.getInstance().getModuleManager().getModule(BedAuraModule.class);
-            if (bedAura != null) bedAura.afterWalkingUpdate(entity);
         }
     }
 
@@ -653,6 +665,10 @@ public final class MoveFixModule extends Module {
         private MoveFixInput(MovementInput vanillaInput, MoveFixModule module) {
             this.vanillaInput = vanillaInput;
             this.module = module;
+            moveStrafe = vanillaInput.moveStrafe;
+            moveForward = vanillaInput.moveForward;
+            jump = vanillaInput.jump;
+            sneak = vanillaInput.sneak;
         }
 
         @Override

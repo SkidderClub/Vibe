@@ -9,6 +9,7 @@ import dev.vibe.module.Category;
 import dev.vibe.module.Module;
 import dev.vibe.module.impl.movement.MoveFixModule;
 import dev.vibe.module.impl.world.ScaffoldModule;
+import dev.vibe.module.impl.world.BedAuraModule;
 import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ModeSetting;
 import dev.vibe.setting.NumberSetting;
@@ -133,7 +134,7 @@ public final class KillAuraModule extends Module {
             sessionPlayer = minecraft.thePlayer;
         }
         // Scaffold owns the server rotation and the held slot while enabled.
-        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive()) { clear(); return; }
+        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()) { clear(); return; }
         EntityLivingBase selected = chooseTarget();
         if (selected == null) {
             // RavenBS permits the physical right mouse button to maintain its
@@ -173,7 +174,7 @@ public final class KillAuraModule extends Module {
     private void prepareInput() {
         if (inputPrepared) return;
         inputPrepared = true;
-        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive()) {
+        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()) {
             clear();
             releaseOwnedBlock();
             return;

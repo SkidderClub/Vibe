@@ -16,7 +16,6 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.play.client.C02PacketUseEntity;
 import net.minecraft.network.play.client.C03PacketPlayer;
 import net.minecraft.network.play.client.C0APacketAnimation;
-import net.minecraft.util.ChatComponentText;
 import org.lwjgl.input.Keyboard;
 
 /** Direct Vibe bridge of Gothaj's LagRange combat module. */
@@ -129,7 +128,7 @@ public final class LagRangeModule extends Module {
             > CombatRangeSupport.distanceToBoxFromPosition(minecraft.thePlayer.lastTickPosX, minecraft.thePlayer.lastTickPosY,
                     minecraft.thePlayer.lastTickPosZ, target); }
     private void stopBlinking() { blinking = false; PacketDelayService.getInstance().flush(PacketDelayService.Owner.LAG_RANGE); }
-    private void chat(String message) { if (minecraft.thePlayer != null) minecraft.thePlayer.addChatMessage(new ChatComponentText(message)); }
+    private void chat(String message) { dev.vibe.chat.ClientChat.send(message); }
     @Override protected void onEnable() { timer = System.currentTimeMillis(); sessionWorld = minecraft.theWorld; }
     @Override protected void onDisable() { target = null; sessionWorld = null; stopBlinking(); }
     private void synchronizeWorld() {

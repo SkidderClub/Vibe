@@ -47,13 +47,19 @@ public final class VibeConfig {
 
     private final File directory;
     private final File activeProfileFile;
+    private final File sessionFile;
     private String activeName;
     private boolean loading;
+    private volatile boolean sessionReady;
+    private JsonObject previousSession = new JsonObject();
+    private String lastSessionJson;
+    private long nextSessionCheck;
 
     public VibeConfig(File minecraftConfigDirectory) {
         File vibeDirectory = new File(minecraftConfigDirectory, "vibe");
         directory = new File(vibeDirectory, "configs");
         activeProfileFile = new File(vibeDirectory, "active-profile.txt");
+        sessionFile = new File(vibeDirectory, "session.json");
         activeName = readActiveName();
     }
 
@@ -112,6 +118,60 @@ public final class VibeConfig {
     @Deprecated
     public void save(ModuleManager manager) {
         // Runtime edits remain in memory until the user saves a named profile.
+        // The independent session checkpoint restores them across client restarts.
+    }
+
+    /** Called after extensions and scripts are registered; never opens editor/action modules. */
+    public synchronized boolean restoreSession(ModuleManager manager) {
+        if (manager == null) return false;
+        try {
+            JsonObject root = readObject(sessionFile);
+            if (getInt(root, "sessionVersion", 0) != 1 || !root.has("modules") || !root.get("modules").isJsonArray()) return false;
+            if (!apply(root, manager, true, true)) return false;
+            String profile = getString(root, "profile", activeName);
+            activeName = profile.startsWith("online/") ? profile : normalizeName(profile);
+            if (activeName == null) activeName = DEFAULT_PROFILE;
+            previousSession = root;
+            lastSessionJson = root.toString();
+            return true;
+        } catch (RuntimeException invalidSession) {
+            return false;
+        } finally {
+            sessionReady = true;
+        }
+    }
+
+    /** Main-thread checkpoint: at most once every two seconds, writing only changed state. */
+    public void tickSession(ModuleManager manager) {
+        if (!sessionReady || loading) return;
+        long now = System.nanoTime();
+        if (now < nextSessionCheck) return;
+        nextSessionCheck = now + 2_000_000_000L;
+        saveSession(manager);
+    }
+
+    /** Also called before extension shutdown so exit cleanup cannot erase enabled states. */
+    public synchronized boolean saveSession(ModuleManager manager) {
+        if (!sessionReady || loading || manager == null) return false;
+        JsonObject root = snapshot(manager, previousSession);
+        root.addProperty("sessionVersion", 1);
+        root.addProperty("profile", activeName);
+        String json = root.toString();
+        if (json.equals(lastSessionJson) && sessionFile.isFile()) return true;
+        File parent = sessionFile.getParentFile();
+        if (!parent.isDirectory() && !parent.mkdirs()) return false;
+        File temporary = new File(parent, ".session.json.tmp");
+        try {
+            Files.write(temporary.toPath(), json.getBytes(StandardCharsets.UTF_8));
+            replaceFile(temporary, sessionFile);
+            previousSession = root;
+            lastSessionJson = json;
+            return true;
+        } catch (IOException ignored) {
+            return false;
+        } finally {
+            if (temporary.isFile()) temporary.delete();
+        }
     }
 
     /** Applies a downloaded profile without creating or overwriting any local file. */
@@ -129,15 +189,11 @@ public final class VibeConfig {
         if (safeName == null || !ensureDirectory()) {
             return false;
         }
-        JsonObject root = new JsonObject();
-        // Version 3 distinguishes deliberate selections from the incomplete
-        // stock ArrayList selection recovered when older profiles are loaded.
-        root.addProperty("format", FORMAT_VERSION);
-        root.addProperty("toggleFeedbackVersion", 1);
-        root.addProperty("profile", safeName);
         File output = getFile(safeName);
         boolean created = !output.isFile();
         JsonObject previous = readObject(output);
+        JsonObject root = snapshot(manager, previous);
+        root.addProperty("profile", safeName);
         String now = formatDate(System.currentTimeMillis());
         String author = configAuthor();
         String creator = getString(previous, "creator", author);
@@ -155,9 +211,34 @@ public final class VibeConfig {
         }
         if (!alreadyAuthor) authors.add(new JsonPrimitive(author));
         root.add("authors", authors);
-        if (Vibe.getInstance() != null && Vibe.getInstance().getHudManager() != null) {
-            root.add("hud", Vibe.getInstance().getHudManager().toJson());
+        File temporary = new File(directory, "." + safeName + ".json.tmp");
+        try {
+            Writer writer = new OutputStreamWriter(new FileOutputStream(temporary), StandardCharsets.UTF_8);
+            try {
+                new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(root, writer);
+            } finally {
+                writer.close();
+            }
+            replaceFile(temporary, output);
+            activeName = safeName;
+            rememberActiveName();
+            if (created && Vibe.getInstance() != null && Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordConfigCreated();
+            return true;
+        } catch (IOException ignored) {
+            return false;
+        } finally {
+            if (temporary.isFile()) temporary.delete();
         }
+    }
+
+    /** Identical typed state for manual profiles and automatic session recovery. */
+    private JsonObject snapshot(ModuleManager manager, JsonObject previous) {
+        JsonObject root = new JsonObject();
+        // Version 3 distinguishes deliberate selections from the former stock ArrayList list.
+        root.addProperty("format", FORMAT_VERSION);
+        root.addProperty("toggleFeedbackVersion", 1);
+        if (Vibe.getInstance() != null && Vibe.getInstance().getHudManager() != null)
+            root.add("hud", Vibe.getInstance().getHudManager().toJson());
         JsonArray modules = new JsonArray();
         for (Module module : manager.getModules()) {
             JsonObject data = new JsonObject();
@@ -184,24 +265,7 @@ public final class VibeConfig {
             }
         }
         root.add("modules", modules);
-        File temporary = new File(directory, "." + safeName + ".json.tmp");
-        try {
-            Writer writer = new OutputStreamWriter(new FileOutputStream(temporary), StandardCharsets.UTF_8);
-            try {
-                new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(root, writer);
-            } finally {
-                writer.close();
-            }
-            replaceFile(temporary, output);
-            activeName = safeName;
-            rememberActiveName();
-            if (created && Vibe.getInstance() != null && Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordConfigCreated();
-            return true;
-        } catch (IOException ignored) {
-            return false;
-        } finally {
-            if (temporary.isFile()) temporary.delete();
-        }
+        return root;
     }
 
     public boolean delete(String name) {

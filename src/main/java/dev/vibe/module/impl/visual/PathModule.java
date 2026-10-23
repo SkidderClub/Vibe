@@ -6,6 +6,7 @@ import dev.vibe.module.Module;
 import dev.vibe.module.impl.combat.AimAssistModule;
 import dev.vibe.module.impl.combat.KillAuraModule;
 import dev.vibe.module.impl.combat.TargetsModule;
+import dev.vibe.module.impl.meme.HypixelModule;
 import dev.vibe.path.PathPlanner;
 import dev.vibe.path.PathRoute;
 import dev.vibe.path.PathTerrain;
@@ -13,9 +14,13 @@ import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ColorSetting;
 import dev.vibe.setting.ModeSetting;
 import dev.vibe.setting.NumberSetting;
+import dev.vibe.setting.MultiSelectSetting;
+import java.util.Arrays;
 import java.util.List;
 import net.minecraft.client.Minecraft;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.BlockPos;
 import net.minecraft.world.World;
@@ -25,6 +30,9 @@ import org.lwjgl.input.Keyboard;
 public final class PathModule extends Module {
     private final ModeSetting targetMode = addSetting(new ModeSetting("Target", "Nearest Player",
             "Nearest Player", "Nearest Target", "Combat Target", "Priority Target"));
+    public static final String TO_MURDERER = "To murderer", TO_BOW_HOLDERS = "To bow holders as murderer";
+    private final MultiSelectSetting murderLines = addSetting(new MultiSelectSetting("Murder Mystery lines",
+            Arrays.asList(TO_MURDERER, TO_BOW_HOLDERS), Arrays.asList(TO_MURDERER, TO_BOW_HOLDERS)));
     private final NumberSetting range = addSetting(new NumberSetting("Max Range", 64, 8, 128, 4));
     private final ColorSetting color = addSetting(new ColorSetting("Color", 0xFF44E88C));
     private final BooleanSetting gradient = addSetting(new BooleanSetting("Gradient", false));
@@ -53,11 +61,9 @@ public final class PathModule extends Module {
     private final NumberSetting timeBudget = addSetting(new NumberSetting("Time Budget ms", 1.5, .25, 4, .25));
     private World world;
     private EntityLivingBase target;
-    private PathRoute route = PathRoute.EMPTY;
-    private PathPlanner search;
-    private PathTerrain terrain;
-    private BlockPos searchStart, searchGoal;
-    private long nextSelection, nextSearch, nextOptimize, searchSince, routeSince;
+    private EntityItem goldTarget;
+    private final RouteState mainPath = new RouteState(), goldPath = new RouteState();
+    private long nextSelection;
     private int searchOptions;
 
     public PathModule() {
@@ -78,51 +84,78 @@ public final class PathModule extends Module {
         long now = System.nanoTime();
         int options = options();
         if (options != searchOptions) {
-            cancelSearch(); route = PathRoute.EMPTY; nextSelection = nextSearch = nextOptimize = 0; searchOptions = options;
+            mainPath.clear(); goldPath.clear(); nextSelection = 0; searchOptions = options;
         }
-        if (now >= nextSelection || targetMode.is("Combat Target") || target != null && !eligible(target, mc)) {
-            EntityLivingBase chosen = selectTarget(mc);
-            if (chosen != target) { cancelSearch(); route = PathRoute.EMPTY; target = chosen; nextSearch = nextOptimize = 0; }
+        if (now >= nextSelection || targetMode.is("Combat Target") || target != null && !eligible(target, mc)
+                || goldTarget != null && !eligibleGold(goldTarget, mc)) {
+            target = selectTarget(mc);
+            goldTarget = selectGoldTarget(mc);
             nextSelection = now + 200_000_000L;
         }
-        if (target == null) return;
-        BlockPos feet = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY + .05, mc.thePlayer.posZ);
-        BlockPos goal = new BlockPos(target.posX, target.posY + .05, target.posZ);
-        if (search != null && (searchStart.distanceSq(feet) > 16 || searchGoal.distanceSq(goal) > 9)) {
-            cancelSearch(); nextSearch = 0;
-        }
-        if (routeSince != 0 && now - routeSince > 1_500_000_000L) route = PathRoute.EMPTY;
-        if (search == null && now >= nextSearch) {
-            terrain = new PathTerrain(mc.theWorld, mc.thePlayer);
-            searchStart = terrain.grounded(feet); searchGoal = terrain.grounded(goal);
-            nextSearch = now + updateInterval.getInt() * 1_000_000L;
-            if (searchStart == null || searchGoal == null) {
-                // Neither void nor unloaded terrain is connected by a fictitious straight tracer.
-                route = PathRoute.EMPTY; cancelSearch(); return;
+        int routes = target != null && goldTarget != null ? 2 : 1;
+        int nodes = Math.max(1, nodesPerTick.getInt() / routes);
+        long nanos = (long) (timeBudget.getDouble() * 1_000_000 / routes);
+        mainPath.tick(mc, target, now, nodes, nanos);
+        goldPath.tick(mc, goldTarget, now, nodes, nanos);
+    }
+
+    /** Both routes share the same collision checks, replan rules and total tick budget. */
+    private final class RouteState {
+        private Entity destination;
+        private PathRoute route = PathRoute.EMPTY;
+        private PathPlanner search;
+        private PathTerrain terrain;
+        private BlockPos searchStart, searchGoal;
+        private long nextSearch, nextOptimize, searchSince, routeSince;
+
+        void tick(Minecraft mc, Entity chosen, long now, int nodes, long nanos) {
+            if (destination != chosen) { clear(); destination = chosen; }
+            if (destination == null) return;
+            BlockPos feet = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY + .05, mc.thePlayer.posZ);
+            BlockPos goal = new BlockPos(destination.posX, destination.posY + .05, destination.posZ);
+            if (search != null && (searchStart.distanceSq(feet) > 16 || searchGoal.distanceSq(goal) > 9)) {
+                cancelSearch(); nextSearch = 0;
             }
-            boolean optimize = now >= nextOptimize;
-            if (optimize && !route.nodes.isEmpty()) nextOptimize = now + optimizeInterval.getInt()*1_000_000L;
-            search = new PathPlanner(terrain, searchStart, searchGoal, range.getInt(), searchBudget.getInt(),
-                    24, jumps.isEnabled(), drop.getInt(), diagonals.isEnabled(), reuse.isEnabled() ? route.nodes : null,
-                    optimize, stability.getDouble()/100);
-            searchSince = now;
+            if (routeSince != 0 && now - routeSince > 1_500_000_000L) route = PathRoute.EMPTY;
+            if (search == null && now >= nextSearch) {
+                terrain = new PathTerrain(mc.theWorld, mc.thePlayer);
+                searchStart = terrain.grounded(feet); searchGoal = terrain.grounded(goal);
+                nextSearch = now + updateInterval.getInt() * 1_000_000L;
+                if (searchStart == null || searchGoal == null) {
+                    // Neither void nor unloaded terrain is connected by a fictitious straight tracer.
+                    route = PathRoute.EMPTY; cancelSearch(); return;
+                }
+                boolean optimize = now >= nextOptimize;
+                if (optimize && !route.nodes.isEmpty()) nextOptimize = now + optimizeInterval.getInt()*1_000_000L;
+                search = new PathPlanner(terrain, searchStart, searchGoal, range.getInt(), searchBudget.getInt(),
+                        24, jumps.isEnabled(), drop.getInt(), diagonals.isEnabled(), reuse.isEnabled() ? route.nodes : null,
+                        optimize, stability.getDouble()/100);
+                searchSince = now;
+            }
+            if (search == null) return;
+            long deadline = System.nanoTime() + nanos;
+            search.advance(nodes, deadline);
+            if (search.isDone() || now - searchSince >= 1_000_000_000L) {
+                List<BlockPos> steps = search.path();
+                route = !steps.isEmpty() || search.reachedGoal()
+                        ? PathRoute.build(searchStart, steps, terrain, search.reachedGoal()) : PathRoute.EMPTY;
+                routeSince = now;
+                cancelSearch(); nextSearch = now + updateInterval.getInt() * 1_000_000L;
+            }
         }
-        if (search == null) return;
-        long deadline = System.nanoTime() + (long) (timeBudget.getDouble() * 1_000_000);
-        search.advance(nodesPerTick.getInt(), deadline);
-        if (search.isDone() || now - searchSince >= 1_000_000_000L) {
-            List<BlockPos> steps = search.path();
-            route = !steps.isEmpty() || search.reachedGoal()
-                    ? PathRoute.build(searchStart, steps, terrain, search.reachedGoal()) : PathRoute.EMPTY;
-            routeSince = now;
-            cancelSearch(); nextSearch = now + updateInterval.getInt() * 1_000_000L;
+
+        private void cancelSearch() { search = null; terrain = null; searchStart = searchGoal = null; searchSince = 0; }
+        private void clear() {
+            cancelSearch(); destination = null; route = PathRoute.EMPTY;
+            nextSearch = nextOptimize = routeSince = 0;
         }
     }
 
     /** Stable nearest selection, sharing Friends/Teams/Invisibles/type filtering with combat. */
     public EntityLivingBase selectTarget(Minecraft mc) {
         if (mc == null || mc.thePlayer == null || mc.theWorld == null || Vibe.getInstance() == null) return null;
-        if (targetMode.is("Combat Target")) {
+        boolean murderTargets = murderTargets();
+        if (!murderTargets && targetMode.is("Combat Target")) {
             KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
             EntityLivingBase candidate = aura != null && aura.isEnabled() ? aura.getTarget() : null;
             if (eligible(candidate, mc)) return candidate;
@@ -132,7 +165,7 @@ public final class PathModule extends Module {
         }
         EntityLivingBase nearest = eligible(target, mc) ? target : null;
         double best = nearest == null ? range.getDouble() * range.getDouble() : mc.thePlayer.getDistanceSqToEntity(nearest);
-        Iterable<?> candidates = targetMode.is("Nearest Target") ? mc.theWorld.loadedEntityList : mc.theWorld.playerEntities;
+        Iterable<?> candidates = !murderTargets && targetMode.is("Nearest Target") ? mc.theWorld.loadedEntityList : mc.theWorld.playerEntities;
         for (Object object : candidates) {
             if (!(object instanceof EntityLivingBase)) continue;
             EntityLivingBase entity = (EntityLivingBase) object;
@@ -151,14 +184,46 @@ public final class PathModule extends Module {
                 || !entity.isEntityAlive() || mc.theWorld.getEntityByID(entity.getEntityId()) != entity
                 || mc.thePlayer.getDistanceSqToEntity(entity) > range.getDouble() * range.getDouble()) return false;
         if (!targetMode.is("Nearest Target") && !targetMode.is("Combat Target") && !(entity instanceof EntityPlayer)) return false;
+        boolean murderTargets = murderTargets();
+        if (murderTargets) {
+            HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(HypixelModule.class);
+            if (hypixel == null || !hypixel.isMurderMysteryPathTarget(entity, murderLines.isSelected(TO_MURDERER),
+                    murderLines.isSelected(TO_BOW_HOLDERS))) return false;
+        }
         TargetsModule targets = Vibe.getInstance().getModuleManager().getModule(TargetsModule.class);
         if (targets != null ? !targets.canTarget(entity) : entity.isInvisible()) return false;
-        return !targetMode.is("Priority Target") || entity instanceof EntityPlayer && Vibe.getInstance().getTargetManager() != null
+        return murderTargets || !targetMode.is("Priority Target") || entity instanceof EntityPlayer && Vibe.getInstance().getTargetManager() != null
                 && Vibe.getInstance().getTargetManager().isTarget((EntityPlayer) entity);
+    }
+
+    /** Gold is a separate optional route; it does not consume the murderer/bow-holder route. */
+    private EntityItem selectGoldTarget(Minecraft mc) {
+        HypixelModule hypixel = hypixel();
+        if (hypixel == null || !hypixel.isMurderMysteryActive() || !hypixel.getGoldPath().isEnabled()) return null;
+        EntityItem nearest = null;
+        double best = range.getDouble() * range.getDouble();
+        for (Object object : mc.theWorld.loadedEntityList) {
+            if (!(object instanceof EntityItem) || !eligibleGold((EntityItem) object, mc)) continue;
+            EntityItem item = (EntityItem) object;
+            double distance = mc.thePlayer.getDistanceSqToEntity(item);
+            if (nearest == null || distance < best) { nearest = item; best = distance; }
+        }
+        return nearest;
+    }
+
+    private boolean eligibleGold(EntityItem item, Minecraft mc) {
+        HypixelModule hypixel = hypixel();
+        return hypixel != null && hypixel.isGoldPathTarget(item) && item.worldObj == mc.theWorld
+                && mc.theWorld.getEntityByID(item.getEntityId()) == item
+                && mc.thePlayer.getDistanceSqToEntity(item) <= range.getDouble() * range.getDouble();
     }
 
     private int options() {
         int hash = targetMode.getValue().hashCode();
+        hash = hash * 31 + murderLines.getValue().hashCode();
+        hash = hash * 31 + (murderTargets() ? 1 : 0);
+        HypixelModule hypixel = hypixel();
+        hash = hash * 31 + (hypixel != null && hypixel.isMurderMysteryActive() && hypixel.getGoldPath().isEnabled() ? 1 : 0);
         hash = hash * 31 + range.getInt(); hash = hash * 31 + (jumps.isEnabled() ? 1 : 0);
         hash = hash * 31 + drop.getInt(); hash = hash * 31 + searchBudget.getInt();
         hash = hash * 31 + (diagonals.isEnabled() ? 1 : 0); hash = hash * 31 + (reuse.isEnabled() ? 1 : 0);
@@ -166,15 +231,28 @@ public final class PathModule extends Module {
         return hash;
     }
 
-    private void cancelSearch() { search = null; terrain = null; searchStart = searchGoal = null; searchSince = 0; }
-    private void clear() {
-        cancelSearch(); world = null; target = null; route = PathRoute.EMPTY;
-        nextSelection = nextSearch = nextOptimize = routeSince = 0;
+    private boolean murderTargets() {
+        HypixelModule hypixel = hypixel();
+        return hypixel != null && hypixel.usesMurderMysteryPathTargets(murderLines.isSelected(TO_MURDERER),
+                murderLines.isSelected(TO_BOW_HOLDERS));
     }
 
-    public PathRoute getRoute() { return route; }
+    private HypixelModule hypixel() {
+        Vibe vibe = Vibe.getInstance();
+        return vibe == null || vibe.getModuleManager() == null ? null : vibe.getModuleManager().getModule(HypixelModule.class);
+    }
+
+    private void clear() {
+        mainPath.clear(); goldPath.clear(); world = null; target = null; goldTarget = null;
+        nextSelection = 0;
+    }
+
+    public PathRoute getRoute() { return mainPath.route; }
+    public PathRoute getGoldRoute() { return goldPath.route; }
+    public EntityItem getGoldTarget() { return goldTarget; }
     public EntityLivingBase getTarget() { return target; }
     public ModeSetting getTargetMode() { return targetMode; }
+    public MultiSelectSetting getMurderLines() { return murderLines; }
     public NumberSetting getRange() { return range; }
     public NumberSetting getLineWidth() { return lineWidth; }
     public NumberSetting getHeightOffset() { return heightOffset; }

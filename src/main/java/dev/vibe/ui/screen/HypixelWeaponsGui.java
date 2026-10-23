@@ -1,18 +1,15 @@
 package dev.vibe.ui.screen;
 
-import dev.vibe.Vibe;
+import dev.vibe.game.hypixel.MurderWeapons;
 import dev.vibe.module.impl.client.BlurModule;
 import dev.vibe.module.impl.meme.HypixelModule;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
 import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumChatFormatting;
@@ -20,153 +17,211 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
-/** Searchable Skeet item picker for Murder Mystery weapon signatures. */
+/** Scrollable item/variant picker. Applying edits changes only the running configuration. */
 public final class HypixelWeaponsGui extends GuiScreen {
+    private static final int TEXT = SkeetEditorStyle.TEXT, MUTED = SkeetEditorStyle.MUTED;
+    private static final String[] FILTERS = {"Default skins", "Selected", "All items"};
     private final HypixelModule module;
+    private final GuiScreen parent;
     private final Set<String> selected = new LinkedHashSet<String>();
+    private final Set<String> defaults = MurderWeapons.defaults();
     private final List<Choice> catalog = new ArrayList<Choice>();
-    private final List<Tag> tags = new ArrayList<Tag>();
+    private final List<Cell> cells = new ArrayList<Cell>();
+    private List<Choice> filtered;
     private GuiTextField search;
-    private int left, top, right, bottom, listTop, listBottom, scroll;
+    private int left, top, right, bottom, searchY, tabsY, gridTop, gridBottom, footerY;
+    private int columns, rows, cellWidth, scroll, filter;
+    private boolean initialized;
 
-    public HypixelWeaponsGui(HypixelModule module) { this.module = module; }
+    public HypixelWeaponsGui(HypixelModule module) { this(module, null); }
+    public HypixelWeaponsGui(HypixelModule module, GuiScreen parent) { this.module = module; this.parent = parent; }
 
     @Override public void initGui() {
-        int windowWidth = Math.min(620, Math.max(390, width - 24));
-        int windowHeight = Math.min(430, Math.max(286, height - 24));
+        Keyboard.enableRepeatEvents(true);
+        String query = search == null ? "" : search.getText();
+        if (!initialized) { selected.addAll(MurderWeapons.parse(module.getMurderWeapons().getValue())); initialized = true; }
+        int windowWidth = Math.min(720, width - 24), windowHeight = Math.min(480, height - 24);
         left = (width - windowWidth) / 2; right = left + windowWidth;
         top = (height - windowHeight) / 2; bottom = top + windowHeight;
-        for (String value : module.getMurderWeapons().getValue().split(",")) {
-            String id = normalize(value); if (!id.isEmpty()) selected.add(id);
-        }
-        catalog.clear();
+        searchY = top + (windowHeight < 320 ? 37 : 54);
+        tabsY = searchY + 30; gridTop = tabsY + 30; footerY = bottom - 34; gridBottom = footerY - 23;
+        columns = Math.max(3, (windowWidth - 40) / 62);
+        cellWidth = (windowWidth - 36) / columns;
+        rows = Math.max(1, (gridBottom - gridTop) / 52);
+        buildCatalog();
+        search = new GuiTextField(0, fontRendererObj, left + 25, searchY + 7, windowWidth - 69, 14);
+        search.setEnableBackgroundDrawing(false); search.setMaxStringLength(80); search.setText(query); search.setFocused(true);
+        filtered = null;
+    }
+
+    private void buildCatalog() {
+        Map<String, Choice> choices = new LinkedHashMap<String, Choice>();
         for (Object value : Item.itemRegistry.getKeys()) {
             if (!(value instanceof ResourceLocation)) continue;
-            ResourceLocation location = (ResourceLocation) value;
-            Item item = (Item) Item.itemRegistry.getObject(location);
+            Item item = Item.itemRegistry.getObject((ResourceLocation) value);
             if (item == null) continue;
-            String id = location.getResourceDomain().equals("minecraft") ? location.getResourcePath() : location.toString();
-            String label;
-            try { label = EnumChatFormatting.getTextWithoutFormattingCodes(new ItemStack(item).getDisplayName()); }
-            catch (RuntimeException ignored) { label = prettify(id); }
-            catalog.add(new Choice(id, label == null || label.trim().isEmpty() ? prettify(id) : label));
+            List<ItemStack> variants = new ArrayList<ItemStack>();
+            try { item.getSubItems(item, CreativeTabs.tabAllSearch, variants); }
+            catch (RuntimeException invalidVariants) { variants.clear(); }
+            if (variants.isEmpty()) variants.add(new ItemStack(item));
+            if (item.getHasSubtypes()) {
+                ItemStack first = variants.get(0);
+                String id = MurderWeapons.itemId(first);
+                choices.put(id, new Choice(id, label(first) + " (any variant)", first));
+            }
+            for (ItemStack stack : variants) {
+                String id = MurderWeapons.signature(stack);
+                choices.put(id, new Choice(id, label(stack), stack));
+            }
         }
+        // Unknown and legacy signatures stay visible and removable in Selected.
+        for (String id : selected) if (!choices.containsKey(id)) {
+            ItemStack stack = MurderWeapons.stack(id);
+            choices.put(id, new Choice(id, stack == null ? id : label(stack), stack));
+        }
+        catalog.clear(); catalog.addAll(choices.values());
         Collections.sort(catalog, Comparator.comparing((Choice c) -> c.label.toLowerCase(Locale.ROOT)).thenComparing(c -> c.id));
-        search = new GuiTextField(0, fontRendererObj, left + 21, top + 157, right - left - 42, 16);
-        search.setEnableBackgroundDrawing(false); search.setMaxStringLength(80); search.setFocused(true);
-        listTop = top + 218; listBottom = bottom - 48;
+    }
+
+    private static String label(ItemStack stack) {
+        try {
+            String name = EnumChatFormatting.getTextWithoutFormattingCodes(stack.getDisplayName());
+            if (name != null && !name.trim().isEmpty()) return name;
+        } catch (RuntimeException | LinkageError unavailableTranslation) {
+            // A malformed third-party name must not prevent editing the registry signature.
+        }
+        StringBuilder name = new StringBuilder();
+        for (String word : MurderWeapons.signature(stack).replace('_', ' ').split(" ")) {
+            if (!word.isEmpty()) name.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1)).append(' ');
+        }
+        return name.toString().trim();
     }
 
     @Override public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         SkeetEditorStyle.backdrop(this, BlurModule.CLICK_GUI, partialTicks);
-        SkeetEditorStyle.window(left, top, right, bottom, "Murderer weapons", "Search vanilla items and add the weapon signatures to watch");
-
-        SkeetEditorStyle.panel(left + 12, top + 31, right - 12, top + 126, "Selected weapons");
-        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("Click an item below to add it. Click a selected tag to remove it."), left + 20, top + 51, SkeetEditorStyle.MUTED);
-        drawTags(mouseX, mouseY);
-
-        SkeetEditorStyle.panel(left + 12, top + 137, right - 12, top + 207, "Find a vanilla item");
-        SkeetEditorStyle.input(left + 16, top + 153, right - 16, top + 177);
+        SkeetEditorStyle.window(left, top, right, bottom, "Murder Mystery", selected.size() + " selected");
+        if (searchY - top > 40) fontRendererObj.drawString("Choose the items that reveal a murderer", left + 18, top + 31, MUTED);
+        SkeetEditorStyle.input(left + 17, searchY, right - 17, searchY + 24);
+        if (search.isFocused()) SkeetEditorStyle.border(left + 17, searchY, right - 17, searchY + 24, SkeetEditorStyle.accent(.18F));
+        if (search.getText().isEmpty() && !search.isFocused()) fontRendererObj.drawString("Search item names or IDs...", left + 25, searchY + 8, MUTED);
         search.drawTextBox();
-        fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("Type a display name or item ID, for example sword, shears, blaze rod"), left + 20, top + 184, SkeetEditorStyle.MUTED);
-
-        SkeetEditorStyle.panel(left + 12, top + 218, right - 12, bottom - 48, "Matching items");
-        drawChoices(mouseX, mouseY);
-        SkeetEditorStyle.button(left + 18, bottom - 35, left + 126, bottom - 16, "Close", false);
-        SkeetEditorStyle.button(right - 126, bottom - 35, right - 18, bottom - 16, "Save", true);
+        fontRendererObj.drawString("x", right - 31, searchY + 8, MUTED);
+        int tabLeft = left + 18;
+        for (int index = 0; index < FILTERS.length; index++) {
+            int tabWidth = fontRendererObj.getStringWidth(FILTERS[index]) + 18;
+            button(tabLeft, tabsY, tabLeft + tabWidth, tabsY + 21, FILTERS[index], filter == index,
+                    inside(mouseX, mouseY, tabLeft, tabsY, tabLeft + tabWidth, tabsY + 21));
+            tabLeft += tabWidth + 6;
+        }
+        drawGrid(mouseX, mouseY);
+        String help = "Click to toggle  /  " + selected.size() + " selected";
+        fontRendererObj.drawString(fontRendererObj.trimStringToWidth(help, right - left - 36), left + 18, footerY - 15, MUTED);
+        button(left + 18, footerY, left + 128, footerY + 22, "Restore defaults", false,
+                inside(mouseX, mouseY, left + 18, footerY, left + 128, footerY + 22));
+        button(right - 150, footerY, right - 88, footerY + 22, "Cancel", false,
+                inside(mouseX, mouseY, right - 150, footerY, right - 88, footerY + 22));
+        button(right - 80, footerY, right - 18, footerY + 22, "Apply", true,
+                inside(mouseX, mouseY, right - 80, footerY, right - 18, footerY + 22));
+        for (Cell cell : cells) if (inside(mouseX, mouseY, cell.x, cell.y, cell.x + cellWidth - 5, cell.y + 47)) {
+            drawHoveringText(Arrays.asList(cell.choice.label, EnumChatFormatting.GRAY + cell.choice.id,
+                    selected.contains(cell.choice.id) ? "Selected - click to remove" : EnumChatFormatting.GRAY + "Click to add"), mouseX, mouseY);
+            break;
+        }
     }
 
-    private void drawTags(int mouseX, int mouseY) {
-        tags.clear(); int x = left + 21, y = top + 67, limit = right - 20;
-        if (selected.isEmpty()) {
-            fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("No weapon signatures selected"), x, y + 5, SkeetEditorStyle.MUTED); return;
+    private void drawGrid(int mouseX, int mouseY) {
+        cells.clear(); List<Choice> matches = matches();
+        int maxScroll = Math.max(0, (matches.size() + columns - 1) / columns - rows);
+        scroll = Math.max(0, Math.min(maxScroll, scroll));
+        if (matches.isEmpty()) { fontRendererObj.drawString("No matching items", left + 21, gridTop + 17, MUTED); return; }
+        for (int index = 0; index < columns * rows && scroll * columns + index < matches.size(); index++) {
+            Choice choice = matches.get(scroll * columns + index);
+            int x = left + 18 + index % columns * cellWidth, y = gridTop + index / columns * 52;
+            boolean active = selected.contains(choice.id), hover = inside(mouseX, mouseY, x, y, x + cellWidth - 5, y + 47);
+            SkeetEditorStyle.row(x, y, x + cellWidth - 5, y + 47, active, hover);
+            if (choice.stack != null) {
+                RenderHelper.enableGUIStandardItemLighting(); GlStateManager.enableDepth();
+                mc.getRenderItem().renderItemAndEffectIntoGUI(choice.stack, x + (cellWidth - 21) / 2, y + 7);
+                GlStateManager.disableDepth(); RenderHelper.disableStandardItemLighting();
+            } else fontRendererObj.drawString("?", x + cellWidth / 2 - 4, y + 12, MUTED);
+            GlStateManager.disableLighting();
+            String name = fontRendererObj.trimStringToWidth(choice.label, cellWidth - 13);
+            fontRendererObj.drawString(name, x + (cellWidth - 5 - fontRendererObj.getStringWidth(name)) / 2, y + 33, active ? TEXT : MUTED);
+            if (active) drawRect(x + cellWidth - 13, y + 5, x + cellWidth - 9, y + 9, SkeetEditorStyle.accent(.18F));
+            cells.add(new Cell(choice, x, y));
         }
-        for (String id : selected) {
-            int tagWidth = Math.min(150, Math.max(58, fontRendererObj.getStringWidth(id) + 20));
-            if (x + tagWidth > limit) { x = left + 21; y += 21; }
-            if (y + 17 > top + 118) break;
-            boolean hover = inside(mouseX, mouseY, x, y, x + tagWidth, y + 17);
-            SkeetEditorStyle.row(x, y, x + tagWidth, y + 17, false, hover);
-            fontRendererObj.drawString(id, x + 6, y + 5, SkeetEditorStyle.TEXT);
-            fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("x"), x + tagWidth - 10, y + 5, hover ? 0xFFFF737D : SkeetEditorStyle.MUTED);
-            tags.add(new Tag(id, x, y, x + tagWidth, y + 17)); x += tagWidth + 4;
-        }
-    }
-
-    private void drawChoices(int mouseX, int mouseY) {
-        List<Choice> matches = matches();
-        int rows = Math.max(1, (listBottom - listTop - 18) / 22);
-        int maxScroll = Math.max(0, matches.size() - rows); scroll = Math.max(0, Math.min(maxScroll, scroll));
-        if (matches.isEmpty()) {
-            fontRendererObj.drawString(dev.vibe.language.LanguageManager.translate("No matching vanilla items"), left + 21, listTop + 23, SkeetEditorStyle.MUTED); return;
-        }
-        for (int index = 0; index < rows && index + scroll < matches.size(); index++) {
-            Choice choice = matches.get(index + scroll); int y = listTop + 18 + index * 22;
-            boolean active = selected.contains(choice.id), hover = inside(mouseX, mouseY, left + 18, y, right - 18, y + 18);
-            SkeetEditorStyle.row(left + 18, y, right - 18, y + 18, active, hover);
-            String label = fontRendererObj.trimStringToWidth(choice.label, Math.max(80, right - left - 245));
-            fontRendererObj.drawString(label, left + 25, y + 5, SkeetEditorStyle.TEXT);
-            String id = fontRendererObj.trimStringToWidth(choice.id, 118);
-            fontRendererObj.drawString(id, right - 183 - fontRendererObj.getStringWidth(id), y + 5, SkeetEditorStyle.MUTED);
-            SkeetEditorStyle.button(right - 174, y + 2, right - 24, y + 16, active ? "Remove" : "Add", !active);
-        }
+        RenderHelper.disableStandardItemLighting(); GlStateManager.disableDepth();
         if (maxScroll > 0) {
-            String position = (scroll + 1) + "-" + Math.min(matches.size(), scroll + rows) + " of " + matches.size();
-            fontRendererObj.drawString(position, right - 20 - fontRendererObj.getStringWidth(position), listTop + 5, SkeetEditorStyle.MUTED);
+            int trackBottom = gridTop + rows * 52 - 5, trackHeight = trackBottom - gridTop;
+            drawRect(right - 13, gridTop, right - 10, trackBottom, SkeetEditorStyle.BORDER);
+            int thumb = Math.max(12, trackHeight * rows / (maxScroll + rows));
+            int thumbY = gridTop + (trackHeight - thumb) * scroll / maxScroll;
+            drawRect(right - 13, thumbY, right - 10, thumbY + thumb, SkeetEditorStyle.accent(.18F));
         }
     }
 
     private List<Choice> matches() {
-        String query = normalize(search == null ? "" : search.getText()).replace('_', ' ');
-        if (query.isEmpty()) return catalog;
-        List<Choice> result = new ArrayList<Choice>();
+        if (filtered != null) return filtered;
+        String query = search == null ? "" : search.getText().trim().toLowerCase(Locale.ROOT).replace('_', ' ');
+        filtered = new ArrayList<Choice>();
         for (Choice choice : catalog) {
-            String words = (choice.id + " " + choice.label).toLowerCase(Locale.ROOT).replace('_', ' ');
-            if (words.contains(query)) result.add(choice);
+            if (filter == 0 && !defaults.contains(choice.id) || filter == 1 && !selected.contains(choice.id)) continue;
+            if (query.isEmpty() || choice.words.contains(query)) filtered.add(choice);
         }
-        return result;
+        return filtered;
     }
 
-    private void save() {
-        StringBuilder joined = new StringBuilder();
-        for (String item : selected) { if (joined.length() > 0) joined.append(','); joined.append(item); }
-        module.getMurderWeapons().setValue(joined.toString());
-        if (Vibe.getInstance().getConfig() != null) Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
-    }
+    private void apply() { module.getMurderWeapons().setValue(String.join(",", selected)); mc.displayGuiScreen(parent); }
 
     @Override protected void mouseClicked(int mouseX, int mouseY, int button) throws IOException {
-        if (button != 0) { super.mouseClicked(mouseX, mouseY, button); return; }
-        if (inside(mouseX, mouseY, right - 126, bottom - 35, right - 18, bottom - 16)) { save(); return; }
-        if (inside(mouseX, mouseY, left + 18, bottom - 35, left + 126, bottom - 16)) { save(); mc.displayGuiScreen(null); return; }
-        for (Tag tag : tags) if (inside(mouseX, mouseY, tag.left, tag.top, tag.right, tag.bottom)) { selected.remove(tag.id); return; }
-        if (inside(mouseX, mouseY, left + 18, listTop + 18, right - 18, listBottom)) {
-            int index = (mouseY - listTop - 18) / 22 + scroll; List<Choice> matches = matches();
-            if (index >= 0 && index < matches.size()) { String id = matches.get(index).id; if (!selected.add(id)) selected.remove(id); }
-            return;
+        if (button != 0) return;
+        if (inside(mouseX, mouseY, right - 80, footerY, right - 18, footerY + 22)) { apply(); return; }
+        if (inside(mouseX, mouseY, right - 150, footerY, right - 88, footerY + 22)) { mc.displayGuiScreen(parent); return; }
+        if (inside(mouseX, mouseY, left + 18, footerY, left + 128, footerY + 22)) {
+            selected.clear(); selected.addAll(defaults); buildCatalog(); changed(); return;
         }
-        search.mouseClicked(mouseX, mouseY, button); super.mouseClicked(mouseX, mouseY, button);
+        if (inside(mouseX, mouseY, right - 42, searchY, right - 17, searchY + 24)) { search.setText(""); changed(); return; }
+        int tabLeft = left + 18;
+        for (int index = 0; index < FILTERS.length; index++) {
+            int tabWidth = fontRendererObj.getStringWidth(FILTERS[index]) + 18;
+            if (inside(mouseX, mouseY, tabLeft, tabsY, tabLeft + tabWidth, tabsY + 21)) { filter = index; changed(); return; }
+            tabLeft += tabWidth + 6;
+        }
+        for (Cell cell : cells) if (inside(mouseX, mouseY, cell.x, cell.y, cell.x + cellWidth - 5, cell.y + 47)) {
+            if (!selected.add(cell.choice.id)) selected.remove(cell.choice.id);
+            filtered = null; return;
+        }
+        search.mouseClicked(mouseX, mouseY, button);
     }
 
+    private void changed() { scroll = 0; filtered = null; cells.clear(); }
     @Override public void handleMouseInput() throws IOException {
         super.handleMouseInput(); int wheel = Mouse.getEventDWheel();
-        if (wheel != 0 && inside(Mouse.getEventX() * width / Math.max(1, mc.displayWidth),
-                height - Mouse.getEventY() * height / Math.max(1, mc.displayHeight) - 1, left + 18, listTop, right - 18, listBottom)) {
-            scroll += wheel > 0 ? -3 : 3;
-        }
+        int mouseX = Mouse.getEventX() * width / Math.max(1, mc.displayWidth);
+        int mouseY = height - Mouse.getEventY() * height / Math.max(1, mc.displayHeight) - 1;
+        if (wheel != 0 && inside(mouseX, mouseY, left + 18, gridTop, right - 9, gridBottom)) scroll += wheel > 0 ? -1 : 1;
     }
-
     @Override protected void keyTyped(char character, int key) throws IOException {
-        if (key == Keyboard.KEY_ESCAPE) { save(); mc.displayGuiScreen(null); return; }
-        if (key == Keyboard.KEY_RETURN || key == Keyboard.KEY_NUMPADENTER) { save(); return; }
-        if (key == Keyboard.KEY_UP) { scroll--; return; }
-        if (key == Keyboard.KEY_DOWN) { scroll++; return; }
-        if (search.textboxKeyTyped(character, key)) scroll = 0;
+        if (key == Keyboard.KEY_ESCAPE) { mc.displayGuiScreen(parent); return; }
+        if (key == Keyboard.KEY_RETURN || key == Keyboard.KEY_NUMPADENTER) { apply(); return; }
+        if (key == Keyboard.KEY_UP || key == Keyboard.KEY_PRIOR) { scroll -= key == Keyboard.KEY_UP ? 1 : rows; return; }
+        if (key == Keyboard.KEY_DOWN || key == Keyboard.KEY_NEXT) { scroll += key == Keyboard.KEY_DOWN ? 1 : rows; return; }
+        if (search.textboxKeyTyped(character, key)) changed();
     }
+    @Override public void updateScreen() { if (search != null) search.updateCursorCounter(); }
+    @Override public void onGuiClosed() { Keyboard.enableRepeatEvents(false); }
     @Override public boolean doesGuiPauseGame() { return false; }
-
     private static boolean inside(int x, int y, int left, int top, int right, int bottom) { return x >= left && x < right && y >= top && y < bottom; }
-    private static String normalize(String value) { return value == null ? "" : value.trim().toLowerCase(Locale.ROOT).replace(' ', '_'); }
-    private static String prettify(String id) { StringBuilder result = new StringBuilder(); for (String word : id.replace(':', ' ').replace('_', ' ').split(" ")) if (!word.isEmpty()) result.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1)).append(' '); return result.toString().trim(); }
-    private static final class Choice { final String id, label; Choice(String id, String label) { this.id = id; this.label = label; } }
-    private static final class Tag { final String id; final int left, top, right, bottom; Tag(String id, int left, int top, int right, int bottom) { this.id = id; this.left = left; this.top = top; this.right = right; this.bottom = bottom; } }
+    private void button(int left, int top, int right, int bottom, String text, boolean active, boolean hover) {
+        SkeetEditorStyle.button(left, top, right, bottom, text, active);
+        if (hover && !active) SkeetEditorStyle.border(left, top, right, bottom, SkeetEditorStyle.accent(.18F));
+    }
+    private static final class Choice {
+        final String id, label, words; final ItemStack stack;
+        Choice(String id, String label, ItemStack stack) { this.id = id; this.label = label; this.stack = stack; this.words = (id + " " + label).toLowerCase(Locale.ROOT).replace('_', ' '); }
+    }
+    private static final class Cell {
+        final Choice choice; final int x, y;
+        Cell(Choice choice, int x, int y) { this.choice = choice; this.x = x; this.y = y; }
+    }
 }

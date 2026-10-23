@@ -35,7 +35,7 @@ public class FontLocalizationTransformerTest implements Opcodes {
         ClassNode node = new ClassNode();
         new ClassReader(transformed).accept(node, 0);
         MethodNode draw = (MethodNode) node.methods.get(0);
-        boolean localized = false, scripted = false;
+        boolean localized = false, scripted = false, chat = false;
         for (AbstractInsnNode instruction : draw.instructions.toArray()) {
             if (instruction instanceof MethodInsnNode) {
                 MethodInsnNode call = (MethodInsnNode) instruction;
@@ -45,10 +45,12 @@ public class FontLocalizationTransformerTest implements Opcodes {
                 scripted |= call.owner.equals("dev/vibe/ui/ScriptTextRenderer")
                         && call.name.equals("draw")
                         && call.desc.equals("(Ljava/lang/Object;Ljava/lang/String;FFIZ)I");
+                chat |= call.owner.equals("dev/vibe/chat/ClientChatRenderer") && call.name.equals("draw");
             }
         }
         assertTrue("FontRenderer labels must be localized before rendering", localized);
         assertTrue("Custom-language labels must be routed through their bundled script font", scripted);
+        assertTrue("Local prefixes must be colored each rendered frame", chat);
     }
 
     @Test
@@ -71,17 +73,20 @@ public class FontLocalizationTransformerTest implements Opcodes {
                 "net.minecraft.client.gui.FontRenderer", raw);
         ClassNode node = new ClassNode();
         new ClassReader(transformed).accept(node, 0);
-        boolean found = false;
+        boolean found = false, chat = false;
         for (Object entry : node.methods) {
             MethodNode method = (MethodNode) entry;
             if (!"(Ljava/lang/String;FFIZ)I".equals(method.desc)) continue;
+            new org.objectweb.asm.tree.analysis.Analyzer(new org.objectweb.asm.tree.analysis.BasicVerifier()).analyze(node.name, method);
             for (AbstractInsnNode instruction : method.instructions.toArray()) {
                 if (instruction instanceof MethodInsnNode) {
                     MethodInsnNode call = (MethodInsnNode) instruction;
                     found |= call.owner.equals("dev/vibe/ui/ScriptTextRenderer") && call.name.equals("draw");
+                    chat |= call.owner.equals("dev/vibe/chat/ClientChatRenderer") && call.name.equals("draw");
                 }
             }
         }
         assertTrue("The actual FontRenderer must receive the dedicated script-font draw hook", found);
+        assertTrue("The actual FontRenderer must receive the animated local-chat hook", chat);
     }
 }

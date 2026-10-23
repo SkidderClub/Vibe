@@ -15,7 +15,6 @@ import net.minecraft.entity.player.EntityPlayer;
 import org.lwjgl.input.Keyboard;
 import java.util.HashSet;
 import java.util.Set;
-import net.minecraft.util.ChatComponentText;
 
 /** Shared entity filter used by aim and ESP modules. */
 public final class TargetsModule extends Module {
@@ -86,7 +85,7 @@ public final class TargetsModule extends Module {
             EntityPlayer player = (EntityPlayer) object;
             if (player != minecraft.thePlayer && Vibe.getInstance().getTargetManager().isTarget(player)
                     && warnedTargets.add(player.getName().toLowerCase(java.util.Locale.ROOT))) {
-                minecraft.thePlayer.addChatMessage(new ChatComponentText("§8[§cTarget§8] §f" + player.getName() + " §7appeared in your game."));
+                dev.vibe.chat.ClientChat.send("§f" + player.getName() + " §7appeared in your game.");
             }
         }
     }

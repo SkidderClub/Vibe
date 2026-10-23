@@ -335,7 +335,9 @@ final class HypixelAutoblock {
       this.forceAttackUnblocked = false;
       boolean restorePhysicalUse = this.isBlocking && mc.gameSettings.keyBindUseItem.isKeyDown() && mouseDown(1) && mc.currentScreen == null;
       this.releaseLag();
-      this.stopBlocking(releaseUseKey);
+      // Reset only input acquired by this controller. Disabling an idle aura
+      // must not release a user's manual right-click/block/eat action.
+      this.stopBlocking(releaseUseKey && this.isBlocking);
       this.manualBlock = false;
       this.targetWasInRange = false;
       this.unblockedAfterLeavingRange = false;

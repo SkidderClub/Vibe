@@ -15,7 +15,6 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.util.ChatComponentText;
 import org.lwjgl.input.Keyboard;
 
 /** Direct Vibe bridge of Gothaj's TimerRange module. */
@@ -174,5 +173,5 @@ public final class TimerRangeModule extends Module {
         return target == null ? 0 : (int) Math.min(Math.floor((CombatRangeSupport.distanceToBox(target) - 3.0D)
                 / CombatRangeSupport.baseMoveSpeed()) * 3.0D, (range.getDouble() - 3.0D) / CombatRangeSupport.baseMoveSpeed() * 3.0D);
     }
-    private void chat(String text) { if (minecraft.thePlayer != null) minecraft.thePlayer.addChatMessage(new ChatComponentText(text)); }
+    private void chat(String text) { dev.vibe.chat.ClientChat.send(text); }
 }

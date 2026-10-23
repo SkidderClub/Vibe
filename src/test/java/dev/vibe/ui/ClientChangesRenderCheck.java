@@ -67,7 +67,9 @@ public final class ClientChangesRenderCheck {
         try {
             Class<?> type = Class.forName("sun.misc.Unsafe"); Field field = type.getDeclaredField("theUnsafe"); field.setAccessible(true);
             unsafe = field.get(null); allocate = type.getMethod("allocateInstance",Class.class);
-            mc = instance(Minecraft.class); set(Minecraft.class,null,"theMinecraft",mc);
+            mc = args.length > 0 && args[0].equals("murder")
+                    ? instance(dev.vibe.ui.render.esp.EspRenderCheck.PreviewMinecraft.class) : instance(Minecraft.class);
+            set(Minecraft.class,null,"theMinecraft",mc);
             mc.gameSettings = new GameSettings(); mc.gameSettings.guiScale = 1;
             set(Minecraft.class,mc,"mcDataDir",OUTPUT.toFile());
             IMetadataSerializer meta = new IMetadataSerializer();
@@ -86,6 +88,14 @@ public final class ClientChangesRenderCheck {
             Vibe vibe = new Vibe(); set(Vibe.class,null,"instance",vibe);
             ModuleManager modules = instance(ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<Module>()); set(Vibe.class,vibe,"moduleManager",modules);
+            if (args.length > 0 && args[0].equals("chat-inventory")) {
+                ChatInventoryRenderCheck.verify(mc, OUTPUT);
+                return;
+            }
+            if (args.length > 0 && args[0].equals("murder")) {
+                verifyMurderWeapons(modules);
+                return;
+            }
             if (args.length > 0 && args[0].equals("configs")) {
                 dev.vibe.config.VibeConfig config = new dev.vibe.config.VibeConfig(OUTPUT.resolve("config-editor-fixture").toFile());
                 set(Vibe.class, vibe, "config", config);
@@ -525,6 +535,123 @@ public final class ClientChangesRenderCheck {
             if(!game.play(moves[i]))throw new AssertionError("Restored move cannot be replayed");
         }
     }
+    private static void verifyMurderWeapons(ModuleManager modules) throws Exception {
+        dev.vibe.camera.DroneCollisionsTest.registerBlocks();
+        // The real RenderItem path with a baked icon fixture avoids Forge's launch-only model loader.
+        dev.vibe.ui.render.esp.EspRenderCheck.installItemRenderer(mc);
+        HypixelModule module = new HypixelModule(); modules.registerDynamic(module);
+        verifyMurderEditorAction(module);
+        for (int[] size : new int[][] {{960,540},{560,400},{400,300},{320,240}}) {
+            mc.displayWidth = size[0]; mc.displayHeight = size[1];
+            dev.vibe.ui.screen.HypixelWeaponsGui gui = new dev.vibe.ui.screen.HypixelWeaponsGui(module);
+            gui.setWorldAndResolution(mc, size[0], size[1]);
+            render(gui, "murder-weapons-" + size[0] + ".png");
+            Method matches = gui.getClass().getDeclaredMethod("matches"); matches.setAccessible(true);
+            if (((List<?>) matches.invoke(gui)).size() != 47) throw new AssertionError("A screenshot skin is missing from the grid");
+            List<?> cells = (List<?>) get(gui.getClass(), gui, "cells");
+            int footer = (Integer) get(gui.getClass(), gui, "footerY");
+            for (Object cell : cells) {
+                int y = (Integer) get(cell.getClass(), cell, "y");
+                if (y + 47 > footer - 23) throw new AssertionError("An item overlaps the editor footer at " + size[0]);
+            }
+            Object cell = cells.get(0);
+            GuiInput.mouseClicked(gui, (Integer) get(cell.getClass(),cell,"x") + 2, (Integer) get(cell.getClass(),cell,"y") + 2, 0);
+            Set<?> selected = (Set<?>) get(gui.getClass(),gui,"selected");
+            if (selected.size() != 46 || dev.vibe.game.hypixel.MurderWeapons.parse(module.getMurderWeapons().getValue()).size() != 47)
+                throw new AssertionError("Draft edit leaked into the running config");
+            // Resizing keeps an unfinished edit; restore defaults reaches every signature.
+            gui.setWorldAndResolution(mc, size[0], size[1]);
+            if (((Set<?>) get(gui.getClass(),gui,"selected")).size() != 46) throw new AssertionError("Resize discarded edits");
+            int left = (Integer) get(gui.getClass(),gui,"left");
+            GuiInput.mouseClicked(gui,left + 24,footer + 8,0);
+            if (((Set<?>) get(gui.getClass(),gui,"selected")).size() != 47) throw new AssertionError("Restore defaults is incomplete");
+            net.minecraft.client.gui.GuiTextField search = (net.minecraft.client.gui.GuiTextField) get(gui.getClass(),gui,"search");
+            search.setFocused(true);
+            for (char c : "golden".toCharArray()) GuiInput.keyTyped(gui,c,0);
+            if (((List<?>) matches.invoke(gui)).size() != 6) throw new AssertionError("Weapon name/ID search failed");
+            render(gui,"murder-weapons-search-" + size[0] + ".png");
+            GuiInput.keyTyped(gui,'\u001b',org.lwjgl.input.Keyboard.KEY_ESCAPE);
+            if (!module.getMurderWeapons().getValue().equals(dev.vibe.game.hypixel.MurderWeapons.DEFAULTS)) throw new AssertionError("Cancel applied the draft");
+            gui.onGuiClosed();
+            gui = new dev.vibe.ui.screen.HypixelWeaponsGui(module); gui.setWorldAndResolution(mc,size[0],size[1]);
+            set(gui.getClass(),gui,"scroll",10000); render(gui,"murder-weapons-scrolled-" + size[0] + ".png");
+            cells = (List<?>) get(gui.getClass(),gui,"cells");
+            cell = cells.get(cells.size()-1);
+            Object choice = get(cell.getClass(),cell,"choice");
+            if (!get(choice.getClass(),choice,"id").equals("wooden_sword")) throw new AssertionError("The last skin is unreachable");
+            GuiInput.mouseClicked(gui,(Integer)get(cell.getClass(),cell,"x")+2,(Integer)get(cell.getClass(),cell,"y")+2,0);
+            GuiInput.keyTyped(gui,'\r',org.lwjgl.input.Keyboard.KEY_RETURN);
+            if (dev.vibe.game.hypixel.MurderWeapons.parse(module.getMurderWeapons().getValue()).size()!=46) throw new AssertionError("Apply did not commit the edited list");
+            module.getMurderWeapons().setValue(dev.vibe.game.hypixel.MurderWeapons.DEFAULTS); gui.onGuiClosed();
+        }
+        verifyMurderGold();
+        System.out.println("Murder Mystery rendering passed: Skeet editor, immediate toggle with disabled module and open ClickGUI, parent return, config loading guard, 47 variants, four screen sizes, scrolling, drafts, resize, reset, search, apply and independent gold ESP through a proxy.");
+    }
+
+    private static void verifyMurderEditorAction(HypixelModule module) throws Exception {
+        dev.vibe.setting.BooleanSetting action = null;
+        for (dev.vibe.setting.Setting<?> setting : module.getSettings())
+            if (setting.getRawName().equals("Open weapon editor")) action = (dev.vibe.setting.BooleanSetting) setting;
+        if (action == null || module.isEnabled()) throw new AssertionError("Editor action fixture is invalid");
+        dev.vibe.config.VibeConfig config = new dev.vibe.config.VibeConfig(OUTPUT.resolve("murder-editor-fixture").toFile());
+        set(Vibe.class,Vibe.getInstance(),"config",config);
+        GuiScreen parent = instance(VibeClickGui.class); mc.currentScreen = parent;
+        for (boolean enabled : new boolean[]{false,true}) {
+            set(Module.class,module,"enabled",enabled);
+            set(mc.getClass(),mc,"destination",null);
+            action.toggle();
+            Object opened = get(mc.getClass(),mc,"destination");
+            if (!(opened instanceof dev.vibe.ui.screen.HypixelWeaponsGui) || action.isEnabled())
+                throw new AssertionError("Boolean did not open the weapon editor immediately from ClickGUI");
+            GuiScreen gui = (GuiScreen)opened;
+            mc.displayWidth=960; mc.displayHeight=540; gui.setWorldAndResolution(mc,960,540);
+            GuiInput.keyTyped(gui,'\u001b',org.lwjgl.input.Keyboard.KEY_ESCAPE);
+            if (get(mc.getClass(),mc,"destination") != parent) throw new AssertionError("Cancel lost the parent ClickGUI");
+            action.toggle(); gui=(GuiScreen)get(mc.getClass(),mc,"destination"); gui.setWorldAndResolution(mc,960,540);
+            GuiInput.keyTyped(gui,'\r',org.lwjgl.input.Keyboard.KEY_RETURN);
+            if (get(mc.getClass(),mc,"destination") != parent) throw new AssertionError("Apply lost the parent ClickGUI");
+        }
+        set(dev.vibe.config.VibeConfig.class,config,"loading",true);
+        set(mc.getClass(),mc,"destination",null); action.setEnabled(true);
+        if (action.isEnabled() || get(mc.getClass(),mc,"destination") != null)
+            throw new AssertionError("Loading a saved true action opened the editor");
+        set(dev.vibe.config.VibeConfig.class,config,"loading",false);
+        set(Vibe.class,Vibe.getInstance(),"config",null);
+        set(Module.class,module,"enabled",false); mc.currentScreen=null;
+    }
+
+    private static void verifyMurderGold() throws Exception {
+        // Use the actual item ESP renderer with no ItemESP module registered.
+        frame(640,480);
+        try (dev.vibe.path.PathTestFixture fixture = new dev.vibe.path.PathTestFixture()) {
+            fixture.mc.setServerData(new net.minecraft.client.multiplayer.ServerData("Proxy","fixture.eu-fra.liquidproxy.net",false));
+            HypixelModule module = new HypixelModule(); fixture.modules.registerDynamic(module);
+            set(Module.class,module,"enabled",true);
+            net.minecraft.scoreboard.Scoreboard board = new net.minecraft.scoreboard.Scoreboard();
+            net.minecraft.scoreboard.ScoreObjective objective = board.addScoreObjective("murder",net.minecraft.scoreboard.IScoreObjectiveCriteria.DUMMY);
+            objective.setDisplayName("MURDER MYSTERY"); board.setObjectiveInDisplaySlot(1,objective);
+            board.getValueFromObjective("Role: Innocent",objective).setScorePoints(1);
+            set(net.minecraft.world.World.class,fixture.world,"worldScoreboard",board);
+            module.tick();
+            set(Minecraft.class,fixture.mc,"renderManager",instance(net.minecraft.client.renderer.entity.RenderManager.class));
+            dev.vibe.module.impl.meme.MurderMysteryTest.Drop drop = instance(dev.vibe.module.impl.meme.MurderMysteryTest.Drop.class);
+            set(drop.getClass(),drop,"stack",new net.minecraft.item.ItemStack(net.minecraft.init.Items.gold_ingot));
+            drop.posX=drop.lastTickPosX=2; drop.posY=drop.lastTickPosY=2;
+            drop.setEntityBoundingBox(new net.minecraft.util.AxisAlignedBB(1.8,1.8,-.2,2.2,2.2,.2)); fixture.world.loadedEntityList.add(drop);
+            dev.vibe.ui.render.esp.ItemEspRenderer renderer = new dev.vibe.ui.render.esp.ItemEspRenderer();
+            for (boolean enabled : new boolean[] {true,false}) {
+                module.getHighlightGold().setEnabled(enabled); frame(640,480);
+                GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadIdentity(); GL11.glOrtho(0,6,0,6,-10,10);
+                GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glLoadIdentity();
+                renderer.render(new net.minecraftforge.client.event.RenderWorldLastEvent(null,.5F));
+                ByteBuffer pixels=BufferUtils.createByteBuffer(640*480*4); GL11.glReadPixels(0,0,640,480,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,pixels);
+                int yellow=0; for(int i=0;i<pixels.capacity();i+=4) if((pixels.get(i)&255)>85 && (pixels.get(i+1)&255)>65 && (pixels.get(i+2)&255)<100)yellow++;
+                if (enabled ? yellow<100 : yellow!=0) throw new AssertionError("Independent gold ESP toggle did not change its pixels: "+yellow);
+                if (GL11.glGetError()!=GL11.GL_NO_ERROR) throw new AssertionError("Gold ESP produced an OpenGL error");
+            }
+        }
+    }
+
     private static void frame(int width,int height) throws Exception {
         Framebuffer target = mc.getFramebuffer();
         if (target==null || target.framebufferWidth!=width || target.framebufferHeight!=height) {

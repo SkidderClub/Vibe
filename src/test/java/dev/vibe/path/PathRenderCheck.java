@@ -42,8 +42,9 @@ public final class PathRenderCheck {
             scene("path-gradient.png");
             fixture.module.getLineStyle().setValue("Dashed"); scene("path-dashed.png");
             performance();
+            goldIntegration();
             if (GL11.glGetError() != GL11.GL_NO_ERROR) throw new AssertionError("Path rendering produced a GL error");
-            System.out.println("Path GL checks passed: real wall detour, solid/dashed/gradient pixels, depth modes, alpha, state, camera origin and cached rendering.");
+            System.out.println("Path GL checks passed: real wall detour, solid/dashed/gradient pixels, depth modes, alpha, state, camera origin, cached rendering and independent closest-gold route.");
         } finally { buffer.destroy(); }
     }
 
@@ -150,6 +151,43 @@ public final class PathRenderCheck {
         String report = String.format(java.util.Locale.ROOT,"Cached solid path draw CPU median %.3f ms, p95 %.3f ms; %d simplified vertices; zero world reads.%n",
                 times[times.length/2]/1e6,times[(int)(times.length*.95)]/1e6,route.points.size());
         Files.write(output.resolve("timings.txt"),report.getBytes(java.nio.charset.StandardCharsets.UTF_8)); System.out.print(report);
+    }
+
+    private static void goldIntegration() throws Exception {
+        dev.vibe.module.impl.meme.HypixelModule murder = new dev.vibe.module.impl.meme.HypixelModule();
+        fixture.modules.registerDynamic(murder);
+        PathTestFixture.set(dev.vibe.module.Module.class,murder,"enabled",true);
+        murder.getGoldPath().setEnabled(true); murder.getHighlightGold().setEnabled(false);
+        net.minecraft.scoreboard.Scoreboard board = new net.minecraft.scoreboard.Scoreboard();
+        net.minecraft.scoreboard.ScoreObjective objective = board.addScoreObjective("murder",net.minecraft.scoreboard.IScoreObjectiveCriteria.DUMMY);
+        objective.setDisplayName("MURDER MYSTERY"); board.setObjectiveInDisplaySlot(1,objective);
+        board.getValueFromObjective("Role: Innocent",objective).setScorePoints(1);
+        PathTestFixture.set(net.minecraft.world.World.class,fixture.world,"worldScoreboard",board);
+        for (Object value : fixture.world.playerEntities) {
+            net.minecraft.entity.player.EntityPlayer player=(net.minecraft.entity.player.EntityPlayer)value;
+            player.inventory=new net.minecraft.entity.player.InventoryPlayer(player);
+        }
+        dev.vibe.module.impl.meme.MurderMysteryTest.Drop gold=PathTestFixture.allocate(dev.vibe.module.impl.meme.MurderMysteryTest.Drop.class);
+        PathTestFixture.set(gold.getClass(),gold,"stack",new net.minecraft.item.ItemStack(net.minecraft.init.Items.gold_ingot));
+        gold.setEntityId(10); gold.worldObj=fixture.world;
+        gold.posX=gold.lastTickPosX=6.5; gold.posY=gold.lastTickPosY=64.2; gold.posZ=gold.lastTickPosZ=-4.5;
+        fixture.world.entities.put(10,gold); fixture.world.loadedEntityList.add(gold);
+        PathTestFixture.set(net.minecraft.client.Minecraft.class,fixture.mc,"renderManager",
+                PathTestFixture.allocate(net.minecraft.client.renderer.entity.RenderManager.class));
+        murder.tick(); fixture.forceReplan();
+        for(int i=0;i<200&&!fixture.module.getGoldRoute().complete;i++)fixture.module.tick();
+        if(fixture.module.getTarget()!=null || !fixture.module.getGoldRoute().complete)
+            throw new AssertionError("Gold route must work while no murderer is known");
+        topDown(1); int reads=fixture.world.reads;
+        renderer.render(new net.minecraftforge.client.event.RenderWorldLastEvent(null,.5F));
+        int yellow=0; byte[] data=pixels();
+        for(int i=0;i<data.length;i+=4)if((data[i]&255)>150&&(data[i+1]&255)>120&&(data[i+2]&255)<100)yellow++;
+        if(yellow<100)throw new AssertionError("Closest-gold route has no gold pixels");
+        if(reads!=fixture.world.reads)throw new AssertionError("Gold route renderer queried terrain");
+        save("path-closest-gold.png");
+        murder.getGoldPath().setEnabled(false); topDown(1);
+        renderer.render(new net.minecraftforge.client.event.RenderWorldLastEvent(null,.5F));
+        if(colored(0)+colored(1)+colored(2)!=0)throw new AssertionError("Disabled gold route remains visible");
     }
     private static int colored(int channel) {
         byte[] data=pixels(); int count=0;

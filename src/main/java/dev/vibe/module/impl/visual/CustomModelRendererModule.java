@@ -19,7 +19,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.init.Items;
-import net.minecraft.util.ChatComponentText;
 import org.lwjgl.input.Keyboard;
 
 /**
@@ -173,7 +172,7 @@ public final class CustomModelRendererModule extends Module {
     }
 
     private void say(String text) {
-        if (minecraft.thePlayer != null) minecraft.thePlayer.addChatMessage(new ChatComponentText("§8[§dModels§8] §7" + text));
+        dev.vibe.chat.ClientChat.send(text);
     }
 
     // ---- queries used by CustomModelRenderer, called every frame ----
