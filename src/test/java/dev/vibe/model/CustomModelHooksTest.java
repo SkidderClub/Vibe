@@ -40,6 +40,25 @@ public class CustomModelHooksTest {
         assertSame(bytes, new CustomModelTransformer().transform("bjg", "net.minecraft.client.renderer.ItemModelMesher", bytes));
     }
 
+    @Test public void capeLayerIsGuardedAndVerifiesInDevelopmentAndRelease() throws Exception {
+        String mapped="net.minecraft.client.renderer.entity.layers.LayerCape";
+        byte[] development=read(getClass().getClassLoader().getResourceAsStream(mapped.replace('.','/')+".class"));
+        verifyCape(transform(mapped,mapped,development));
+        try(JarFile official=officialJar()) {
+            byte[] release=read(official.getInputStream(official.getJarEntry("bkp.class")));
+            verifyCape(transform("bkp",mapped,release)); verifyCape(transform("bkp","bkp",release));
+        }
+    }
+    private static void verifyCape(byte[] bytes)throws Exception {
+        ClassNode node=new ClassNode();new ClassReader(bytes).accept(node,0);int guards=0;
+        for(Object value:node.methods) {
+            MethodNode method=(MethodNode)value;boolean hooked=false;
+            for(AbstractInsnNode instruction:method.instructions.toArray())if(instruction instanceof MethodInsnNode && ((MethodInsnNode)instruction).name.equals("hidesCape")){guards++;hooked=true;}
+            if(hooked)new Analyzer(new BasicVerifier()).analyze(node.name,method);
+        }
+        assertTrue("Cape layer must honor Hide Minecraft Cape",guards>0);
+    }
+
     private static byte[] transform(String raw, String mapped, byte[] bytes) {
         return new CustomModelTransformer().transform(raw, mapped, bytes);
     }
@@ -47,7 +66,7 @@ public class CustomModelHooksTest {
     private static void verify(byte[] bytes) throws Exception {
         ClassNode node = new ClassNode();
         new ClassReader(bytes).accept(node, 0);
-        int renderItem = 0, holder = 0;
+        int renderItem = 0, holder = 0, gui = 0;
         for (Object entry : node.methods) {
             MethodNode method = (MethodNode) entry;
             boolean hooked = false;
@@ -58,11 +77,13 @@ public class CustomModelHooksTest {
                 hooked = true;
                 if (call.name.equals("renderItem")) renderItem++;
                 if (call.name.equals("holder")) holder++;
+                if (call.name.equals("renderGuiItem")) gui++;
             }
             if (hooked) new Analyzer(new BasicVerifier()).analyze(node.name, method);
         }
         assertEquals("renderItemModelTransform routes its quad drawing through the hook", 1, renderItem);
         assertEquals("renderItemModelForEntity reports the holder", 1, holder);
+        assertEquals("Inventory/hotbar rendering uses the model hook", 1, gui);
     }
 
     private static byte[] read(InputStream input) throws Exception {

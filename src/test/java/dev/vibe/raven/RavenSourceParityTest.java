@@ -14,7 +14,8 @@ public class RavenSourceParityTest {
         String raven = read(SOURCE.resolve("module/impl/player/Scaffold.java"));
         String vibe = read(Paths.get("src/main/java/dev/vibe/module/impl/world/HypixelScaffold.java"));
         String[] methods = new String[]{"getBlockCount","resetMovementState","resetLongTellyQueue","autoClick","updateCameraYaw","beginTick","updateKeepYState","updateLongTellyState","aimAtPlacement","getFaceOffsets","aimYaw","aimYawWithJitter","aimPitch","updateTargetRotations","updateLookBucket","alignTakeoffRotations","snapGroundYaw","aimGroundPlacement","getGroundYawBuckets","isPlacementAllowed","verifyPlacementAim","aimLongTellyPlacement","easeActivationRotation","placeSelectedBlock","updateKeepYPlacement","allowPacket","allowMouse","buildCandidates","matchCandidate","buildPrediction","isAbovePredictedPath","getSupportOverhang","findNeededBlock","createSimulation","checkUnsupportedCorners","getFaceGeometry","findFacePitch","findNearestFacePitch","getCandidateScore","getTravelYaw","getTellyMode","getKeepYMode","isIceSelectionEnabled","isKeepYActive","getActiveKeepYMode","randomFloat","getPlayerYaw","quantizeMouseRotation","unwrapYaw","clampRotationDelta","quantizeRotation","jitter","updateYawJitter","nextYawJitter","rotationEaseScale","easeRotations","smooth","getRotationsToOffset","getMovementYaw","getForwardInput","getStrafeInput","isMoving","isJumpPressed","updateCardinalSide","isDiagonalMovement","getInputYaw","isTellyTakeoff","isManualTellyTakeoff","isLongTellyEnabled","isLookLocked","faceFromDelta","intersectsPlayer","findQueueSupport","buildLongTellyQueue","findLongTellyPlacement","getLongTellyCandidateYaws","hasCeilingAbove","hasJumpPotion","isReplaceable","isReplaceableAt","isSolidSupport","isInteractableAt","findPlacement","findPlacementTarget","findClosestPlacement","findBestPlacementFace","raycastFace","hasStableFaceAim","aimShortDiagonalFace","placeKeepYFromRay","getPlacementLimit","placeBlock","isUnsupportedAt","hasCornerSupport","isValidBlock","findPreferredIceSlot"};
-        for (String method : methods) assertEquals(method, normalizeScaffold(body(raven, method)), normalizeScaffold(body(vibe, method)));
+        for (String method : methods) assertEquals(method, normalizeScaffold(body(raven, method)),
+                scaffoldWithoutVibeOptions(method, normalizeScaffold(body(vibe, method))));
     }
     @Test public void vanillaAutoblockStateMachineRetainsRavensBranching() throws Exception {
         org.junit.Assume.assumeTrue(Files.isRegularFile(SOURCE.resolve("module/impl/combat/AutoBlock.java")));
@@ -40,6 +41,17 @@ public class RavenSourceParityTest {
                 "getCollidingBoundingBoxes","handleWaterMovement","isInLava","pushOutOfBlocks"})
             assertEquals(method, tokens(body(raven, method)), tokens(body(vibe, method).replace("mc().", "mc.")));
     }
+    /** These deliberate Vibe options have functional tests in ScaffoldModuleTest;
+     * the rest of the imported algorithm must still match the reference. */
+    private static String scaffoldWithoutVibeOptions(String method, String body) {
+        if (method.equals("getGroundYawBuckets")) body = body.replace("lateralOffset>0.26", "lateralOffset>0.12").replace("lateralOffset<-0.26", "lateralOffset<-0.12");
+        if (method.equals("nextYawJitter")) body = body.replace("if(this.owner.lessMicroAdjustments())return0.0F;", "");
+        if (method.equals("easeRotations")) body = body.replace("speedLimit*=this.owner.startupMultiplier();", "");
+        if (method.equals("easeActivationRotation")) body = body.replace("easeFraction=Math.min(1.0F,easeFraction*this.owner.startupMultiplier());", "");
+        if (method.equals("findNearestFacePitch")) body = body.replace("(this.owner.lessMicroAdjustments()||currentPitch>=innerMinimum&&currentPitch<=innerMaximum)", "currentPitch>=innerMinimum&&currentPitch<=innerMaximum");
+        return body;
+    }
+
     private static String normalizeBlock(String body) {
         return tokens(body.replace("ModuleManager.bedAura", "bedAura()").replace("ModuleManager.killAura", "owner")
                 .replace("!owner.isRequireMouseDown()", "true").replace("Utils.nullCheck()", "RavenBlockAccess.nullCheck()")

@@ -900,9 +900,9 @@ final class HypixelScaffold {
                (position.xCoord - blockCenterX) * -motion.zCoord + (position.zCoord - blockCenterZ) * motion.xCoord
             )
             / horizontalSpeed;
-         if (lateralOffset > 0.12) {
+         if (lateralOffset > 0.26) {
             this.groundPlacementSide = 1;
-         } else if (lateralOffset < -0.12) {
+         } else if (lateralOffset < -0.26) {
             this.groundPlacementSide = -1;
          }
 
@@ -1078,6 +1078,7 @@ final class HypixelScaffold {
       float smoothTicks = 3.0F;
       boolean ramping = smoothTicks >= 1.0F && this.activationTicks <= smoothTicks;
       float easeFraction = ramping ? 1.0F - (float)Math.pow(0.05, 1.0 / smoothTicks) : 1.0F;
+      easeFraction = Math.min(1.0F, easeFraction * this.owner.startupMultiplier());
       if (ramping) {
          float distance = Math.max(Math.abs(MathHelper.wrapAngleTo180_float(this.targetYaw - previousYaw)), Math.abs(this.targetPitch - previousPitch));
          easeFraction = Math.min(1.0F, easeFraction * this.rotationEaseScale(distance));
@@ -1518,7 +1519,8 @@ final class HypixelScaffold {
             innerMaximum = innerMinimum;
          }
 
-         if (currentPitch >= innerMinimum && currentPitch <= innerMaximum && this.raycastFace(placement, candidateYaw, currentPitch) != null) {
+         if ((this.owner.lessMicroAdjustments() || currentPitch >= innerMinimum && currentPitch <= innerMaximum)
+               && this.raycastFace(placement, candidateYaw, currentPitch) != null) {
             return currentPitch;
          } else {
             double desiredPitch = currentPitch;
@@ -1642,6 +1644,7 @@ final class HypixelScaffold {
    }
 
    private float nextYawJitter() {
+      if (this.owner.lessMicroAdjustments()) return 0.0F;
       return this.jitter(this.yawJitterAmplitude);
    }
 
@@ -1672,6 +1675,7 @@ final class HypixelScaffold {
 
          speedLimit -= this.randomFloat(0.1F, 1.0F);
          speedLimit *= this.rotationEaseScale(distance);
+         speedLimit *= this.owner.startupMultiplier();
          float step = Math.min(speedLimit, distance);
          float scale = step / distance;
          return new float[]{fromYaw + yawDelta * scale, clampPitch(fromPitch + pitchDelta * scale)};

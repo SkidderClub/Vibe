@@ -65,7 +65,20 @@ public final class BedAuraModule extends Module {
         ready = true;
     }
 
-    /** Called once after walking packets; swing and digging share the next tick boundary. */
+    /** Movement has updated the eyes by now; refresh the aim before C03 is serialized. */
+    public void beforeWalkingUpdate(Object entity) {
+        if (!ready || entity != owner || owner != minecraft.thePlayer || !isEnabled()) return;
+        MovingObjectPosition hit = bed == null ? null : selectHit(bed);
+        if (hit == null || !breakable(hit.getBlockPos()) || !withinReach(hit.hitVec)) { reset(); return; }
+        if (!hit.getBlockPos().equals(target)) stopMining();
+        target = hit.getBlockPos(); plannedHit = hit;
+        MoveFixModule fix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
+        if (fix == null) { reset(); return; }
+        float[] angles = rotations(hit.hitVec);
+        fix.setFakeRotation(getId(), angles[0], angles[1]);
+    }
+
+    /** Called once after walking packets; use the vanilla controller for all dig state. */
     public void afterWalkingUpdate(Object entity) {
         if (!ready || entity != owner || owner != minecraft.thePlayer) return;
         ready = false;

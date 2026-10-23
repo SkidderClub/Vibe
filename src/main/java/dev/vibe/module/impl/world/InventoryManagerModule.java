@@ -119,7 +119,14 @@ public final class InventoryManagerModule extends Module {
     }
 
     private PendingAction arrangeOne(Container container, InventoryLayout layout) {
-        for (Map.Entry<Integer, Type> assignment : layout.assignments().entrySet()) {
+        Map<Integer, Type> assignments = layout.assignments();
+        Type[] armor = {Type.HELMET, Type.CHESTPLATE, Type.LEGGINGS, Type.BOOTS};
+        for (int index = 0; index < armor.length; index++) {
+            if (!layout.isAssigned(armor[index]) && !assignments.containsKey(36 + index)) assignments.put(36 + index, armor[index]);
+        }
+        List<Map.Entry<Integer, Type>> ordered = new ArrayList<Map.Entry<Integer, Type>>(assignments.entrySet());
+        ordered.sort((a, b) -> Integer.compare(priority(a.getValue()), priority(b.getValue())));
+        for (Map.Entry<Integer, Type> assignment : ordered) {
             if (assignment.getKey() >= 40) continue;
             int target = InventoryLayout.toContainerSlot(assignment.getKey());
             if (target < 0 || target >= container.inventorySlots.size() || layout.isIgnoredContainerSlot(target)) continue;
@@ -144,10 +151,15 @@ public final class InventoryManagerModule extends Module {
         return null;
     }
 
+    private static int priority(Type type) {
+        if (type == Type.SWORD) return 0;
+        return type == Type.HELMET || type == Type.CHESTPLATE || type == Type.LEGGINGS || type == Type.BOOTS ? 1 : 2;
+    }
+
     private int findBest(Container container, InventoryLayout layout, Type type, int preferred) {
         int best = InventoryLayout.matches(type, container.getSlot(preferred).getStack()) ? preferred : -1;
         double bestScore = best < 0 ? Double.NEGATIVE_INFINITY : score(container.getSlot(best).getStack());
-        for (int slot : playerSlots()) {
+        for (int slot = 5; slot <= 44; slot++) {
             if (layout.isIgnoredContainerSlot(slot)) continue;
             ItemStack stack = container.getSlot(slot).getStack();
             if (!InventoryLayout.matches(type, stack)) continue;
@@ -176,9 +188,20 @@ public final class InventoryManagerModule extends Module {
             ItemStack stack = container.getSlot(slot).getStack();
             Type type = classify(stack);
             if (type == null || !isUnique(type)) continue;
-            // Preserve the existing cleaner priority and tie behaviour. Only
-            // the execution of the selected action is new.
-            int best = findBest(container, layout, type, slot);
+            int preferred = slot;
+            if (stack.getItem() instanceof ItemArmor) preferred = 5 + ((ItemArmor) stack.getItem()).armorType;
+            else for (Map.Entry<Integer, Type> assignment : layout.assignments().entrySet()) {
+                if (assignment.getKey() < 40 && assignment.getValue() == type) preferred = InventoryLayout.toContainerSlot(assignment.getKey());
+            }
+            // All copies use one deterministic keeper, including exact ties.
+            // Equipped armour participates so a spare is not mistaken for the best.
+            int best = findBest(container, layout, type, preferred);
+            if (best == slot) {
+                for (int other = 5; other < slot; other++) {
+                    if (!layout.isIgnoredContainerSlot(other) && InventoryLayout.matches(type, container.getSlot(other).getStack())
+                            && Math.abs(score(container.getSlot(other).getStack()) - score(stack)) < 0.000001D) { best = other; break; }
+                }
+            }
             if (best >= 0 && best != slot && score(container.getSlot(best).getStack()) >= score(stack)) {
                 return PendingAction.drop(slot, stack);
             }
@@ -350,9 +373,14 @@ public final class InventoryManagerModule extends Module {
             int fire = EnchantmentHelper.getEnchantmentLevel(Enchantment.fireAspect.effectId, stack);
             result += fire == 1 ? 0.66D : fire >= 2 ? 0.99D : 0.0D;
         } else if (stack.getItem() instanceof ItemTool) {
-            double toolBase = stack.getItem() instanceof net.minecraft.item.ItemPickaxe ? 4.0D
-                    : stack.getItem() instanceof net.minecraft.item.ItemAxe ? 3.0D : 1.0D;
-            result += toolBase + EnchantmentHelper.getEnchantmentLevel(Enchantment.efficiency.effectId, stack) * 0.4D;
+            ItemTool tool = (ItemTool) stack.getItem();
+            net.minecraft.block.Block block = tool instanceof net.minecraft.item.ItemPickaxe ? net.minecraft.init.Blocks.stone
+                    : tool instanceof net.minecraft.item.ItemAxe ? net.minecraft.init.Blocks.log : net.minecraft.init.Blocks.dirt;
+            result += tool.getStrVsBlock(stack, block)
+                    + Item.ToolMaterial.valueOf(tool.getToolMaterialName()).getHarvestLevel() * 2.0D
+                    + EnchantmentHelper.getEnchantmentLevel(Enchantment.efficiency.effectId, stack) * 1.5D;
+        } else if (stack.getItem() instanceof net.minecraft.item.ItemHoe) {
+            result += stack.getMaxDamage() * 0.005D;
         } else if (stack.getItem() instanceof ItemArmor) {
             result += ((ItemArmor) stack.getItem()).damageReduceAmount
                     + EnchantmentHelper.getEnchantmentLevel(Enchantment.protection.effectId, stack) * 0.25D;

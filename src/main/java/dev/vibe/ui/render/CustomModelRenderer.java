@@ -86,10 +86,12 @@ public final class CustomModelRenderer {
         } else if (transform == ItemCameraTransforms.TransformType.THIRD_PERSON) {
             boolean self = heldItemOwner == null || heldItemOwner == minecraft.thePlayer;
             if (!settings.getSwordViews().isSelected(self ? "Third Person" : "Other Players")) return false;
+        } else if (transform == ItemCameraTransforms.TransformType.GUI) {
+            if (!settings.getInventorySwords().isEnabled()) return false;
         } else {
             return false;
         }
-        CompiledModel compiled = settings.swordModel();
+        CompiledModel compiled = settings.swordModel(stack);
         if (compiled == null || compiled.getAnchors() == null) return false;
         drawing = true;
         try {
@@ -214,7 +216,10 @@ public final class CustomModelRenderer {
                 && entity.getDistanceSqToEntity(viewer) > lodDistance * lodDistance) lod = 1;
         drawing = true;
         try {
-            drawPlayer(compiled, biped, lod, scale, entity.isSneaking(), settings.getAnimateLimbs().isEnabled());
+            dev.vibe.model.ModelCompatibility.Profile profile = settings.compatibility();
+            drawPlayer(compiled, biped, lod, scale, entity.isSneaking(),
+                    profile == null ? settings.getAnimateLimbs().isEnabled() : profile.animate,
+                    profile == null || profile.head, profile == null || profile.legs);
         } finally {
             drawing = false;
         }
@@ -252,6 +257,10 @@ public final class CustomModelRenderer {
      * the model pixel size vanilla passes (1/16).
      */
     public static void drawPlayer(CompiledModel compiled, ModelBiped biped, int lod, float scale, boolean sneaking, boolean animate) {
+        drawPlayer(compiled, biped, lod, scale, sneaking, animate, true, true);
+    }
+
+    public static void drawPlayer(CompiledModel compiled, ModelBiped biped, int lod, float scale, boolean sneaking, boolean animate, boolean head, boolean legs) {
         GlStateManager.pushMatrix();
         try {
             if (sneaking) GlStateManager.translate(0.0F, 0.2F, 0.0F);
@@ -260,11 +269,11 @@ public final class CustomModelRenderer {
             try {
                 float[][] pivots = compiled.getPivots();
                 part(compiled, lod, pivots, BodyPart.BODY, biped.bipedBody, animate);
-                part(compiled, lod, pivots, BodyPart.HEAD, biped.bipedHead, animate);
+                part(compiled, lod, pivots, BodyPart.HEAD, biped.bipedHead, animate && head);
                 part(compiled, lod, pivots, BodyPart.RIGHT_ARM, biped.bipedRightArm, animate);
                 part(compiled, lod, pivots, BodyPart.LEFT_ARM, biped.bipedLeftArm, animate);
-                part(compiled, lod, pivots, BodyPart.RIGHT_LEG, biped.bipedRightLeg, animate);
-                part(compiled, lod, pivots, BodyPart.LEFT_LEG, biped.bipedLeftLeg, animate);
+                part(compiled, lod, pivots, BodyPart.RIGHT_LEG, biped.bipedRightLeg, animate && legs);
+                part(compiled, lod, pivots, BodyPart.LEFT_LEG, biped.bipedLeftLeg, animate && legs);
             } finally {
                 end();
             }
@@ -300,6 +309,16 @@ public final class CustomModelRenderer {
         CustomModelRendererModule settings = module();
         return settings != null && settings.getHideArmor().isEnabled() && settings.appliesToPlayer((EntityPlayer) entity)
                 && !HypixelModule.visualsSuppressed() && settings.playerModel() != null;
+    }
+
+    public static boolean hidesCape(Object entity) {
+        CustomModelRendererModule settings = module();
+        return entity instanceof EntityPlayer && settings != null && settings.isEnabled() && settings.getHideCape().isEnabled()
+                && !HypixelModule.visualsSuppressed() && (entity == Minecraft.getMinecraft().thePlayer || settings.appliesToPlayer((EntityPlayer) entity));
+    }
+
+    public static void renderGuiItem(Object renderer, Object stack, Object model) {
+        renderItem(renderer, stack, model, ItemCameraTransforms.TransformType.GUI);
     }
 
     // ---- GL state ----

@@ -60,15 +60,42 @@ public class BedAuraTargetTest {
         } finally { set(Minecraft.class,null,"theMinecraft",previous); }
     }
     private static MovingObjectPosition hit(Method method,BedAuraModule module,BlockPos bed)throws Exception{return (MovingObjectPosition)method.invoke(module,bed);}
+    @Test public void movingPlayerRefreshesAimBeforeWalkingAndSwingsBeforeControllerDigging() throws Exception {
+        Minecraft previous=Minecraft.getMinecraft(); dev.vibe.Vibe previousVibe=dev.vibe.Vibe.getInstance();
+        try {
+            Field registered=net.minecraft.init.Bootstrap.class.getDeclaredField("alreadyRegistered");registered.setAccessible(true);
+            if(!registered.getBoolean(null)){registered.setBoolean(null,true);net.minecraft.block.Block.registerBlocks();net.minecraft.item.Item.registerItems();}
+            Minecraft mc=allocate(Minecraft.class);set(Minecraft.class,null,"theMinecraft",mc);
+            Player player=allocate(Player.class);mc.thePlayer=player;player.actions=new java.util.ArrayList<String>();
+            Controller controller=allocate(Controller.class);controller.actions=player.actions;mc.playerController=controller;
+            World world=allocate(World.class);world.blocks=new HashMap<BlockPos,IBlockState>();mc.theWorld=world;
+            BlockPos bed=new BlockPos(0,0,3);world.blocks.put(bed,Blocks.bed.getDefaultState());
+            dev.vibe.Vibe vibe=new dev.vibe.Vibe();set(dev.vibe.Vibe.class,null,"instance",vibe);
+            dev.vibe.module.ModuleManager modules=allocate(dev.vibe.module.ModuleManager.class);set(dev.vibe.Vibe.class,vibe,"moduleManager",modules);
+            dev.vibe.module.impl.movement.MoveFixModule fix=new dev.vibe.module.impl.movement.MoveFixModule();
+            BedAuraModule aura=new BedAuraModule();set(dev.vibe.module.ModuleManager.class,modules,"modules",new java.util.ArrayList<dev.vibe.module.Module>(java.util.Arrays.asList(fix,aura)));
+            set(dev.vibe.module.Module.class,fix,"enabled",true);set(dev.vibe.module.Module.class,aura,"enabled",true);
+            set(BedAuraModule.class,aura,"owner",player);set(BedAuraModule.class,aura,"bed",bed);set(BedAuraModule.class,aura,"ready",true);
+            aura.beforeWalkingUpdate(player);float before=fix.getRotationYaw();
+            player.posX=.4; aura.beforeWalkingUpdate(player);
+            assertTrue(Math.abs(net.minecraft.util.MathHelper.wrapAngleTo180_float(fix.getRotationYaw()-before))>1);
+            aura.afterWalkingUpdate(player);assertEquals(java.util.Arrays.asList("swing","dig"),player.actions);
+            assertTrue(aura.isActivelyMining());
+        } finally {set(Minecraft.class,null,"theMinecraft",previous);set(dev.vibe.Vibe.class,null,"instance",previousVibe);}
+    }
     private static void set(Class<?> type,Object object,String name,Object value)throws Exception{Field f=type.getDeclaredField(name);f.setAccessible(true);f.set(object,value);}
     private static <T>T allocate(Class<T> type)throws Exception{Class<?> u=Class.forName("sun.misc.Unsafe");Field f=u.getDeclaredField("theUnsafe");f.setAccessible(true);return type.cast(u.getMethod("allocateInstance",Class.class).invoke(f.get(null),type));}
     public static final class Player extends EntityPlayerSP {
+        java.util.List<String> actions;
         private Player(){super(null,null,null,null);}
-        @Override public Vec3 getPositionEyes(float partialTicks){return new Vec3(.5,1.62,.5);}
+        @Override public Vec3 getPositionEyes(float partialTicks){return new Vec3(posX+.5,1.62,.5);}
+        @Override public void swingItem(){if(actions!=null)actions.add("swing");}
     }
     public static final class Controller extends PlayerControllerMP {
+        java.util.List<String> actions;
         private Controller(){super(null,null);}
         @Override public float getBlockReachDistance(){return 4.5F;}
+        @Override public boolean onPlayerDamageBlock(BlockPos block,EnumFacing face){if(actions!=null)actions.add("dig");return true;}
     }
     public static final class World extends WorldClient {
         Map<BlockPos,IBlockState> blocks;

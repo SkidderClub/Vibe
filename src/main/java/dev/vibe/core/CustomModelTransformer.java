@@ -11,6 +11,10 @@ import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
+import org.objectweb.asm.tree.JumpInsnNode;
+import org.objectweb.asm.tree.LabelNode;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.FrameNode;
 
 /**
  * Lets CustomModelRenderer draw held swords: inside RenderItem.renderItemModelTransform the
@@ -27,13 +31,23 @@ public final class CustomModelTransformer implements IClassTransformer, Opcodes 
         if (bytes == null) return null;
         String mapped = transformedName == null ? "" : transformedName.replace('.', '/');
         String raw = name == null ? "" : name.replace('.', '/');
-        if (!RENDER_ITEM.equals(mapped) && !"bjh".equals(raw)) return bytes;
+        boolean cape = mapped.equals("net/minecraft/client/renderer/entity/layers/LayerCape") || raw.equals("bkp");
+        if (!cape && !RENDER_ITEM.equals(mapped) && !"bjh".equals(raw)) return bytes;
         ClassNode node = new ClassNode();
         new ClassReader(bytes).accept(node, 0);
         boolean changed = false;
         for (Object entry : new ArrayList<Object>(node.methods)) {
             MethodNode method = (MethodNode) entry;
-            if (named(method.name, "renderItemModelTransform", "func_175040_a")
+            if (cape && (named(method.name, "doRenderLayer", "func_177141_a") || method.name.equals("func_177166_a")) && method.desc.endsWith(";FFFFFFF)V")) {
+                LabelNode vanilla = new LabelNode(); InsnList guard = new InsnList();
+                guard.add(new VarInsnNode(ALOAD, 1));
+                guard.add(new MethodInsnNode(INVOKESTATIC, HOOK, "hidesCape", "(Ljava/lang/Object;)Z", false));
+                guard.add(new JumpInsnNode(IFEQ, vanilla)); guard.add(new InsnNode(RETURN)); guard.add(vanilla);
+                guard.add(new FrameNode(F_SAME, 0, null, 0, null)); method.instructions.insert(guard); changed = true;
+            } else if (!cape && named(method.name, "renderItemIntoGUI", "func_180450_b")
+                    && (method.desc.equals("(Lnet/minecraft/item/ItemStack;II)V") || method.desc.equals("(Lzx;II)V"))) {
+                changed |= routeGuiItem(method);
+            } else if (named(method.name, "renderItemModelTransform", "func_175040_a")
                     && (method.desc.equals("(Lnet/minecraft/item/ItemStack;Lnet/minecraft/client/resources/model/IBakedModel;"
                             + "Lnet/minecraft/client/renderer/block/model/ItemCameraTransforms$TransformType;)V")
                         || method.desc.equals("(Lzx;Lboq;Lbgr$b;)V"))) {
@@ -57,6 +71,19 @@ public final class CustomModelTransformer implements IClassTransformer, Opcodes 
 
     private static boolean named(String value, String mcp, String srg) {
         return value.equals(mcp) || value.equals(srg) || value.equals("a");
+    }
+
+    private static boolean routeGuiItem(MethodNode method) {
+        for (AbstractInsnNode instruction : method.instructions.toArray()) {
+            if (!(instruction instanceof MethodInsnNode)) continue;
+            MethodInsnNode call = (MethodInsnNode) instruction;
+            if ((call.name.equals("renderItem") || call.name.equals("func_180454_a") || call.name.equals("a"))
+                    && (call.desc.equals("(Lnet/minecraft/item/ItemStack;Lnet/minecraft/client/resources/model/IBakedModel;)V") || call.desc.equals("(Lzx;Lboq;)V"))) {
+                method.instructions.set(call, new MethodInsnNode(INVOKESTATIC, HOOK, "renderGuiItem", "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V", false));
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean routeRenderItem(MethodNode method) {

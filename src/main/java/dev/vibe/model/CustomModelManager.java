@@ -181,6 +181,7 @@ public final class CustomModelManager {
                     String name = null;
                     if (file.isDirectory()) {
                         if (ModelFiles.findModelFile(file) == null) continue;
+                        if (kind == ModelKind.PLAYERS && excludedLocalModel(file)) continue;
                         name = infoName(file);
                     } else if (!ModelFiles.isModelFile(file) && !ModelFiles.isArchive(file)) {
                         continue;
@@ -205,6 +206,20 @@ public final class CustomModelManager {
         } catch (Exception ignored) {
             return null;
         }
+    }
+
+    private static boolean excludedLocalModel(File directory) {
+        File info = new File(directory, ModelFiles.INFO_FILE);
+        if (!info.isFile()) return false;
+        try {
+            JsonObject json = new JsonParser().parse(new String(Files.readAllBytes(info.toPath()), StandardCharsets.UTF_8)).getAsJsonObject();
+            String uid = GltfLoader.string(json, "uid", "");
+            if (uid.isEmpty()) {
+                String source = GltfLoader.string(json, "source", "");
+                uid = source.substring(Math.max(0, source.length() - 32));
+            }
+            return ModelCompatibility.excluded(uid);
+        } catch (Exception ignored) { return false; }
     }
 
     public String attribution(ModelKind kind, String name) {

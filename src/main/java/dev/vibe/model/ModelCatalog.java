@@ -118,7 +118,7 @@ public final class ModelCatalog {
                 for (JsonElement model : models) {
                     if (!model.isJsonObject()) continue;
                     Entry entry = Entry.fromJson(kind, model.getAsJsonObject());
-                    if (entry != null) result.add(entry);
+                    if (entry != null && !(kind == ModelKind.PLAYERS && ModelCompatibility.excluded(entry.uid))) result.add(entry);
                 }
             }
             return result;

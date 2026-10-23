@@ -24,11 +24,17 @@ The models belong to their authors and are not bundled with Vibe. Selecting one 
 
 The token is stored in `.minecraft/vibe/models/.sketchfab-token`, outside config profiles, so sharing a profile never shares it. `.models token clear` removes it.
 
-Sketchfab only allows downloading models whose author enabled it. In the knife collection that is 6 of 21 models (*Karambit Knife Freehand*, *M9 Bayonet Knife*, *M9 Bayonet Freehand*, *Butterfly Knife | Freehand*, *Hunting knife*, *knife CS GO*); the other 15 are marked "not downloadable" or sold in the Sketchfab store. They appear in `.models list swords` as `[locked]`. If you bought one in the Sketchfab store, `.models download <name>` fetches it with your token; if you have a file of one of them, put it in the swords folder (see below) and it works like any other model. In the Star Wars collection 124 of 131 models are downloadable.
+Sketchfab only allows downloading models whose author enabled it. In the knife collection that is 6 of 21 models (*Karambit Knife Freehand*, *M9 Bayonet Knife*, *M9 Bayonet Freehand*, *Butterfly Knife | Freehand*, *Hunting knife*, *knife CS GO*); the other 15 are marked "not downloadable" or sold in the Sketchfab store. They appear in `.models list swords` as `[locked]`. If you bought one in the Sketchfab store, `.models download <name>` fetches it with your token; if you have a file of one of them, put it in the swords folder (see below) and it works like any other model. The curated Star Wars catalogue contains 72 downloadable, tested models.
 
 `.models downloadAll swords` downloads every downloadable knife at once. For characters, models download when you select them.
 
 ## Own models
+
+### Tested character profiles and sword mapping
+
+The built-in character catalogue now contains the 72 models approved in the supplied character test list. The other 59 entries are excluded, including existing downloads identified by their Sketchfab UID; their files are left intact. **Tested Model Defaults** applies the recorded T-pose, static droid, head/leg animation and 90/180-degree orientation choices per character. Disable it to use the manual animation/pose settings and rotation alone. This controls rigid part animation; it does not add skeletal skinning to meshes with visible joint seams.
+
+Enable **Per Sword Models** to choose a different knife for Wooden, Stone, Iron, Golden and Diamond Sword. Each selector supports **Global** (the existing Sword Model setting) and **Vanilla** (keep that sword unchanged). **Inventory and Hotbar** also replaces the inventory/hotbar item image; it is independent of the first/third-person Sword Views. **Hide Minecraft Cape** hides vanilla/OptiFine capes for self and the selected character targets.
 
 Models live in `.minecraft/vibe/models/`:
 

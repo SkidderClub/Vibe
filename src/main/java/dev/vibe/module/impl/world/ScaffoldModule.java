@@ -12,6 +12,7 @@ import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ModeSetting;
 import dev.vibe.setting.NumberSetting;
 import dev.vibe.setting.RangeSetting;
+import dev.vibe.setting.MultiSelectSetting;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -71,7 +72,7 @@ public final class ScaffoldModule extends Module {
     private static final int MAX_TURN = 90;
     private static final int YAW_STEP = 2;
     /** Lateral distance from the block centre at which Sideways and GodBridge change the side they look past. */
-    private static final double SIDE_SWITCH = 0.1D;
+    private static final double SIDE_SWITCH = 0.26D;
     /** A diagonal sneak held for the corner ends after this long, even when the corner was never reached. */
     private static final long CORNER_TIMEOUT = 1500L;
     private static final float TELLY_TURN_MIN = 140.0F;
@@ -114,6 +115,12 @@ public final class ScaffoldModule extends Module {
     private final ModeSetting tower = addSetting(new ModeSetting("Tower", "None", "None", "NCP", "Timer", "Intave"));
     private final BooleanSetting keepY = addSetting(new BooleanSetting("Keep Y", true, () -> !hypixelRotations()));
     private final BooleanSetting sneak = addSetting(new BooleanSetting("Sneak", false, () -> mode.is("Normal")));
+    private final MultiSelectSetting startOptions = addSetting(new MultiSelectSetting("Start Options",
+            Arrays.asList("Sneak", "Faster Rotate"), java.util.Collections.<String>emptyList()));
+    private final NumberSetting startRotateSpeed = addSetting(new NumberSetting("Start Rotation Multiplier", 2.0D, 1.0D, 5.0D, 0.1D,
+            () -> startOptions.isSelected("Faster Rotate")));
+    private final BooleanSetting lessMicro = addSetting(new BooleanSetting("Less Micro Adjustments", false));
+    private final BooleanSetting sneakOnFail = addSetting(new BooleanSetting("Sneak on Fail", false, () -> !sneak.isEnabled()));
     private final NumberSetting blockEndDistance = addSetting(new NumberSetting("Block End Distance", 0.1D, 0.0D, 0.6D, 0.01D,
             () -> mode.is("Normal") && sneak.isEnabled()));
     private final BooleanSetting randomizeUnsneak = addSetting(new BooleanSetting("Randomize Unsneak", true,
@@ -166,6 +173,7 @@ public final class ScaffoldModule extends Module {
     private boolean rotating;
     private boolean sprintOwned;
     private boolean timerOwned;
+    private boolean starting;
     private static Field rightClickDelay;
 
     public ScaffoldModule() {
@@ -174,6 +182,7 @@ public final class ScaffoldModule extends Module {
 
     @Override
     protected void onEnable() {
+        starting = true;
         hypixel.reset();
         wasHypixel = hypixelRotations();
         offGroundTicks = 0;
@@ -220,6 +229,7 @@ public final class ScaffoldModule extends Module {
             // A respawn or world change starts from the new player's state.
             releaseRotation();
             owner = player;
+            starting = true;
             serverSlot = blockSlot = swappedSlot = restoreSlot = -1;
             blockPos = null;
             facing = null;
@@ -388,7 +398,8 @@ public final class ScaffoldModule extends Module {
             speed = (float) sample(acceleration ? rotationAcceleration : rotationSpeed);
             correction = movementFix.isEnabled() ? enabledCorrection(fix) : "Off";
         }
-        rotation.advance(target[0], target[1], speed, acceleration, sensitivity());
+        rotation.advance(target[0], target[1], speed * startupMultiplier(), acceleration, sensitivity());
+        if (Math.abs(RotationMath.difference(rotation.getYaw(), target[0])) < 5.0F && rotation.getPitch() >= MIN_PITCH) starting = false;
         fix.setFakeRotation(getId(), rotation.getYaw(), rotation.getPitch(), correction);
         rotating = true;
     }
@@ -459,6 +470,9 @@ public final class ScaffoldModule extends Module {
      * hit the first candidate is held at a pitch close to the next hit.
      */
     private float[] aim(EntityPlayerSP player, float[] yaws, float currentPitch, boolean search) {
+        if (lessMicro.isEnabled() && hasTarget() && targetBox != null
+                && Math.abs(RotationMath.difference(rotation.getYaw(), yaws[0])) <= 60.0F
+                && lookingAt(player, rotation.getYaw(), currentPitch, true)) return new float[] {rotation.getYaw(), currentPitch};
         if (hasTarget() && faceVisible(player.getPositionEyes(1.0F))) {
             for (float yaw : yaws) {
                 float pitch = hitPitch(player, yaw, currentPitch);
@@ -712,6 +726,8 @@ public final class ScaffoldModule extends Module {
         if (!hypixelRotations() && moving && player.onGround && !jumpKey && (jumpEnabled() || mode.is("Telly"))) keyJump = true;
         if (normal && edgeSneak(player, moving, keyJump)) keySneak = true;
         else if (!normal) resetEdgeSneak();
+        if (starting && startOptions.isSelected("Sneak")) keySneak = true;
+        if (!sneak.isEnabled() && sneakOnFail.isEnabled() && moving && player.onGround && !keyJump && fallingNextStep(player)) keySneak = true;
         if (normal && safeWalk.isEnabled() && player.onGround && minecraft.theWorld.getCollidingBoundingBoxes(player,
                 player.getEntityBoundingBox().addCoord(player.motionX, player.motionY, player.motionZ)
                         .expand(-0.175D, 0.0D, -0.175D)).isEmpty()) {
@@ -774,6 +790,18 @@ public final class ScaffoldModule extends Module {
         double z = player.posZ + player.motionZ + Math.cos(radians) * distance;
         return !supports(new BlockPos(x, player.posY - 0.01D, z), x, z);
     }
+
+    private boolean fallingNextStep(EntityPlayerSP player) {
+        float travel = movementYaw(player.rotationYaw);
+        double radians = Math.toRadians(travel);
+        double speed = Math.max(0.12D, Math.hypot(player.motionX, player.motionZ));
+        AxisAlignedBB feet = player.getEntityBoundingBox().offset(-Math.sin(radians) * speed, -0.08D, Math.cos(radians) * speed)
+                .expand(-0.05D, 0, -0.05D);
+        return minecraft.theWorld.getCollidingBoundingBoxes(player, feet).isEmpty();
+    }
+
+    float startupMultiplier() { return starting && startOptions.isSelected("Faster Rotate") ? startRotateSpeed.getFloat() : 1.0F; }
+    boolean lessMicroAdjustments() { return lessMicro.isEnabled(); }
 
     private long nextUnsneakDelay() {
         if (!randomizeUnsneak.isEnabled()) return unsneakDelay.getInt();
@@ -1055,6 +1083,8 @@ public final class ScaffoldModule extends Module {
         if (fix != null) {
             fix.setFakeRotation(getId(), yaw, pitch, enabledCorrection(fix));
             rotating = true;
+            if (minecraft.thePlayer != null && pitch >= MIN_PITCH
+                    && Math.abs(RotationMath.difference(yaw, travelYaw(minecraft.thePlayer) + 180.0F)) <= 60.0F) starting = false;
         }
     }
     Float hypixelServerYaw() { MoveFixModule fix = moveFix(); return fix == null ? null : fix.getRotationYaw(); }

@@ -1,0 +1,641 @@
+{
+  "profiles": {
+    "1f937a4ce6e94de597e9950a7f6960c2": {
+      "name": "TIE Pilot 3D Model",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": false,
+      "legs": true
+    },
+    "6683fe3852f74a77bec5cc67ffea8b2d": {
+      "name": "T7-01 Star Wars The Old Republic Droid",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "94b9776efaf8414aa6f051ce8de9de61": {
+      "name": "Swtor Revan Reborn",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "0fae75387d2c4396858d568b9fbb19ab": {
+      "name": "Sullustan Star Wars PNJ",
+      "animate": true,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "ad6c1b24a5014d9984c2f63d2ca5f27b": {
+      "name": "Stormtrooper",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "8d7e698218174e2b9e40f8c4c1acceba": {
+      "name": "Star Wars Rigged StormTrooper Model",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "d67b698acba24a829e00fdd4409e1836": {
+      "name": "Star Wars Jedi Fallen Order BD1",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "14f77062bf884c01bfad060a6378d27c": {
+      "name": "Star Wars Gonk Droid",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 90,
+      "head": true,
+      "legs": true
+    },
+    "bb52ea58e9f04427b9b9bf4b829e0810": {
+      "name": "STAR WARS DROIDE B2 BY OSCAR CREATIVO",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "86b72f64925e4b73a6ff8ff893e70a1d": {
+      "name": "Star Wars Droid Wolf",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "9b0d260e63174ac8873cb56919cc76f9": {
+      "name": "Star Wars Clone Trooper",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": false,
+      "legs": true
+    },
+    "2d246f4920fe4893a78129bb3b00b096": {
+      "name": "Star Wars Battlefront 3 X2",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": false,
+      "legs": true
+    },
+    "f3688d384b2042b6a8fc3360f64b9a48": {
+      "name": "Star Wars Battlefront - Droideka",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 90,
+      "head": true,
+      "legs": true
+    },
+    "3581f3a312dc426d87af3031f5198edf": {
+      "name": "Star Wars Bantha Walk",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "d35313348ba246e892c3eef18dd0aee7": {
+      "name": "Star Wars B1 Battle Droid",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "4a57954690eb4377b62a6290b2dee070": {
+      "name": "Star Wars - Grogu",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 180,
+      "head": true,
+      "legs": true
+    },
+    "6bb0be59be404ab0b880a46783f69ade": {
+      "name": "Star Wars - C3PO",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "6cbe743c36024b0792cbfc672dacca12": {
+      "name": "snow clone trooper",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "67611b62211648b7805359ab148c949a": {
+      "name": "Shore trooper || Rogue One: A Star Wars Story",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "cac806e8fb89450e9421d2cd9fa566f9": {
+      "name": "Rustbucket (Desert Gonk Droid)",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 90,
+      "head": true,
+      "legs": true
+    },
+    "ef7449eae42648a2859e6b70a83ffcba": {
+      "name": "Revan",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": false
+    },
+    "2d1bf74e06a347449a20c8f2181aac78": {
+      "name": "R5-J2 Imperial Astromech Droid",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 180,
+      "head": true,
+      "legs": true
+    },
+    "a5b37a5bcd314c5a82dd037555419c4c": {
+      "name": "R2-D2 low-poly",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 180,
+      "head": true,
+      "legs": true
+    },
+    "476fe6527305404cb0d7e1ebe9eead63": {
+      "name": "R2-D2 (Animated)",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "71374f8575744fb691f57256274c00ee": {
+      "name": "R2- D2",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "942e52cd3a1241089dc351f318eec283": {
+      "name": "Phase 3 Dark Trooper [Star Wars The Mandalorian]",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "36261cd23cca477dac9f9deec09e3c6b": {
+      "name": "Obi-wan",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 180,
+      "head": true,
+      "legs": true
+    },
+    "7560d567785742c29ff45b2c8029cda1": {
+      "name": "Mandalorian w/bones Non Armored - Read Desc",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "6dabccb1ba044d85ad6b05a94544973c": {
+      "name": "Mandalorian Armored - Fortnite",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "65383411ba6f4a56aac823d5d014df20": {
+      "name": "Mandalorian - Star Wars",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "ec8478adc99942d7a0f4f27e2291cfa3": {
+      "name": "Kylo Ren",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "26dcd2ac8088410ea7f351331fd2ab47": {
+      "name": "Kamino Security Trooper",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "2761149238284abe8ce1bd8795c3d6b8": {
+      "name": "K-2SO star wars droid",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "524e1fcf8c774573b5b15496efc4f572": {
+      "name": "Jabba",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 180,
+      "head": true,
+      "legs": true
+    },
+    "98c128f403e74387a60d31eb7ebea151": {
+      "name": "Imperial MSE/Mouse Droid",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "99e5fe9631d74b0aaa3ff0b8223c72d3": {
+      "name": "GNK Droid",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 90,
+      "head": true,
+      "legs": true
+    },
+    "3b93ee8b245f4a46b97df4b4473a8984": {
+      "name": "General Grievous",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "1a281d7f0fa94ceda83fcac3c40f7438": {
+      "name": "Fortnite X Star Wars (Encrypted Skin)",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": false,
+      "legs": true
+    },
+    "98873410df1546c4ab36ebe3d83a2248": {
+      "name": "First order trooper Rigged and textured",
+      "animate": true,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "52cccefa9b1b4ca29b5d85593c9ea0f1": {
+      "name": "First Order Stormtrooper non rigged",
+      "animate": true,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "029de9e7d0264119bbc4cbff45b8ed04": {
+      "name": "Eopie Star Wars",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "b68009ff665b4e04bb6bd51d6f9b6788": {
+      "name": "E-3P0",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "9a1f91e4c4934386820542a7260776d4": {
+      "name": "Droideka",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "ce96ea38dfb54199be3b8f8ecef7a6b8": {
+      "name": "DRK-1 Probe Droid",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "503860c8c63b419daa391f296ab874f1": {
+      "name": "Death trooper || Rogue One: A Star Wars Story",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "a863482a891447db955579d7b3ab19a3": {
+      "name": "Darth Nihilus",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "102ed10dfcd441029b4586bf4c88ec20": {
+      "name": "Darth Maul",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "5eec865d11874e9096930bf2a8965699": {
+      "name": "Cloneswamptrooper",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "76783e87f9fa41e4b1bd776b5977d1f9": {
+      "name": "Clone vulcanic shock trooper Phase II",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "fd9ade37c6bb4e298bb933a5d6805024": {
+      "name": "Clone Trooper Phase II",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "46a00518f88c4e9b9a4516954d9dd491": {
+      "name": "Clone Trooper 501st Legion (OLD)",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": false,
+      "legs": true
+    },
+    "85880f7a45404d2ea536d4b2d79511b4": {
+      "name": "Clone Trooper 327th Legion (OLD)",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": false,
+      "legs": true
+    },
+    "631b759ce00a4496a1960ae0ff49cde0": {
+      "name": "Clone scout trooper",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "9fb0032b1f7048c7b50f023e1f247ef1": {
+      "name": "Clone Sandtrooper Commander",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": false,
+      "legs": true
+    },
+    "f56a05f611fa4d50970655224b5076b1": {
+      "name": "Clone Sandtrooper",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": false,
+      "legs": true
+    },
+    "9776a92b56684a24acfa0186f89dcb79": {
+      "name": "Clone Cold Assault Trooper",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": false,
+      "legs": true
+    },
+    "6bd74c35b8c8486d87796b09f5dfe43c": {
+      "name": "CL TR P2 327th star corps light infantry",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 180,
+      "head": false,
+      "legs": true
+    },
+    "001f369aea9044499943d5966b7090e3": {
+      "name": "CL TR P2 212th attack battalion",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 180,
+      "head": false,
+      "legs": true
+    },
+    "b3ba110bfb804c4aa1bf8bc9f27391b0": {
+      "name": "Chewbacca",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "939daac943324c10b5e245e0580752e3": {
+      "name": "Buzz Droïd Star Wars",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "8ee61e679d2446e59ff48735e0df7b4a": {
+      "name": "Boba fett",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": false,
+      "legs": true
+    },
+    "61213fd805a54e758bb92ec869cb183d": {
+      "name": "BD-1",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "d589e71d16334782b57127312388da89": {
+      "name": "BB-9E Star Wars Abejorro",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "b7c9cde2a0884be491ab07e123631d24": {
+      "name": "BB-9E",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "0b63cacb1ab540b397a70a9cfa026010": {
+      "name": "BB-8",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "1f49d4f09768498e9a95886891698739": {
+      "name": "Battle Droid B2",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": false,
+      "legs": true
+    },
+    "f0ca5d7dd5b64869907c6e781d7c660a": {
+      "name": "B1 Battle Droid Star Wars",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": false,
+      "legs": true
+    },
+    "01ba1ddf7c834632a68f37d466a4ac60": {
+      "name": "Astromech Droid C2-b5 Jedi Fallen Order",
+      "animate": false,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "cc8a36aa9b184c4b8a4a74d7cd54cf6d": {
+      "name": "Anakin Skywalker Low-Poly",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "44136feb26a843e5b218d79a0745803f": {
+      "name": "Admiral Ackbar",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": false,
+      "legs": true
+    },
+    "077bbe07d52f44c18ef9f30422d50ee5": {
+      "name": "[UE4] Storm Trooper (Rigged + Game Ready)",
+      "animate": true,
+      "fixPose": false,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    },
+    "7db6b438deba4cf3ac947e336cb88554": {
+      "name": "**OLD** Phase II Clone Trooper + DC-15s (Rigged)",
+      "animate": true,
+      "fixPose": true,
+      "yaw": 0,
+      "head": true,
+      "legs": true
+    }
+  },
+  "excluded": [
+    "3229acc2be1b477a9b264c7cd36428c5",
+    "77eae86c9f8545cabc87ef0fb8695c5a",
+    "7a4a4571b70d402ebef271c3dae9141d",
+    "92b8bc14356446e797deab4823e83eb7",
+    "7fd8c5ccd2874c67911ff3d5dd775e3b",
+    "9d1989e7329c4072897387442818b719",
+    "b2a625f178bc41e68227ada178a9c2cf",
+    "3467fb25bc2c4db9b0969740522bf560",
+    "4e0ac5df97c940c2a01684aa5b23fcd8",
+    "8e328cc9b21849aea5fed5c7d389597a",
+    "1b82ccf44f0b4ce788c4077bda0fb157",
+    "4338105e09704f359c6afcab7e5fce10",
+    "60a35bb311314596b5a7e5719e8e35ca",
+    "05678f11f4fe47178c9b4941ee334e16",
+    "db4fdcd9eead4782af5aad3beec8c947",
+    "e30ad72b8ef74ead9739dad571bed50f",
+    "c072b4097f894f34a2144c6d53c13ade",
+    "4b15c64baf834e0a96f8ff807c76ef22",
+    "55e0194bf96546cba173f655904aac39",
+    "cbfd9b686cca427096387955ceea2785",
+    "d8f34d9ece52441384c9c2d760b3d618",
+    "8f1595c75e154bac97c1a4cfdd36fa5c",
+    "2fb5a943b7b24ac0b195a74d1a3c6c8d",
+    "fea41f8063b5490790767e68f787de11",
+    "4fc7c836c348440fa654a7adc6efee55",
+    "c00a201b49ac46cc8a95c828b76865ba",
+    "4bc72588c38c4373a54940b0ff97f168",
+    "59c66eb5d470436f9d29d5720c9b402a",
+    "97aa462f55264301801da438fd268de3",
+    "5e098a79422b476388f59b189c5bbd4e",
+    "289df371f562417a8639a92becf02149",
+    "f0e7abfa029e4a80844a7160bbcc53ec",
+    "ab81bac300dd403ba998ae8c3065bf87",
+    "9a1651485a384209bdd2656195abfc99",
+    "164e66cae1a54368a9aa86743ee844bd",
+    "25ee6c50c91443a4beb6e12fb7cea666",
+    "92cc2754e8d649b4846047175f234566",
+    "3a9a2a7897d240ecabe0638c3844cd67",
+    "62a4273131f949ed9559721f7fb9cf14",
+    "2fde289b3e6e4daca4ac9271fd0b809f",
+    "8af3b896135c41279b5e523992952081",
+    "259e8d4aface4ca987a334445d688700",
+    "31d6f5554c8e4981bfa17a0e69d49986",
+    "aae018747b054186bd48e460b0ad1192",
+    "ece97956b8134ca0b3fad3612573161d",
+    "4ee65de6131f4a0f9ab9296e8429175d",
+    "0614b4965e2c4b249b683dc4da29471b",
+    "ad9bcd5f4c77449fb035924f5a9d091d",
+    "b523a380441f4269ba5da15450b3af69",
+    "772883ba6a0d4744bf6e404f6e07eb49",
+    "d1b99496719447179c5015fedaf32389",
+    "e7f2a1fbfdcd41f59ba03fe48ae39004",
+    "a255c4d9fbf04bdcada41b497f8d201c",
+    "49e56ac8273341c4a359cb4f8b0afa15",
+    "51341f3ba62a4d76a9216b4c36d673c5",
+    "f6b41f2f3efe4143a51a2dfe901d7bb9",
+    "4d5c2b9e93f84aca98b619895604a8ff",
+    "a65084fe14944ee5b00b0928b5fe4b8a",
+    "1cbbc8a231154426ade7d3b11cf5bb0e"
+  ]
+}

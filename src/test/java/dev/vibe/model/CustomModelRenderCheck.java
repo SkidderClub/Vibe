@@ -66,7 +66,9 @@ public final class CustomModelRenderCheck {
                 MeshData mesh = mesh(model[1]);
                 long loaded = System.nanoTime();
                 int budget = Integer.getInteger("vibe.budget", 60000);
-                PreparedModel prepared = sword ? SwordFitter.prepare(mesh, budget) : PlayerFitter.prepare(mesh, budget, 0, true);
+                ModelCompatibility.Profile profile = sword ? null : ModelCompatibility.profile(new ModelCatalog(null).find(ModelKind.PLAYERS, new File(model[1]).getName()));
+                PreparedModel prepared = sword ? SwordFitter.prepare(mesh, budget) : PlayerFitter.prepare(mesh, budget,
+                        profile == null ? 0 : profile.yaw, profile == null || profile.fixPose);
                 long fitted = System.nanoTime();
                 CompiledModel compiled = CompiledModel.compile(prepared);
                 long uploaded = System.nanoTime();
@@ -74,7 +76,7 @@ public final class CustomModelRenderCheck {
                 GL11.glClearColor(0.18F, 0.2F, 0.24F, 1.0F);
                 GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
                 if (sword) swordPanels(compiled, firstPerson);
-                else playerPanels(compiled);
+                else playerPanels(compiled, profile);
                 assertState();
                 int error = GL11.glGetError();
                 if (error != GL11.GL_NO_ERROR) throw new AssertionError("OpenGL error " + error + " for " + name);
@@ -200,7 +202,7 @@ public final class CustomModelRenderCheck {
 
     // ---- players ----
 
-    private static void playerPanels(CompiledModel compiled) {
+    private static void playerPanels(CompiledModel compiled, ModelCompatibility.Profile profile) {
         ModelBiped biped = new ModelBiped(0.0F);
         for (int panel = 0; panel < PANELS; panel++) {
             viewport(panel);
@@ -241,7 +243,8 @@ public final class CustomModelRenderCheck {
                     biped.bipedRightLeg.render(0.0625F);
                     biped.bipedLeftLeg.render(0.0625F);
                 } else {
-                    CustomModelRenderer.drawPlayer(compiled, biped, 0, 0.0625F, biped.isSneak, true);
+                    CustomModelRenderer.drawPlayer(compiled, biped, 0, 0.0625F, biped.isSneak, profile == null || profile.animate,
+                            profile == null || profile.head, profile == null || profile.legs);
                 }
                 GlStateManager.popMatrix();
             }

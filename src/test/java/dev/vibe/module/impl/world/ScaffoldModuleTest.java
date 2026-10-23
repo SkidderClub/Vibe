@@ -417,6 +417,8 @@ public class ScaffoldModuleTest {
         scaffold.setEnabled(true);
         assertPlacesFrom(45.0F);
         moveTo(1.15D, 64.0D, 0.8D, true);
+        assertPlacesFrom(45.0F);
+        moveTo(1.15D, 64.0D, 0.97D, true);
         assertPlacesFrom(135.0F);
         KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindSneak.getKeyCode(), true);
         assertPlacesFrom(135.0F);
@@ -543,6 +545,41 @@ public class ScaffoldModuleTest {
         assertNull("Too short to reach", ScaffoldModule.entryFace(eyes, ScaffoldModule.lookVector(90.0F, 83.5F), 1.0D, box));
         assertNull("Starting inside the box has no entry face",
                 ScaffoldModule.entryFace(new Vec3(0.5D, 63.5D, 0.5D), ScaffoldModule.lookVector(0.0F, 0.0F), 4.5D, box));
+    }
+
+    @Test public void startupSneakAndFasterRotationEndAfterTheInitialTurn() throws Exception {
+        world.blocks.put(new BlockPos(0,63,0),Blocks.stone.getDefaultState());
+        keys(true,false,false,false); standAt(0.5,64,0.5,-90,20);
+        setting("Safe Walk").setValue(false);
+        ((dev.vibe.setting.MultiSelectSetting)find("Start Options")).toggle("Sneak");
+        ((dev.vibe.setting.MultiSelectSetting)find("Start Options")).toggle("Faster Rotate");
+        number("Start Rotation Multiplier").setValue(3.0);
+        range("Rotation Speed").setRange(10.0,10.0);
+        scaffold.setEnabled(true); assertTrue(moveInput(false).sneak); assertEquals(3.0F,scaffold.startupMultiplier(),0);
+        scaffold.tickStart();
+        assertTrue("Initial turn uses the multiplier", Math.abs(RotationMath.difference(moveFix.getRotationYaw(),-90)) > 20);
+        for(int tick=0;tick<20;tick++)scaffold.tickStart();
+        assertFalse(moveInput(false).sneak); assertEquals(1.0F,scaffold.startupMultiplier(),0);
+    }
+
+    @Test public void sneakOnFailCatchesAnUnsupportedStepWithoutNormalSneak() throws Exception {
+        world.blocks.put(new BlockPos(0,63,0),Blocks.stone.getDefaultState());
+        keys(true,false,false,false); standAt(0.5,64,0.5,-90,20);
+        setting("Safe Walk").setValue(false); setting("Sneak on Fail").setValue(true);
+        scaffold.setEnabled(true); assertFalse(moveInput(false).sneak);
+        moveTo(0.98,64,0.5,true); player.motionX=.4;
+        assertTrue(moveInput(false).sneak); assertFalse(moveInput(true).sneak);
+        world.blocks.put(new BlockPos(1,63,0),Blocks.stone.getDefaultState());
+        assertFalse("Releases as soon as support exists",moveInput(false).sneak);
+    }
+
+    @Test public void lessMicroKeepsAnAlreadyValidRay() throws Exception {
+        world.blocks.put(new BlockPos(0,63,0),Blocks.stone.getDefaultState());
+        standAt(1.2,64,0.5,-90,20); setting("Less Micro Adjustments").setValue(true);
+        scaffold.setEnabled(true); scaffold.tickStart();
+        float pitch=moveFix.getRotationPitch(),yaw=moveFix.getRotationYaw();
+        for(int tick=0;tick<6;tick++) { scaffold.tickStart(); assertEquals(pitch,moveFix.getRotationPitch(),.001); assertEquals(yaw,moveFix.getRotationYaw(),.001); }
+        assertNotNull(serverRay());
     }
 
     /** A few ticks at the current position must settle on {@code yaw} and place against the east face. */

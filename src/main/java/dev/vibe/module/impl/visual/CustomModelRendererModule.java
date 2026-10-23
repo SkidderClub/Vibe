@@ -4,6 +4,7 @@ import dev.vibe.Vibe;
 import dev.vibe.model.CompiledModel;
 import dev.vibe.model.CustomModelManager;
 import dev.vibe.model.ModelKind;
+import dev.vibe.model.ModelCompatibility;
 import dev.vibe.module.Category;
 import dev.vibe.module.Module;
 import dev.vibe.setting.BooleanSetting;
@@ -16,6 +17,8 @@ import java.util.Arrays;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.init.Items;
 import net.minecraft.util.ChatComponentText;
 import org.lwjgl.input.Keyboard;
 
@@ -39,6 +42,11 @@ public final class CustomModelRendererModule extends Module {
 
     private final ModeSetting swordModel = addSetting(new ModeSetting("Sword Model", DEFAULT_SWORD,
             () -> modes.isSelected(SWORDS), choices(ModelKind.SWORDS, DEFAULT_SWORD)));
+    private final BooleanSetting perSword = addSetting(new BooleanSetting("Per Sword Models", false, () -> modes.isSelected(SWORDS)));
+    private final ModeSetting[] swordModels = {
+        swordChoice("Wooden Sword"), swordChoice("Stone Sword"), swordChoice("Iron Sword"), swordChoice("Golden Sword"), swordChoice("Diamond Sword")
+    };
+    private final BooleanSetting inventorySwords = addSetting(new BooleanSetting("Inventory and Hotbar", false, () -> modes.isSelected(SWORDS)));
     private final NumberSetting swordScale = addSetting(new NumberSetting("Sword Scale", 1.0D, 0.2D, 3.0D, 0.05D,
             () -> modes.isSelected(SWORDS)));
     private final MultiSelectSetting swordViews = addSetting(new MultiSelectSetting("Sword Views",
@@ -75,6 +83,8 @@ public final class CustomModelRendererModule extends Module {
             () -> modes.isSelected(PLAYER_MODEL)));
     private final BooleanSetting hideArmor = addSetting(new BooleanSetting("Hide Armor", true,
             () -> modes.isSelected(PLAYER_MODEL)));
+    private final BooleanSetting hideCape = addSetting(new BooleanSetting("Hide Minecraft Cape", false));
+    private final BooleanSetting modelDefaults = addSetting(new BooleanSetting("Tested Model Defaults", true, () -> modes.isSelected(PLAYER_MODEL)));
     private final NumberSetting playerRotation = addSetting(new NumberSetting("Player Rotation", 0.0D, -180.0D, 180.0D, 15.0D,
             () -> modes.isSelected(PLAYER_MODEL)));
 
@@ -89,6 +99,11 @@ public final class CustomModelRendererModule extends Module {
     private CustomModelManager.Request swordRequest;
     private CustomModelManager.Request playerRequest;
     private long lastChoiceRefresh;
+
+    private ModeSetting swordChoice(String name) {
+        List<String> values = new java.util.ArrayList<String>(); values.add("Global"); values.add("Vanilla"); values.addAll(manager.choices(ModelKind.SWORDS));
+        return addSetting(new ModeSetting(name, "Global", () -> modes.isSelected(SWORDS) && perSword.isEnabled(), values.toArray(new String[0])));
+    }
 
     public CustomModelRendererModule() {
         super("CustomModelRenderer", "Replace held swords and player models with your own 3D models",
@@ -130,6 +145,10 @@ public final class CustomModelRendererModule extends Module {
     public void refreshChoices() {
         lastChoiceRefresh = System.currentTimeMillis();
         refresh(swordModel, ModelKind.SWORDS);
+        for (ModeSetting setting : swordModels) {
+            List<String> values = new java.util.ArrayList<String>(); values.add("Global"); values.add("Vanilla"); values.addAll(manager.choices(ModelKind.SWORDS));
+            if (!values.equals(setting.getModes())) setting.replaceModes(values);
+        }
         refresh(playerModel, ModelKind.PLAYERS);
     }
 
@@ -160,9 +179,25 @@ public final class CustomModelRendererModule extends Module {
     // ---- queries used by CustomModelRenderer, called every frame ----
 
     public CompiledModel swordModel() {
+        return swordModel(null);
+    }
+
+    public String swordSelection(ItemStack stack) {
+        if (perSword.isEnabled() && stack != null) {
+            net.minecraft.item.Item[] items = {Items.wooden_sword, Items.stone_sword, Items.iron_sword, Items.golden_sword, Items.diamond_sword};
+            for (int index = 0; index < items.length; index++) if (stack.getItem() == items[index]) {
+                String selected = swordModels[index].getValue();
+                if (!"Global".equals(selected)) return "Vanilla".equals(selected) ? null : selected;
+            }
+        }
+        return swordModel.getValue();
+    }
+
+    public CompiledModel swordModel(ItemStack stack) {
         if (!isEnabled() || !modes.isSelected(SWORDS)) return null;
         int budget = budget(), texture = texture();
-        String name = swordModel.getValue();
+        String name = swordSelection(stack);
+        if (name == null) return null;
         if (swordRequest == null || !swordRequest.matches(name, budget, texture, 0, false)) {
             swordRequest = new CustomModelManager.Request(ModelKind.SWORDS, name, budget, texture, 0, false);
         }
@@ -171,8 +206,9 @@ public final class CustomModelRendererModule extends Module {
 
     public CompiledModel playerModel() {
         if (!isEnabled() || !modes.isSelected(PLAYER_MODEL)) return null;
-        int budget = budget(), texture = texture(), yaw = playerRotation.getInt();
-        boolean pose = fixPose.isEnabled();
+        ModelCompatibility.Profile profile = compatibility();
+        int budget = budget(), texture = texture(), yaw = profile == null ? playerRotation.getInt() : profile.yaw;
+        boolean pose = profile == null ? fixPose.isEnabled() : profile.fixPose;
         String name = playerModel.getValue();
         if (playerRequest == null || !playerRequest.matches(name, budget, texture, yaw, pose)) {
             playerRequest = new CustomModelManager.Request(ModelKind.PLAYERS, name, budget, texture, yaw, pose);
@@ -214,6 +250,11 @@ public final class CustomModelRendererModule extends Module {
     public NumberSetting getSwordScale() { return swordScale; }
     public MultiSelectSetting getSwordViews() { return swordViews; }
     public BooleanSetting getEnchantGlint() { return enchantGlint; }
+    public BooleanSetting getInventorySwords() { return inventorySwords; }
+    public BooleanSetting getHideCape() { return hideCape; }
+    public ModelCompatibility.Profile compatibility() {
+        return modelDefaults.isEnabled() ? ModelCompatibility.profile(manager.getCatalog().find(ModelKind.PLAYERS, playerModel.getValue())) : null;
+    }
     public BooleanSetting getReverseBlade() { return reverseBlade; }
     public BooleanSetting getFlipBlade() { return flipBlade; }
     public NumberSetting getSwordRotateX() { return swordRotateX; }

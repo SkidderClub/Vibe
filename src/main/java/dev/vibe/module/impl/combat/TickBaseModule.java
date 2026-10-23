@@ -9,6 +9,7 @@ import dev.vibe.module.impl.movement.MoveFixModule;
 import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.NumberSetting;
 import dev.vibe.setting.RangeSetting;
+import dev.vibe.setting.ModeSetting;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -19,6 +20,7 @@ import org.lwjgl.input.Keyboard;
 
 /** Direct state/settings port of Gothaj's TickBase module. */
 public final class TickBaseModule extends Module {
+    private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Screenshot", "Screenshot", "Burst"));
     private final RangeSetting hitRange = addSetting(new RangeSetting("Range", 3.0D, 4.0D, 0.5D, 7.0D, 0.1D));
     private final NumberSetting balanceRegen = addSetting(new NumberSetting("Balance Regen", 1.0D, 0.0D, 2.0D, 0.1D));
     private final NumberSetting maxBalance = addSetting(new NumberSetting("Max Balance", 20.0D, 0.0D, 200.0D, 1.0D));
@@ -36,6 +38,7 @@ public final class TickBaseModule extends Module {
     private EntityLivingBase target;
     private boolean executing;
     private Object sessionWorld;
+    private long nextLagAt;
 
     public TickBaseModule() { super("TickBase", "", Category.COMBAT, Keyboard.KEY_NONE); }
 
@@ -82,7 +85,8 @@ public final class TickBaseModule extends Module {
         if (pendingPauseTicks > 0) { pendingPauseTicks--; return; }
         if (skipTicksBuffer-- > 0) return;
         if (skipCooldownTicks > 0) { skipCooldownTicks--; return; }
-        if (minecraft.thePlayer == null || target == null || simulationHistory.isEmpty()) return;
+        if (minecraft.thePlayer == null || target == null || simulationHistory.isEmpty() || minecraft.currentScreen != null
+                || System.currentTimeMillis() < nextLagAt) return;
         if (minecraft.thePlayer.isDead || minecraft.thePlayer.isSpectator() || target.isDead) return;
         EntityLivingBase valid = validateTarget();
         if (valid == null) return;
@@ -94,14 +98,30 @@ public final class TickBaseModule extends Module {
             CombatRangeSupport.Snapshot snapshot = simulationHistory.get(index);
             double distance = snapshot.position.distanceTo(valid.getPositionVector());
             double distanceSq = distance * distance;
-            if (distanceSq < playerDistSq && distanceSq >= minRangeSq && distanceSq <= maxRangeSq
-                    && (!requireGround.isEnabled() || snapshot.onGround)) validTicks.add(index);
+            if (distanceSq < playerDistSq && distanceSq >= (mode.is("Screenshot") ? 0.25D : minRangeSq) && distanceSq <= maxRangeSq
+                    && !snapshot.collidedHorizontally && (!requireGround.isEnabled() || snapshot.onGround)) {
+                validTicks.add(index + 1);
+                if (mode.is("Screenshot") && distanceSq <= minRangeSq) break;
+            }
         }
         if (validTicks.isEmpty()) return;
-        int bestAdvance = validTicks.get(0);
+        int bestAdvance = mode.is("Screenshot") ? validTicks.get(validTicks.size() - 1) : validTicks.get(0);
         if (bestAdvance == 0) return;
         KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
         if (requireKillAura.isEnabled() && (aura == null || !aura.isEnabled())) return;
+        if (mode.is("Screenshot")) {
+            int delayedTicks = Math.min(5, bestAdvance);
+            tickStock = Math.max(0.0F, tickStock - delayedTicks);
+            long millis = screenshotDelayMillis(delayedTicks);
+            nextLagAt = System.currentTimeMillis() + millis + Math.max(250L, skipCooldown.getInt() * 50L);
+            // Like taking a synchronous screenshot: time actually elapses, then vanilla's
+            // timer catches up. No recursive ticks or fabricated movement packets are sent.
+            long deadline = System.nanoTime() + millis * 1_000_000L;
+            while (!Thread.currentThread().isInterrupted() && System.nanoTime() < deadline)
+                java.util.concurrent.locks.LockSupport.parkNanos(deadline - System.nanoTime());
+            pendingPauseTicks = postSkipPause.getInt(); skipCooldownTicks = skipCooldown.getInt();
+            return;
+        }
         skipTicksBuffer = bestAdvance;
         pendingPauseTicks = postSkipPause.getInt();
         for (int index = 0; index < bestAdvance; index++) {
@@ -119,6 +139,7 @@ public final class TickBaseModule extends Module {
     }
 
     private void reset() {
+        nextLagAt = 0L;
         skipTicksBuffer = 0;
         tickStock = 0.0F;
         skipCooldownTicks = 0;
@@ -126,6 +147,8 @@ public final class TickBaseModule extends Module {
         target = null;
         executing = false;
     }
+
+    public static long screenshotDelayMillis(int ticks) { return Math.max(0, Math.min(5, ticks)) * 50L; }
 
     private void synchronizeWorld() {
         Object world = minecraft.theWorld;

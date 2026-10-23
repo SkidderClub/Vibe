@@ -94,13 +94,11 @@ public final class ChestStealerModule extends Module {
         return titleCheck.isEnabled() && !hasVanillaChestTitle(chest) ? null : chest;
     }
 
-    /** Server-selector menus are custom named inventories, never loot them. */
+    /** Title check deliberately accepts any title containing "chest". */
     private boolean hasVanillaChestTitle(ContainerChest chest) {
         IInventory inventory = chest.getLowerChestInventory();
-        if (inventory == null || inventory.hasCustomName()) return false;
-        String name = inventory.getName();
-        return "container.chest".equals(name) || "container.chestDouble".equals(name)
-                || "Chest".equalsIgnoreCase(name) || "Large Chest".equalsIgnoreCase(name);
+        return inventory != null && inventory.getDisplayName() != null && inventory.getDisplayName().getUnformattedText()
+                .toLowerCase(java.util.Locale.ROOT).contains("chest");
     }
 
     private List<Slot> usefulSlots(ContainerChest chest) {

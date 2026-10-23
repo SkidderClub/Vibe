@@ -171,7 +171,13 @@ public class CustomModelPipelineTest {
         ModelCatalog catalog = new ModelCatalog(new File(temporary.getRoot(), "none.json"));
         List<ModelCatalog.Entry> swords = catalog.entries(ModelKind.SWORDS), players = catalog.entries(ModelKind.PLAYERS);
         assertEquals(21, swords.size());
-        assertTrue(players.size() > 100);
+        assertEquals("Only models approved in the tested roster remain", 72, players.size());
+        assertNull(catalog.find(ModelKind.PLAYERS, "Yoda"));
+        assertNull(catalog.find(ModelKind.PLAYERS, "Darth Vader"));
+        assertFalse(ModelCompatibility.profile(catalog.find(ModelKind.PLAYERS, "TIE Pilot 3D Model")).head);
+        assertFalse(ModelCompatibility.profile(catalog.find(ModelKind.PLAYERS, "Revan")).legs);
+        ModelCompatibility.Profile gonk = ModelCompatibility.profile(catalog.find(ModelKind.PLAYERS, "Star Wars Gonk Droid"));
+        assertFalse(gonk.animate); assertFalse(gonk.fixPose); assertEquals(90, gonk.yaw);
         assertNotNull("default sword", catalog.find(ModelKind.SWORDS, "Karambit Knife Freehand"));
         assertTrue(catalog.find(ModelKind.SWORDS, "Karambit Knife Freehand").downloadable);
         assertNotNull("default player", catalog.find(ModelKind.PLAYERS, "First order trooper Rigged and textured"));
