@@ -98,21 +98,6 @@ public final class InstallTests {
             Check.equal("new", new String(Files.readAllBytes(current), StandardCharsets.UTF_8));
         });
 
-        check.test("an interrupted update's profile is put back", () -> {
-            Path root = Files.createDirectories(temp.resolve("launcher-home"));
-            System.setProperty("vibe.launcher.home", root.toString());
-            dev.vibe.launcher.core.AppPaths paths = dev.vibe.launcher.core.AppPaths.detect();
-            System.clearProperty("vibe.launcher.home");
-            Files.createDirectories(root.resolve("source").resolve("src"));
-            Path world = Files.createDirectories(root.resolve("source-old-123").resolve("run").resolve("client").resolve("saves"));
-            Files.write(world.resolve("level.dat"), new byte[] { 7 });
-            dev.vibe.launcher.core.AppLog log = new dev.vibe.launcher.core.AppLog(root.resolve("logs"));
-            SourceManager manager = new SourceManager(paths, new dev.vibe.launcher.core.Settings(root.resolve("s.properties"), log), log);
-            manager.cleanLeftovers();
-            Check.isTrue(Files.isRegularFile(root.resolve("source/run/client/saves/level.dat")), "profile restored");
-            Check.isTrue(!Files.exists(root.resolve("source-old-123")), "empty leftover removed");
-        });
-
         check.test("changelog sections become plain text", () -> {
             String markdown = "# Vibe changelog\n\n## Unreleased\n\n- Added **GTA8** in [docs/GTA8.md](GTA8.md), run `./gradlew x`.\n"
                     + "  Continued line.\n- Second\n\n## v0.0.5\n\n* Old entry\n";
@@ -126,8 +111,8 @@ public final class InstallTests {
         });
 
         check.test("GitHub timestamps parse as UTC", () -> {
-            Check.equal(1790529960000L, SourceManager.parseTime("2026-09-27T17:26:00Z"));
-            Check.equal(0L, SourceManager.parseTime("garbage"));
+            Check.equal(1790529960000L, dev.vibe.launcher.versions.ReleaseCatalog.parseTime("2026-09-27T17:26:00Z"));
+            Check.equal(0L, dev.vibe.launcher.versions.ReleaseCatalog.parseTime("garbage"));
         });
     }
 

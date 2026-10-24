@@ -105,6 +105,7 @@ public final class LauncherFrame extends JFrame {
         sidebar = new Sidebar(controller, this::show);
         playBar = new PlayBar(controller, () -> show(Page.ACCOUNTS));
         pages.put(Page.HOME, new HomePage(controller));
+        pages.put(Page.VERSIONS, new VersionsPage(controller));
         pages.put(Page.MODS, new ModsPage(controller));
         pages.put(Page.EXTENSIONS, new ExtensionsPage(controller));
         pages.put(Page.ACCOUNTS, new AccountsPage(controller));
@@ -227,7 +228,7 @@ public final class LauncherFrame extends JFrame {
                     break;
             }
         }
-        if (state == State.IDLE && (lastState == State.RUNNING || lastState == State.STOPPING || lastState == State.BUILDING)) {
+        if (state == State.IDLE && (lastState == State.RUNNING || lastState == State.STOPPING || lastState == State.STARTING)) {
             if (minimizedForGame || controller.lastFailure() != null) {
                 setExtendedState(getExtendedState() & ~ICONIFIED);
                 toFront();

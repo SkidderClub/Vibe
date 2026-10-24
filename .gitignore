@@ -24,3 +24,6 @@ context/
 *.iml
 **/__pycache__/
 *.pyc
+
+/launcher/dist/
+/launcher/build/

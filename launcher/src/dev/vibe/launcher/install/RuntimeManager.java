@@ -22,16 +22,13 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Private Eclipse Temurin runtimes: Java 8 runs Minecraft 1.8.9, JDK 21 runs
- * Gradle. Downloads come from the Adoptium API and are verified against the
- * SHA-256 checksum it publishes before they are unpacked.
+ * The private Eclipse Temurin 8 runtime that starts Minecraft 1.8.9.
+ *
+ * <p>Downloads come from the Adoptium API and are verified against the SHA-256
+ * checksum it publishes before they are unpacked. Minecraft 1.8.9 only runs on
+ * Java 8, so that is the only runtime the launcher keeps.</p>
  */
 public final class RuntimeManager {
-    public static final class Runtimes {
-        public final Path java8, jdk21;
-        Runtimes(Path java8, Path jdk21) { this.java8 = java8; this.jdk21 = jdk21; }
-    }
-
     private final AppPaths paths;
     private final Settings settings;
     private final AppLog log;
@@ -42,25 +39,19 @@ public final class RuntimeManager {
         this.log = log;
     }
 
-    /** Whether both runtimes are present, without touching the network. */
+    /** Whether Java 8 is present, without touching the network. */
     public boolean isReady() {
-        return usable(settings.java8Home(), false, 8) != null && usable(settings.jdk21Home(), true, 21) != null;
+        return usable(settings.java8Home(), false, 8) != null;
     }
 
-    public Runtimes ensure(Progress progress) throws IOException {
+    public Path ensure(Progress progress) throws IOException {
         Path java8 = usable(settings.java8Home(), false, 8);
         if (java8 == null) {
             warnIfWrongVersion(settings.java8Home(), 8);
-            java8 = install(8, "jre", "temurin-8", false, progress.range(0, 0.35));
+            java8 = install(progress);
             settings.setJava8Home(java8.toString());
         }
-        Path jdk21 = usable(settings.jdk21Home(), true, 21);
-        if (jdk21 == null) {
-            warnIfWrongVersion(settings.jdk21Home(), 21);
-            jdk21 = install(21, "jdk", "temurin-21", true, progress.range(0.35, 1));
-            settings.setJdk21Home(jdk21.toString());
-        }
-        return new Runtimes(java8, jdk21);
+        return java8;
     }
 
     /** A runtime configured by hand that has the wrong version is replaced by the launcher's own. */
@@ -70,33 +61,31 @@ public final class RuntimeManager {
             int actual = majorVersion(Paths.get(configured.trim()));
             if (actual > 0 && actual != expected) {
                 log.warn(ErrorCode.WRONG_JAVA.id() + " The configured Java " + expected + " at " + configured + " is Java " + actual
-                        + "; the launcher installs its own Java " + expected + " instead.");
+                        + "; the launcher installs its own Java 8 instead.");
             }
         } catch (Exception ignored) {
             // Not a valid path: install() replaces it anyway.
         }
     }
 
-    /** Deletes both private runtimes and downloads them again. */
-    public Runtimes reinstall(Progress progress) throws IOException {
+    /** Deletes the private runtime and downloads it again. */
+    public Path reinstall(Progress progress) throws IOException {
         settings.setJava8Home("");
-        settings.setJdk21Home("");
         FileUtil.deleteTree(paths.runtimes().resolve("temurin-8"));
-        FileUtil.deleteTree(paths.runtimes().resolve("temurin-21"));
         return ensure(progress);
     }
 
-    private Path install(int feature, String imageType, String folder, boolean requireJdk, Progress progress) throws IOException {
-        Path output = paths.runtimes().resolve(folder);
-        Path existing = findHome(output, requireJdk, feature);
+    private Path install(Progress progress) throws IOException {
+        Path output = paths.runtimes().resolve("temurin-8");
+        Path existing = findHome(output, false, 8);
         if (existing != null) return existing;
 
-        String label = feature == 8 ? "Java 8" : "Java 21";
+        String label = "Java 8";
         progress.update(I18n.t("Looking up {0}", label), null, -1);
         // Minecraft 1.8.9's LWJGL 2 has no Apple Silicon natives; Java 8 runs under Rosetta there.
-        String arch = Platform.os() == Platform.Os.MAC && feature == 8 ? "x64" : Platform.architecture();
-        String query = "https://api.adoptium.net/v3/assets/latest/" + feature + "/hotspot?architecture=" + arch
-                + "&image_type=" + imageType + "&os=" + Platform.adoptiumOs() + "&vendor=eclipse";
+        String arch = Platform.os() == Platform.Os.MAC ? "x64" : Platform.architecture();
+        String query = "https://api.adoptium.net/v3/assets/latest/8/hotspot?architecture=" + arch
+                + "&image_type=jre&os=" + Platform.adoptiumOs() + "&vendor=eclipse";
         List<Object> assets = Json.array(Json.parse(Http.getText(query, 4 * 1024 * 1024)));
         if (assets.isEmpty()) {
             throw new LauncherException(ErrorCode.JAVA_UNAVAILABLE, I18n.t("Adoptium has no {0} build for {1}.", label, Platform.adoptiumOs() + "/" + arch));
@@ -112,8 +101,8 @@ public final class RuntimeManager {
         }
 
         Files.createDirectories(paths.runtimes());
-        Path archive = paths.runtimes().resolve(name.isEmpty() ? folder + ".zip" : name.replaceAll("[^A-Za-z0-9._-]", "_"));
-        Path temporary = paths.runtimes().resolve(folder + ".partial");
+        Path archive = paths.runtimes().resolve(name.isEmpty() ? "temurin-8.zip" : name.replaceAll("[^A-Za-z0-9._-]", "_"));
+        Path temporary = paths.runtimes().resolve("temurin-8.partial");
         try {
             String message = I18n.t("Downloading {0}", label);
             Http.download(link, archive, Math.max(size * 2, 600L * 1024L * 1024L), progress.range(0, 0.85).bytes(message));
@@ -130,7 +119,7 @@ public final class RuntimeManager {
             }
             FileUtil.deleteTree(output);
             Files.move(temporary, output);
-            Path home = findHome(output, requireJdk, feature);
+            Path home = findHome(output, false, 8);
             if (home == null) {
                 throw new LauncherException(ErrorCode.JAVA_BROKEN, I18n.t("The {0} download does not contain a usable Java installation.", label));
             }
@@ -152,10 +141,7 @@ public final class RuntimeManager {
         }
     }
 
-    /**
-     * Also requires the class library, so a half-deleted runtime is downloaded again, and
-     * the expected major version: Gradle refuses a Java 17 handed over as Java 8.
-     */
+    /** Also requires the class library and the expected major version. */
     private static boolean isHome(Path home, boolean requireJdk, int major) {
         boolean library = Files.isRegularFile(home.resolve("lib").resolve("modules")) || Files.isRegularFile(home.resolve("lib").resolve("rt.jar"));
         if (!library || !Files.isRegularFile(Platform.javaExecutable(home, false)) || (requireJdk && !Files.isRegularFile(Platform.javacExecutable(home)))) return false;

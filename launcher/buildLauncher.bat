@@ -31,7 +31,7 @@ if defined SKIP_TESTS goto :package
 echo [Vibe Launcher] Running tests...
 javac --release 8 -encoding UTF-8 -Xlint:-options -cp "%CLASSES%" -sourcepath "%ROOT%test" -d "%TEST_CLASSES%" "%ROOT%test\dev\vibe\launcher\LauncherTests.java"
 if errorlevel 1 goto :failed
-java -Djava.awt.headless=true -cp "%CLASSES%;%TEST_CLASSES%" dev.vibe.launcher.LauncherTests
+java -Xms32m -Xmx384m -XX:+UseSerialGC -Djava.awt.headless=true -cp "%CLASSES%;%TEST_CLASSES%" dev.vibe.launcher.LauncherTests
 if errorlevel 1 (
     echo [ERROR] Launcher tests failed; the JAR was not replaced.
     goto :failed
@@ -65,6 +65,34 @@ for /f "tokens=*" %%H in ('certutil -hashfile "%OUTPUT%" SHA256 ^| findstr /v ":
 set "HASH=%HASH: =%"
 > "%BUILD%\VibeLauncher.jar.sha256" echo %HASH%  VibeLauncher.jar
 
+rem Windows app image with a bundled runtime: dist\VibeLauncher\VibeLauncher.exe
+where jpackage >nul 2>&1
+if errorlevel 1 (
+    echo [WARN] jpackage was not found ^(JDK 14 or newer^); skipping the Windows app image.
+    goto :done
+)
+set "APP_INPUT=%BUILD%\app-input"
+set "DIST=%ROOT%dist"
+mkdir "%APP_INPUT%" "%DIST%" 2>nul
+copy /y "%OUTPUT%" "%APP_INPUT%\VibeLauncher.jar" >nul
+if exist "%DIST%\VibeLauncher" rmdir /s /q "%DIST%\VibeLauncher" 2>nul
+if exist "%DIST%\VibeLauncher" (
+    echo [ERROR] Could not replace "%DIST%\VibeLauncher". Close the running launcher and try again.
+    goto :failed
+)
+echo [Vibe Launcher] Building Windows app image...
+jpackage --type app-image --name VibeLauncher --app-version %VERSION% ^
+    --vendor "Vibe" --description "Vibe Launcher" ^
+    --input "%APP_INPUT%" --main-jar VibeLauncher.jar ^
+    --main-class dev.vibe.launcher.VibeLauncher ^
+    --dest "%DIST%"
+if errorlevel 1 (
+    echo [ERROR] jpackage could not build the Windows app image.
+    goto :failed
+)
+echo Windows app:   %DIST%\VibeLauncher\VibeLauncher.exe
+
+:done
 echo.
 echo Build complete: %OUTPUT% ^(version %VERSION%^)
 echo SHA-256:        %HASH%

@@ -87,8 +87,11 @@ public final class ModLibrary {
             boolean enabled = name.endsWith(".jar") || name.endsWith(".zip");
             boolean disabled = name.endsWith(".jar" + DISABLED) || name.endsWith(".zip" + DISABLED);
             if (!Files.isRegularFile(file) || (!enabled && !disabled)) continue;
+            // The launcher manages Vibe itself; it must not appear as a user mod.
+            ModInfo info = read(file);
+            if (info.id.equalsIgnoreCase("vibe") || name.startsWith("vibe-1.8.9-")) continue;
             long size = file.toFile().length();
-            result.add(new Mod(file, read(file), enabled, size));
+            result.add(new Mod(file, info, enabled, size));
         }
         result.sort((left, right) -> left.name.compareToIgnoreCase(right.name));
         return result;

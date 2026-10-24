@@ -1,23 +1,17 @@
 package dev.vibe.launcher.ui;
 
-import dev.vibe.launcher.VibeLauncher;
 import dev.vibe.launcher.app.LauncherController;
 import dev.vibe.launcher.core.I18n;
-import dev.vibe.launcher.core.Text;
 import dev.vibe.launcher.install.ChangelogSection;
-import dev.vibe.launcher.install.SourceManager;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import java.util.List;
@@ -35,8 +29,6 @@ final class HomePage extends JPanel {
     private final Stack.Panel chips = Stack.row(8);
     private final Stack.Panel news = Stack.column(10);
     private final Stack.Panel newsColumn;
-    private final Segmented newsTabs;
-    private int tab;
 
     HomePage(LauncherController controller) {
         super(new BorderLayout());
@@ -83,8 +75,6 @@ final class HomePage extends JPanel {
         Card card = new Card(true, 12, 18, 18);
         card.fill(() -> Style.alpha(Style.surface(), 235));
         card.add(Label.heading(I18n.t("What's new")));
-        newsTabs = new Segmented(new String[] { I18n.t("Changelog"), I18n.t("Commits") }, 0, index -> { tab = index; rebuildNews(); });
-        card.add(newsTabs);
         JScrollPane scroll = Scroll.of(news);
         card.add(scroll, Stack.FILL);
         newsColumn.add(card, Stack.FILL);
@@ -94,7 +84,7 @@ final class HomePage extends JPanel {
         controller.addListener(event -> {
             switch (event) {
                 case SKIN: case ACCOUNTS: refreshPlayer(); break;
-                case SOURCE: refreshChips(); rebuildNews(); break;
+                case VERSIONS: refreshChips(); rebuildNews(); break;
                 case STATE: case SETTINGS: refreshMotion(); break;
                 default: break;
             }
@@ -128,36 +118,26 @@ final class HomePage extends JPanel {
         chips.add(new Chip("Minecraft 1.8.9", Icons.CUBE));
         chips.add(new Chip("Forge + OptiFine", Icons.MODS));
         String version = controller.vibeVersion();
-        String revision = Text.shortSha(controller.installedRevision());
-        if (!version.isEmpty()) chips.add(new Chip("Vibe " + version + (revision.isEmpty() ? "" : " · " + revision), Icons.SHIELD));
+        if (!version.isEmpty()) chips.add(new Chip("Vibe " + version, Icons.SHIELD));
         chips.revalidate();
         chips.repaint();
     }
 
     private void rebuildNews() {
         news.removeAll();
-        if (tab == 0) {
-            List<ChangelogSection> sections = controller.changelog();
-            if (sections.isEmpty()) news.add(Label.body(controller.sourceInstalled() ? I18n.t("No changelog found in this Vibe version.")
-                    : I18n.t("The changelog appears once Vibe has been downloaded.")));
-            for (ChangelogSection section : sections) {
-                Label heading = new Label(section.title, Style.smallBold(), Label.Tone.ACCENT);
-                heading.setBorder(BorderFactory.createEmptyBorder(news.getComponentCount() == 0 ? 0 : 8, 0, 0, 0));
-                news.add(heading);
-                int shown = 0;
-                for (String entry : section.entries) {
-                    news.add(new Bullet(entry));
-                    if (++shown >= 12) break;
-                }
-            }
-        } else {
-            SourceManager.Remote remote = controller.remote();
-            if (remote == null) {
-                news.add(Label.body(controller.remoteError().isEmpty() ? I18n.t("Loading commits from GitHub…")
-                        : I18n.t("GitHub is not reachable right now: {0}", controller.remoteError())));
-            } else {
-                String installed = controller.installedRevision();
-                for (SourceManager.Commit commit : remote.commits) news.add(new CommitRow(commit, commit.sha.equals(installed)));
+        List<ChangelogSection> sections = controller.changelog();
+        if (sections.isEmpty()) {
+            news.add(Label.body(controller.sourceInstalled() ? I18n.t("No release notes found for this Vibe version.")
+                    : I18n.t("The release notes appear once a Vibe version has been downloaded.")));
+        }
+        for (ChangelogSection section : sections) {
+            Label heading = new Label(section.title, Style.smallBold(), Label.Tone.ACCENT);
+            heading.setBorder(BorderFactory.createEmptyBorder(news.getComponentCount() == 0 ? 0 : 8, 0, 0, 0));
+            news.add(heading);
+            int shown = 0;
+            for (String entry : section.entries) {
+                news.add(new Bullet(entry));
+                if (++shown >= 12) break;
             }
         }
         news.revalidate();
@@ -230,47 +210,6 @@ final class HomePage extends JPanel {
                     Style.text(g, line, 16, y, Style.small(), Style.mix(Style.muted(), Style.text(), 0.35));
                     y += metrics.getHeight() + 1;
                 }
-            } finally {
-                g.dispose();
-            }
-        }
-    }
-
-    /** A commit on main; click opens it on GitHub. */
-    private final class CommitRow extends JComponent {
-        private static final long serialVersionUID = 1L;
-        private final SourceManager.Commit commit;
-        private final boolean installed;
-        private final Anim.Value hover = new Anim.Value(this, 0, 16);
-
-        CommitRow(SourceManager.Commit commit, boolean installed) {
-            this.commit = commit;
-            this.installed = installed;
-            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            setToolTipText(I18n.t("Open on GitHub"));
-            addMouseListener(new MouseAdapter() {
-                @Override public void mouseEntered(MouseEvent event) { hover.to(1); }
-                @Override public void mouseExited(MouseEvent event) { hover.to(0); }
-                @Override public void mouseClicked(MouseEvent event) { controller.browse(VibeLauncher.REPOSITORY_URL + "/commit/" + commit.sha); }
-            });
-        }
-
-        @Override public Dimension getPreferredSize() { return new Dimension(300, 56); }
-
-        @Override protected void paintComponent(Graphics graphics) {
-            Graphics2D g = Style.prepare(graphics);
-            try {
-                int w = getWidth(), h = getHeight();
-                Style.fill(g, 0, 0, w, h, 10, Style.alpha(Style.text(), (int) (6 + 10 * hover.value)));
-                Color dot = installed ? Style.success() : Style.alpha(Style.accent(), 170);
-                g.setColor(dot);
-                g.fill(new Ellipse2D.Double(12, 15, 8, 8));
-                int textWidth = w - 44;
-                Style.text(g, Style.ellipsize(g.getFontMetrics(Style.bodyBold()), commit.message.isEmpty() ? Text.shortSha(commit.sha) : commit.message, textWidth),
-                        30, 23, Style.bodyBold(), Style.text());
-                String meta = commit.author + "  ·  " + I18n.ago(commit.time) + "  ·  " + Text.shortSha(commit.sha)
-                        + (installed ? "  ·  " + I18n.t("installed") : "");
-                Style.text(g, Style.ellipsize(g.getFontMetrics(Style.small()), meta, textWidth), 30, 42, Style.small(), installed ? Style.success() : Style.muted());
             } finally {
                 g.dispose();
             }
