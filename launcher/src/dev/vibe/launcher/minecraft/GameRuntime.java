@@ -271,19 +271,18 @@ public final class GameRuntime {
     private void downloadAssets(Map<String, Object> index, Progress progress) throws IOException {
         Map<String, Object> objects = Json.object(index, "objects");
         if (objects.isEmpty()) throw new LauncherException(ErrorCode.ASSET_DOWNLOAD, I18n.t("Minecraft's asset list is empty."));
-        final int total = objects.size();
+        final Map<String, Long> assets = uniqueAssets(objects);
+        final int total = assets.size();
         final AtomicInteger done = new AtomicInteger();
         final Path objectsDir = root().resolve("assets").resolve("objects");
         ExecutorService pool = Executors.newFixedThreadPool(6);
         List<Future<?>> tasks = new ArrayList<Future<?>>();
         try {
-            for (final Map.Entry<String, Object> object : objects.entrySet()) {
+            for (final Map.Entry<String, Long> asset : assets.entrySet()) {
                 tasks.add(pool.submit(new Runnable() {
                     @Override public void run() {
-                        Map<String, Object> file = Json.object(object.getValue());
-                        String hash = Json.string(file, "hash");
-                        long size = Json.number(file, "size", 0);
-                        if (!hash.matches("[0-9a-f]{40}")) return;
+                        String hash = asset.getKey();
+                        long size = asset.getValue();
                         Path target = objectsDir.resolve(hash.substring(0, 2)).resolve(hash);
                         try {
                             downloadChecked(target, "https://resources.download.minecraft.net/" + hash.substring(0, 2) + "/" + hash,
@@ -315,6 +314,22 @@ public final class GameRuntime {
         } finally {
             pool.shutdownNow();
         }
+    }
+
+    /**
+     * Asset objects are keyed by name, but several names can point at the same file
+     * (icons, dig/step sounds). Download each hash once: two threads sharing a
+     * {@code .part} file would collide on Windows and fail with VL-204.
+     */
+    static Map<String, Long> uniqueAssets(Map<String, Object> objects) {
+        Map<String, Long> unique = new LinkedHashMap<String, Long>();
+        for (Object value : objects.values()) {
+            Map<String, Object> file = Json.object(value);
+            String hash = Json.string(file, "hash");
+            if (!hash.matches("[0-9a-f]{40}") || unique.containsKey(hash)) continue;
+            unique.put(hash, Json.number(file, "size", 0));
+        }
+        return unique;
     }
 
     private static final class AssetFailure extends RuntimeException {

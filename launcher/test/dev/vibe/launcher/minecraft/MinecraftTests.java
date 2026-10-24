@@ -72,6 +72,17 @@ public final class MinecraftTests {
             Check.equal("natives-osx", GameRuntime.nativeClassifier("natives-osx"));
         });
 
+        check.test("duplicate asset hashes are downloaded once", () -> {
+            Map<String, Object> objects = Json.object(Json.parse(
+                    "{\"icons/minecraft.icns\":{\"hash\":\"991b421dfd401f115241601b2b373140a8d78572\",\"size\":114786},"
+                    + "\"minecraft/icons/minecraft.icns\":{\"hash\":\"991b421dfd401f115241601b2b373140a8d78572\",\"size\":114786},"
+                    + "\"sound\":{\"hash\":\"bdf48ef6b5d0d23bbb02e17d04865216179f510a\",\"size\":7},"
+                    + "\"broken\":{\"hash\":\"not-a-hash\",\"size\":1}}"));
+            Map<String, Long> unique = GameRuntime.uniqueAssets(objects);
+            Check.equal(2, unique.size());
+            Check.equal(114786L, unique.get("991b421dfd401f115241601b2b373140a8d78572"));
+        });
+
         check.test("natives unpack without META-INF or escapes", () -> {
             Path jar = temp.resolve("natives.jar");
             ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(jar));
