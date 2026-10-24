@@ -85,6 +85,7 @@ public final class HudEditorGui extends GuiScreen {
     private long savedAt;
     /** The HUD at the game's own resolution; the canvas shows it scaled down. */
     private Framebuffer preview;
+    private final HudEditorBackground background = new HudEditorBackground();
     private boolean previewUnavailable;
 
     public HudEditorGui(HudManager manager) {
@@ -211,7 +212,7 @@ public final class HudEditorGui extends GuiScreen {
                 GlStateManager.pushMatrix();
                 GlStateManager.translate(canvasX, canvasY, 0.0F);
                 GlStateManager.scale(previewScale, previewScale, 1.0F);
-                drawHud();
+                drawHud(false);
                 GlStateManager.popMatrix();
             }
             GlStateManager.enableBlend();
@@ -240,8 +241,19 @@ public final class HudEditorGui extends GuiScreen {
         }
     }
 
-    private void drawHud() {
-        for (String id : manager.getElementIds()) if (manager.isEnabled(id)) manager.drawPreview(manager.getElement(id), fontRendererObj);
+    public void captureGameView() { background.capture(mc); }
+
+    private void drawHud(boolean physicalPixels) {
+        ScaledResolution resolution = new ScaledResolution(mc);
+        background.draw(resolution.getScaledWidth(), resolution.getScaledHeight());
+        manager.beginEditorPreview(physicalPixels);
+        Framebuffer previousTarget = KawaseBlur.useHudTarget(physicalPixels ? preview : null);
+        try {
+            for (String id : manager.getElementIds()) if (manager.isEnabled(id)) manager.drawPreview(manager.getElement(id), fontRendererObj);
+        } finally {
+            KawaseBlur.useHudTarget(previousTarget);
+            manager.endEditorPreview();
+        }
     }
 
     /**
@@ -274,7 +286,7 @@ public final class HudEditorGui extends GuiScreen {
             preview.framebufferClear();
             GlStateManager.depthMask(depthMask);
             preview.bindFramebuffer(true);
-            drawHud();
+            drawHud(true);
         } finally {
             OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER, previous);
             GL11.glViewport(viewport.get(0), viewport.get(1), viewport.get(2), viewport.get(3));
@@ -394,6 +406,17 @@ public final class HudEditorGui extends GuiScreen {
 
     private void drawTheme(int x, int right, int y, int mouseX, int mouseY) {
         final HudManager.HudElement element = selected;
+        if (HudManager.TARGET_HUD.equals(element.getId())) {
+            AccountScreenStyle.panel(x, y, right - x, CONTROL, SURFACE, BORDER);
+            AccountScreenStyle.rawText("Style", x + 10, y + 8, TEXT);
+            AccountScreenStyle.rawText(effectiveTheme(element), x + 10, y + 24, ACCENT);
+            addHit(x, y, right, y + CONTROL, (mx, my) -> {
+                ModeSetting setting = Vibe.getInstance().getModuleManager().getModule(HudModule.class).targetHud.mode;
+                java.util.List<String> modes = setting.getModes();
+                setting.setValue(modes.get((modes.indexOf(setting.getValue()) + 1) % modes.size())); persist();
+            });
+            return;
+        }
         AccountScreenStyle.panel(x, y, right - x, CONTROL, SURFACE, BORDER);
         AccountScreenStyle.rawText(AccountScreenStyle.fit("Theme", right - x - 20), x + 10, y + 8, TEXT);
         int segmentsLeft = x + 8, segmentsRight = right - 8, segmentsTop = y + 21;
@@ -728,6 +751,7 @@ public final class HudEditorGui extends GuiScreen {
     @Override public void onGuiClosed() {
         if (preview != null) preview.deleteFramebuffer();
         preview = null;
+        background.close();
         super.onGuiClosed();
     }
 
@@ -838,7 +862,9 @@ public final class HudEditorGui extends GuiScreen {
         else if (HudManager.WATERMARK.equals(element)) { settings.add(hud.getWatermarkOutline()); settings.add(hud.getWatermarkDetails()); settings.add(hud.getWatermarkText()); }
         else if (HudManager.ARRAY_LIST.equals(element)) { settings.add(hud.getArrayOutline()); settings.add(hud.getArrayListModules()); settings.add(hud.getArrayPrimaryColor()); settings.add(hud.getArraySecondaryColor()); settings.add(hud.getBackground()); settings.addAll(hud.array.all); }
         else if (HudManager.COORDINATES.equals(element)) settings.add(hud.getCoordinatesOutline());
-        else if (HudManager.SCOREBOARD.equals(element)) settings.add(hud.getReplaceScoreboardServer());
+        else if (HudManager.SCOREBOARD.equals(element)) { settings.add(hud.getReplaceScoreboardServer()); settings.addAll(hud.scoreboardColors.all); }
+        else if (HudManager.CLOCK.equals(element)) settings.addAll(hud.clock.all);
+        else if (HudManager.TARGET_HUD.equals(element)) settings.addAll(hud.targetHud.all);
         else if (HudManager.ARMOR.equals(element)) settings.add(hud.getArmorDisplayMode());
         else if (HudManager.HEALTH.equals(element)) { settings.add(hud.getHealthMaximumColor()); settings.add(hud.getHealthMinimumColor()); settings.add(hud.getHealthAbsorption()); settings.add(hud.getHealthAbsorptionColor()); settings.add(hud.getHealthHideFull()); }
         else if (HudManager.NOTIFICATIONS.equals(element)) {
@@ -861,11 +887,14 @@ public final class HudEditorGui extends GuiScreen {
         if (setting instanceof ColorSetting && editingColor == setting) return ROW + PICKER;
         return headerHeight(setting);
     }
-    private String effectiveTheme(HudManager.HudElement element) { if (element.getTheme() != null) return element.getTheme(); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); return hud == null ? "Vibe" : hud.getMode().getValue(); }
-    private String friendlyName(String id) { String value; if (HudManager.ARRAY_LIST.equals(id)) value = "Array list"; else if (HudManager.SESSION_INFO.equals(id)) value = "Statistics"; else if (HudManager.MOTION_GRAPH.equals(id)) value = "Motion graph"; else if (HudManager.CPS_GRAPH.equals(id)) value = "CPS graph"; else if (HudManager.MUSIC.equals(id)) value = "Music"; else { value = id == null ? "" : id.replace('_', ' '); value = value.isEmpty() ? value : Character.toUpperCase(value.charAt(0)) + value.substring(1); } return LanguageManager.translate(value); }
+    private String effectiveTheme(HudManager.HudElement element) { if (HudManager.TARGET_HUD.equals(element.getId())) return Vibe.getInstance().getModuleManager().getModule(HudModule.class).targetHud.mode.getValue(); if (element.getTheme() != null) return element.getTheme(); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); return hud == null ? "Vibe" : hud.getMode().getValue(); }
+    private String friendlyName(String id) { String value; if (HudManager.TARGET_HUD.equals(id)) value = "Target HUD"; else if (HudManager.ARRAY_LIST.equals(id)) value = "Array list"; else if (HudManager.SESSION_INFO.equals(id)) value = "Statistics"; else if (HudManager.MOTION_GRAPH.equals(id)) value = "Motion graph"; else if (HudManager.CPS_GRAPH.equals(id)) value = "CPS graph"; else if (HudManager.MUSIC.equals(id)) value = "Music"; else { value = id == null ? "" : id.replace('_', ' '); value = value.isEmpty() ? value : Character.toUpperCase(value.charAt(0)) + value.substring(1); } return LanguageManager.translate(value); }
     private String displayName(Setting<?> setting, String element) {
         String value = setting.getRawName();
-        if (HudManager.ARRAY_LIST.equals(element)) value = value.replaceFirst("(?i)^ArrayList\\s*", "").replaceFirst("(?i)^Array\\s*", "");
+        if (HudManager.TARGET_HUD.equals(element)) value = value.replaceFirst("(?i)^Target HUD\\s+", "");
+        else if (HudManager.CLOCK.equals(element)) value = value.replaceFirst("(?i)^Clock\\s+", "");
+        else if (HudManager.SCOREBOARD.equals(element)) value = value.replaceFirst("(?i)^Scoreboard\\s+", "");
+        else if (HudManager.ARRAY_LIST.equals(element)) value = value.replaceFirst("(?i)^ArrayList\\s*", "").replaceFirst("(?i)^Array\\s*", "");
         else if (HudManager.NOTIFICATIONS.equals(element)) value = value.replaceFirst("(?i)^Notifications\\s+", "");
         else if (element != null) {
             // The inspector already names the element, so "Watermark Outline" reads as "Outline" when that is translated too.

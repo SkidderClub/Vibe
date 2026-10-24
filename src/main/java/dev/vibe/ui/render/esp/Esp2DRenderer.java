@@ -212,7 +212,7 @@ public final class Esp2DRenderer {
         if(item==null)return;
         int texture=GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
         GL20.glUseProgram(0);GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);GlStateManager.pushMatrix();
-        try {
+        try (dev.vibe.ui.render.HudItemGeometryRenderer.Scope items=dev.vibe.ui.render.HudItemGeometryRenderer.begin()) {
             GlStateManager.translate(x,y,0);GlStateManager.scale(scale,scale,scale);
             GlStateManager.enableTexture2D();GlStateManager.enableDepth();RenderHelper.enableGUIStandardItemLighting();
             GlStateManager.color(1,1,1,opacity);mc.getRenderItem().renderItemAndEffectIntoGUI(item,0,0);

@@ -65,7 +65,7 @@ final float scale = s.scale.getFloat() * element.getScale();
         if(rows.isEmpty() || !preview && DebugOverlay.overlaps(left-12,top-12,left+w+12,top+h+12))return;
         BlurModule blur = Vibe.getInstance().getModuleManager().getModule(BlurModule.class);
         // The blur samples the screen at HUD coordinates; the editor's scaled preview would show the wrong region.
-        boolean blurred = !preview && blur!=null && blur.isEnabled() && blur.getElements().isSelected(BlurModule.ARRAY_LIST);
+        boolean blurred = (!preview || Vibe.getInstance().getHudManager()!=null && Vibe.getInstance().getHudManager().isFramebufferPreview()) && blur!=null && blur.isEnabled() && blur.getElements().isSelected(BlurModule.ARRAY_LIST);
         long now=System.currentTimeMillis();
         for(int i=0;i<rows.size();i++){
             Row row=rows.get(i); row.x=right?left+w-row.width:left; row.y=top+i*(rh+gap);
@@ -95,11 +95,23 @@ final float scale = s.scale.getFloat() * element.getScale();
                 for(Row row:rows)KawaseBlur.drawRoundedRegion((int)Math.floor(row.x),(int)Math.floor(row.y),
                         (int)Math.ceil(row.x+row.width),(int)Math.ceil(row.y+rh),s.radius.getFloat()*scale,blur.getStrength().getInt(),0);
             }
-            if (!s.background.is("None")) for (Row row : rows)
-                RenderUtils.roundedRect((int)row.x,(int)row.y,(int)Math.ceil(row.x+row.width),(int)Math.ceil(row.y+rh),
-                        s.radius.getFloat()*scale,alpha(hud.getBackground().getArgb(),(row.color>>>24)/255F));
-            if(s.glow.isEnabled() && hud.getArrayOutline().isEnabled()) drawOutlineGlow(rows,right,rh,gap,s);
-            if(hud.getArrayOutline().isEnabled())outline(rows,right,rh,gap,s,hud);
+            int background = alpha(hud.getBackground().getArgb(), s.opacity.getFloat());
+            if (s.background.is("Rectangle")) {
+                RenderUtils.roundedRect(left, top, left+w, top+h, s.radius.getFloat()*scale, background);
+            } else if (s.background.is("Steps")) for (int index=0;index<rows.size();index++) {
+                Row row=rows.get(index);
+                // Shared rounded boundaries prevent one-pixel double alpha at fractional row scales.
+                int rowTop=Math.round(row.y),rowBottom=Math.round(row.y+rh);
+                RenderUtils.roundedRect(Math.round(row.x),rowTop,Math.round(row.x+row.width),rowBottom,
+                        s.radius.getFloat()*scale,background);
+            }
+            final List<Row> paintedRows=rows;
+            List<ArrayListOutline.Box> boxes=new ArrayList<ArrayListOutline.Box>();
+            for(Row row:rows)boxes.add(new ArrayListOutline.Box(row.x,row.y,row.x+row.width,row.y+rh));
+            if(hud.getArrayOutline().isEnabled()) drawPerimeter(boxes,s.outline.getValue(),s.outlineWidth.getFloat()*scale,
+                    s.radius.getFloat()*scale,s.glow.isEnabled()?s:null,index->border(paintedRows.get(index),s));
+            if(s.rail.is("Full")) drawPerimeter(boxes,s.background.is("Rectangle")?"Rectangle":"Steps",s.railWidth.getFloat()*scale,
+                    s.radius.getFloat()*scale,s.glow.isEnabled()?s:null,index->paintedRows.get(index).color);
             for(int i=0;i<rows.size();i++){
                 Row r=rows.get(i);
                 float rail=s.railWidth.getFloat()*scale;
@@ -187,72 +199,23 @@ GlStateManager.translate(x,y,0);GlStateManager.scale(s.scale.getFloat()*elementS
             }
         }finally{GlStateManager.popMatrix();if(run!=null)run.endRun();}
     }
-    private void outline(List<Row> rows,boolean right,float rh,float gap,ArrayListSettings s,HudModule hud){
-        float t=s.outlineWidth.getFloat()*s.scale.getFloat();Row first=rows.get(0),last=rows.get(rows.size()-1);
-        if(s.outline.is("Rectangle")){
-            float l=Float.MAX_VALUE,r=0;for(Row row:rows){l=Math.min(l,row.x);r=Math.max(r,row.x+row.width);}
-            rect(l,first.y,r,first.y+t,border(first,s));rect(l,last.y+rh-t,r,last.y+rh,border(last,s));
-            for(Row row:rows){float bottom=Math.min(last.y+rh,row.y+rh+gap);rect(l,row.y,l+t,bottom,border(row,s));rect(r-t,row.y,r,bottom,border(row,s));}return;
-        }
-        for(int i=0;i<rows.size();i++){
-            Row r=rows.get(i);int c=border(r,s);
-            if(s.outline.is("Rows")||gap>0){RenderUtils.roundedOutline((int)r.x,(int)r.y,(int)(r.x+r.width),(int)(r.y+rh),s.radius.getFloat()*s.scale.getFloat(),t,c);continue;}
-            rect(r.x,r.y,r.x+t,r.y+rh,c);rect(r.x+r.width-t,r.y,r.x+r.width,r.y+rh,c);
-            if(i==0)rect(r.x,r.y,r.x+r.width,r.y+t,c);
-            if(i+1==rows.size())rect(r.x,r.y+rh-t,r.x+r.width,r.y+rh,c);
-            else {Row next=rows.get(i+1);float a=right?r.x:r.x+r.width,b=right?next.x:next.x+next.width;rect(Math.min(a,b),r.y+rh-t,Math.max(a,b)+t,r.y+rh,c);}
-        }
-    }
-    /**
-     * Draw the glow ourselves instead of routing it through roundedOutline.
-     * That helper restores the normal alpha blend function for every row,
-     * which turned a large glow radius into a stack of hard, cyan outlines.
-     */
-    private void drawOutlineGlow(List<Row> rows,boolean right,float rh,float gap,ArrayListSettings s){
-        float strength=Math.max(0.0F,Math.min(1.0F,s.glowStrength.getFloat()));
-        float radius=Math.min(10.0F,Math.max(1.0F,s.glowRadius.getFloat()));
-        int passes=Math.max(2,Math.min(4,(int)Math.ceil(radius*.4F)));
-        GL11.glPushAttrib(GL11.GL_ENABLE_BIT|GL11.GL_COLOR_BUFFER_BIT|GL11.GL_CURRENT_BIT|GL11.GL_LINE_BIT);
-        try{
-            // Normal alpha composition prevents bright colour channels from
-            // accumulating into white when neighbouring stepped rows overlap.
-            GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);
-            GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glEnable(GL11.GL_LINE_SMOOTH);
-            // Each pass is the real outer silhouette. The old implementation
-            // expanded one rounded rectangle per row, leaving a stack of hard
-            // boxes across the text instead of a glow around the ArrayList.
-            for(int pass=passes;pass>=0;pass--){
-                float progress=pass/(float)passes;
-                GL11.glLineWidth(1.0F+radius*progress*.65F);
-                float opacity=strength*.075F*(1.0F-progress)*(1.0F-progress);
-                if(opacity<=.002F)continue;
-                glowPath(rows,right,rh,gap,s,opacity);
+    private static void drawPerimeter(List<ArrayListOutline.Box> boxes,String shape,float thickness,
+                                      float radius,ArrayListSettings glow,java.util.function.IntUnaryOperator colors) {
+        if (shape.equals("Rows")) {
+            for (int i=0;i<boxes.size();i++) {
+                final int row=i;
+                paintPath(ArrayListOutline.path(Collections.singletonList(boxes.get(i)),true),thickness,radius,glow,unused->colors.applyAsInt(row));
             }
-        }finally{GL11.glPopAttrib();}
+        } else paintPath(ArrayListOutline.path(boxes,shape.equals("Rectangle")),thickness,radius,glow,colors);
     }
-    private static void glowPath(List<Row> rows,boolean right,float rh,float gap,ArrayListSettings s,float opacity){
-        if(rows.isEmpty())return;
-        if(s.outline.is("Rectangle")){
-            float left=Float.MAX_VALUE,rightEdge=-Float.MAX_VALUE;for(Row row:rows){left=Math.min(left,row.x);rightEdge=Math.max(rightEdge,row.x+row.width);}
-            int color=alpha(border(rows.get(0),s),opacity);
-            glowSegment(left,rows.get(0).y,rightEdge,rows.get(0).y,color);glowSegment(left,rows.get(rows.size()-1).y+rh,rightEdge,rows.get(rows.size()-1).y+rh,color);
-            glowSegment(left,rows.get(0).y,left,rows.get(rows.size()-1).y+rh,color);glowSegment(rightEdge,rows.get(0).y,rightEdge,rows.get(rows.size()-1).y+rh,color);return;
+    private static void paintPath(List<ArrayListOutline.Point> path,float thickness,float radius,ArrayListSettings glow,
+                                  java.util.function.IntUnaryOperator colors) {
+        if(glow!=null) for(int pass=4;pass>=1;pass--) {
+            float progress=pass/4F;
+            ArrayListOutline.draw(path,thickness+glow.glowRadius.getFloat()*progress,radius,colors,
+                    glow.glowStrength.getFloat()*.055F*(1-progress*.7F));
         }
-        for(int i=0;i<rows.size();i++){
-            Row row=rows.get(i);int color=alpha(border(row,s),opacity);
-            if(s.outline.is("Rows")||gap>0){
-                glowSegment(row.x,row.y,row.x+row.width,row.y,color);glowSegment(row.x,row.y+rh,row.x+row.width,row.y+rh,color);
-                glowSegment(row.x,row.y,row.x,row.y+rh,color);glowSegment(row.x+row.width,row.y,row.x+row.width,row.y+rh,color);continue;
-            }
-            glowSegment(row.x,row.y,row.x,row.y+rh,color);glowSegment(row.x+row.width,row.y,row.x+row.width,row.y+rh,color);
-            if(i==0)glowSegment(row.x,row.y,row.x+row.width,row.y,color);
-            if(i+1==rows.size())glowSegment(row.x,row.y+rh,row.x+row.width,row.y+rh,color);
-            else {Row next=rows.get(i+1);float a=right?row.x:row.x+row.width,b=right?next.x:next.x+next.width;glowSegment(Math.min(a,b),row.y+rh,Math.max(a,b),row.y+rh,color);}
-        }
-    }
-    private static void glowSegment(float x1,float y1,float x2,float y2,int color){
-        if((color>>>24)==0)return;GlStateManager.color((color>>16&255)/255F,(color>>8&255)/255F,(color&255)/255F,(color>>>24)/255F);
-        GL11.glBegin(GL11.GL_LINES);GL11.glVertex2f(x1,y1);GL11.glVertex2f(x2,y2);GL11.glEnd();
+        ArrayListOutline.draw(path,thickness,radius,colors,1);
     }
     private static int border(Row row,ArrayListSettings s){return s.outlineAccent.isEnabled()?row.color:alpha(s.outlineColor.getArgb(),(row.color>>>24)/255f);}
     private static float fade(ArrayListSettings s,int row,int count){return s.opacity.getFloat()*(1-s.fade.getFloat()*row/Math.max(1f,count-1));}

@@ -50,7 +50,11 @@ public final class HudSettingsGui extends GuiScreen {
         } else if (HudManager.COORDINATES.equals(element)) {
             settings.add(hud.getCoordinatesOutline());
         } else if (HudManager.SCOREBOARD.equals(element)) {
-            settings.add(hud.getReplaceScoreboardServer());
+            settings.add(hud.getReplaceScoreboardServer()); settings.addAll(hud.scoreboardColors.all);
+        } else if (HudManager.CLOCK.equals(element)) {
+            settings.addAll(hud.clock.all);
+        } else if (HudManager.TARGET_HUD.equals(element)) {
+            settings.addAll(hud.targetHud.all);
         } else if (HudManager.ARMOR.equals(element)) {
             settings.add(hud.getArmorDisplayMode());
         } else if (HudManager.HEALTH.equals(element)) {

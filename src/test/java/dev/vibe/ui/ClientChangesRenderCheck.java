@@ -88,6 +88,14 @@ public final class ClientChangesRenderCheck {
             Vibe vibe = new Vibe(); set(Vibe.class,null,"instance",vibe);
             ModuleManager modules = instance(ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<Module>()); set(Vibe.class,vibe,"moduleManager",modules);
+            if (args.length > 0 && args[0].equals("hud-visuals")) {
+                HudVisualsRenderCheck.verify(mc, modules, OUTPUT);
+                return;
+            }
+            if (args.length > 0 && args[0].equals("hud-refresh")) {
+                HudRefreshRenderCheck.verify(mc, modules, OUTPUT);
+                return;
+            }
             if (args.length > 0 && args[0].equals("chat-inventory")) {
                 ChatInventoryRenderCheck.verify(mc, OUTPUT);
                 return;
@@ -652,7 +660,7 @@ public final class ClientChangesRenderCheck {
         }
     }
 
-    private static void frame(int width,int height) throws Exception {
+    static void frame(int width,int height) throws Exception {
         Framebuffer target = mc.getFramebuffer();
         if (target==null || target.framebufferWidth!=width || target.framebufferHeight!=height) {
             if (target!=null) target.deleteFramebuffer(); target=new Framebuffer(width,height,true); set(Minecraft.class,mc,"framebufferMc",target);

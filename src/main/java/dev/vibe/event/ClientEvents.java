@@ -122,6 +122,7 @@ import net.minecraft.item.ItemStack;
 
 public final class ClientEvents {
 
+    private final dev.vibe.ui.render.OofArrowsRenderer oofArrowsRenderer = new dev.vibe.ui.render.OofArrowsRenderer();
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final dev.vibe.ui.render.BreakProgressRenderer breakProgressRenderer = new dev.vibe.ui.render.BreakProgressRenderer();
     private final EspRenderer espRenderer = new EspRenderer();
@@ -199,6 +200,7 @@ public final class ClientEvents {
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
+            if (Vibe.getInstance().getHudManager() != null) Vibe.getInstance().getHudManager().tickTargets();
             if (Vibe.getInstance().getConfig() != null)
                 Vibe.getInstance().getConfig().tickSession(Vibe.getInstance().getModuleManager());
             dev.vibe.module.impl.meme.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class);
@@ -436,6 +438,10 @@ public final class ClientEvents {
     public void onHud(RenderGameOverlayEvent.Post event) {
         if (event.type != RenderGameOverlayEvent.ElementType.TEXT
                 && event.type != RenderGameOverlayEvent.ElementType.ALL) return;
+        // Vanilla's hotbar/health are present here; Vibe's movable widgets follow below.
+        if (event.type == RenderGameOverlayEvent.ElementType.TEXT
+                && minecraft.currentScreen instanceof dev.vibe.hud.HudEditorGui)
+            ((dev.vibe.hud.HudEditorGui) minecraft.currentScreen).captureGameView();
         if (event.type == RenderGameOverlayEvent.ElementType.ALL) restoreVanillaScoreboard();
         if (FreecamModule.hideHudHook()) return;
         if (minecraft.gameSettings.showDebugInfo && debugText != null && !debugText.isCanceled()) {
@@ -449,6 +455,7 @@ public final class ClientEvents {
                 if (!pitBot) {
                     Vibe.getInstance().getHudManager().draw();
                     espRenderer.renderOverlay();
+                    oofArrowsRenderer.render();
                     hitmarkerRenderer.renderOverlay();
                     scaffoldCountRenderer.render();
                     if (deferredCrosshair) customCrosshairRenderer.render();
@@ -622,6 +629,8 @@ public final class ClientEvents {
     @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.HIGHEST)
     public void onPreAll(RenderGameOverlayEvent.Pre event) {
         if (event.type != RenderGameOverlayEvent.ElementType.ALL) return;
+        if (FreecamModule.hideHudHook() && minecraft.currentScreen instanceof dev.vibe.hud.HudEditorGui)
+            ((dev.vibe.hud.HudEditorGui) minecraft.currentScreen).captureGameView();
         if (FreecamModule.hideHudHook()) {
             restoreVanillaScoreboard();
             debugText = null;
@@ -730,6 +739,7 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onWorldRender(RenderWorldLastEvent event) {
+        oofArrowsRenderer.capture(event.partialTicks);
         dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
         if (hypixel != null && hypixel.suppressVisuals()) return;
         fogRenderer.renderMinecraft();
@@ -806,6 +816,7 @@ public final class ClientEvents {
             event.setCanceled(true);
             return;
         }
+        if (Vibe.getInstance().getHudManager() != null) Vibe.getInstance().getHudManager().recordTarget((EntityLivingBase) event.target);
         if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordAttack((EntityLivingBase) event.target);
         WTapModule wTap = Vibe.getInstance().getModuleManager().getModule(WTapModule.class);
         if (wTap != null) wTap.onAttack((EntityLivingBase) event.target);
@@ -922,6 +933,7 @@ public final class ClientEvents {
     public void onScriptDisconnect(FMLNetworkEvent.ClientDisconnectionFromServerEvent event) {
         minecraft.addScheduledTask(() -> {
             fogRenderer.close(); hitmarkerRenderer.close(); phoneRenderer.close();
+            oofArrowsRenderer.clear();
             dev.vibe.module.impl.meme.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class);
             if (phone != null) phone.stopCommunications();
             dev.vibe.ui.render.ItemGlowRenderer.closeActive();

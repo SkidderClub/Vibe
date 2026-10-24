@@ -40,7 +40,7 @@ public final class ScaffoldCountRenderer {
         FontRenderer font = minecraft.fontRendererObj;
         RenderUtils.roundedRect(left, top, left + WIDTH, top + HEIGHT, 8.0F, 0xB4141414);
 
-        if (stack != null) {
+        if (stack != null) try (HudItemGeometryRenderer.Scope items = HudItemGeometryRenderer.begin()) {
             GlStateManager.pushMatrix();
             GlStateManager.enableRescaleNormal();
             GlStateManager.enableBlend();
