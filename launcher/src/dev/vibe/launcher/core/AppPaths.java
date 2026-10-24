@@ -39,7 +39,7 @@ public final class AppPaths {
     public Path root() { return root; }
     public Path settingsFile() { return root.resolve("launcher.properties"); }
     public Path lockFile() { return root.resolve("launcher.lock"); }
-    /** The managed Vibe checkout. Its {@code run/client} folder is the persistent game profile. */
+    /** The managed Vibe checkout of older launchers; only its {@code run/client} folder is still used. */
     public Path source() { return root.resolve("source"); }
     public Path runtimes() { return root.resolve("runtime"); }
     public Path logs() { return root.resolve("logs"); }
@@ -48,5 +48,11 @@ public final class AppPaths {
     public Path skinCache() { return cache().resolve("skins"); }
     public Path staging() { return root.resolve("staging"); }
     public Path sessionFile() { return root.resolve("session.properties"); }
+    /** Minecraft, Forge, OptiFine, libraries, natives and assets prepared by this launcher. */
+    public Path minecraft() { return root.resolve("minecraft"); }
+    /** Downloaded Vibe releases, one folder per tag. */
+    public Path versions() { return root.resolve("versions"); }
+    /** The last GitHub release list, kept so versions stay visible offline. */
+    public Path releasesCache() { return cache().resolve("releases.json"); }
     public Path profile() { return source().resolve("run").resolve("client"); }
 }

@@ -1,23 +1,27 @@
 # Vibe Launcher
 
-`VibeLauncher.jar` installs, updates and starts Vibe. It needs nothing besides a
-Java runtime that can open the JAR (Java 8 or newer): the Vibe source, the Java
-runtimes for Minecraft and Gradle, Forge and OptiFine are all set up on the first
-start.
+`VibeLauncher.jar` downloads, manages and starts Vibe. It needs nothing besides a
+Java runtime that can open the JAR (Java 8 or newer): Minecraft 1.8.9, Forge,
+OptiFine, the libraries, natives and assets, plus the private Java 8 runtime, are
+all prepared on the first start. Vibe itself is downloaded as a ready-made JAR
+from `VibeUpdate/VibeReleases`; no source checkout or Gradle is involved.
 
 ## Features
 
 - **Play bar on every page** with the selected account, the game mode, live
-  progress (download, Gradle stages, Minecraft start) and a Stop button.
+  progress (version download, Minecraft setup, game start) and a Stop button.
+- **Versions page**: installed builds, every release on GitHub, switching,
+  removing, release notes and one **Update to latest** action. The chosen JAR is
+  the only Vibe build in `mods/`, so version changes are instant.
 - **Game modes**: Vibe (Forge 1.8.9 + OptiFine), GTA7 and GTA8: Los Vibes. The
   city modes open straight after the main menu has loaded.
 - **Accounts** from Vibe's encrypted vault, with skin heads. The launcher only
   reads names and UUIDs; refresh tokens are skipped while parsing and the
-  decrypted buffer is wiped. *Add
-  account* starts Vibe directly in its Alt Manager for Microsoft or offline
-  sign-in. *Automatic* leaves the choice to Vibe's Auto Login.
+  decrypted buffer is wiped. *Add account* starts Vibe directly in its Alt
+  Manager for Microsoft or offline sign-in. *Automatic* leaves the choice to
+  Vibe's Auto Login.
 - **Home** with the account's real skin and cape as a rotating 3D model, framed
-  by Vibe's default 2D ESP, plus the Vibe changelog and the latest commits.
+  by Vibe's default 2D ESP, plus the release notes of the selected version.
 - **Mods**: drag `.jar` files anywhere onto the window. Names, versions and
   authors come from `mcmod.info`; mods can be switched off (`.disabled`) or
   removed. OptiFine, Vibe itself, Fabric and newer-Forge mods are refused, mods
@@ -25,13 +29,13 @@ start.
 - **Appearance**: the six menu themes are shared with Vibe in both directions.
 - **Extensions**: Cosmetica is enabled by default; the example Test module is optional.
   Use **Add JAR** or drag a custom extension JAR onto the window to install it.
-  Installed extensions have
-  enable/disable switches and can be removed. Their settings and progress remain
-  in the persistent profile when disabled.
+  Installed extensions have enable/disable switches and can be removed. Their
+  settings and progress remain in the persistent profile when disabled.
 - **Settings**: memory, what happens to the window when Minecraft starts,
-  automatic updates, Java runtimes, folders, import of `options.txt` and resource
-  packs from `.minecraft`, build-cache and source repair.
-- **Console** with Gradle and Minecraft output, highlighted errors and the log files.
+  automatic version updates, Java 8, folders, import of `options.txt` and
+  resource packs from `.minecraft`, repair of the game files and the active
+  version.
+- **Console** with Minecraft output, highlighted errors and the log files.
 - English and German interface (follows Vibe's language, then the system).
 
 ## Build
@@ -53,28 +57,40 @@ Windows, `~/Library/Application Support/VibeLauncher` on macOS and
 
 | Path | Contents |
 | --- | --- |
-| `source/` | Managed checkout of `SkidderClub/Vibe` (`main`). |
-| `source/run/client/` | Vibe's persistent game profile: worlds, options, accounts, mods. |
-| `source/run/client/vibe/extensions.properties` | Public extension selections, applied before launch. |
-| `runtime/temurin-8`, `runtime/temurin-21` | Private Java runtimes, SHA-256 verified. |
-| `logs/launcher.log`, `logs/game/` | Launcher log and one log per game session. |
+| `versions/<tag>/` | One downloaded release: `Vibe-1.8.9-<version>.jar`, `release.properties`, `changelog.md`. |
+| `minecraft/` | Minecraft 1.8.9, Forge, OptiFine, libraries, natives and assets, prepared once. |
+| `minecraft/.stamp` | Marks the prepared game files and their platform/asset index. |
+| `source/run/client/` | Vibe's persistent game profile: worlds, options, accounts, mods, crash reports. |
+| `source/run/client/mods/` | Your custom mods plus the selected Vibe JAR. |
+| `source/run/client/vibe/accounts/` | Account vault (`accounts.vault`) and key (`accounts.key`). |
+| `runtime/temurin-8` | Private Java 8 runtime, SHA-256 verified, started with Minecraft. |
+| `cache/releases.json` | The last GitHub release list, so versions stay visible offline. |
 | `cache/skins/` | Cached skins and capes. |
-| `launcher.properties` | Launcher settings. |
+| `logs/launcher.log`, `logs/game/` | Launcher log and one log per game session. |
+| `launcher.properties` | Launcher settings, including the selected version. |
 
-**Updates.** Before a launch (or on start, with automatic updates enabled) the
-launcher asks GitHub for the newest commit. Small updates download only the
-changed files; large or rewritten histories download the full source archive,
-which replaces the checkout in one move. `run/` and the cached OptiFine JAR are
-carried over, so the profile is never touched.
+The old `source/` checkout is no longer downloaded or updated; only its
+`run/client` folder is reused so worlds, settings and mods stay where they are.
+A leftover checkout can be deleted without losing the game profile.
 
-**Launch.** The launcher starts the Gradle wrapper itself, like `gradlew runClient
--PvibeOptifine -PvibePersistentRun -PvibeMaxMemory=<MB>` but without a shell in
-between, with JDK 21 for Gradle and Java 8 for Minecraft passed as toolchains through
-environment variables. Output goes to a log file that the console follows, so
-Minecraft keeps running if the launcher is closed. Vibe writes
-`VIBE_LAUNCH_READY_FILE` when its first screen is drawn, which marks the game as
-running. On Java 9+ a restarted launcher reconnects to a running game; Stop ends
-Gradle and Minecraft on every Java version.
+**Versions.** The launcher asks the GitHub API for the releases of
+`VibeUpdate/VibeReleases`. A release counts when it has a
+`Vibe-1.8.9-*.jar` asset. The JAR is verified against the asset's SHA-256
+(`digest`, otherwise a matching `.sha256` file) and opened to check for
+`mcmod.info`, then stored under `versions/<tag>/`. Switching versions removes
+the other managed `Vibe-1.8.9-*.jar` files from `mods/` and hard-links (or
+copies) the chosen one. Release bodies are shown as notes on the Versions and
+Home pages and saved as `changelog.md`.
+
+**Launch.** The launcher prepares Minecraft once: the Mojang version manifest
+and 1.8.9 metadata, the client JAR, vanilla libraries, natives and assets, the
+Forge installer profile and universal JAR, and OptiFine. It then starts
+`net.minecraft.launchwrapper.Launch` directly with Java 8, using Forge's
+argument template and `optifine.OptiFineForgeTweaker`. Vibe JARs never enter the
+classpath; the selected one is loaded from `mods/` like any Forge mod. Vibe
+writes `VIBE_LAUNCH_READY_FILE` when its first screen is drawn, which marks the
+game as running. On Java 9+ a restarted launcher reconnects to a running game;
+Stop ends Minecraft on every Java version.
 
 **Bridge.** Before each launch the launcher writes
 `run/client/vibe/launcher.properties` (`mode` = `vibe`, `gta7`, `gta8` or
@@ -93,19 +109,22 @@ launcher has exited; the launcher then starts again, even if the replacement fai
 
 ## Troubleshooting
 
-Every error has a code such as `VL-101` (no internet connection) or `VL-504` (OptiFine could not be
-downloaded). It appears in the toast, in the play bar and in the console, together with a one-line fix;
-*How to fix* opens its section in [docs/LAUNCHER_ERRORS.md](../docs/LAUNCHER_ERRORS.md), the full guide
-to every code. The hundreds group the cause: 1xx internet, 2xx files, 3xx Java, 4xx Vibe
-download, 5xx Gradle build, 6xx Minecraft, 7xx launcher, 8xx mods, 900 unexpected.
+Every error has a code such as `VL-101` (no internet connection) or `VL-610`
+(Forge could not be downloaded). It appears in the toast, in the play bar and in
+the console, together with a one-line fix; *How to fix* opens its section in
+[docs/LAUNCHER_ERRORS.md](../docs/LAUNCHER_ERRORS.md), the full guide to every
+code. The hundreds group the cause: 1xx internet, 2xx files, 3xx Java, 4xx Vibe
+download, 5xx the older Gradle build, 6xx Minecraft, 7xx launcher, 8xx mods,
+900 unexpected.
 
-Failed builds and crashes are diagnosed from Gradle's "What went wrong", the last lines of the game output
-and the crash report, so they name the actual cause (wrong Java version, out of memory, graphics driver,
-mod conflict, ...). Downloads and builds check the free disk space first, and read timeouts are retried
+Crashes are diagnosed from Minecraft's output and the crash report, so they name
+the actual cause (out of memory, graphics driver, missing natives, mod conflict,
+...). Downloads check the free disk space first, and read timeouts are retried
 instead of being treated as a cancel.
 
-- **The build fails after an update:** Settings → Troubleshooting → *Clear build cache*.
-- **Broken or edited source:** *Reinstall Vibe* downloads it again and keeps the profile.
+- **Crashes or broken game files:** Settings → Troubleshooting → *Repair game files*
+  downloads Minecraft, Forge and OptiFine again and keeps versions and the profile.
+- **Broken version JAR:** *Reinstall Vibe* downloads the active version again.
 - **Java problems:** Settings → Java → *Reinstall*.
 - The console's *Launcher log* and *Game log* buttons open the files to attach to a bug report.
 

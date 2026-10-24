@@ -97,30 +97,6 @@ public final class ErrorTests {
             Check.equal("api.github.com could not be found.", Text.describe(new UnknownHostException("api.github.com")));
         });
 
-        check.test("failed builds are diagnosed from Gradle's output", () -> {
-            Check.equal(ErrorCode.OPTIFINE_DOWNLOAD, build(null, "Execution failed for task ':prepareOptifine'.\nOptiFine did not provide a download link. Retry later"));
-            Check.equal(ErrorCode.NO_INTERNET, build(null, "Could not resolve all files for configuration ':runtimeClasspath'.\nCould not resolve com.google.code.gson:gson:2.2.4."
-                    + "\nCould not GET 'https://repo.maven.apache.org/x.pom'.\nrepo.maven.apache.org: Name or service not known"));
-            Check.equal(ErrorCode.BUILD_DOWNLOAD, build(null, "Could not resolve all files for configuration ':runtimeClasspath'.\nCould not GET 'https://maven.minecraftforge.net/x'.\nRead timed out"));
-            Check.equal(ErrorCode.COMPILE_ERROR, build(new String[] { "Could not resolve an optional thing" },
-                    "Execution failed for task ':compileJava'.\nCompilation failed; see the compiler error output for details."));
-            Check.equal(ErrorCode.WRONG_JAVA, build(null, "Could not determine the dependencies of task ':compileJava'.\n"
-                    + "No matching toolchains found for requested specification: {languageVersion=21, vendor=any, implementation=vendor-specific}."));
-            Check.equal(ErrorCode.GRADLE_LOCKED, build(null, "Gradle could not start your build.\nTimeout waiting to lock journal cache (/home/u/.gradle/caches/journal-1). "
-                    + "It is currently in use by another Gradle instance."));
-            Check.equal(ErrorCode.GRADLE_MEMORY, build(null, "Unable to start the daemon process.\nCould not reserve enough space for 3145728KB object heap"));
-            Check.equal(ErrorCode.MINECRAFT_FILES, build(null, "Execution failed for task ':runClient'.\nUnimined did not prepare the Minecraft 1.8.9 client: /x.jar"));
-            Check.equal(ErrorCode.GRADLE_DOWNLOAD, build(new String[] { "Downloading https://services.gradle.org/distributions/gradle-8.8-bin.zip",
-                    "Exception in thread \"main\" java.net.UnknownHostException: services.gradle.org" }, ""));
-            Check.equal(ErrorCode.COMPILE_ERROR, build(new String[] { "/src/main/java/dev/vibe/A.java:12: error: cannot find symbol" }, ""));
-            Check.equal(ErrorCode.DISK_FULL, build(new String[] { "java.io.IOException: No space left on device" }, "Execution failed for task ':remapJar'."));
-            Check.equal(ErrorCode.BUILD_FAILED, build(null, "Something nobody has seen before."));
-            FailureAnalyzer analyzer = new FailureAnalyzer();
-            analyzer.accept("> Task :compileJava", false);
-            analyzer.accept("  /src/main/java/dev/vibe/A.java:12: error: cannot find symbol  ", false);
-            Check.equal("/src/main/java/dev/vibe/A.java:12: error: cannot find symbol", analyzer.buildFailure("").evidence);
-        });
-
         check.test("crashes are diagnosed from the crash report and the last lines", () -> {
             Check.equal(ErrorCode.GRAPHICS, crash(null, "---- Minecraft Crash Report ----\nDescription: Initializing game\n\norg.lwjgl.LWJGLException: Pixel format not accelerated"));
             Check.equal(ErrorCode.GAME_MEMORY_SETTING, crash(new String[] { "Error occurred during initialization of VM", "Could not reserve enough space for 8388608KB object heap" }, ""));
@@ -130,25 +106,18 @@ public final class ErrorTests {
             Check.equal(ErrorCode.GAME_CRASHED, crash(null, "net.minecraftforge.fml.common.LoaderExceptionModCrash: Caught exception from Vibe (vibe)"));
             Check.equal(ErrorCode.ROSETTA, crash(new String[] { "A problem occurred starting process 'command '/x/bin/java''", "error=86, Bad CPU type in executable" }, ""));
             Check.equal(ErrorCode.GAME_CRASHED, crash(null, "Description: Ticking entity\n\njava.lang.NullPointerException"));
-            // Build output and old warnings do not decide a later crash.
+            // Only the last lines count, so an old harmless warning does not decide a later crash.
             FailureAnalyzer analyzer = new FailureAnalyzer();
-            analyzer.accept("java.lang.OutOfMemoryError: Metaspace", false);
-            analyzer.accept("[Client thread/WARN]: java.lang.UnsatisfiedLinkError: optional native", true);
-            for (int index = 0; index < 250; index++) analyzer.accept("[Client thread/INFO]: line " + index, true);
-            Check.equal(ErrorCode.GAME_CRASHED, analyzer.gameFailure("").code);
+            analyzer.accept("[Client thread/WARN]: java.lang.UnsatisfiedLinkError: optional native");
+            for (int index = 0; index < 250; index++) analyzer.accept("[Client thread/INFO]: line " + index);
+            analyzer.accept("[Client thread/ERROR]: java.lang.OutOfMemoryError: Java heap space");
+            Check.equal(ErrorCode.GAME_OUT_OF_MEMORY, analyzer.gameFailure("").code);
         });
-    }
-
-    private static ErrorCode build(String[] lines, String summary) {
-        FailureAnalyzer analyzer = new FailureAnalyzer();
-        if (lines != null) for (String line : lines) analyzer.accept(line, false);
-        return analyzer.buildFailure(summary).code;
     }
 
     private static ErrorCode crash(String[] lines, String report) {
         FailureAnalyzer analyzer = new FailureAnalyzer();
-        analyzer.accept("> Task :compileJava", false);
-        if (lines != null) for (String line : lines) analyzer.accept(line, true);
+        if (lines != null) for (String line : lines) analyzer.accept(line);
         return analyzer.gameFailure(report).code;
     }
 

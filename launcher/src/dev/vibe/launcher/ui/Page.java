@@ -3,6 +3,7 @@ package dev.vibe.launcher.ui;
 /** The sidebar destinations. */
 enum Page {
     HOME("Home", Icons.HOME),
+    VERSIONS("Versions", Icons.DOWNLOAD),
     MODS("Mods", Icons.MODS),
     EXTENSIONS("Extensions", Icons.PLUS),
     ACCOUNTS("Accounts", Icons.ACCOUNTS),

@@ -23,7 +23,7 @@ The hundreds digit tells you where the problem is:
 | [2xx](#2xx-files-and-folders) | Files, folders and disk space |
 | [3xx](#3xx-java) | The launcher's Java runtimes |
 | [4xx](#4xx-vibe-download-and-updates) | Downloading and updating Vibe |
-| [5xx](#5xx-building-vibe-gradle) | Building Vibe with Gradle |
+| [5xx](#5xx-building-vibe-gradle) | Building Vibe with Gradle (older launchers) |
 | [6xx](#6xx-starting-and-playing-minecraft) | Starting Minecraft and crashes |
 | [7xx](#7xx-the-launcher-itself) | The launcher itself |
 | [8xx](#8xx-custom-mods) | Custom mods |
@@ -46,10 +46,11 @@ The hundreds digit tells you where the problem is:
    twice automatically.
 3. **Look at the console** (left sidebar → Console). Red lines show what went wrong.
 4. **Use the repair buttons** in Settings:
-   - *Troubleshooting → Clear build cache*: Vibe is rebuilt from scratch on the next start.
-   - *Troubleshooting → Reinstall Vibe*: The source code is downloaded again. Worlds, settings, accounts
-     and mods are kept.
-   - *Java → Reinstall*: Java 8 and Java 21 are downloaded again (about 250 MB).
+   - *Troubleshooting → Repair game files*: Minecraft 1.8.9, Forge and OptiFine are downloaded again.
+     Worlds, settings, accounts and mods are kept.
+   - *Troubleshooting → Reinstall Vibe*: The active Vibe version is downloaded again. Worlds, settings,
+     accounts and mods are kept.
+   - *Java → Reinstall*: The private Java 8 runtime is downloaded again (about 200 MB).
 5. **Restart your PC** if files are locked or Java processes hang.
 
 ## Important folders
@@ -66,24 +67,24 @@ Open it with Settings → Folders → *Launcher data*. It contains:
 
 | Path | Contents |
 | --- | --- |
-| `source/` | The Vibe source code that Vibe is built from |
+| `source/` | Old checkout of the Vibe source code; only `source/run/client` is still used. A leftover checkout can be deleted |
 | `source/run/client/` | Your game profile: worlds, options, accounts, mods, crash reports |
 | `source/run/client/crash-reports/` | Minecraft's crash reports |
-| `source/run/client/mods/` | Your custom mods |
+| `source/run/client/mods/` | Your custom mods; the active Vibe JAR is switched in here |
 | `source/run/client/vibe/accounts/` | Account vault (`accounts.vault`) and key (`accounts.key`) |
-| `source/build/` | Build output; `source/build/optifine/` holds the OptiFine JAR |
-| `runtime/temurin-8`, `runtime/temurin-21` | Java 8 (starts Minecraft) and Java 21 (builds Vibe) |
+| `versions/<tag>/` | Downloaded Vibe versions: JAR, `release.properties`, `changelog.md` |
+| `minecraft/` | Minecraft 1.8.9, Forge, libraries, natives, assets and `optifine/`, prepared once |
+| `minecraft/.stamp` | Marks that `minecraft/` is complete |
+| `runtime/temurin-8` | The private Java 8 runtime that starts Minecraft |
+| `cache/releases.json` | Cached list of the GitHub releases |
 | `logs/launcher.log` | Launcher log |
-| `logs/game/` | One log per game start (build and Minecraft output) |
+| `logs/game/` | One log per game start (launcher and Minecraft output) |
 | `launcher.properties` | The launcher's settings |
 
-Gradle also uses its own **Gradle folder** in your user directory: `%USERPROFILE%\.gradle` on Windows,
-`~/.gradle` on macOS and Linux (or the folder from the `GRADLE_USER_HOME` environment variable). It holds
-Gradle itself (`wrapper/dists/`), Minecraft, Forge and all libraries (`caches/`).
+A separate Gradle folder is no longer used by current launchers.
 
 > **Tip:** You can move the data folder by starting the launcher like this:
-> `java -Dvibe.launcher.home="D:\VibeLauncher" -jar VibeLauncher.jar`. Move the Gradle folder with the
-> `GRADLE_USER_HOME` environment variable (e.g. `D:\gradle`).
+> `java -Dvibe.launcher.home="D:\VibeLauncher" -jar VibeLauncher.jar`.
 
 ## All codes at a glance
 
@@ -114,23 +115,29 @@ Gradle itself (`wrapper/dists/`), Minecraft, Forge and all libraries (`caches/`)
 | [VL-403](#vl-403) | Vibe download is invalid | Reinstall Vibe |
 | [VL-404](#vl-404) | Game profile could not be moved | Close programs, try again |
 | [VL-405](#vl-405) | Vibe files are missing | Reinstall Vibe |
-| [VL-500](#vl-500) | Build failed | Read the console, clear the build cache |
-| [VL-501](#vl-501) | Download during the build failed | Check the connection, try again later |
-| [VL-502](#vl-502) | Vibe does not compile | Clear cache, reinstall, report |
-| [VL-503](#vl-503) | Gradle could not be set up | Delete the Gradle download |
+| [VL-406](#vl-406) | Vibe version download damaged | Try again |
+| [VL-407](#vl-407) | Release has no JAR | Pick another version |
+| [VL-500](#vl-500) | Build failed (older launchers) | Not used by current launchers |
+| [VL-501](#vl-501) | Download during the build failed (older launchers) | Not used by current launchers |
+| [VL-502](#vl-502) | Vibe does not compile (older launchers) | Not used by current launchers |
+| [VL-503](#vl-503) | Gradle could not be set up (older launchers) | Not used by current launchers |
 | [VL-504](#vl-504) | OptiFine could not be downloaded | Try again later or by hand |
 | [VL-505](#vl-505) | Not enough memory for the build | Close programs, paging file |
-| [VL-506](#vl-506) | Gradle cache damaged | Delete the Gradle cache |
-| [VL-507](#vl-507) | Build files are locked | End other builds, restart |
-| [VL-508](#vl-508) | Minecraft files are missing | Delete the Unimined cache |
-| [VL-600](#vl-600) | Minecraft crashed | Read the crash report, test mods |
+| [VL-506](#vl-506) | Gradle cache damaged (older launchers) | Not used by current launchers |
+| [VL-507](#vl-507) | Build files are locked (older launchers) | Not used by current launchers |
+| [VL-508](#vl-508) | Minecraft files are missing (older launchers) | Not used by current launchers |
+| [VL-600](#vl-600) | Minecraft crashed | Read the crash report, test mods, repair game files |
 | [VL-601](#vl-601) | Minecraft could not reserve its memory | Lower the memory |
 | [VL-602](#vl-602) | Minecraft ran out of memory | Raise the memory |
 | [VL-603](#vl-603) | Graphics driver problem | Update the driver |
 | [VL-604](#vl-604) | A mod prevents the start | Disable custom mods |
-| [VL-605](#vl-605) | Game libraries could not be loaded | Clear the build cache |
+| [VL-605](#vl-605) | Game libraries could not be loaded | Repair game files |
 | [VL-606](#vl-606) | Java crashed | Driver, turn off overlays |
 | [VL-607](#vl-607) | Rosetta 2 is missing | Install Rosetta (Mac) |
+| [VL-608](#vl-608) | Minecraft could not be downloaded | Check the connection |
+| [VL-609](#vl-609) | Minecraft assets could not be downloaded | Check the connection |
+| [VL-610](#vl-610) | Forge could not be downloaded | Check the connection |
+| [VL-611](#vl-611) | Minecraft runtime incomplete | Repair game files |
 | [VL-701](#vl-701) | Launcher is already open | Find the window or end the process |
 | [VL-702](#vl-702) | No desktop available | Start in a desktop session |
 | [VL-703](#vl-703) | Launcher update failed | Update later or by hand |
@@ -154,20 +161,19 @@ Gradle itself (`wrapper/dists/`), Minecraft, Forge and all libraries (`caches/`)
 
 ## 1xx: Internet and servers
 
-The launcher needs the internet for the first start, for updates and for the first build. It talks to
-these servers; a firewall or filter must allow them:
+The launcher needs the internet for the first start, for updates and for downloading Vibe, Minecraft and
+Forge. It talks to these servers; a firewall or filter must allow them:
 
 | Server | Used for |
 | --- | --- |
-| `api.github.com`, `github.com`, `codeload.github.com`, `raw.githubusercontent.com`, `objects.githubusercontent.com`, `release-assets.githubusercontent.com` | Vibe source code, updates, launcher updates, Java downloads |
-| `api.adoptium.net` | Looking up Java 8 and Java 21 |
-| `services.gradle.org` | Gradle itself (on the first build) |
-| `repo.maven.apache.org`, `maven.minecraftforge.net`, `maven.fabricmc.net`, `maven.wagyourtail.xyz`, `jitpack.io` | Libraries for the build |
+| `api.github.com`, `github.com`, `codeload.github.com`, `raw.githubusercontent.com`, `objects.githubusercontent.com`, `release-assets.githubusercontent.com` | Vibe version JARs and releases (`VibeUpdate/VibeReleases`), updates, launcher updates, Java downloads |
+| `api.adoptium.net` | Looking up Java 8 |
+| `repo.maven.apache.org`, `maven.minecraftforge.net`, `maven.fabricmc.net`, `maven.wagyourtail.xyz`, `jitpack.io` | Libraries for Minecraft and Forge |
 | `piston-meta.mojang.com`, `launchermeta.mojang.com`, `libraries.minecraft.net`, `resources.download.minecraft.net` | Minecraft 1.8.9, libraries and assets |
 | `optifine.net` | OptiFine |
 | `api.mojang.com`, `sessionserver.mojang.com`, `textures.minecraft.net` | Skins and capes in the preview |
 
-Once Vibe is installed and built, it also starts **without internet**, as long as no update is
+Once Vibe and the game files are installed, it also starts **without internet**, as long as no update is
 half-finished ([VL-402](#vl-402)).
 
 ### VL-101
@@ -304,14 +310,14 @@ The launcher is not allowed to write or delete a file (`Access is denied`, `Perm
 `AccessDeniedException`).
 
 **Causes and fix:**
-1. **Antivirus:** Add the data folder and the Gradle folder as exceptions.
+1. **Antivirus:** Add the data folder (including `minecraft/`) as an exception.
 2. **Windows "Controlled folder access"** (Windows Security → Virus & threat protection → Ransomware
    protection): Allow `java.exe` and `javaw.exe` or turn the feature off to test.
 3. **OneDrive/Dropbox:** If the launcher or its data folder is in a synced folder, move it out (see the tip
    under [Important folders](#important-folders)).
 4. **Linux/macOS:** If the launcher was ever started with `sudo`, files belong to `root`. Fix this with
-   `sudo chown -R "$USER" ~/.local/share/VibeLauncher ~/.gradle` (macOS:
-   `sudo chown -R "$USER" ~/Library/Application\ Support/VibeLauncher ~/.gradle`). Never start the
+   `sudo chown -R "$USER" ~/.local/share/VibeLauncher` (macOS:
+   `sudo chown -R "$USER" ~/Library/Application\ Support/VibeLauncher`). Never start the
    launcher with `sudo`.
 5. Do **not** start the launcher as administrator if it ran normally before; otherwise it creates files
    you will not be allowed to change later.
@@ -326,7 +332,8 @@ A file or folder is currently open in another program (`being used by another pr
 1. Close Minecraft and other launchers.
 2. Close Explorer windows, editors or IDEs that have files in the data folder open.
 3. End hanging Java processes: Windows Task Manager → "OpenJDK Platform binary" or
-   "Java(TM) Platform SE binary" → End task. macOS/Linux: Activity Monitor or `pkill -f GradleWrapperMain`.
+   "Java(TM) Platform SE binary" → End task. macOS/Linux: Activity Monitor or
+   `pkill -f net.minecraft.launchwrapper.Launch`.
 4. Antivirus programs and Windows Search sometimes hold on to files briefly: wait a moment and try
    again.
 5. If none of this helps, restart your PC.
@@ -334,25 +341,23 @@ A file or folder is currently open in another program (`being used by another pr
 ### VL-203
 **Not enough disk space**
 
-Before downloads and builds, the launcher checks whether enough space is free and otherwise stops with a
-message such as `Only 800 MB free for C:\Users\…\VibeLauncher, about 1.6 GB are needed.` The code also
-appears when the drive fills up during a download or build.
+Before downloads, the launcher checks whether enough space is free and otherwise stops with a message
+such as `Only 800 MB free for C:\Users\…\VibeLauncher, about 1.8 GB are needed.` The code also appears
+when the drive fills up during a download.
 
-**Space needed (approximately):**
+**Space needed (approximately), all in the data folder:**
 
 | What | Where | Size |
 | --- | --- | --- |
-| Vibe source code | Data folder | 250 MB |
-| Java 8 and Java 21 | Data folder | 450 MB |
-| Build output | Data folder | 500 MB |
-| Gradle, Minecraft, Forge, libraries, assets | Gradle folder | 1–1.5 GB |
+| Vibe versions | `versions/` | 50–300 MB |
+| Java 8 | `runtime/temurin-8/` | 250 MB |
+| Minecraft 1.8.9, Forge, libraries, assets | `minecraft/` | 1–1.5 GB |
 
-So the first start needs about **3 GB**, split between the data folder and the Gradle folder (usually
-both on `C:`).
+So the first start needs about **2 GB** in the data folder.
 
 **Fix:**
 1. Free up disk space (Windows: Settings → System → Storage → Temporary files).
-2. Or move the data folder and the Gradle folder to another drive (see [Important folders](#important-folders)).
+2. Or move the data folder to another drive (see [Important folders](#important-folders)).
 3. Try again.
 
 ### VL-204
@@ -392,8 +397,8 @@ The launcher cannot write to its data folder when it starts and quits with a mes
 
 ## 3xx: Java
 
-The launcher brings **its own Java versions**: Java 8 starts Minecraft 1.8.9, Java 21 builds Vibe. They
-come from Eclipse Temurin (Adoptium), are verified by checksum and live in the data folder under
+The launcher brings **its own Java 8**: it starts Minecraft 1.8.9. Current launchers use no other Java.
+It comes from Eclipse Temurin (Adoptium), is verified by checksum and lives in the data folder under
 `runtime/`. A Java installed on your PC or `JAVA_HOME` **does not matter**; it is only needed to open
 `VibeLauncher.jar` (see [Problems without an error code](#problems-without-an-error-code)).
 
@@ -449,79 +454,95 @@ The launcher's Java could not be run (`Cannot run program`, `A problem occurred 
 ### VL-305
 **Wrong Java version**
 
-Gradle did not find the Java version it needs for the build (`No matching toolchains found`,
-`Unsupported class file major version`).
+The launcher's Java 8 could not start Minecraft, usually because the runtime is damaged or from an old
+version (`Unsupported class file major version`).
 
 **Fix:**
-1. Settings → Java → **Reinstall**. Afterwards Java 8 and Java 21 are set up cleanly again.
-2. If you changed `java8Home` or `jdk21Home` in `launcher.properties` by hand, delete these lines. The
-   launcher now detects a Java with the wrong version itself and then uses its own.
-3. Then Settings → Troubleshooting → **Clear build cache** and start again.
+1. Settings → Java → **Reinstall**: the private Java 8 runtime is downloaded again (about 200 MB).
+2. If you changed `java8Home` in `launcher.properties` by hand, delete the line. The launcher detects a
+   Java with the wrong version itself and then uses its own.
+3. Then press **Play** again.
 
 ## 4xx: Vibe download and updates
+
+These codes cover downloading a Vibe version from the GitHub releases and switching it into the game
+profile. Current launchers download ready-made JARs and never build Vibe.
 
 ### VL-401
 **Vibe could not be downloaded**
 
-The Vibe source code could not be downloaded on the first start. Usually the more specific code of the
-cause is shown instead, e.g. [VL-101](#vl-101) or [VL-105](#vl-105).
+The Vibe version JAR could not be downloaded from the GitHub release. Usually the more specific code of
+the cause is shown instead, e.g. [VL-101](#vl-101) or [VL-105](#vl-105).
 
 **Fix:**
-1. Check your internet connection and whether https://github.com/SkidderClub/Vibe loads in the browser.
+1. Check your internet connection and whether https://github.com/VibeUpdate/VibeReleases loads in the
+   browser.
 2. Follow the section for the more specific code if the console names one.
 3. Try again.
 
 ### VL-402
 **Last update did not finish**
 
-A Vibe update was interrupted (launcher closed, crash, power cut). So that Vibe is not built from a mix of
-two versions, the launcher only starts after the repair. That is not possible without internet; you then
-often see the code of the network cause (e.g. [VL-101](#vl-101)).
+Legacy code from launcher versions before 2.1.0 (kept for old links). Current launchers download
+ready-made JARs and do not show it.
 
-**Fix:**
-1. Connect to the internet and press **Play**: the rest of the update is downloaded.
-2. Alternatively Settings → Troubleshooting → **Reinstall Vibe**.
-
-Your game profile (worlds, settings, accounts, mods) is kept in both cases.
+**Fix:** Go online and press **Play**; alternatively use Settings → Troubleshooting → **Reinstall Vibe**.
+Your game profile (worlds, settings, accounts, mods) is kept.
 
 ### VL-403
 **Vibe download is invalid**
 
-The downloaded Vibe archive is damaged or does not contain a Gradle project.
+The downloaded Vibe JAR is damaged or is not a valid Vibe JAR.
 
 **Fix:**
 1. Try again.
-2. Settings → Troubleshooting → **Reinstall Vibe**.
+2. Settings → Troubleshooting → **Reinstall Vibe** (or pick another version on the Versions page).
 3. An antivirus or proxy can alter downloads: add an exception or try another network.
-4. If nothing helps, [report the error](#reporting-an-error): the current state on GitHub is broken.
+4. If nothing helps, [report the error](#reporting-an-error): the release on GitHub is broken.
 
 ### VL-404
 **Game profile could not be moved**
 
-During a full update, the old source folder is swapped for the new one and your game profile (`run/`) is
-moved over. That did not work, usually because files were open. The launcher restores the previous state.
+Legacy code from launcher versions before 2.1.0 (kept for old links). Current launchers keep the game
+profile in `source/run/client/` and do not move it.
 
-**Fix:**
-1. Close Minecraft, Explorer windows in the data folder and other programs ([VL-202](#vl-202)).
-2. Press **Play** again or use Settings → Updates → *Update now*.
-3. **Important:** Do not delete any `source-old-…` folders in the data folder that contain `run/client`.
-   The launcher automatically brings back a profile stored there on the next start.
+**Fix:** Close Minecraft and programs that use the data folder ([VL-202](#vl-202)) and press **Play**
+again.
 
 ### VL-405
 **Vibe files are missing**
 
-Important files are missing from the installed source code, e.g. the Gradle wrapper
-(`gradle/wrapper/gradle-wrapper.jar`). This happens when files were deleted by hand or removed by an
-antivirus.
+Files of the selected Vibe version are missing or corrupt in `versions/<tag>/`. This happens when files
+were deleted by hand or removed by an antivirus.
 
-**Fix:** Settings → Troubleshooting → **Reinstall Vibe**. Your game profile is kept.
+**Fix:** Settings → Troubleshooting → **Reinstall Vibe**, or pick another version on the Versions page.
+Your game profile is kept.
+
+### VL-406
+**Vibe version download damaged**
+
+The downloaded Vibe JAR does not match the SHA-256 checksum that GitHub publishes, or it is not a
+readable Vibe JAR. A proxy or filter that replaces downloads with a login page is a common cause.
+
+**Fix:**
+1. Open **Versions** and press **Download** again.
+2. If it keeps failing, turn off VPN and HTTP scanners (antivirus web protection, school network).
+3. If it still fails, [report the error](#reporting-an-error).
+
+### VL-407
+**Release has no JAR**
+
+The GitHub release exists, but it has no JAR asset to download. This is a publishing mistake, not a
+problem with your computer.
+
+**Fix:** Pick another version on the Versions page or use **Update now** in Settings. If the newest
+release is affected, wait until it is fixed.
 
 ## 5xx: Building Vibe (Gradle)
 
-Before every start, the launcher builds Vibe from the source code with Gradle and then starts Forge 1.8.9
-with OptiFine. The **first build takes 5–15 minutes** because Gradle, Minecraft, Forge and all libraries
-are downloaded; after that it is much faster. The full output is in the console and in
-`logs/game/<date>.log`.
+These codes belong to launcher versions before 2.1.0, which compiled Vibe from source with Gradle before
+every start. Current launchers download ready-made JARs and never show them. The sections are kept so
+that old links still work.
 
 ### VL-500
 **Build failed**
@@ -576,16 +597,16 @@ the download is damaged (`Could not install Gradle distribution`, `Exception in 
 ### VL-504
 **OptiFine could not be downloaded**
 
-Vibe starts with OptiFine 1.8.9 HD U M6 pre2, which is downloaded from optifine.net on the first build.
-optifine.net did not provide a download link, or the file is not a valid OptiFine JAR.
+Vibe starts with OptiFine 1.8.9 HD U M6 pre2, which is downloaded from optifine.net when the game files
+are prepared. optifine.net did not provide a download link, or the file is not a valid OptiFine JAR.
 
 **Fix:**
 1. Try again later; optifine.net is sometimes overloaded or changes its download page.
 2. **By hand:** Download `preview_OptiFine_1.8.9_HD_U_M6_pre2.jar` via
    https://optifine.net/adloadx?f=preview_OptiFine_1.8.9_HD_U_M6_pre2.jar (click "Download" after the ad)
    and save the file unchanged as
-   `<data folder>/source/build/optifine/preview_OptiFine_1.8.9_HD_U_M6_pre2.jar`. Create the `optifine`
-   folder if it is missing. The file is kept across updates and when the build cache is cleared.
+   `<data folder>/minecraft/optifine/preview_OptiFine_1.8.9_HD_U_M6_pre2.jar`. Create the `optifine`
+   folder if it is missing. The file is kept across updates and when game files are repaired.
 3. Ad or DNS filters can block optifine.net: add an exception.
 
 ### VL-505
@@ -639,8 +660,8 @@ Unimined (the Gradle plugin for Minecraft) did not prepare the Minecraft 1.8.9 c
 
 ## 6xx: Starting and playing Minecraft
 
-These codes appear when the build worked but Minecraft does not start or exits with an error. If there is
-a fresh crash report, **Open crash report** opens it directly; it is in
+These codes appear when the game files are ready but Minecraft does not start or exits with an error. If
+there is a fresh crash report, **Open crash report** opens it directly; it is in
 `<data folder>/source/run/client/crash-reports/`.
 
 ### VL-600
@@ -653,7 +674,7 @@ Minecraft exited with an error. The cause could not be matched to one of the mor
    and the first line of the stack trace below it.
 2. If you have custom mods, disable them on the Mods page and start again. If it works then, enable them
    one by one until the error comes back.
-3. Settings → Troubleshooting → **Clear build cache**.
+3. Settings → Troubleshooting → **Repair game files**.
 4. If it remains, [report the error](#reporting-an-error) with the crash report.
 
 Note: Ending Minecraft through the Task Manager also produces this code.
@@ -667,7 +688,7 @@ Java could not get the configured memory and could not even start Minecraft
 
 **Fix:**
 1. Lower Settings → Game → **Memory** (e.g. to 2–3 GB).
-2. Close other programs; Gradle also uses memory while you play.
+2. Close other programs; they also use memory while you play.
 3. Windows: Enable the paging file (see [VL-505](#vl-505)).
 
 ### VL-602
@@ -719,9 +740,10 @@ The native LWJGL libraries (graphics, sound, input) could not be loaded (`Unsati
 `no lwjgl64 in java.library.path`).
 
 **Fix:**
-1. Settings → Troubleshooting → **Clear build cache**: the libraries are unpacked again.
-2. Check your antivirus's quarantine (e.g. `lwjgl64.dll`, `OpenAL64.dll`) and add the data folder and the
-   Gradle folder as exceptions.
+1. Settings → Troubleshooting → **Repair game files**: the LWJGL natives are unpacked again into the
+   launcher's `minecraft/natives/` folder.
+2. Check your antivirus's quarantine (e.g. `lwjgl64.dll`, `OpenAL64.dll`) and add the data folder as an
+   exception.
 3. Linux on ARM processors is not supported by Minecraft 1.8.9 (LWJGL 2).
 
 ### VL-606
@@ -754,13 +776,53 @@ softwareupdate --install-rosetta --agree-to-license
 
 Then restart the launcher and press **Play**.
 
+### VL-608
+**Minecraft could not be downloaded**
+
+The launcher could not download the Minecraft 1.8.9 client or version list from Mojang, or a downloaded
+file was damaged.
+
+**Fix:**
+1. Check the connection and try again; the launcher retries twice before giving up.
+2. Allow `launchermeta.mojang.com` and `piston-meta.mojang.com` in firewall and filters.
+3. Settings → Troubleshooting → **Repair game files**.
+
+### VL-609
+**Minecraft assets could not be downloaded**
+
+The asset list (sounds, languages, textures) could not be read from `resources.download.minecraft.net`,
+or one of its files is damaged.
+
+**Fix:**
+1. Check the connection and press **Play** again.
+2. Allow `resources.download.minecraft.net` in firewall and filters.
+3. Settings → Troubleshooting → **Repair game files**.
+
+### VL-610
+**Forge could not be downloaded**
+
+The Forge installer or its universal JAR could not be read from `maven.minecraftforge.net`.
+
+**Fix:**
+1. Try again in a few minutes; Maven servers are sometimes briefly overloaded.
+2. Allow `maven.minecraftforge.net` in firewall and filters.
+3. Settings → Troubleshooting → **Repair game files**.
+
+### VL-611
+**Minecraft runtime incomplete**
+
+Files under `minecraft/` are missing, e.g. the client JAR, a library, a native library or the asset index.
+This happens after a manual delete or an interrupted download.
+
+**Fix:** Settings → Troubleshooting → **Repair game files**. Versions, worlds, settings and mods stay.
+
 ## 7xx: The launcher itself
 
 ### VL-701
 **Launcher is already open**
 
 A Vibe Launcher with the same data folder is already running. Two launchers would get in each other's way
-when updating and building.
+when updating and switching versions.
 
 **Fix:**
 1. Look for the open window (taskbar, Alt+Tab; it may be minimized).
@@ -884,7 +946,7 @@ you do not need to do anything.
 ### VL-805
 **Vibe is loaded automatically**
 
-You added a Vibe JAR. The launcher builds and loads Vibe itself; a second copy would make Forge abort.
+You added a Vibe JAR. The launcher installs and loads Vibe itself; a second copy would make Forge abort.
 
 ### VL-806
 **Fabric mod**
@@ -941,9 +1003,10 @@ To open the JAR you need Java 8 or newer installed.
    Java 8: update it.
 
 **The first start takes very long.**
-That is normal: the first time, Vibe, two Java versions, Gradle, Minecraft, Forge and OptiFine are
-downloaded and Vibe is built (5–15 minutes, depending on your connection). The play bar shows the
-progress, the console every line. Later starts are much faster because only what changed is rebuilt.
+That is normal: the first time, the selected Vibe JAR, one Java 8 runtime, Minecraft 1.8.9, Forge,
+OptiFine, all libraries and assets are downloaded (5–15 minutes, depending on your connection). The play
+bar shows the progress, the console every line. Later starts are much faster because the downloaded files
+are kept.
 
 **The game starts, but with the wrong account or not signed in.**
 Choose the account on the Accounts page. *Automatic* uses Vibe's Auto Login. Renew expired Microsoft

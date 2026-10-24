@@ -20,10 +20,16 @@ public final class Settings {
         this.file = file;
         this.log = log;
         this.values = FileUtil.readProperties(file);
-        // Keys of the first launcher that no longer have a meaning.
+        // Keys of older launchers that no longer have a meaning.
         values.remove("projectRoot");
         values.remove("installed");
         values.remove("updateRepository");
+        values.remove("sourceRevision");
+        values.remove("sourceIncomplete");
+        values.remove("sourceUpdatedAt");
+        values.remove("sourceMessage");
+        values.remove("sourceCommitTime");
+        values.remove("jdk21Home");
     }
 
     // ---- preferences -----------------------------------------------------
@@ -81,25 +87,12 @@ public final class Settings {
 
     // ---- installation state ----------------------------------------------
 
-    public String sourceRevision() { return get("sourceRevision", ""); }
-    public void setSourceRevision(String revision) { set("sourceRevision", revision); }
-    /** True after an interrupted delta update; the next update downloads everything. */
-    public boolean sourceIncomplete() { return "true".equals(get("sourceIncomplete", "false")); }
-    public void setSourceIncomplete(boolean value) { set("sourceIncomplete", Boolean.toString(value)); }
-    public long sourceUpdatedAt() { return parseLong(get("sourceUpdatedAt", "0")); }
-    public void setSourceUpdatedAt(long value) { set("sourceUpdatedAt", Long.toString(value)); }
-    public String sourceMessage() { return get("sourceMessage", ""); }
-    public long sourceCommitTime() { return parseLong(get("sourceCommitTime", "0")); }
-    public void setSourceCommit(String message, long time) {
-        values.setProperty("sourceMessage", message == null ? "" : message);
-        values.setProperty("sourceCommitTime", Long.toString(time));
-        save();
-    }
+    /** Tag of the Vibe release that should start, for example {@code v0.0.6}. */
+    public String selectedVibeVersion() { return get("vibeVersion", ""); }
+    public void setSelectedVibeVersion(String value) { set("vibeVersion", value); }
 
     public String java8Home() { return get("java8Home", ""); }
     public void setJava8Home(String value) { set("java8Home", value); }
-    public String jdk21Home() { return get("jdk21Home", ""); }
-    public void setJdk21Home(String value) { set("jdk21Home", value); }
 
     public Rectangle windowBounds() {
         String[] parts = get("window", "").split(",");

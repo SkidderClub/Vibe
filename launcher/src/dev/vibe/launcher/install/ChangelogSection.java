@@ -9,7 +9,7 @@ public final class ChangelogSection {
     public final String title;
     public final List<String> entries;
 
-    ChangelogSection(String title, List<String> entries) {
+    public ChangelogSection(String title, List<String> entries) {
         this.title = title;
         this.entries = Collections.unmodifiableList(entries);
     }
@@ -41,7 +41,7 @@ public final class ChangelogSection {
     }
 
     /** Strips the Markdown the changelog uses: links, code spans and emphasis. */
-    static String plain(String text) {
+    public static String plain(String text) {
         return text.replaceAll("\\[([^\\]]+)\\]\\([^)]*\\)", "$1")
                 .replace("`", "")
                 .replace("**", "")

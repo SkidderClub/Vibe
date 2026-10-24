@@ -33,7 +33,7 @@ public enum ErrorCode {
     // ---- 2xx: files and folders ---------------------------------------------
     ACCESS_DENIED(201, "No permission to write files", "Your antivirus, a sync tool such as OneDrive or missing rights block the launcher's folder. Allow it and try again."),
     FILE_IN_USE(202, "Files are in use", "Close Minecraft and programs that have Vibe's files open, then try again. A restart helps if nothing else does."),
-    DISK_FULL(203, "Not enough disk space", "Free up disk space and try again. The first start needs about 3 GB."),
+    DISK_FULL(203, "Not enough disk space", "Free up disk space and try again. The first start needs about 1.5 GB."),
     FILE_ERROR(204, "File system error", "A file could not be read or written. Try again; if it repeats, check the drive for errors."),
     MINECRAFT_FOLDER_MISSING(205, "No Minecraft folder found", "Start the normal Minecraft launcher once, or copy options.txt into Vibe's game folder by hand."),
     DATA_FOLDER(206, "Launcher data folder unusable", "The launcher cannot write to its data folder. Check its permissions or choose another folder (see help)."),
@@ -41,27 +41,29 @@ public enum ErrorCode {
     // ---- 3xx: Java ----------------------------------------------------------
     JAVA_UNAVAILABLE(301, "No Java for this system", "Adoptium offers no Java for this system. Vibe needs 64-bit Windows, macOS or Linux."),
     JAVA_DAMAGED(302, "Java download damaged", "The Java download was damaged on the way. Try again; an antivirus or proxy may be altering downloads."),
-    JAVA_BROKEN(303, "Java installation unusable", "Settings → Java → Reinstall downloads both runtimes again."),
+    JAVA_BROKEN(303, "Java installation unusable", "Settings → Java → Reinstall downloads Java 8 again."),
     JAVA_START(304, "Java could not be started", "An antivirus may have blocked Java. Allow the launcher's runtime folder, then use Settings → Java → Reinstall."),
-    WRONG_JAVA(305, "Wrong Java version", "The build did not find the Java version it needs. Settings → Java → Reinstall sets up Java 8 and Java 21 again."),
+    WRONG_JAVA(305, "Wrong Java version", "Minecraft 1.8.9 only runs on Java 8. Settings → Java → Reinstall sets Java 8 up again."),
 
     // ---- 4xx: Vibe download and updates -------------------------------------
     VIBE_DOWNLOAD(401, "Vibe could not be downloaded", "Check your connection to GitHub and try again."),
     UPDATE_INCOMPLETE(402, "Last update did not finish", "Connect to the internet and press Play: the launcher repairs the update."),
     SOURCE_INVALID(403, "Vibe download is invalid", "Try again. If it keeps failing, use Settings → Troubleshooting → Reinstall Vibe."),
     PROFILE_CARRY_OVER(404, "Game profile could not be moved", "Close Minecraft and programs that use the game folder, then try again. Your worlds are kept."),
-    SOURCE_DAMAGED(405, "Vibe files are missing", "Settings → Troubleshooting → Reinstall Vibe downloads the source again; your profile is kept."),
+    SOURCE_DAMAGED(405, "Vibe files are missing", "Settings → Troubleshooting → Reinstall Vibe downloads the release again; your profile is kept."),
+    RELEASE_CHECKSUM(406, "Vibe version download damaged", "The JAR did not match its checksum and was discarded. Try again or pick another version on the Versions page."),
+    RELEASE_ASSET_MISSING(407, "Vibe version has no JAR", "This GitHub release has no downloadable JAR. Pick another version on the Versions page or report it."),
 
-    // ---- 5xx: building Vibe -------------------------------------------------
+    // ---- 5xx: older launchers that built Vibe ---------------------------------
     BUILD_FAILED(500, "Build failed", "The console shows why. Settings → Troubleshooting → Clear build cache often helps."),
     BUILD_DOWNLOAD(501, "Download during the build failed", "Gradle could not download Minecraft, Forge or a library. Check your connection and try again in a few minutes."),
     COMPILE_ERROR(502, "Vibe does not compile", "Clear the build cache and reinstall Vibe. If it remains, this Vibe version is broken: wait for a fix or report it."),
     GRADLE_DOWNLOAD(503, "Gradle could not be set up", "Gradle's own download failed or is damaged. Check your connection and try again (see help)."),
-    OPTIFINE_DOWNLOAD(504, "OptiFine could not be downloaded", "optifine.net did not deliver the file. Try again later or save the OptiFine JAR by hand (see help)."),
+    OPTIFINE_DOWNLOAD(504, "OptiFine could not be downloaded", "optifine.net did not deliver the file. Try again later or save the OptiFine JAR in the launcher's minecraft/optifine folder by hand (see help)."),
     GRADLE_MEMORY(505, "Not enough memory for the build", "Close other programs and try again. The build needs about 3 GB of free RAM."),
     GRADLE_CACHE(506, "Gradle cache damaged", "Clear the build cache. If that does not help, delete Gradle's cache folder (see help)."),
     GRADLE_LOCKED(507, "Build files are locked", "Another Gradle build is running, for example in an IDE. Close it or restart the PC, then try again."),
-    MINECRAFT_FILES(508, "Minecraft files are missing", "Minecraft 1.8.9 was not prepared. Delete the Unimined cache (see help) and start again with internet."),
+    MINECRAFT_FILES(508, "Minecraft files are missing", "Settings → Troubleshooting → Repair game files downloads Minecraft 1.8.9 again; your profile is kept."),
 
     // ---- 6xx: Minecraft -----------------------------------------------------
     GAME_CRASHED(600, "Minecraft crashed", "The crash report or the console shows the cause. Disable your own mods to test whether one of them is responsible."),
@@ -69,9 +71,13 @@ public enum ErrorCode {
     GAME_OUT_OF_MEMORY(602, "Minecraft ran out of memory", "Raise Settings → Memory to 3–4 GB and use fewer or smaller resource packs and mods."),
     GRAPHICS(603, "Graphics driver problem", "Update your graphics driver. On laptops, let Java use the dedicated graphics card."),
     MOD_CONFLICT(604, "A mod prevents the start", "Disable your own mods on the Mods page and start again, then enable them one by one to find the culprit."),
-    NATIVES(605, "Game libraries could not be loaded", "Clear the build cache so the LWJGL libraries are unpacked again, and allow them in your antivirus."),
+    NATIVES(605, "Game libraries could not be loaded", "Settings → Troubleshooting → Repair game files unpacks the LWJGL libraries again, and allow them in your antivirus."),
     NATIVE_CRASH(606, "Java crashed", "Usually the graphics driver or an overlay (Discord, RivaTuner, …). Update the driver and turn overlays off."),
     ROSETTA(607, "Rosetta 2 is missing", "Minecraft 1.8.9 needs Rosetta 2 on Apple Silicon: run softwareupdate --install-rosetta in Terminal."),
+    MINECRAFT_DOWNLOAD(608, "Minecraft could not be downloaded", "Check your connection to Mojang and try again. Settings → Troubleshooting → Repair game files restarts the download."),
+    ASSET_DOWNLOAD(609, "Minecraft assets could not be downloaded", "The game files download failed. Check your connection and use Settings → Troubleshooting → Repair game files."),
+    FORGE_DOWNLOAD(610, "Forge could not be downloaded", "Forge's download server did not answer. Try again in a few minutes or use Settings → Troubleshooting → Repair game files."),
+    RUNTIME_INCOMPLETE(611, "Minecraft runtime incomplete", "Some game files are missing or damaged. Use Settings → Troubleshooting → Repair game files."),
 
     // ---- 7xx: the launcher itself -------------------------------------------
     ALREADY_RUNNING(701, "Launcher is already open", "Switch to the open window. If none is visible, end the Java process in the task manager and start again."),

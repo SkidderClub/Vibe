@@ -50,16 +50,6 @@ public final class GameTests {
             Check.isTrue(!String.valueOf(error.getMessage()).contains("SECRET"), "no content in error");
         });
 
-        check.test("environment keys are replaced regardless of case", () -> {
-            java.util.Map<String, String> environment = new java.util.HashMap<String, String>();
-            environment.put("Path", "C:\\Windows");
-            environment.put("OTHER", "x");
-            Check.equal("C:\\Windows", GameSession.get(environment, "PATH"));
-            GameSession.put(environment, "PATH", "C:\\jdk\\bin;C:\\Windows");
-            Check.equal(2, environment.size());
-            Check.equal("C:\\jdk\\bin;C:\\Windows", environment.get("Path"));
-        });
-
         check.test("missing vault means no accounts", () -> Check.equal(0, AccountVault.read(temp.resolve("nowhere")).size()));
 
         check.test("vault problems carry their error code", () -> {
@@ -195,40 +185,34 @@ public final class GameTests {
             Check.equal("custom", extensions.list(library.list()).get(2).id);
         });
 
-        check.test("session follows stages, readiness and exit code", () -> {
-            Path project = Files.createDirectories(temp.resolve("project-ok"));
-            fakeWrapper(project);
-            Recorder recorder = runSession(project, temp.resolve("ok"));
+        check.test("session reports output, readiness and exit code", () -> {
+            Recorder recorder = runGame(temp.resolve("game-ok"), 0, false);
             Check.equal(Integer.valueOf(0), recorder.code);
             Check.isTrue(recorder.reachedGame, "ready file seen");
-            Check.isTrue(recorder.stages.contains(GameSession.Stage.COMPILING), "compile stage: " + recorder.stages);
-            Check.isTrue(recorder.stages.contains(GameSession.Stage.ASSETS), "asset stage: " + recorder.stages);
-            Check.isTrue(recorder.stages.contains(GameSession.Stage.STARTING), "start stage: " + recorder.stages);
+            Check.isTrue(recorder.stages.contains(GameSession.Stage.STARTING), "starting stage: " + recorder.stages);
             Check.equal(GameSession.Stage.RUNNING, recorder.stages.get(recorder.stages.size() - 1));
-            Check.isTrue(recorder.lines.contains("runClient") && recorder.lines.contains("-PvibeMaxMemory=2048"), "Gradle arguments: " + recorder.lines);
-            Check.isTrue(recorder.lines.contains("[Client thread/INFO]: M\u00fcnchen \u2713"), "UTF-8 output: " + recorder.lines);
+            Check.isTrue(recorder.lines.contains("[12:00:00] [Client thread/INFO]: M\u00fcnchen \u2713"), "UTF-8 output: " + recorder.lines);
             Check.isTrue(recorder.lines.contains("2% (2/3)") && recorder.lines.contains("100% (3/3)"), "carriage returns split lines: " + recorder.lines);
-            Path jdk = Paths.get(System.getProperty("java.home"));
-            Check.isTrue(recorder.lines.contains("JAVA_HOME=" + jdk), "JAVA_HOME: " + recorder.lines);
-            String inherited = System.getenv("PATH");
-            String expectedPath = "PATH=" + jdk.resolve("bin") + File.pathSeparator + (inherited == null ? "" : inherited);
-            Check.isTrue(recorder.lines.contains(expectedPath), "PATH keeps the system entries: " + recorder.lines);
+            Check.isTrue(recorder.log != null && Files.isRegularFile(recorder.log), "game log written");
         });
 
-        check.test("failed build reports what went wrong", () -> {
-            Path project = Files.createDirectories(temp.resolve("project-fail"));
-            fakeWrapper(project);
-            Files.write(project.resolve("fail.marker"), new byte[0]);
-            Recorder recorder = runSession(project, temp.resolve("fail"));
+        check.test("a crash in the game output is diagnosed", () -> {
+            Recorder recorder = runGame(temp.resolve("game-crash"), 1, true);
             Check.equal(Integer.valueOf(1), recorder.code);
-            Check.isTrue(!recorder.reachedGame, "never reached the game");
-            Check.equal("Execution failed for task ':compileJava'.\nCompilation failed; see the compiler error output for details.", recorder.failure);
-            Check.equal(ErrorCode.COMPILE_ERROR, recorder.session.analyzer().buildFailure(recorder.failure).code);
+            Check.isTrue(recorder.session != null, "session exists");
+            Check.equal(ErrorCode.NATIVES, recorder.session.analyzer().gameFailure("").code);
         });
 
-        check.test("a source without Gradle wrapper is reported as damaged", () -> {
-            Path project = Files.createDirectories(temp.resolve("project-empty"));
-            Check.equal(ErrorCode.SOURCE_DAMAGED, ErrorCode.of(Check.fails(IOException.class, () -> runSession(project, temp.resolve("empty")))));
+        check.test("a missing Java runtime fails with its error code", () -> {
+            GameSession.Request request = new GameSession.Request();
+            request.logFile = temp.resolve("missing-java/game.log");
+            request.readyFile = temp.resolve("missing-java/ready");
+            request.sessionFile = temp.resolve("missing-java/session.properties");
+            request.launch = new dev.vibe.launcher.minecraft.LaunchCommand.Launch(
+                    Arrays.asList("definitely-not-a-java-runtime"), temp, Collections.<String, String>emptyMap());
+            dev.vibe.launcher.core.LauncherException error = Check.fails(dev.vibe.launcher.core.LauncherException.class,
+                    () -> GameSession.start(request, new Recorder()));
+            Check.equal(ErrorCode.JAVA_START, error.code);
         });
     }
 
@@ -240,6 +224,7 @@ public final class GameTests {
         volatile boolean reachedGame;
         volatile String failure;
         volatile GameSession session;
+        volatile Path log;
 
         @Override public void output(List<String> added) { lines.addAll(added); }
         @Override public void stage(GameSession.Stage stage) { stages.add(stage); }
@@ -251,41 +236,36 @@ public final class GameTests {
         }
     }
 
-    private static Recorder runSession(Path project, Path work) throws Exception {
+    private static Recorder runGame(Path work, int exitCode, boolean crash) throws Exception {
+        String executable = Paths.get(System.getProperty("java.home"), "bin", isWindows() ? "java.exe" : "java").toString();
+        Path log = work.resolve("game.log");
+        Path ready = work.resolve("ready");
         GameSession.Request request = new GameSession.Request();
-        request.projectRoot = project;
-        request.java8 = work.resolve("java8");
-        request.jdk21 = Paths.get(System.getProperty("java.home"));
-        request.memoryMb = 2048;
-        request.logFile = work.resolve("game.log");
-        request.readyFile = work.resolve("ready");
+        request.logFile = log;
+        request.readyFile = ready;
         request.sessionFile = work.resolve("session.properties");
+        request.launch = new dev.vibe.launcher.minecraft.LaunchCommand.Launch(
+                Arrays.asList(executable, "-Xms16m", "-Xmx96m", "-XX:+UseSerialGC", "-Dfile.encoding=UTF-8", "-cp", testClasspath(), FakeGame.class.getName(),
+                        "--ready", ready.toString(), "--exit", Integer.toString(exitCode), crash ? "--crash" : "--ok"),
+                work, Collections.<String, String>emptyMap());
         Recorder recorder = new Recorder();
+        recorder.log = log;
         recorder.session = GameSession.start(request, recorder);
         if (!recorder.done.await(30, TimeUnit.SECONDS)) throw new AssertionError("session did not finish");
         Check.isTrue(!Files.exists(request.sessionFile), "session marker removed");
         return recorder;
     }
 
-    /** Installs the test's GradleWrapperMain as the project's gradle/wrapper/gradle-wrapper.jar. */
-    private static void fakeWrapper(Path project) throws IOException {
-        String entry = org.gradle.wrapper.GradleWrapperMain.class.getName().replace('.', '/') + ".class";
-        Path wrapper = Files.createDirectories(project.resolve("gradle").resolve("wrapper")).resolve("gradle-wrapper.jar");
-        JarOutputStream jar = new JarOutputStream(Files.newOutputStream(wrapper));
+    /** The compiled test classes, so FakeGame can run in a separate JVM. */
+    private static String testClasspath() {
         try {
-            jar.putNextEntry(new JarEntry(entry));
-            InputStream input = GameTests.class.getResourceAsStream("/" + entry);
-            try {
-                byte[] buffer = new byte[8192];
-                int count;
-                while ((count = input.read(buffer)) != -1) jar.write(buffer, 0, count);
-            } finally {
-                input.close();
-            }
-        } finally {
-            jar.close();
+            return Paths.get(GameTests.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();
+        } catch (Exception error) {
+            throw new IllegalStateException(error);
         }
     }
+
+    private static boolean isWindows() { return System.getProperty("os.name", "").toLowerCase().contains("win"); }
 
     private static File jar(Path file, String entry, String content) throws IOException {
         ZipOutputStream output = new ZipOutputStream(Files.newOutputStream(file));
