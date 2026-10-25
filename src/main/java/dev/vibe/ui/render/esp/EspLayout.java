@@ -22,7 +22,21 @@ public final class EspLayout {
         }
     }
     public static float scale(float projectedHeight, float strength) {
-        return (float)Math.min(2.5, Math.pow(Math.max(.01,projectedHeight)/180.0, strength));
+        if(!Float.isFinite(projectedHeight))return 1;
+        double ratio=Math.max(0,projectedHeight)/180.0;
+        // Neutral at the editor's 180px reference, with smooth, bounded tails.
+        // Linear scaling made distant glyphs subpixel and close-up equipment enormous.
+        double target=.55+.9*ratio/(1+ratio);
+        return (float)Math.pow(target,Math.max(0,Math.min(1,strength)));
+    }
+    public static float strokeScale(float scale){return Math.min(1,scale);}
+    public static float textScale(float projectedHeight,float strength){
+        double ratio=Math.max(0,projectedHeight)/180.0;
+        return (float)Math.pow(.8+.4*ratio/(1+ratio),Math.max(0,Math.min(1,strength)));
+    }
+    public static float cornerBlend(float distance,float threshold,boolean enabled){
+        if(!enabled)return 0;if(threshold<=0)return 1;
+        float t=Math.max(0,Math.min(1,(distance-threshold+.35F)/.7F));return t*t*(3-2*t);
     }
 
     public static Map<String, Rect> arrange(Rect box, List<Request> input, float gap) {

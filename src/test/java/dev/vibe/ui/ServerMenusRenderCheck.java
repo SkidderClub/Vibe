@@ -51,6 +51,14 @@ public final class ServerMenusRenderCheck {
                     @Override public void drawDefaultBackground(){super.drawDefaultBackground();background(this,menus,qol);}
                 };
                 screen.setWorldAndResolution(mc,960,540);mc.currentScreen=screen;
+                java.lang.reflect.Field buttonsField=GuiScreen.class.getDeclaredField("buttonList");buttonsField.setAccessible(true);
+                @SuppressWarnings("unchecked") java.util.List<GuiButton> buttons=(java.util.List<GuiButton>)buttonsField.get(screen);
+                menus.onMenuInit(new GuiScreenEvent.InitGuiEvent.Post(screen,buttons));
+                if(i==0)for(java.lang.reflect.Field field:GuiScreenAddServer.class.getDeclaredFields())if(field.getType()==GuiButton.class){
+                    field.setAccessible(true);Object referenced=field.get(screen);
+                    if(!buttons.contains(referenced)||!(referenced instanceof dev.vibe.ui.menu.VibeMenuButton))
+                        throw new AssertionError("The resource-pack button lost its native reference when styled");
+                }
                 ClientChangesRenderCheck.frame(960,540);Gui.drawRect(0,0,960,540,0xFFFF00FF);
                 screen.drawScreen(-1,-1,0);
                 ByteBuffer pixels=BufferUtils.createByteBuffer(960*540*4);GL11.glReadPixels(0,0,960,540,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,pixels);
@@ -66,6 +74,7 @@ public final class ServerMenusRenderCheck {
             }
         } finally {mc.currentScreen=null;mc.theWorld=null;}
         System.out.println("Native edit-server/direct-connect menus have opaque backgrounds and reject stale QOL world captures.");
+        ServerBrowserRenderCheck.verify(mc,output);
     }
     private static void background(GuiScreen screen,MainMenuEvents menus,QolRenderer qol) {
         menus.onServerFormBackground(new GuiScreenEvent.BackgroundDrawnEvent(screen));qol.redrawBehind(screen);

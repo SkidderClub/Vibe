@@ -71,10 +71,6 @@ public final class EspRenderer {
             ScaledResolution resolution = new ScaledResolution(minecraft);
             if (projected.right < 0 || projected.bottom < 0 || projected.left > resolution.getScaledWidth()
                     || projected.top > resolution.getScaledHeight()) return;
-            projected.left = Math.max(-8, projected.left);
-            projected.top = Math.max(-8, projected.top);
-            projected.right = Math.min(resolution.getScaledWidth() + 8, projected.right);
-            projected.bottom = Math.min(resolution.getScaledHeight() + 8, projected.bottom);
             if (projected.width() > 2 && projected.height() > 4) {
                 Esp2DRenderer.Actor actor = new Esp2DRenderer.Actor(name, health, maximumHealth, armor, distance, heldItem, item, equipment, 1);
                 if(item==null && heldItem!=null && !heldItem.isEmpty()) actor.nativeItem=heldItem.toLowerCase(java.util.Locale.ROOT).contains("pistol")?"Pistol":heldItem.toLowerCase(java.util.Locale.ROOT).contains("knife")?"Knife":"Rifle";
@@ -216,7 +212,7 @@ public final class EspRenderer {
 
     private ProjectedBounds bounds(AxisAlignedBB box, ScaledResolution resolution) {
         // Both cameras clip in homogeneous space. GTA7's supersampled viewport maps to the same GUI dimensions.
-        double[] clipped = BoxProjection.bounds(new double[] {box.minX, box.minY, box.minZ},
+        double[] clipped = BoxProjection.visibleBounds(new double[] {box.minX, box.minY, box.minZ},
                 new double[] {box.maxX, box.maxY, box.maxZ}, model, camera,
                 resolution.getScaledWidth_double(), resolution.getScaledHeight_double());
         if (clipped == null) return null;

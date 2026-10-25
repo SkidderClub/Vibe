@@ -25,4 +25,13 @@ public class BoxProjectionTest {
     @Test public void offscreenBoundsDoNotLeavePhantomBoxes() {
         assertNull(BoxProjection.bounds(new double[]{20,0,-2}, new double[]{21,1.8,-1}, identity, perspective, 800, 600));
     }
+    @Test public void viewportEdgesDoNotResizeTheProjectedPlayer(){
+        double[] inside=BoxProjection.visibleBounds(new double[]{-.3,1,-3},new double[]{.3,2.8,-3},identity,perspective,800,600);
+        double[] partlyOutside=BoxProjection.visibleBounds(new double[]{-.3,2,-3},new double[]{.3,3.8,-3},identity,perspective,800,600);
+        double[] clipped=BoxProjection.bounds(new double[]{-.3,2,-3},new double[]{.3,3.8,-3},identity,perspective,800,600);
+        assertNotNull(inside);assertNotNull(partlyOutside);assertTrue(partlyOutside[1]<0);
+        assertEquals(inside[3]-inside[1],partlyOutside[3]-partlyOutside[1],.0001);
+        assertTrue(clipped[3]-clipped[1]<partlyOutside[3]-partlyOutside[1]);
+        assertNull(BoxProjection.visibleBounds(new double[]{20,0,-2},new double[]{21,1.8,-1},identity,perspective,800,600));
+    }
 }

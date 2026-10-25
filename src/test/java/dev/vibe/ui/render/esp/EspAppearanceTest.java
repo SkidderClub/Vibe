@@ -24,7 +24,8 @@ public class EspAppearanceTest {
         assertNotEquals(color,esp.getChams(2,true).getColor());
         for(int p=0;p<3;p++)for(Esp2DSettings.Element e:esp.get2D(p).elements)assertFalse(e.backgroundEnabled.isEnabled());
         assertTrue(EspLayout.scale(2,1)<EspLayout.scale(10,1));
-        assertEquals(EspLayout.scale(10,1)*2,EspLayout.scale(20,1),.00001);
+        assertTrue(EspLayout.scale(20,1)>EspLayout.scale(10,1));
+        assertTrue(EspLayout.scale(20,1)<EspLayout.scale(10,1)*1.1F);
     }
     @Test public void disabledModesElementsAndInheritedTextHideDetails() {
         EspModule esp=new EspModule();Esp2DSettings s=esp.get2D();

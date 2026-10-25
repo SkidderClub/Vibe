@@ -59,4 +59,17 @@ public class EspLayoutTest {
         for(float height=10;height<400;height+=.25F){float a=EspLayout.scale(height,.6F),b=EspLayout.scale(height+.01F,.6F);assertTrue(b>=a);assertTrue(b-a<.001);}
         assertEquals(1,EspLayout.scale(10,0),.0001);
     }
+    @Test public void distanceScalingKeepsDistantLabelsReadableAndCloseEquipmentBounded(){
+        assertEquals(1,EspLayout.scale(180,1),.00001);
+        assertTrue(EspLayout.scale(8,1)>.55F);
+        assertTrue(EspLayout.scale(3000,1)<1.45F);
+        assertEquals(1,EspLayout.strokeScale(EspLayout.scale(3000,1)),.00001);
+        assertTrue(EspLayout.textScale(8,1)>.8F);assertTrue(EspLayout.textScale(3000,1)<1.2F);assertEquals(1,EspLayout.textScale(180,1),.00001);
+        float last=0;for(float h=1;h<3000;h+=.25F){float next=EspLayout.scale(h,1);assertTrue(next>=last);if(last>0)assertTrue(next-last<.002);last=next;}
+    }
+    @Test public void switchingBetweenFullAndCornerBoxesHasNoDistanceThresholdJump(){
+        assertEquals(1,EspLayout.cornerBlend(0,0,true),0);assertEquals(0,EspLayout.cornerBlend(20,10,false),0);
+        float before=EspLayout.cornerBlend(9.999F,10,true),after=EspLayout.cornerBlend(10.001F,10,true);
+        assertTrue(after>=before);assertTrue(after-before<.01);
+    }
 }

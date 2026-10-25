@@ -40,7 +40,7 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 
-/** Modular ClickGUI with Futuristic, Skeet, NeverLose, Augustus and Xanax layouts. */
+/** All layouts edit the same Module/Setting objects and share config persistence. */
 public final class VibeClickGui extends GuiScreen {
 
     private static final int PANEL_WIDTH = 176;
@@ -67,6 +67,9 @@ public final class VibeClickGui extends GuiScreen {
     private final ParticlesRenderer clickGuiParticles = new ParticlesRenderer();
     private final NeverLoseWorkspace neverLose = new NeverLoseWorkspace();
     private final XanaxWorkspace xanax = new XanaxWorkspace();
+    private final DropdownWorkspace dropdown = new DropdownWorkspace();
+    private String dropdownPanel;
+    private int dropdownTop, dropdownBottom;
     private Setting<?> editing;
     private String editBuffer = "";
     private GuiTextField textEditor;
@@ -94,6 +97,10 @@ public final class VibeClickGui extends GuiScreen {
     @Override
     public void initGui() {
         Keyboard.enableRepeatEvents(true);
+        if(isDropdownTheme()){
+            commitEditing();editing=null;textEditor=null;draggingSlider=null;rangeDrag=null;
+            colorPopup=null;draggingColor=null;bindingModule=null;dropdown.release();
+        }
         int columns = width >= 1000 ? Category.values().length : (width >= 650 ? 3 : 2);
         int index = 0;
         for (Category category : Category.values()) {
@@ -128,7 +135,9 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        if (isXanaxTheme()) {
+        if (isDropdownTheme()) {
+            drawDropdown(mouseX, mouseY, partialTicks);
+        } else if (isXanaxTheme()) {
             xanax.draw(width, height, mouseX, mouseY);
         } else if (isNeverLoseTheme()) {
             drawNeverLose(mouseX, mouseY, partialTicks);
@@ -141,6 +150,111 @@ public final class VibeClickGui extends GuiScreen {
         }
         super.drawScreen(mouseX, mouseY, partialTicks);
         WaifuRenderer.draw(this);
+    }
+
+    private void drawDropdown(int mx,int my,float partialTicks) {
+        dev.vibe.ui.GuiRenderState.prepare(false);
+        dev.vibe.module.impl.client.BlurModule blur=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.BlurModule.class);
+        if(blur!=null&&blur.isEnabled()&&blur.getElements().isSelected(dev.vibe.module.impl.client.BlurModule.CLICK_GUI))
+            KawaseBlur.drawBackdrop(width,height,blur.getStrength().getInt(),partialTicks);
+        ClickGuiModule settings=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
+        if(mc.theWorld==null)Gui.drawRect(0,0,width,height,0xFF171923);
+        Gui.drawRect(0,0,width,height,settings.getTheme().is("Novoline")?0x66170D34:settings.getTheme().is("PacketV3")?0x36000000:0x16000000);
+        clickGuiParticles.draw(this);targets.clear();
+        if(draggingSlider!=null&&!draggingSlider.setting.isVisible()){draggingSlider=null;rangeDrag=null;}
+        if(colorPopup!=null&&!colorPopup.setting.isVisible()){colorPopup=null;draggingColor=null;editing=null;}
+        if(draggingSlider!=null)updateSlider(draggingSlider,mx);
+        if(draggingColor!=null&&colorPopup!=null)updateColorPopup(mx,my);
+        dropdown.draw(this,width,height,mx,my,settings);
+        if(colorPopup!=null)drawColorPopup(colorPopup);
+    }
+
+    boolean dropdownExpanded(Module module){return expandedModules.contains(module);}
+    boolean dropdownHasSettings(Module module){return hasVisibleSettings(module);}
+    boolean dropdownBinding(Module module){return bindingModule==module;}
+    void dropdownClip(String panel,int top,int bottom){dropdownPanel=panel;dropdownTop=top;dropdownBottom=bottom;}
+    void dropdownModuleTarget(Module module,int left,int top,int right,int bottom,String panel){dropdownTarget(TargetType.MODULE,left,top,right,bottom,module,null,-1,panel);}
+    void dropdownModeOption(ModeSetting setting,int left,int top,int right,int bottom,int option,String panel){dropdownTarget(TargetType.MODE_OPTION,left,top,right,bottom,null,setting,option,panel);}
+    boolean dropdownVisible(int y,int h){return y+h>=dropdownTop&&y<dropdownBottom;}
+    private void dropdownTarget(TargetType type,int left,int top,int right,int bottom,Module module,Setting<?> setting,int channel,String panel){
+        top=Math.max(top,dropdownTop);bottom=Math.min(bottom,dropdownBottom);
+        if(bottom<=top)return;
+        Target target=new Target(type,left,top,right,bottom,module,setting,channel);target.dropdownPanel=panel;targets.add(target);
+    }
+    private int dropdownSettingHeight(Setting<?> setting){
+        if(setting instanceof ModeSetting)return 22+dropdown.inlineHeight((ModeSetting)setting);
+        if(setting instanceof NumberSetting||setting instanceof RangeSetting||setting instanceof StringSetting)return 32;
+        if(setting instanceof MultiSelectSetting&&openSelections.contains(setting))return 22+((MultiSelectSetting)setting).getOptions().size()*18;
+        return 22;
+    }
+    int dropdownSettingsHeight(Module module){int h=0;for(Setting<?> setting:module.getSettings())if(setting.isVisible())h+=dropdownSettingHeight(setting);return h+3;}
+    void drawDropdownSettings(Module module,int x,int y,int w,DropdownStyle style,String owner){
+        int h=dropdownSettingsHeight(module);
+        if(style.suizide)DropdownStyle.roundedGradient(x,y,w,h,6,
+                style.light?style.accent(0,y):RenderUtils.blend(style.body,style.accent(0,y),.16F),
+                style.light?style.accent(1,y):RenderUtils.blend(style.body,style.accent(1,y),.16F));
+        else DropdownStyle.rect(x,y,w,h,style.packet?5:0,style.novo?0xD50D0D14:0xD5111114);
+        for(Setting<?> setting:module.getSettings())if(setting.isVisible()){drawDropdownSetting(setting,x,y,w,style,owner);y+=dropdownSettingHeight(setting);}
+    }
+    private void drawDropdownSetting(Setting<?> setting,int x,int y,int w,DropdownStyle style,String owner){
+        int text=style.suizide&&style.light?0xFFFFFFFF:style.text;
+        int muted=style.suizide&&style.light?0xFFEDE8E9:style.muted;
+        int accent=style.suizide&&style.light?0xFFFFFFFF:style.accent(.4F,y);
+        if(setting instanceof NumberSetting||setting instanceof RangeSetting){
+            String value=setting instanceof NumberSetting?compact(((NumberSetting)setting).getDouble()):compact(((RangeSetting)setting).getMin())+" - "+compact(((RangeSetting)setting).getMax());
+            float valueW=DropdownStyle.LABEL.width(value);DropdownStyle.label(setting.getName(),x+4,y+2,w-valueW-13,muted);
+            DropdownStyle.LABEL.draw(value,x+w-valueW-5,y+2,text);
+            int left=x+6,right=x+w-6,sy=y+23;double min,max,low,high;
+            if(setting instanceof NumberSetting){NumberSetting n=(NumberSetting)setting;min=n.getMinimum();max=n.getMaximum();low=min;high=n.getDouble();}
+            else {RangeSetting r=(RangeSetting)setting;min=r.getMinimum();max=r.getMaximum();low=r.getMin();high=r.getMax();}
+            float a=max<=min?0:(float)((low-min)/(max-min)),b=max<=min?0:(float)((high-min)/(max-min));
+            int lx=left+Math.round((right-left)*a),rx=left+Math.round((right-left)*b);
+            DropdownStyle.rect(left,sy,right-left,3,1,style.suizide&&style.light?0x55FFFFFF:0xFF3A3A45);
+            DropdownStyle.rect(lx,sy,Math.max(1,rx-lx),3,1,accent);
+            DropdownStyle.rect(rx-3,sy-2,7,7,4,accent);
+            if(setting instanceof RangeSetting)DropdownStyle.rect(lx-3,sy-2,7,7,4,accent);
+            dropdownTarget(setting instanceof RangeSetting?TargetType.RANGE:TargetType.NUMBER,left,y+15,right,y+32,null,setting,-1,owner);return;
+        }
+        if(setting instanceof StringSetting){
+            DropdownStyle.label(setting.getName(),x+4,y+1,w-8,muted);
+            DropdownStyle.rect(x+4,y+16,w-8,14,3,style.light?0x33000000:0xFF262630);
+            if(editing==setting&&textEditor!=null){textEditor.xPosition=x+7;textEditor.yPosition=y+19;textEditor.width=Math.max(1,w-14);textEditor.setTextColor(text);textEditor.drawTextBox();}
+            else DropdownStyle.label(((StringSetting)setting).getValue(),x+7,y+16,w-14,text);
+            dropdownTarget(TargetType.TEXT,x+4,y+16,x+w-4,y+31,null,setting,-1,owner);return;
+        }
+        int reserve=setting instanceof BooleanSetting?34:setting instanceof ColorSetting?32:Math.max(40,w/2);
+        DropdownStyle.label(setting.getName(),x+4,y+3,w-reserve-8,muted);
+        if(setting instanceof BooleanSetting){
+            boolean on=((BooleanSetting)setting).isEnabled();int tx=x+w-29;
+            DropdownStyle.rect(tx,y+5,25,12,6,style.light?0x4AFFFFFF:on?RenderUtils.blend(style.body,accent,.3F):0xFF35353E);
+            DropdownStyle.rect(tx+(on?14:2),y+7,8,8,4,on?accent:style.light?0xFFF6C2CA:0xFF92939B);
+            dropdownTarget(TargetType.BOOLEAN,x,y,x+w,y+22,null,setting,-1,owner);
+        }else if(setting instanceof ColorSetting){
+            int sx=x+w-27;DropdownStyle.rect(sx-1,y+4,24,14,3,style.light?0x55FFFFFF:0xFF484851);
+            RenderUtils.transparencyGrid(sx,y+5,sx+22,y+17,3);DropdownStyle.rect(sx,y+5,22,12,2,((ColorSetting)setting).getArgb());
+            dropdownTarget(TargetType.COLOR_TOGGLE,sx-1,y,x+w,y+22,null,setting,-1,owner);
+        }else if(setting instanceof ModeSetting){
+            String value=LanguageManager.translate(((ModeSetting)setting).getValue());
+            String fit=DropdownStyle.LABEL.fit(value,reserve-14);DropdownStyle.LABEL.draw(fit,x+w-14-DropdownStyle.LABEL.width(fit),y+3,text);
+            NeverLoseStyle.chevron(x+w-9,y+10,dropdown.modeOpen((ModeSetting)setting),text);
+            dropdownTarget(TargetType.MODE,x,y,x+w,y+22,null,setting,-1,owner);
+            dropdown.drawInlineMode(this,(ModeSetting)setting,x,y+22,w,owner);
+        }else if(setting instanceof MultiSelectSetting){
+            MultiSelectSetting multi=(MultiSelectSetting)setting;String count=multi.getValue().size()+" "+LanguageManager.translate("selected");
+            DropdownStyle.label(count,x+w-reserve,y+3,reserve-13,text);NeverLoseStyle.chevron(x+w-9,y+10,openSelections.contains(multi),text);
+            dropdownTarget(TargetType.MULTI_TOGGLE,x,y,x+w,y+22,null,setting,-1,owner);
+            if(openSelections.contains(multi)){int rowY=y+22;for(int i=0;i<multi.getOptions().size();i++){
+                String option=multi.getOptions().get(i);boolean selected=multi.isSelected(option);
+                DropdownStyle.rect(x+7,rowY+6,5,5,2,selected?accent:style.light?0x55FFFFFF:0xFF4B4B55);
+                DropdownStyle.label(LanguageManager.translate(option),x+19,rowY+1,w-26,selected?text:muted);
+                dropdownTarget(TargetType.MULTI_OPTION,x+4,rowY,x+w-4,rowY+18,null,setting,i,owner);rowY+=18;
+            }}
+        }
+    }
+    void dropdownTooltip(Module module,int mx,int my){
+        java.util.List<String> lines=new ArrayList<String>();lines.add(module.getName());
+        lines.addAll(fontRendererObj.listFormattedStringToWidth(module.getDescription(),210));
+        lines.add("LMB: toggle  RMB: settings  MMB: bind");drawHoveringText(lines,mx,my);
     }
 
     private void drawFuturistic(int mouseX, int mouseY, float partialTicks) {
@@ -674,6 +788,10 @@ public final class VibeClickGui extends GuiScreen {
             handleColorPopupClick(mouseX, mouseY, mouseButton);
             return;
         }
+        if(isDropdownTheme()){
+            if(colorPopup!=null){colorPopup=null;draggingColor=null;editing=null;return;}
+            if(dropdown.click(mouseX,mouseY,mouseButton))return;
+        }
         if (isSkeetTheme()) {
             int boardWidth = boardWidth();
             int boardHeight = boardHeight();
@@ -708,6 +826,7 @@ public final class VibeClickGui extends GuiScreen {
         }
         for (int index = targets.size() - 1; index >= 0; index--) {
             Target target = targets.get(index);
+            if(isDropdownTheme()&&!dropdown.accepts(target.dropdownPanel,mouseX,mouseY))continue;
             if (isSkeetTheme() && target.type != TargetType.CATEGORY && !insideSkeetContent(mouseX, mouseY)) {
                 continue;
             }
@@ -730,6 +849,7 @@ public final class VibeClickGui extends GuiScreen {
         }
         if (target.type == TargetType.MODULE) {
             if (mouseButton == 1) {
+                if(isDropdownTheme())dropdown.closeMode();
                 if (hasVisibleSettings(target.module)) {
                     if (!expandedModules.add(target.module)) {
                         expandedModules.remove(target.module);
@@ -748,6 +868,7 @@ public final class VibeClickGui extends GuiScreen {
             return;
         }
         Setting<?> setting = target.setting;
+        if(isDropdownTheme()&&mouseButton!=0&&(target.type==TargetType.NUMBER||target.type==TargetType.RANGE))return;
         if (target.type == TargetType.BOOLEAN) {
             ((BooleanSetting) setting).toggle();
         } else if (target.type == TargetType.NUMBER) {
@@ -759,7 +880,12 @@ public final class VibeClickGui extends GuiScreen {
             rangeDrag=range.beginDrag(range.getMinimum()+(range.getMaximum()-range.getMinimum())*(mouseX-target.left)/(double)Math.max(1,target.right-target.left));
             updateSlider(target, mouseX);
         } else if (target.type == TargetType.MODE) {
-            ((ModeSetting) setting).cycle(mouseButton == 1);
+            if(isDropdownTheme())dropdown.openMode((ModeSetting)setting,target.left,target.bottom,Math.max(116,target.right-target.left));
+            else ((ModeSetting) setting).cycle(mouseButton == 1);
+        } else if(target.type==TargetType.MODE_OPTION){
+            ModeSetting mode=(ModeSetting)setting;
+            if(target.channel>=0&&target.channel<mode.getModes().size())mode.setValue(mode.getModes().get(target.channel));
+            dropdown.closeMode();
         } else if (target.type == TargetType.COLOR_TOGGLE) {
             ColorSetting color = (ColorSetting) setting;
             if (colorPopup != null && colorPopup.setting == color) {
@@ -801,6 +927,7 @@ public final class VibeClickGui extends GuiScreen {
     protected void mouseReleased(int mouseX, int mouseY, int state) {
         neverLose.release(state);
         xanax.release(state);
+        if(state==0)dropdown.release();
         if (isAugustusTheme()) {
             super.mouseReleased(mouseX, mouseY, state);
             return;
@@ -875,9 +1002,12 @@ public final class VibeClickGui extends GuiScreen {
         if(isXanaxTheme()){xanax.wheel(mx,my,wheel);return;}
         if(isNeverLoseTheme()){neverLose.wheel(mx,my,wheel);return;}
         if(colorPopup!=null&&colorPopup.contains(mx,my))return;
+        if(isDropdownTheme()&&dropdown.wheelPopup(mx,my,wheel))return;
+        if(isDropdownTheme()&&dropdown.panWheel(mx,my,wheel))return;
         for(int i=targets.size()-1;i>=0;i--) {
             Target target=targets.get(i);
             if(!target.contains(mx,my)||(isSkeetTheme()&&!insideSkeetContent(mx,my)))continue;
+            if(isDropdownTheme()&&!dropdown.accepts(target.dropdownPanel,mx,my))continue;
             if(target.type==TargetType.NUMBER||target.type==TargetType.RANGE) {
                 int handle=target.setting instanceof RangeSetting?dev.vibe.ui.SliderWheel.nearestHandle((RangeSetting)target.setting,
                         (mx-target.left)/(double)Math.max(1,target.right-target.left)):0;
@@ -887,6 +1017,7 @@ public final class VibeClickGui extends GuiScreen {
             }
         }
         if(draggingSlider!=null)return;
+        if(isDropdownTheme()){dropdown.wheel(mx,my,wheel);return;}
         if (isSkeetTheme()) {
             int boardWidth = boardWidth();
             int boardHeight = boardHeight();
@@ -960,6 +1091,10 @@ public final class VibeClickGui extends GuiScreen {
             Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
             return;
         }
+        if(isDropdownTheme()&&keyCode==Keyboard.KEY_ESCAPE){
+            if(colorPopup!=null){commitEditing();editing=null;colorPopup=null;draggingColor=null;return;}
+            if(dropdown.escape())return;
+        }
         if (editing != null) {
             if (keyCode == Keyboard.KEY_RETURN || keyCode == Keyboard.KEY_NUMPADENTER) {
                 commitEditing();
@@ -1007,6 +1142,7 @@ public final class VibeClickGui extends GuiScreen {
         Keyboard.enableRepeatEvents(false);
         neverLose.close();
         xanax.close();
+        dropdown.close();
         AugustusImGui.closed();
         commitEditing();
         SAVED_PANELS.clear();
@@ -1062,7 +1198,30 @@ public final class VibeClickGui extends GuiScreen {
         return module.getId() + ":" + setting.getRawName();
     }
 
+    private void drawDropdownColorPopup(ColorPopup popup){
+        DropdownStyle style=new DropdownStyle(Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class),System.currentTimeMillis());
+        int x=popup.left,y=popup.top,left=x+6,top=y+16;
+        int fill=style.light?0xFFF5F7F6:0xFF18181E;
+        DropdownStyle.rect(x-2,y+2,COLOR_POPUP_WIDTH+4,COLOR_POPUP_HEIGHT+3,8,0x55000000);
+        DropdownStyle.rect(x,y,COLOR_POPUP_WIDTH,COLOR_POPUP_HEIGHT,6,style.light?0xFFB9C9C3:0xFF474750);
+        DropdownStyle.rect(x+1,y+1,COLOR_POPUP_WIDTH-2,COLOR_POPUP_HEIGHT-2,5,fill);
+        DropdownStyle.label("Color",x+6,y+1,COLOR_POPUP_WIDTH-12,style.text);
+        DropdownStyle.gradient(left,top,76,76,0xFFFFFFFF,Color.HSBtoRGB(popup.hue,1,1));
+        DropdownStyle.verticalGradient(left,top,76,76,0x00000000,0xFF000000);
+        int sx=left+Math.round(popup.saturation*76),sy=top+Math.round((1-popup.brightness)*76);
+        DropdownStyle.rect(sx-3,sy-3,7,7,4,0xFFFFFFFF);DropdownStyle.rect(sx-2,sy-2,5,5,3,Color.HSBtoRGB(popup.hue,popup.saturation,popup.brightness));
+        RenderUtils.transparencyGrid(x+86,top,x+110,top+76,4);DropdownStyle.rect(x+86,top,24,76,3,popup.setting.getArgb());
+        int hueY=top+81;
+        for(int i=0;i<6;i++){int a=left+i*76/6,b=left+(i+1)*76/6;DropdownStyle.gradient(a,hueY,b-a,8,Color.HSBtoRGB(i/6F,1,1),Color.HSBtoRGB((i+1)/6F,1,1));}
+        int hx=left+Math.round(popup.hue*76);DropdownStyle.rect(hx-1,hueY-2,2,12,1,style.text);
+        int ay=hueY+14;RenderUtils.transparencyGrid(left,ay,left+76,ay+8,3);
+        DropdownStyle.gradient(left,ay,76,8,popup.setting.getArgb()&0xFFFFFF,popup.setting.getArgb()|0xFF000000);
+        int ax=left+Math.round(popup.setting.getAlpha()*76/255F);DropdownStyle.rect(ax-1,ay-2,2,12,1,style.text);
+        DropdownStyle.rect(left,y+127,103,15,3,style.light?0xFFE1E8E5:0xFF2B2B35);
+        DropdownStyle.label(editing==popup.setting?editBuffer+"|":popup.setting.getHex(),left+4,y+128,95,style.text);
+    }
     private void drawColorPopup(ColorPopup popup) {
+        if(isDropdownTheme()){drawDropdownColorPopup(popup);return;}
         int left = popup.left;
         int top = popup.top;
         int squareLeft = left + 6;
@@ -1115,6 +1274,7 @@ public final class VibeClickGui extends GuiScreen {
     }
 
     private void handleColorPopupClick(int mouseX, int mouseY, int mouseButton) {
+        if(isDropdownTheme()&&mouseButton!=0)return;
         int squareLeft = colorPopup.left + 6;
         int squareTop = colorPopup.top + 16;
         if (contains(mouseX, mouseY, squareLeft, squareTop, squareLeft + 76, squareTop + 76)) {
@@ -1203,6 +1363,10 @@ public final class VibeClickGui extends GuiScreen {
         ClickGuiModule clickGui = Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
         return clickGui != null && clickGui.getTheme().is("Futuristic");
     }
+    private boolean isDropdownTheme(){
+        ClickGuiModule settings=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
+        return settings!=null&&(settings.getTheme().is("PacketV3")||settings.getTheme().is("Novoline")||settings.getTheme().is("SuizideX"));
+    }
 
     private boolean isSkeetTheme() {
         ClickGuiModule clickGui = Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
@@ -1240,7 +1404,7 @@ public final class VibeClickGui extends GuiScreen {
     }
 
     private enum TargetType {
-        CATEGORY, MODULE, BOOLEAN, NUMBER, RANGE, MODE, COLOR_TOGGLE, TEXT, MULTI_TOGGLE, MULTI_OPTION
+        CATEGORY, MODULE, BOOLEAN, NUMBER, RANGE, MODE, MODE_OPTION, COLOR_TOGGLE, TEXT, MULTI_TOGGLE, MULTI_OPTION
     }
 
     private enum ColorPopupPart {
@@ -1271,6 +1435,7 @@ public final class VibeClickGui extends GuiScreen {
     }
 
     private static final class Target {
+        private String dropdownPanel;
         private final TargetType type;
         private final int left;
         private final int top;

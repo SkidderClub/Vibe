@@ -55,6 +55,11 @@ public final class MainMenuShaderManager {
     private long lastShaderFrame;
 
     public void draw(int width, int height) {
+        draw(width,height,520000,33);
+    }
+
+    /** A covered backdrop can spend less on ambient motion while controls render at full rate. */
+    public void draw(int width,int height,int pixelBudget,int intervalMillis) {
         ensureInitialized();
         if (!enabled || width <= 0 || height <= 0 || !ensureProgram()) {
             drawFallback(width, height);
@@ -77,7 +82,6 @@ public final class MainMenuShaderManager {
         // or 4K fragment pass every menu frame.
         int renderWidth = framebufferWidth;
         int renderHeight = framebufferHeight;
-        final int pixelBudget = 520000;
         long pixels = (long) framebufferWidth * (long) framebufferHeight;
         if (pixels > pixelBudget) {
             double scale = Math.sqrt(pixelBudget / (double) pixels);
@@ -89,7 +93,7 @@ public final class MainMenuShaderManager {
         // Thirty animated shader frames per second feel fluid in a menu and
         // halve the cost on high-refresh displays. The cached FBO is still
         // presented every GUI frame so button interaction remains responsive.
-        boolean renderShader = lastShaderFrame == 0L || System.currentTimeMillis() - lastShaderFrame >= 33L;
+        boolean renderShader = lastShaderFrame == 0L || System.currentTimeMillis() - lastShaderFrame >= intervalMillis;
         if (renderShader) renderShaderFrame(renderWidth, renderHeight, framebufferWidth, framebufferHeight);
 
         minecraft.getFramebuffer().bindFramebuffer(true);

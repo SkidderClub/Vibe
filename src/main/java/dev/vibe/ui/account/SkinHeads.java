@@ -40,6 +40,9 @@ public final class SkinHeads {
     private SkinHeads() { }
 
     public static void draw(UUID id, String name, int x, int y, int size) {
+        draw(id,name,x,y,size,true);
+    }
+    public static void draw(UUID id,String name,int x,int y,int size,boolean fetch) {
         Minecraft mc = Minecraft.getMinecraft();
         if (id == null) id = UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(java.nio.charset.StandardCharsets.UTF_8));
         Head head = HEADS.get(id);
@@ -47,7 +50,7 @@ public final class SkinHeads {
             head = new Head(DefaultPlayerSkin.getDefaultSkin(id));
             HEADS.put(id, head);
         }
-        if (!head.loading && System.currentTimeMillis() >= head.retryAt) request(mc, id, name, head);
+        if (fetch && !head.loading && System.currentTimeMillis() >= head.retryAt) request(mc, id, name, head);
         GlStateManager.enableTexture2D();
         GlStateManager.enableBlend();
         GlStateManager.color(1, 1, 1, 1);

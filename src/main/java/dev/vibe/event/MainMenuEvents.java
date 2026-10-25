@@ -46,6 +46,16 @@ public final class MainMenuEvents {
 
     @SubscribeEvent
     public void onGuiOpen(GuiOpenEvent event) {
+        if (event.gui != null && event.gui.getClass() == net.minecraft.client.gui.GuiMultiplayer.class) {
+            GuiScreen parent = new GuiMainMenu();
+            for (Field field : net.minecraft.client.gui.GuiMultiplayer.class.getDeclaredFields()) {
+                if (field.getType() != GuiScreen.class) continue;
+                try { field.setAccessible(true); Object value = field.get(event.gui); if (value instanceof GuiScreen) parent = (GuiScreen) value; }
+                catch (ReflectiveOperationException ignored) { }
+            }
+            event.gui = new dev.vibe.ui.server.ServerBrowserGui(parent, shaders, Vibe.getInstance().getServerBrowser());
+            return;
+        }
         if (!(event.gui instanceof GuiMainMenu)) return;
         Minecraft mc = Minecraft.getMinecraft();
         // Apply and persist the fresh-profile default before displayGuiScreen
@@ -72,6 +82,26 @@ public final class MainMenuEvents {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onMenuInit(GuiScreenEvent.InitGuiEvent.Post event) {
+        if (event.gui instanceof net.minecraft.client.gui.GuiScreenAddServer
+                || event.gui instanceof net.minecraft.client.gui.GuiScreenServerList
+                || event.gui instanceof net.minecraft.client.multiplayer.GuiConnecting
+                || event.gui instanceof net.minecraft.client.gui.GuiDisconnected) {
+            for (int i = 0; i < event.buttonList.size(); i++) {
+                GuiButton original = event.buttonList.get(i);
+                if (original.getClass() == GuiButton.class) {
+                    GuiButton replacement = new VibeMenuButton(original);
+                    // The resource-pack selector keeps a direct reference to its button.
+                    // Retain that reference so native label/enabled updates reach the styled control.
+                    for (Class<?> type = event.gui.getClass(); type != null && type != GuiScreen.class; type = type.getSuperclass()) {
+                        for (Field field : type.getDeclaredFields()) if (field.getType() == GuiButton.class) {
+                            try { field.setAccessible(true); if (field.get(event.gui) == original) field.set(event.gui, replacement); }
+                            catch (ReflectiveOperationException ignored) { }
+                        }
+                    }
+                    event.buttonList.set(i, replacement);
+                }
+            }
+        }
         if (event.gui instanceof GuiIngameMenu) {
             boolean exists = false;
             for (GuiButton button : event.buttonList) if (button.id == LICENSES_BUTTON_ID) exists = true;
@@ -121,7 +151,9 @@ public final class MainMenuEvents {
     @SubscribeEvent
     public void onServerFormBackground(GuiScreenEvent.BackgroundDrawnEvent event) {
         if(Minecraft.getMinecraft().theWorld!=null||!(event.gui instanceof net.minecraft.client.gui.GuiScreenAddServer
-                ||event.gui instanceof net.minecraft.client.gui.GuiScreenServerList))return;
+                ||event.gui instanceof net.minecraft.client.gui.GuiScreenServerList
+                ||event.gui instanceof net.minecraft.client.multiplayer.GuiConnecting
+                ||event.gui instanceof net.minecraft.client.gui.GuiDisconnected))return;
         // Own the complete backdrop after vanilla's gradient, before form controls.
         dev.vibe.ui.GuiRenderState.prepare(false);
         Gui.drawRect(0,0,event.gui.width,event.gui.height,0xFF111218);
@@ -161,6 +193,7 @@ public final class MainMenuEvents {
                 && !Keyboard.isRepeatEvent() && click != null && click.getKey() != Keyboard.KEY_NONE
                 && Keyboard.getEventKey() == click.getKey()
                 && (event.gui instanceof GuiMainMenu || event.gui instanceof net.minecraft.client.gui.GuiMultiplayer
+                    || event.gui instanceof dev.vibe.ui.server.ServerBrowserGui
                     || event.gui instanceof net.minecraft.client.gui.GuiDisconnected || event.gui instanceof GuiSelectWorld)) {
             Vibe.getInstance().openClickGui();
             event.setCanceled(true);

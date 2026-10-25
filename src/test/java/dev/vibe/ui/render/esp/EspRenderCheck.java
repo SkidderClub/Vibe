@@ -52,7 +52,7 @@ public final class EspRenderCheck {
             ModuleManager modules=(ModuleManager)u.getMethod("allocateInstance",Class.class).invoke(unsafe,ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<dev.vibe.module.Module>(Arrays.asList(esp,editorModule)));set(Vibe.class,vibe,"moduleManager",modules);
             esp.getModes().setValue(new LinkedHashSet<String>(Arrays.asList("2D")));renderer=new Esp2DRenderer();
-            cornersAndContext();textBackgrounds();distanceAnchors();healthAndState();check("bars");gradientMask();check("gradient");textFonts();check("fonts");editor(editorModule);check("editor");
+            cornersAndContext();textBackgrounds();textAfterBars();fontFilterRestored();distanceAnchors();subpixelOutlines();subpixelBars();scalingGallery();healthAndState();check("bars");gradientMask();check("gradient");textFonts();check("fonts");editor(editorModule);check("editor");
             if(GL11.glGetError()!=0)throw new AssertionError("OpenGL error after ESP checks");
             System.out.println("ESP native checks passed: bars, global gradient masks, fonts, editor selection/resizing and settings visibility.");
         } finally {buffer.destroy();}
@@ -85,7 +85,7 @@ public final class EspRenderCheck {
         s.box.outlineColor.setValue(0xFFFF0000);s.box.color.solid.setValue(0xFF00FFFF);s.box.corners.setValue(true);s.box.cornerDistance.setValue(0D);s.box.cornerLength.setValue(.25);s.box.rounding.setValue(0D);
         frame();renderer.draw(s,actor(20,20),new EspLayout.Rect(300,180,100,180),W,H,true);
         for(int[] point:new int[][]{{325,180},{374,180},{325,360},{374,360},{300,205},{400,205},{300,334},{400,334}})
-            if((pixel(point[0],point[1])&0xFFFFFF)!=0xFF0000)throw new AssertionError("Corner outline missing end cap at "+Arrays.toString(point));
+            if((pixel(point[0],point[1])&0xFFFFFF)!=0xFF0000)throw new AssertionError("Corner outline missing end cap at "+Arrays.toString(point)+": "+Integer.toHexString(pixel(point[0],point[1])));
         save("corner-caps.png");
         s.box.color.mode.setValue("Team");s.box.color.solid.getHurtOverride().setValue(true);s.box.color.solid.getHurtColor().setValue(0xFFFF00FF);
         Esp2DRenderer.Actor a=actor(20,20);a.teamColor=0xFF55AAFF;
@@ -96,10 +96,57 @@ public final class EspRenderCheck {
         Esp2DSettings s=new EspModule().get2D();s.distanceScaling.setValue(1D);s.name.offset.setValue(30D);s.name.position.setValue("Right Down");
         Esp2DRenderer.Frame near=renderer.measure(s,actor(20,20),new EspLayout.Rect(300,180,100,180));
         Esp2DRenderer.Frame far=renderer.measure(s,actor(20,20),new EspLayout.Rect(300,180,10,18));
-        for(String id:near.elements.keySet()){
-            EspLayout.Rect n=near.elements.get(id),f=far.elements.get(id);
-            if(Math.abs((n.x-300)*.1-(f.x-300))>.01||Math.abs((n.y-180)*.1-(f.y-180))>.01)throw new AssertionError("Distance moved anchor "+id);
+        EspLayout.Rect n=near.elements.get("Name"),f=far.elements.get("Name");
+        float pad=s.box.width.getFloat()/2+s.box.outlineWidth.getFloat();
+        if(Math.abs(n.bottom()-near.box.bottom()-pad-30)>.01||Math.abs(f.bottom()-far.box.bottom()-pad*EspLayout.strokeScale(far.scale)-3)>.01)throw new AssertionError("Distance changed the along-edge anchor");
+        if(f.w<n.w*.55F)throw new AssertionError("Distant labels became unreadable");
+    }
+    private static void subpixelOutlines()throws Exception{
+        Esp2DSettings s=new EspModule().get2D();for(Esp2DSettings.Element e:s.elements)e.enabled.setValue(false);
+        s.box.enabled.setValue(true);s.box.outline.setValue(false);s.box.corners.setValue(false);s.box.width.setValue(1.5D);s.box.color.solid.setValue(0xFFFFFFFF);
+        for(int scale:new int[]{1,2,3}){
+            double min=Double.POSITIVE_INFINITY,max=0;
+            for(int phase=0;phase<=20;phase++){
+                frame();GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GL11.glOrtho(0,W/(double)scale,H/(double)scale,0,1000,3000);GL11.glMatrixMode(GL11.GL_MODELVIEW);
+                renderer.draw(s,actor(20,20),new EspLayout.Rect(100+phase/20F,50,16,24),W/scale,H/scale,true);
+                ByteBuffer pixels=BufferUtils.createByteBuffer(8*scale*4*scale*4);GL11.glReadPixels(97*scale,H-64*scale,8*scale,4*scale,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,pixels);
+                double energy=0;for(int i=0;i<pixels.capacity();i+=4)energy+=(pixels.get(i)&255)/(255D*4*scale);
+                min=Math.min(min,energy);max=Math.max(max,energy);
+            }
+            if(min<.5*scale||max-min>.12*scale)throw new AssertionError("Moving outline flickered at GUI scale "+scale+": "+min+".."+max);
         }
+        frame();System.out.println("Subpixel outline coverage is stable through 21 pixel phases at GUI scales 1/2/3.");
+    }
+    private static void scalingGallery()throws Exception{
+        Esp2DSettings s=new EspModule().get2D();s.armorBar.enabled.setValue(true);s.health.enabled.setValue(true);s.itemIcon.enabled.setValue(true);s.box.color.solid.setValue(0xFFEF55DD);
+        frame();Gui.drawRect(0,0,W,H,0xFF26343B);
+        float[] heights={22,45,90,180,360};
+        for(int i=0;i<heights.length;i++)renderer.draw(s,actor(20,20),new EspLayout.Rect(60+i*175,450-heights[i],heights[i]/3,heights[i]),W,H,true);
+        save("smooth-distance-scaling.png");
+        frame();Gui.drawRect(0,0,W,H,0xFF26343B);renderer.draw(s,actor(20,20),new EspLayout.Rect(170,-80,240,720),W,H,true);save("smooth-close-up.png");
+    }
+    private static void subpixelBars(){
+        Esp2DSettings s=new EspModule().get2D();for(Esp2DSettings.Element e:s.elements)e.enabled.setValue(false);
+        s.healthBar.enabled.setValue(true);s.healthBar.width.setValue(.5);s.healthBar.outline.setValue(false);s.healthBar.color.solid.setValue(0xFFFFFFFF);
+        for(int scale:new int[]{1,2,3}){
+            double min=100,max=0;
+            for(int phase=0;phase<=20;phase++){
+                frame();GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GL11.glOrtho(0,W/(double)scale,H/(double)scale,0,1000,3000);GL11.glMatrixMode(GL11.GL_MODELVIEW);
+                renderer.draw(s,actor(20,20),new EspLayout.Rect(100+phase/20F,50,16,24),W/scale,H/scale,true);
+                ByteBuffer pixels=BufferUtils.createByteBuffer(8*scale*4*scale*4);GL11.glReadPixels(93*scale,H-64*scale,8*scale,4*scale,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,pixels);
+                double energy=0;for(int i=0;i<pixels.capacity();i+=4)energy+=(pixels.get(i)&255)/(255D*4*scale);min=Math.min(min,energy);max=Math.max(max,energy);
+            }
+            if(min<.25*scale||max-min>.08*scale)throw new AssertionError("A thin moving health bar flickered at scale "+scale+": "+min+".."+max);
+        }
+        frame();
+    }
+    private static void fontFilterRestored(){
+        ResourceLocation ascii=new ResourceLocation("textures/font/ascii.png");mc.getTextureManager().bindTexture(ascii);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MIN_FILTER,GL11.GL_NEAREST);GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MAG_FILTER,GL11.GL_NEAREST);
+        Esp2DSettings s=new EspModule().get2D();frame();renderer.beginBatch();
+        try{renderer.draw(s,actor(20,20),new EspLayout.Rect(300,180,60,90),W,H,true);mc.getTextureManager().bindTexture(ascii);if(GL11.glGetTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MAG_FILTER)!=GL11.GL_LINEAR)throw new AssertionError("ESP did not smooth the scaled Minecraft font");}
+        finally{renderer.endBatch();}
+        mc.getTextureManager().bindTexture(ascii);if(GL11.glGetTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MAG_FILTER)!=GL11.GL_NEAREST||GL11.glGetTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MIN_FILTER)!=GL11.GL_NEAREST)throw new AssertionError("ESP changed the font filter outside its render pass");
     }
     private static void textBackgrounds()throws Exception {
         Esp2DSettings s=new EspModule().get2D();for(Esp2DSettings.Element e:s.elements)e.enabled.setValue(false);
@@ -114,6 +161,32 @@ public final class EspRenderCheck {
                 if((pixel(x,y)>>16&255)>32)throw new AssertionError("Legacy text background was drawn: "+font);
         }
         save("text-without-background.png");
+    }
+    private static void textAfterBars()throws Exception {
+        for(int profile=0;profile<3;profile++){
+            Esp2DSettings s=new EspModule().get2D(profile);s.distanceScaling.setValue(0D);
+            for(Esp2DSettings.Element e:s.elements)e.enabled.setValue(false);
+            s.healthBar.position.setValue("Right");s.healthBar.outline.setValue(false);s.healthBar.backgroundEnabled.setValue(false);s.healthBar.color.solid.setValue(0);
+            for(Esp2DSettings.Element e:s.elements)if(e.kind==Esp2DSettings.Kind.TEXT){
+                e.enabled.setValue(true);e.backgroundEnabled.setValue(true);e.background.setValue(0xFFFF0000);e.outline.setValue(true);e.outlineColor.setValue(0xFF000000);
+                for(String font:new String[]{"Minecraft","Sans","Sans Bold"}){
+                    e.useDefaultText.setValue(profile!=1);Esp2DSettings.TextStyle t=e.resolvedText();t.font.setValue(font);t.shadow.setValue(true);t.color.solid.setValue(0xFFFFFFFF);
+                    s.healthBar.enabled.setValue(false);frame();Gui.drawRect(0,0,W,H,0xFF687A8D);
+                    EspLayout.Rect r=renderer.draw(s,actor(20,20),new EspLayout.Rect(350,220,100,180),W,H,true).elements.get(e.title);
+                    byte[] clean=textPixels(r);
+                    s.healthBar.enabled.setValue(true);frame();Gui.drawRect(0,0,W,H,0xFF687A8D);
+                    renderer.draw(s,actor(20,20),new EspLayout.Rect(350,220,100,180),W,H,true);
+                    if(!Arrays.equals(clean,textPixels(r)))throw new AssertionError("A preceding bar painted a text background: profile="+profile+", "+e.title+", "+font);
+                }
+                e.enabled.setValue(false);
+            }
+        }
+        save("all-text-after-bars.png");
+    }
+    private static byte[] textPixels(EspLayout.Rect r){
+        int x=(int)Math.floor(r.x)-4,y=(int)Math.floor(r.y)-4,w=(int)Math.ceil(r.w)+9,h=(int)Math.ceil(r.h)+9;
+        ByteBuffer pixels=BufferUtils.createByteBuffer(w*h*4);GL11.glReadPixels(x,H-y-h,w,h,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,pixels);
+        byte[] data=new byte[pixels.remaining()];pixels.get(data);return data;
     }
     private static void gradientMask()throws Exception {
         Esp2DSettings s=esp.get2D();s.healthBar.enabled.setValue(false);s.box.enabled.setValue(true);s.box.corners.setValue(false);s.box.width.setValue(6D);s.box.outline.setValue(false);s.box.color.mode.setValue("Global Gradient");

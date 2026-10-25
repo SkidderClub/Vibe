@@ -4,17 +4,28 @@ package dev.vibe.ui.render.esp;
 public final class BoxProjection {
     private BoxProjection() { }
     public static double[] bounds(double[] min, double[] max, float[] model, float[] projection, double width, double height) {
+        return bounds(min,max,model,projection,width,height,true);
+    }
+    /** Reject invisible boxes, but preserve their full extent when they cross a viewport edge. */
+    public static double[] visibleBounds(double[] min,double[] max,float[] model,float[] projection,double width,double height){
+        return bounds(min,max,model,projection,width,height,false);
+    }
+    private static double[] bounds(double[] min,double[] max,float[] model,float[] projection,double width,double height,boolean clipScreen){
         double[][] corners = new double[8][];
         for (int i = 0; i < 8; i++) corners[i] = transform(projection, transform(model,
                 new double[] {(i & 1) == 0 ? min[0] : max[0], (i & 2) == 0 ? min[1] : max[1],
                         (i & 4) == 0 ? min[2] : max[2], 1}));
+        double[] visible=clip(corners,width,height,0);
+        return visible==null||clipScreen?visible:clip(corners,width,height,4);
+    }
+    private static double[] clip(double[][] corners,double width,double height,int firstPlane){
         double[] bounds = {Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY};
         for (int i = 0; i < 8; i++) for (int axis = 1; axis <= 4; axis <<= 1) {
             if ((i & axis) != 0) continue;
             double[] a = corners[i], b = corners[i | axis];
             double start = 0, end = 1;
             boolean visible = true;
-            for (int plane = 0; plane < 6; plane++) {
+            for (int plane = firstPlane; plane < 6; plane++) {
                 int coordinate = plane / 2;
                 double sign = plane % 2 == 0 ? 1 : -1;
                 double fa = a[3] + sign * a[coordinate], fb = b[3] + sign * b[coordinate];

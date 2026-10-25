@@ -179,6 +179,10 @@ registerRenderCheck('verifyNeverLoseRendering', 'dev.vibe.ui.clickgui.NeverLoseR
         'neverlose-render-check', 'Checks NeverLose controls and clipping.')
 registerRenderCheck('verifyXanaxRendering', 'dev.vibe.ui.clickgui.XanaxRenderCheck', 'xanax-render-check',
         'Checks Xanax rendering, controls, profiles and small-screen layouts.')
+registerRenderCheck('verifyDropdownThemes', 'dev.vibe.ui.ClientChangesRenderCheck', 'dropdown-themes-check',
+        'Checks PacketV3, Novoline and SuizideX controls, native pixels, scrolling, dragging and scaled layouts.', false) {
+    args 'dropdown-themes'
+}
 
 tasks.register('verifyMusicIntegration', JavaExec) {
     group = 'verification'

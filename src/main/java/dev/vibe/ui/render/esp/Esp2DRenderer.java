@@ -41,12 +41,12 @@ public final class Esp2DRenderer {
         float scale=EspLayout.scale(box.h,settings.distanceScaling.getFloat());
         // The stroke is centred on the projected edge, so half of it and the outline lie outside the box.
         Element b=settings.box;
-        float boxPad=b.enabled.isEnabled()?(b.width.getFloat()/2+(b.outline.isEnabled()?b.outlineWidth.getFloat():0))*scale*b.scale.getFloat():0;
+        float boxPad=b.enabled.isEnabled()?(b.width.getFloat()/2+(b.outline.isEnabled()?b.outlineWidth.getFloat():0))*EspLayout.strokeScale(scale)*b.scale.getFloat():0;
         EspLayout.Rect drawn=box.expand(boxPad);
         List<EspLayout.Request> requests=new ArrayList<EspLayout.Request>();
         for(Element e:settings.elements) {
             if(!e.enabled.isEnabled() || e.kind==Kind.BOX || !available(e,settings,actor))continue;
-            float s=scale*e.scale.getFloat(),w,h,offset=e.offset.getFloat()*box.h/180f;
+            float s=elementScale(settings,e,box.h,scale)*e.scale.getFloat(),w,h,offset=e.offset.getFloat()*box.h/180f;
             float outline=e.outline.isEnabled()?e.outlineWidth.getFloat()*s:0;
             if(e.kind==Kind.BAR){
                 // Bars run along the drawn box, outlines included, so both silhouettes start and end on the same pixel.
@@ -58,7 +58,7 @@ public final class Esp2DRenderer {
             else {int count=e.kind==Kind.ARMOR?equipmentCount(actor):1;w=16*s*(e.kind==Kind.ARMOR&&!e.vertical()?count:1);h=16*s*(e.kind==Kind.ARMOR&&e.vertical()?count:1);}
             float pad=outline;
             if(e.kind==Kind.TEXT && e.resolvedText().shadow.isEnabled())pad=Math.max(pad,s*e.resolvedText().size.getFloat()/9);
-            if(e.backgroundEnabled.isEnabled())pad=Math.max(pad,2*s);
+            if(e.kind!=Kind.TEXT&&e.backgroundEnabled.isEnabled())pad=Math.max(pad,2*s);
             requests.add(new EspLayout.Request(e.title,e.position.getValue(),w,h,e.order.getFloat(),offset,pad));
         }
         Map<String,EspLayout.Rect> result=EspLayout.arrange(drawn,requests,settings.gap.getFloat()*scale);
@@ -79,6 +79,7 @@ public final class Esp2DRenderer {
     private float textHeight(TextStyle t,String text) {return t.font.is("Minecraft")?8:font(t).inkHeight(text);}
 
     private boolean batching;
+    private EspFontFilter fontFilter;
     private int batchProgram,batchTexture;
 
     /**
@@ -96,6 +97,7 @@ public final class Esp2DRenderer {
     public void endBatch() {
         if(!batching)return;
         batching=false;
+        closeFontFilter();
         restore(batchProgram,batchTexture);
     }
     private static void restore(int program,int texture) {
@@ -122,15 +124,15 @@ public final class Esp2DRenderer {
             if(b.enabled.isEnabled() && (editor||!blocked(box)))drawBox(settings,b,actor,frame,screenWidth,screenHeight,seconds);
             for(Element e:settings.elements) {
                 EspLayout.Rect r=frame.elements.get(e.title);if(r==null||(!editor&&blocked(r)))continue;
-                float s=frame.scale*e.scale.getFloat();
+                float s=elementScale(settings,e,box.h,frame.scale)*e.scale.getFloat();
                 if(e.kind==Kind.BAR){
                     float outline=e.outline.isEnabled()?e.outlineWidth.getFloat()*s:0;
-                    if(outline>0)border(r,outline,alpha(resolve(e.outlineColor,actor),actor.opacity));
-                    if(e.backgroundEnabled.isEnabled())solid(r,alpha(resolve(e.background,actor),actor.opacity));
+                    if(outline>0&&!shape(settings,e.color,r.expand(outline/2),r,actor,screenWidth,screenHeight,seconds,true,resolve(e.outlineColor,actor),2,0,outline,0,0))border(r,outline,alpha(resolve(e.outlineColor,actor),actor.opacity));
+                    if(e.backgroundEnabled.isEnabled()&&!shape(settings,e.color,r,r,actor,screenWidth,screenHeight,seconds,true,resolve(e.background,actor),1,0,0,0,0))solid(r,alpha(resolve(e.background,actor),actor.opacity));
                     float ratio=e==settings.healthBar?actor.health/Math.max(.001F,actor.maxHealth):actor.armor/20;
                     ratio=Math.max(0,Math.min(1,ratio));
                     EspLayout.Rect fill=e.vertical()?new EspLayout.Rect(r.x,r.bottom()-r.h*ratio,r.w,r.h*ratio):new EspLayout.Rect(r.x,r.y,r.w*ratio,r.h);
-                    paint(settings,e.color,r,screenWidth,screenHeight,false,actor,seconds);quad(fill);GL20.glUseProgram(0);
+                    if(!shape(settings,e.color,fill,r,actor,screenWidth,screenHeight,seconds,false,0,1,0,0,0,0)){paint(settings,e.color,r,screenWidth,screenHeight,false,actor,seconds);quad(fill);GL20.glUseProgram(0);}
                 }else if(e.kind==Kind.TEXT){drawText(settings,e,label(e,settings,actor),r,s,actor,screenWidth,screenHeight,seconds);}
                 else {
                     if(e.backgroundEnabled.isEnabled())solid(r.expand(2*s),alpha(resolve(e.background,actor),actor.opacity));
@@ -140,23 +142,36 @@ public final class Esp2DRenderer {
                 }
             }
         } finally {
-            if(own)restore(program,texture);
+            if(own){closeFontFilter();restore(program,texture);}
         }
         return frame;
     }
     private boolean blocked(EspLayout.Rect r) {return DebugOverlay.overlaps((int)r.x,(int)r.y,(int)Math.ceil(r.right()),(int)Math.ceil(r.bottom()));}
     private void drawBox(Esp2DSettings settings,Element e,Actor a,Frame f,int w,int h,double seconds) {
-        EspLayout.Rect r=f.box;float s=f.scale*e.scale.getFloat(),line=e.width.getFloat()*s;
+        EspLayout.Rect r=f.box;float s=EspLayout.strokeScale(f.scale)*e.scale.getFloat(),line=e.width.getFloat()*s;
         float radius=Math.min(Math.min(r.w,r.h)/2,e.rounding.getFloat()*s);
-        boolean corners=e.corners.isEnabled()&&a.distance>=e.cornerDistance.getFloat();
+        float cornerBlend=EspLayout.cornerBlend(a.distance,e.cornerDistance.getFloat(),e.corners.isEnabled());
+        boolean corners=cornerBlend>=.5F;
         float length=Math.min(r.w,r.h)*e.cornerLength.getFloat();
-        if(e.backgroundEnabled.isEnabled())solidRounded(r,radius,alpha(resolve(e.background,a),a.opacity));
+        if(e.backgroundEnabled.isEnabled()&&!shape(settings,e.color,r,r,a,w,h,seconds,true,resolve(e.background,a),1,radius,0,0,0))solidRounded(r,radius,alpha(resolve(e.background,a),a.opacity));
         if(e.outline.isEnabled()) {
-            GlStateManager.disableTexture2D();
-            color(alpha(resolve(e.outlineColor,a),a.opacity));
-            stroke(r,radius,line+2*e.outlineWidth.getFloat()*s,corners,length+e.outlineWidth.getFloat()*s);
+            float edge=e.outlineWidth.getFloat()*s;
+            if(!shape(settings,e.color,r,r,a,w,h,seconds,true,resolve(e.outlineColor,a),2,radius,line+2*edge,cornerBlend,length+edge)){
+                GlStateManager.disableTexture2D();color(alpha(resolve(e.outlineColor,a),a.opacity));stroke(r,radius,line+2*edge,corners,length+edge);
+            }
         }
-        paint(settings,e.color,r,w,h,false,a,seconds);stroke(r,radius,line,corners,length);GL20.glUseProgram(0);
+        if(!shape(settings,e.color,r,r,a,w,h,seconds,false,0,2,radius,line,cornerBlend,length)){
+            paint(settings,e.color,r,w,h,false,a,seconds);stroke(r,radius,line,corners,length);GL20.glUseProgram(0);
+        }
+    }
+    /** Analytic pixel coverage avoids on/off rasterization as fractional edges move across pixels. */
+    private boolean shape(Esp2DSettings settings,Paint paint,EspLayout.Rect rect,EspLayout.Rect paintRect,Actor actor,int w,int h,double seconds,boolean solid,int color,int kind,float radius,float width,float corners,float length){
+        if(rect.w<=0||rect.h<=0)return true;
+        GlStateManager.disableTexture2D();GL11.glDisable(GL11.GL_ALPHA_TEST);GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(770,771);
+        boolean override=solid||actor.forcedColor!=0;
+        int resolved=solid?color:override?fallback(settings,paint,paintRect,w,h,seconds,actor):0;
+        if(!EspPaintShader.shape(settings,paint,rect,paintRect,w,h,actor.opacity,seconds,actor.teamColor,actor.hurt,actor.forcedColor,override,resolved,kind,radius,width,corners,length))return false;
+        quad(rect.expand((kind==2?width/2:0)+2));GL20.glUseProgram(0);return true;
     }
     private void drawText(Esp2DSettings settings,Element e,String value,EspLayout.Rect r,float scale,Actor actor,int w,int h,double seconds) {
         TextStyle t=e.resolvedText();float size=t.size.getFloat()/9*scale,opacity=actor.opacity;
@@ -178,8 +193,17 @@ public final class Esp2DRenderer {
     }
     private void text(TextStyle t,String value,float x,float y,int color) {
         if((color>>>24)==0)return;
+        // Bars and box geometry disable texturing. Minecraft's font renderer
+        // assumes it is enabled, including its fixed-function shadow/outline
+        // passes; otherwise each glyph quad becomes a solid black rectangle.
+        GlStateManager.enableTexture2D();GlStateManager.enableBlend();
+        if(t.font.is("Minecraft")&&fontFilter==null)fontFilter=EspFontFilter.begin(mc,value);
         if(t.font.is("Minecraft"))mc.fontRendererObj.drawString(value,x,y,color,false);else font(t).draw(value,x,y,color);
     }
+    private static float elementScale(Esp2DSettings settings,Element element,float height,float scale){
+        return element.kind==Kind.BAR?EspLayout.strokeScale(scale):element.kind==Kind.TEXT?EspLayout.textScale(height,settings.distanceScaling.getFloat()):scale;
+    }
+    private void closeFontFilter(){if(fontFilter!=null){fontFilter.close();fontFilter=null;}}
     private boolean paint(Esp2DSettings settings,Paint paint,EspLayout.Rect rect,int w,int h,boolean texture,Actor actor,double seconds) {
         GL11.glDisable(GL11.GL_ALPHA_TEST);GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(770,771);
         if(!texture)GlStateManager.disableTexture2D();

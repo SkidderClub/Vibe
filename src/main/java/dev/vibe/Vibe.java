@@ -51,6 +51,7 @@ public final class Vibe {
     private TargetManager targetManager;
     private ScriptRuntime scriptRuntime;
     private AccountManager accountManager;
+    private dev.vibe.server.ServerBrowserEvents serverBrowser;
     private StatisticsService statistics;
     private ExtensionManager extensions;
     private boolean extensionLoading;
@@ -70,6 +71,7 @@ public final class Vibe {
         // exists so a previous session can never start the client frozen.
         CombatTimerAccess.resetVanillaTimer();
         accountManager = new AccountManager(minecraft, new File(minecraft.mcDataDir, "vibe/accounts").toPath());
+        serverBrowser = new dev.vibe.server.ServerBrowserEvents(minecraft, new File(minecraft.mcDataDir, "vibe/server-results.json").toPath());
         statistics = new StatisticsService(minecraft, new File(minecraft.mcDataDir, "vibe/statistics").toPath());
         statistics.recordLaunch();
         config = new VibeConfig(event.getModConfigurationDirectory());
@@ -90,6 +92,8 @@ public final class Vibe {
         ClientEvents events = new ClientEvents();
         MinecraftForge.EVENT_BUS.register(events);
         MinecraftForge.EVENT_BUS.register(new MainMenuEvents());
+        MinecraftForge.EVENT_BUS.register(serverBrowser);
+        FMLCommonHandler.instance().bus().register(serverBrowser);
         MinecraftForge.EVENT_BUS.register(new GuiButtonLocalizationEvents());
         ReconnectEvents reconnect = new ReconnectEvents();
         MinecraftForge.EVENT_BUS.register(reconnect);
@@ -160,6 +164,7 @@ public final class Vibe {
     public TargetManager getTargetManager() { return targetManager; }
     public ScriptRuntime getScriptRuntime() { return scriptRuntime; }
     public AccountManager getAccountManager() { return accountManager; }
+    public dev.vibe.server.ServerBrowserEvents getServerBrowser() { return serverBrowser; }
     public StatisticsService getStatistics() { return statistics; }
     public ExtensionManager getExtensions() { return extensions; }
     public boolean isExtensionLoading() { return extensionLoading; }
