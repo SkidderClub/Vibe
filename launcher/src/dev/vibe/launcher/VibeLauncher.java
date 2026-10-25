@@ -25,7 +25,7 @@ import javax.swing.SwingUtilities;
 /**
  * Vibe Launcher: installs, updates and starts the Vibe Forge 1.8.9 client.
  *
- * <p>The launcher downloads published Vibe JARs from {@code VibeUpdate/VibeReleases},
+ * <p>The launcher downloads published Vibe JARs from the GitHub releases of {@code SkidderClub/Vibe},
  * prepares Minecraft 1.8.9, Forge and OptiFine once, and then starts the game
  * directly with its private Java 8 runtime. Vibe versions are managed locally
  * and can be switched from the Versions page. It never handles account
@@ -33,14 +33,14 @@ import javax.swing.SwingUtilities;
  * account to use through a small bridge file.</p>
  */
 public final class VibeLauncher {
-    public static final String VERSION = "2.1.0";
+    public static final String VERSION = "2.2.0";
     public static final String PRODUCT = "Vibe Launcher";
     public static final String OWNER = "SkidderClub";
     public static final String REPOSITORY = "Vibe";
     public static final String BRANCH = "main";
     public static final String REPOSITORY_URL = "https://github.com/" + OWNER + "/" + REPOSITORY;
-    public static final String RELEASES_OWNER = "VibeUpdate";
-    public static final String RELEASES_REPOSITORY = "VibeReleases";
+    public static final String RELEASES_OWNER = OWNER;
+    public static final String RELEASES_REPOSITORY = REPOSITORY;
     public static final String RELEASES_URL = "https://github.com/" + RELEASES_OWNER + "/" + RELEASES_REPOSITORY + "/releases";
     public static final String DISCORD_URL = "https://dsc.gg/vibe-skidder-club";
 

@@ -45,7 +45,7 @@ public final class LauncherUpdater {
 
     /** The newest launcher release that is newer than this build, or {@code null}. */
     public Release check() throws IOException {
-        String url = "https://api.github.com/repos/" + VibeLauncher.OWNER + "/" + VibeLauncher.REPOSITORY + "/releases?per_page=30";
+        String url = "https://api.github.com/repos/" + VibeLauncher.OWNER + "/" + VibeLauncher.REPOSITORY + "/releases?per_page=100";
         Release best = null;
         for (Object item : Json.array(Json.parse(Http.getText(url, 8 * 1024 * 1024)))) {
             Map<String, Object> release = Json.object(item);

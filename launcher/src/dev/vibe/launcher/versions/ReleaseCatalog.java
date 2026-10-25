@@ -25,11 +25,12 @@ import java.util.Map;
 import java.util.TimeZone;
 
 /**
- * The published Vibe versions from {@code VibeUpdate/VibeReleases}.
+ * The published Vibe versions from the GitHub releases of {@code SkidderClub/Vibe}.
  *
  * <p>Releases are read from GitHub's API and mirrored to a cache file, so the
  * version list stays usable when GitHub is unreachable or rate limited. Only
- * non-draft releases are listed; pre-releases are included and marked.</p>
+ * non-draft releases with a Vibe JAR are listed, so launcher releases in the same
+ * repository are skipped; pre-releases (one per commit) are included and marked.</p>
  */
 public final class ReleaseCatalog {
     /** The Vibe JAR of one release, with its checksum when GitHub publishes one. */
@@ -148,6 +149,7 @@ public final class ReleaseCatalog {
                 assets.add(new Asset(name, url, sha256Of(digest), null, Json.number(asset, "size", 0)));
             }
             Asset jar = pick(tag, assets, sumName);
+            if (jar == null) continue;
             releases.add(new Release(tag, Json.string(entry, "name"), Json.string(entry, "body"),
                     Json.string(entry, "html_url"), parseTime(Json.string(entry, "published_at")),
                     jar, Json.bool(entry, "prerelease")));

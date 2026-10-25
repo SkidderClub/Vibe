@@ -51,6 +51,26 @@ public final class ReleaseTests {
             Check.isTrue(releases.get(1).published > releases.get(2).published, "newest first by date");
         });
 
+        check.test("commit pre-releases sort after their base version and launcher releases are skipped", () -> {
+            String json = "[\n"
+                    + " {\"tag_name\":\"launcher-v2.2.0\",\"name\":\"Launcher 2.2.0\",\"prerelease\":false,\"published_at\":\"2026-10-26T10:00:00Z\","
+                    + "\"assets\":[{\"name\":\"VibeLauncher.jar\",\"browser_download_url\":\"https://github.com/x/l.jar\"},"
+                    + "{\"name\":\"VibeLauncher.jar.sha256\",\"browser_download_url\":\"https://github.com/x/l.sha256\"}]},\n"
+                    + " {\"tag_name\":\"v0.0.6-dev.42\",\"prerelease\":true,\"published_at\":\"2026-10-25T10:00:00Z\","
+                    + "\"assets\":[{\"name\":\"Vibe-1.8.9-0.0.6-dev.42.jar\",\"browser_download_url\":\"https://github.com/x/42.jar\","
+                    + "\"digest\":\"sha256:" + repeat("b", 64) + "\"}]},\n"
+                    + " {\"tag_name\":\"v0.0.6\",\"prerelease\":false,\"published_at\":\"2026-10-20T10:00:00Z\","
+                    + "\"assets\":[{\"name\":\"Vibe-1.8.9-0.0.6.jar\",\"browser_download_url\":\"https://github.com/x/6.jar\","
+                    + "\"digest\":\"sha256:" + repeat("c", 64) + "\"}]}\n"
+                    + "]";
+            List<ReleaseCatalog.Release> releases = ReleaseCatalog.parse(json);
+            Check.equal(2, releases.size());
+            Check.equal("0.0.6-dev.42", releases.get(0).version());
+            Check.equal("Vibe-1.8.9-0.0.6-dev.42.jar", releases.get(0).asset.name);
+            Check.isTrue(releases.get(0).prerelease, "commit builds are pre-releases");
+            Check.equal("v0.0.6", releases.get(1).tag);
+        });
+
         check.test("release notes become sections", () -> {
             List<ChangelogSection> sections = ReleaseNotes.parse(
                     "## 0.0.6\n\n### Changes\n- Added **GTA8** in [docs](GTA8.md).\n  Continued here.\n- Second\n\n### Fixes\n* A crash\n");

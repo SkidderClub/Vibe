@@ -4,7 +4,7 @@
 Java runtime that can open the JAR (Java 8 or newer): Minecraft 1.8.9, Forge,
 OptiFine, the libraries, natives and assets, plus the private Java 8 runtime, are
 all prepared on the first start. Vibe itself is downloaded as a ready-made JAR
-from `VibeUpdate/VibeReleases`; no source checkout or Gradle is involved.
+from the GitHub releases of `SkidderClub/Vibe`; no source checkout or Gradle is involved.
 
 ## Features
 
@@ -74,8 +74,11 @@ The old `source/` checkout is no longer downloaded or updated; only its
 A leftover checkout can be deleted without losing the game profile.
 
 **Versions.** The launcher asks the GitHub API for the releases of
-`VibeUpdate/VibeReleases`. A release counts when it has a
-`Vibe-1.8.9-*.jar` asset. The JAR is verified against the asset's SHA-256
+`SkidderClub/Vibe`. A release counts when it has a
+`Vibe-1.8.9-*.jar` asset; launcher releases in the same repository are skipped.
+Every commit on `main` is published as a pre-release such as `v0.0.6-dev.42`,
+which the Versions page lists with a *pre-release* label; *Update to latest*
+only picks full releases. The JAR is verified against the asset's SHA-256
 (`digest`, otherwise a matching `.sha256` file) and opened to check for
 `mcmod.info`, then stored under `versions/<tag>/`. Switching versions removes
 the other managed `Vibe-1.8.9-*.jar` files from `mods/` and hard-links (or
@@ -96,6 +99,20 @@ Stop ends Minecraft on every Java version.
 `run/client/vibe/launcher.properties` (`mode` = `vibe`, `gta7`, `gta8` or
 `accounts`, plus `selectedUuid`/`selectedName`) and the theme in
 `run/client/vibe/menu.properties`. No credentials are ever written.
+
+## Publishing
+
+`.github/workflows/release.yml` publishes everything as releases of `SkidderClub/Vibe`:
+
+| Trigger | Release |
+| --- | --- |
+| Every push to `main` | Pre-release `v<version>-dev.<run>` (e.g. `v0.0.6-dev.42`) with `Vibe-1.8.9-<version>-dev.<run>.jar` and its `.sha256`. Only the newest 15 are kept. |
+| Tag `v<version>` matching `version` in `build.gradle` | Full release; notes come from the `## <version>` (or `## Unreleased`) section of `docs/CHANGELOG.md`. |
+| Tag `launcher-v<version>` matching `VibeLauncher.VERSION` | Launcher release with `VibeLauncher.jar` and `VibeLauncher.jar.sha256`. |
+
+To release Vibe, set `version` in `build.gradle`, merge to `main`, then push the
+tag (`git tag v0.0.7 && git push origin v0.0.7`). To release the launcher, raise
+`VERSION` in `VibeLauncher.java`, merge, then push `launcher-v<version>`.
 
 ## Launcher releases
 
