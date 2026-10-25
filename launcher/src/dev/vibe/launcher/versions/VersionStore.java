@@ -131,6 +131,11 @@ public final class VersionStore {
         Path target = directory.resolve(asset.name);
         String expected = asset.sha256;
         if (expected.isEmpty() && asset.sumUrl != null) expected = fetchSum(asset.sumUrl);
+        // The JAR runs inside Minecraft, so it is never installed without a checksum to verify it against.
+        if (expected.isEmpty()) {
+            throw new LauncherException(ErrorCode.RELEASE_CHECKSUM,
+                    I18n.t("Vibe {0} has no checksum, so it cannot be verified and was not installed. Pick another version.", release.tag));
+        }
         if (isIntact(target, asset.size, expected)) {
             writeMeta(release, asset, target, expected);
             return read(directory);
@@ -150,7 +155,7 @@ public final class VersionStore {
             Files.deleteIfExists(target);
             throw damaged(release);
         }
-        if (!expected.isEmpty() && !expected.equals(Http.sha256(target))) {
+        if (!expected.equals(Http.sha256(target))) {
             Files.deleteIfExists(target);
             throw damaged(release);
         }
