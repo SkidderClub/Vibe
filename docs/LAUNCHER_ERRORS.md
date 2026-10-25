@@ -166,7 +166,7 @@ Forge. It talks to these servers; a firewall or filter must allow them:
 
 | Server | Used for |
 | --- | --- |
-| `api.github.com`, `github.com`, `codeload.github.com`, `raw.githubusercontent.com`, `objects.githubusercontent.com`, `release-assets.githubusercontent.com` | Vibe version JARs and releases (`VibeUpdate/VibeReleases`), updates, launcher updates, Java downloads |
+| `api.github.com`, `github.com`, `codeload.github.com`, `raw.githubusercontent.com`, `objects.githubusercontent.com`, `release-assets.githubusercontent.com` | Vibe version JARs and releases (`SkidderClub/Vibe`), updates, launcher updates, Java downloads |
 | `api.adoptium.net` | Looking up Java 8 |
 | `repo.maven.apache.org`, `maven.minecraftforge.net`, `maven.fabricmc.net`, `maven.wagyourtail.xyz`, `jitpack.io` | Libraries for Minecraft and Forge |
 | `piston-meta.mojang.com`, `launchermeta.mojang.com`, `libraries.minecraft.net`, `resources.download.minecraft.net` | Minecraft 1.8.9, libraries and assets |
@@ -475,7 +475,7 @@ The Vibe version JAR could not be downloaded from the GitHub release. Usually th
 the cause is shown instead, e.g. [VL-101](#vl-101) or [VL-105](#vl-105).
 
 **Fix:**
-1. Check your internet connection and whether https://github.com/VibeUpdate/VibeReleases loads in the
+1. Check your internet connection and whether https://github.com/SkidderClub/Vibe/releases loads in the
    browser.
 2. Follow the section for the more specific code if the console names one.
 3. Try again.

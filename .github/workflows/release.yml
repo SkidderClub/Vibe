@@ -1,0 +1,170 @@
+# Publishes Vibe and the Vibe Launcher as GitHub releases of this repository.
+#
+#   push to main        -> pre-release v<version>-dev.<run>, e.g. v0.0.6-dev.42 (selectable in the launcher)
+#   tag v<version>      -> full release of the version in build.gradle (the launcher's "Update to latest")
+#   tag launcher-v<x>   -> launcher release VibeLauncher.jar + .sha256 (the launcher's self-update)
+#
+# Only the newest KEEP_DEV_BUILDS commit pre-releases are kept, so the launcher's
+# release list (100 entries) always still reaches the full and launcher releases.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*', 'launcher-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  KEEP_DEV_BUILDS: 15
+
+jobs:
+  vibe:
+    name: Vibe release
+    if: ${{ !startsWith(github.ref, 'refs/tags/launcher-v') }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Work out the version
+        id: version
+        run: |
+          base=$(sed -n "s/^version = '\(.*\)'$/\1/p" build.gradle)
+          if [ -z "$base" ]; then echo "::error::No version = '...' line in build.gradle"; exit 1; fi
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            if [ "$GITHUB_REF_NAME" != "v$base" ]; then
+              echo "::error::Tag $GITHUB_REF_NAME does not match version $base in build.gradle"
+              exit 1
+            fi
+            version=$base
+            prerelease=false
+          else
+            version=$base-dev.$GITHUB_RUN_NUMBER
+            prerelease=true
+          fi
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if this release already exists
+        id: existing
+        run: |
+          if gh release view "${{ steps.version.outputs.tag }}" > /dev/null 2>&1; then
+            echo "Release ${{ steps.version.outputs.tag }} already exists."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and test
+        if: steps.existing.outputs.exists != 'true'
+        run: sh ./gradlew build --no-daemon
+
+      - name: Package the JAR
+        if: steps.existing.outputs.exists != 'true'
+        run: |
+          mkdir -p dist
+          jar="Vibe-1.8.9-${{ steps.version.outputs.version }}.jar"
+          cp "build/libs/Vibe-1.8.9-${{ steps.version.outputs.base }}.jar" "dist/$jar"
+          (cd dist && sha256sum "$jar" > "$jar.sha256")
+          cat "dist/$jar.sha256"
+
+      - name: Write the release notes
+        if: steps.existing.outputs.exists != 'true'
+        run: |
+          if [ "${{ steps.version.outputs.prerelease }}" = true ]; then
+            # A merged pull request is described by its title, the first body line of the merge commit.
+            subject=$(git log -1 --format=%s)
+            case "$subject" in
+              "Merge pull request"*) title=$(git log -1 --format=%b | sed -n '/./{p;q}'); [ -n "$title" ] && subject="$title ($subject)" ;;
+            esac
+            {
+              echo "Automatic build of commit [\`${GITHUB_SHA::7}\`]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit/$GITHUB_SHA) on \`main\`. Not a tested release."
+              echo
+              echo "## ${{ steps.version.outputs.version }}"
+              echo
+              echo "- $subject"
+            } > notes.md
+          else
+            # The changelog section "## <version>", otherwise "## Unreleased" under the version's name.
+            section() {
+              awk -v head="## $1" '
+                $0 == head { found = 1; next }
+                found && /^## / { exit }
+                found { print }' docs/CHANGELOG.md
+            }
+            body=$(section "${{ steps.version.outputs.base }}")
+            [ -n "$(printf '%s' "$body" | tr -d '[:space:]')" ] || body=$(section Unreleased)
+            printf '## %s\n%s\n' "${{ steps.version.outputs.base }}" "$body" > notes.md
+          fi
+          cat notes.md
+
+      - name: Publish the release
+        if: steps.existing.outputs.exists != 'true'
+        run: |
+          version=${{ steps.version.outputs.version }}
+          flags=""
+          if [ "${{ steps.version.outputs.prerelease }}" = true ]; then
+            flags="--prerelease"
+            title="Vibe $version (dev build)"
+          else
+            flags="--latest"
+            title="Vibe $version"
+          fi
+          gh release create "${{ steps.version.outputs.tag }}" \
+            "dist/Vibe-1.8.9-$version.jar" "dist/Vibe-1.8.9-$version.jar.sha256" \
+            --target "$GITHUB_SHA" --title "$title" --notes-file notes.md $flags
+
+      - name: Remove old commit pre-releases
+        if: steps.version.outputs.prerelease == 'true'
+        run: |
+          gh release list --limit 200 --json tagName,isPrerelease,createdAt \
+            --jq "[.[] | select(.isPrerelease and (.tagName | test(\"^v.+-dev\\\\.[0-9]+$\")))] | sort_by(.createdAt) | reverse | .[$KEEP_DEV_BUILDS:] | .[].tagName" |
+          while read -r tag; do
+            echo "Deleting $tag"
+            gh release delete "$tag" --cleanup-tag --yes
+          done
+
+  launcher:
+    name: Launcher release
+    if: ${{ startsWith(github.ref, 'refs/tags/launcher-v') }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Check the version
+        run: |
+          version=$(sed -n 's/.*String VERSION = "\([^"]*\)".*/\1/p' launcher/src/dev/vibe/launcher/VibeLauncher.java)
+          if [ "$GITHUB_REF_NAME" != "launcher-v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match VibeLauncher.VERSION $version"
+            exit 1
+          fi
+
+      - name: Build and test
+        run: sh launcher/buildLauncher.sh
+
+      - name: Publish the release
+        run: |
+          gh release create "$GITHUB_REF_NAME" launcher/VibeLauncher.jar launcher/build/VibeLauncher.jar.sha256 \
+            --target "$GITHUB_SHA" --title "Vibe Launcher ${GITHUB_REF_NAME#launcher-v}" --generate-notes --latest=false

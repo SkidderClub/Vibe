@@ -52,7 +52,7 @@ import javax.swing.SwingUtilities;
  * The launcher's state and every operation the interface can trigger.
  *
  * <p>Vibe itself is a published JAR: the launcher downloads versions from
- * {@code VibeUpdate/VibeReleases}, keeps them under {@code versions/} and links
+ * {@code SkidderClub/Vibe} releases, keeps them under {@code versions/} and links
  * the chosen one into {@code mods/}. Minecraft, Forge and OptiFine are prepared
  * separately once, so launching later needs no source checkout or Gradle.</p>
  *

@@ -92,7 +92,7 @@ lists all of them, for example:
 ## Desktop launcher
 
 `launcher/VibeLauncher.jar` is the easiest way to play: start it and press **Play**.
-It downloads ready-made Vibe JARs from `VibeUpdate/VibeReleases`, keeps every
+It downloads ready-made Vibe JARs from the [releases](https://github.com/SkidderClub/Vibe/releases) of this repository, keeps every
 downloaded version under `versions/` and starts the persistent Forge 1.8.9 profile
 with OptiFine through a private Java 8 runtime. Minecraft, Forge and OptiFine are
 prepared once, without a source checkout or Gradle. The **Versions** page switches
