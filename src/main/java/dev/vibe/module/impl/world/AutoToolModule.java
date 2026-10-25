@@ -16,6 +16,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemSword;
 import net.minecraft.item.ItemTool;
+import net.minecraft.entity.player.InventoryPlayer;
+import java.util.function.Predicate;
 import net.minecraft.util.MovingObjectPosition;
 import org.lwjgl.input.Keyboard;
 
@@ -48,6 +50,7 @@ public final class AutoToolModule extends Module {
     private int wantedSlot = -1;
     private long waitStart, waitBack;
     private net.minecraft.entity.player.EntityPlayer owner;
+    private static HotbarAction instantAction;
 
     public AutoToolModule() {
         super("AutoTool", "Select the best hotbar tool for the current vanilla action", Category.WORLD, Keyboard.KEY_NONE);
@@ -55,6 +58,7 @@ public final class AutoToolModule extends Module {
 
     /** Runs at tick start before Minecraft consumes a held attack input. */
     public void tick() {
+        if (currentHotbarAction() != null) return;
         if(PickenSwitchModule.ownsSlot())return;
         if (owner != minecraft.thePlayer) {
             originalSlot = spoofedSlot = wantedSlot = -1;
@@ -137,11 +141,16 @@ public final class AutoToolModule extends Module {
     }
 
     private int bestWeapon() {
+        return bestHotbarWeaponSlot(minecraft.thePlayer.inventory, stack -> true);
+    }
+
+    /** Shared weapon scoring for AutoTool and immediate combat actions. */
+    public static int bestHotbarWeaponSlot(InventoryPlayer inventory, Predicate<ItemStack> accepted) {
         int best = -1;
         float damage = -1.0F;
         for (int slot = 0; slot < 9; slot++) {
-            ItemStack stack = minecraft.thePlayer.inventory.mainInventory[slot];
-            if (stack == null) continue;
+            ItemStack stack = inventory.mainInventory[slot];
+            if (stack == null || stack.stackSize <= 0 || !accepted.test(stack)) continue;
             float candidate = 0.0F;
             if (stack.getItem() instanceof ItemSword) {
                 candidate = ((ItemSword) stack.getItem()).getDamageVsEntity();
@@ -228,11 +237,18 @@ public final class AutoToolModule extends Module {
         return vibe == null || vibe.getModuleManager() == null ? null : vibe.getModuleManager().getModule(AutoToolModule.class);
     }
     public static int serverSlotHook(int vanilla) {
+        HotbarAction instant = currentHotbarAction();
+        if (instant != null) return instant.slot;
         AutoToolModule module = active();
-        return dev.vibe.module.impl.meme.HypixelModule.serverSlotHook(PickenSwitchModule.serverSlotHook(module != null && module.hasSilentSlot() ? module.spoofedSlot
-                : ScaffoldModule.serverSlotHook(vanilla)));
+        return PickenSwitchModule.serverSlotHook(module != null && module.hasSilentSlot() ? module.spoofedSlot
+                : ScaffoldModule.serverSlotHook(vanilla));
     }
     public static int beginActionHook() {
+        HotbarAction instant = currentHotbarAction();
+        if (instant != null) {
+            int visible = instant.minecraft.thePlayer.inventory.currentItem;
+            instant.reselect(); return visible;
+        }
         int picken=PickenSwitchModule.beginActionHook();if(picken>=0)return picken;
         AutoToolModule module = active();
         if (module == null || !module.hasSilentSlot() || module.minecraft.thePlayer == null) return ScaffoldModule.beginActionHook();
@@ -243,6 +259,54 @@ public final class AutoToolModule extends Module {
     public static void endActionHook(int visible) {
         Minecraft mc = Minecraft.getMinecraft();
         if (visible >= 0 && mc.thePlayer != null) mc.thePlayer.inventory.currentItem = visible;
+    }
+
+    /** Uses vanilla's same selected-slot cache/C09 writer as AutoTool, without a timer. */
+    public static HotbarAction beginHotbarAction(int slot) {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc == null || mc.thePlayer == null || mc.theWorld == null || mc.playerController == null || mc.thePlayer.worldObj != mc.theWorld
+                || slot < 0 || slot >= 9 || currentHotbarAction() != null) return null;
+        ItemStack stack = mc.thePlayer.inventory.mainInventory[slot];
+        if (stack == null || stack.stackSize <= 0) return null;
+        HotbarAction action = new HotbarAction(mc, slot);
+        instantAction = action; action.reselect();
+        try { mc.playerController.updateController(); return action; }
+        catch (RuntimeException | Error failure) {
+            try { action.close(); } catch (RuntimeException | Error restore) { failure.addSuppressed(restore); }
+            throw failure;
+        }
+    }
+
+    private static HotbarAction currentHotbarAction() {
+        HotbarAction action = instantAction;
+        if (action != null && !action.matchesContext()) instantAction = action = null;
+        return action;
+    }
+
+    public static final class HotbarAction implements AutoCloseable {
+        private final Minecraft minecraft;
+        private final net.minecraft.client.entity.EntityPlayerSP player;
+        private final net.minecraft.world.World world;
+        private final int visible, slot;
+        private boolean closed;
+        private HotbarAction(Minecraft minecraft, int slot) {
+            this.minecraft = minecraft; this.player = minecraft.thePlayer; this.world = minecraft.theWorld;
+            this.visible = player.inventory.currentItem; this.slot = slot;
+        }
+        private boolean matchesContext() {
+            return !closed && Minecraft.getMinecraft() == minecraft && minecraft.thePlayer == player
+                    && minecraft.theWorld == world && player.worldObj == world;
+        }
+        public void reselect() { if (matchesContext()) player.inventory.currentItem = slot; }
+        @Override public void close() {
+            if (closed) return;
+            boolean restore = matchesContext(); closed = true;
+            if (instantAction == this) instantAction = null;
+            if (restore) {
+                player.inventory.currentItem = visible;
+                if (minecraft.playerController != null) minecraft.playerController.updateController();
+            }
+        }
     }
     public int getSpoofedSlot() { return spoofedSlot; }
     public ColorSetting getSilentColor() { return silentColor; }

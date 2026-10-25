@@ -73,6 +73,7 @@ public final class HypixelModule extends Module {
     private int silentSlot = -1, oldFps = -1;
     private int silentWeaponSlot = -1;
     private net.minecraft.client.entity.EntityPlayerSP silentOwner;
+    private dev.vibe.module.impl.world.AutoToolModule.HotbarAction silentAction;
     private boolean oldPauseOnLostFocus, forcedSprint, forcedKeys;
     private List<BlockPos> pitPath = Collections.emptyList();
     private BlockPos pathGoal;
@@ -427,8 +428,7 @@ public final class HypixelModule extends Module {
         int slot=beginAttackHook(module.mc.objectMouseOver.entityHit);
         if(slot<0)return -1;
         module.silentClickScope=true;
-        try { module.mc.playerController.updateController();return slot; }
-        catch(RuntimeException|Error failure) {module.finishSilentAttack();throw failure;}
+        return slot;
     }
     public static void endClickHook(int slot) {
         HypixelModule module=active();
@@ -439,16 +439,29 @@ public final class HypixelModule extends Module {
         if (module == null || !module.isMurderMysteryActive() || module.isSpectating() || !module.silentMurderer.isEnabled() || !(target instanceof EntityPlayer)
                 || module.mc.playerController == null || target == module.mc.thePlayer
                 || ((EntityLivingBase)target).worldObj != module.mc.theWorld || !((EntityLivingBase)target).isEntityAlive()) return -1;
-        if(module.silentPending) {module.mc.thePlayer.inventory.currentItem=module.silentWeaponSlot;return module.silentSlot;}
+        if(module.silentPending) {if(module.silentAction!=null)module.silentAction.reselect();return module.silentSlot;}
         int old = module.mc.thePlayer.inventory.currentItem;
-        for (int slot = 0; slot < 9; slot++) {
-            ItemStack stack=module.mc.thePlayer.inventory.mainInventory[slot];
-            if(stack==null||stack.stackSize<=0||!module.isMurderWeapon(stack))continue;
-            module.silentSlot=old;module.silentWeaponSlot=slot;module.silentOwner=module.mc.thePlayer;module.silentPending=true;
-            module.mc.thePlayer.inventory.currentItem=slot;
-            return old;
-        }
-        return -1;
+        int slot=module.selectSilentWeapon();
+        if(slot<0)return -1;
+        module.silentSlot=old;module.silentWeaponSlot=slot;module.silentOwner=module.mc.thePlayer;module.silentPending=true;
+        try {
+            module.silentAction=dev.vibe.module.impl.world.AutoToolModule.beginHotbarAction(slot);
+            if(module.silentAction!=null)return old;
+            module.finishSilentAttack();return -1;
+        } catch(RuntimeException|Error failure) {module.finishSilentAttack();throw failure;}
+    }
+    private int selectSilentWeapon() {
+        // The detector's skin list contains menu books and food too. Prefer an actual sword.
+        int slot=dev.vibe.module.impl.world.AutoToolModule.bestHotbarWeaponSlot(mc.thePlayer.inventory,
+                stack->stack.getItem() instanceof net.minecraft.item.ItemSword);
+        if(slot>=0)return slot;
+        // Cosmetic knives can be ordinary items. Prefer a labelled knife over a menu item.
+        slot=dev.vibe.module.impl.world.AutoToolModule.bestHotbarWeaponSlot(mc.thePlayer.inventory,stack->{
+            if(!isMurderWeapon(stack)||!stack.hasDisplayName())return false;
+            String label=plain(stack.getTagCompound().getCompoundTag("display").getString("Name"));
+            return label.contains("knife")||label.contains("sword")||label.contains("weapon");
+        });
+        return slot>=0?slot:dev.vibe.module.impl.world.AutoToolModule.bestHotbarWeaponSlot(mc.thePlayer.inventory,this::isMurderWeapon);
     }
     public static void endAttackHook(int ignored) {
         HypixelModule module = active();
@@ -464,12 +477,9 @@ public final class HypixelModule extends Module {
     }
     private void finishSilentAttack() {
         if(!silentPending)return;
-        boolean restore=silentOwner!=null&&silentOwner==mc.thePlayer&&silentOwner.worldObj==mc.theWorld;
-        int slot=silentSlot;
+        dev.vibe.module.impl.world.AutoToolModule.HotbarAction action=silentAction;
         silentPending=silentClickScope=false;silentSlot=silentWeaponSlot=-1;silentOwner=null;
-        if(restore&&slot>=0) {
-            mc.thePlayer.inventory.currentItem=slot;
-            if(mc.playerController!=null)mc.playerController.updateController();
-        }
+        silentAction=null;
+        if(action!=null)action.close();
     }
 }

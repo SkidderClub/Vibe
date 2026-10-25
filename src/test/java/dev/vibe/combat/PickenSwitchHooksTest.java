@@ -139,6 +139,7 @@ public class PickenSwitchHooksTest implements Opcodes {
         murder.getMurderWeapons().setValue("stick");
         for(dev.vibe.setting.Setting<?> s:murder.getSettings())if(s.getRawName().equals("Silent murderer"))((dev.vibe.setting.BooleanSetting)s).setEnabled(true);
         set(Module.class,murder,"enabled",true);set(murder.getClass(),murder,"observedWorld",mc.theWorld);set(murder.getClass(),murder,"murderRoundActive",true);
+        mc.thePlayer.inventory.mainInventory[0]=null;
         mc.thePlayer.inventory.mainInventory[7]=new ItemStack(net.minecraft.init.Items.stick);
         List<Module> modules=new ArrayList<Module>(Arrays.asList(module,murder));
         if(withAuto) {
@@ -175,6 +176,19 @@ public class PickenSwitchHooksTest implements Opcodes {
         installSilentMurder(false);calls.clear();mc.objectMouseOver=null;
         click();assertEquals(Arrays.asList("swing:0","miss"),calls);
         assertEquals(0,mc.thePlayer.inventory.currentItem);
+    }
+    @Test public void aFistHitSelectsTheSwordInsteadOfAnEarlierBookOrFoodAndReturnsToTheEmptySlot() throws Exception {
+        installSilentMurder(false);
+        dev.vibe.module.impl.meme.HypixelModule murder=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
+        murder.getMurderWeapons().setValue(dev.vibe.game.hypixel.MurderWeapons.DEFAULTS);
+        mc.thePlayer.inventory.mainInventory[0]=new ItemStack(net.minecraft.init.Items.book);
+        mc.thePlayer.inventory.mainInventory[1]=new ItemStack(net.minecraft.init.Items.bread);
+        mc.thePlayer.inventory.mainInventory[7]=new ItemStack(net.minecraft.init.Items.iron_sword);
+        mc.thePlayer.inventory.mainInventory[8]=null;mc.thePlayer.inventory.currentItem=8;server=8;calls.clear();
+        mc.objectMouseOver=new net.minecraft.util.MovingObjectPosition(victim);
+        click();
+        assertEquals(Arrays.asList("slot:7","swing:7","attack:7","slot:8"),calls);
+        assertEquals(8,mc.thePlayer.inventory.currentItem);assertNull(mc.thePlayer.getHeldItem());
     }
     private void click() throws Exception {
         String name="dev/vibe/combat/SilentClickFixture";
