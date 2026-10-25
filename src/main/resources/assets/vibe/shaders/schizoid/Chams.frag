@@ -7,11 +7,20 @@ uniform float Opacity;
 uniform int ShowSkin;
 uniform int Material;
 uniform int MaskPass;
+uniform sampler2D SceneDepth;
+uniform vec2 SceneSize;
+uniform vec2 SceneOrigin;
+uniform int SceneSide;
 varying vec2 SkinUv;
 varying vec3 EyePosition;
 varying vec3 EyeNormal;
 
 void main() {
+    if(SceneSide>=0) {
+        float worldDepth=texture2D(SceneDepth,(gl_FragCoord.xy-SceneOrigin)/SceneSize).r;
+        bool behindWorld=gl_FragCoord.z>worldDepth+0.0000002;
+        if((SceneSide==0&&!behindWorld)||(SceneSide==1&&behindWorld))discard;
+    }
     vec4 skin = NativeMesh != 0 ? SurfaceColor : texture2D(Skin, SkinUv);
     // Preserve transparent hat/jacket/armor cutouts even on an untextured material.
     if (skin.a < 0.1) discard;

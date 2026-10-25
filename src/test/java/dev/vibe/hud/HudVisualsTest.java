@@ -31,16 +31,29 @@ public class HudVisualsTest {
     }
     @Test public void arrowCircleOvalAndCardinalDirectionsMatchTheCamera() {
         float[] front=OofArrowsRenderer.position(960,540,90,11,false,0);
-        float[] right=OofArrowsRenderer.position(960,540,90,11,false,-Math.PI/2);
+        float[] right=OofArrowsRenderer.position(960,540,90,11,false,Math.PI/2);
         float[] rear=OofArrowsRenderer.position(960,540,90,11,false,Math.PI);
         assertEquals(480,front[0],.01);assertEquals(180,front[1],.01);
         assertEquals(570,right[0],.01);assertEquals(270,right[1],.01);assertEquals(360,rear[1],.01);
-        float[] oval=OofArrowsRenderer.position(960,540,90,11,true,-Math.PI/2);
+        float[] oval=OofArrowsRenderer.position(960,540,90,11,true,Math.PI/2);
         assertEquals(90*960/540F,oval[0]-480,.01);
         for(int angle=0;angle<360;angle+=10) {
             float[] point=OofArrowsRenderer.position(320,180,300,36,true,Math.toRadians(angle));
             assertTrue(point[0]>=36&&point[0]<=284&&point[1]>=36&&point[1]<=144);
         }
+    }
+    @Test public void arrowBearingsUseActualCameraAxesIncludingDetachedTranslation() {
+        // Minecraft yaw zero looks south: world +X is on the LEFT of the camera.
+        float[] south={-1,0,0,0,0,1,0,0,0,0,-1,0,0,0,0,1};
+        assertTrue(arrowPoint(south,10,0)[0]<480);assertTrue(arrowPoint(south,-10,0)[0]>480);
+        assertTrue(arrowPoint(south,0,10)[1]<270);assertTrue(arrowPoint(south,0,-10)[1]>270);
+        float[] west={0,0,1,0,0,1,0,0,-1,0,0,0,0,0,0,1};
+        assertTrue(arrowPoint(west,0,10)[0]<480);assertTrue(arrowPoint(west,0,-10)[0]>480);
+        south[12]=5;
+        assertTrue(arrowPoint(south,8,0)[0]<480);assertTrue(arrowPoint(south,2,0)[0]>480);
+    }
+    private static float[] arrowPoint(float[] view,double x,double z) {
+        return OofArrowsRenderer.position(960,540,90,11,false,OofArrowsRenderer.bearing(view,x,0,z));
     }
     @Test public void projectionHidesVisibleEntitiesAndKeepsOffscreenOnes() {
         float[] identity={1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
@@ -56,6 +69,9 @@ public class HudVisualsTest {
         int near=OofArrowsRenderer.color(arrows,0,0,0),far=OofArrowsRenderer.color(arrows,0,0,128);
         assertEquals(near&0xFFFFFF,far&0xFFFFFF);assertTrue((near>>>24)>(far>>>24));
         arrows.colorMode.setValue("Rainbow");assertNotEquals(OofArrowsRenderer.color(arrows,0,0,10),OofArrowsRenderer.color(arrows,1200,0,10));
+        arrows.distanceFade.setEnabled(false);arrows.visibleOpacity.setValue(.25);arrows.occludedOpacity.setValue(.75);
+        assertEquals(64,OofArrowsRenderer.color(arrows,0,0,10,true)>>>24);
+        assertEquals(191,OofArrowsRenderer.color(arrows,0,0,10,false)>>>24);
     }
     @Test public void geometryHookIsInertOutsideHudAndPatchesActualNativeModelWriter() throws Exception {
         assertFalse(HudItemGeometryRenderer.draw(new Object(),-1,null));

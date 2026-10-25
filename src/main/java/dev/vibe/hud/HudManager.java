@@ -76,6 +76,8 @@ public final class HudManager {
     private final HudElement targetHud = new HudElement(TARGET_HUD, 30, 68, false, false, true);
     private final TargetHudTracker targetTracker = new TargetHudTracker();
     private final TargetHudRenderer targetRenderer = new TargetHudRenderer();
+    private final TargetHudCards targetCards = new TargetHudCards();
+    private net.minecraft.world.World targetWorld;
     private boolean framebufferPreview;
     private final HudElement clock = new HudElement(CLOCK, 9, 70, false, false);
     private final HudElement sessionInfo = new HudElement(SESSION_INFO, 9, 96, false, false);
@@ -481,6 +483,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     public void recordTarget(net.minecraft.entity.EntityLivingBase target) {
+        if (!(target instanceof EntityPlayer) || target == minecraft.thePlayer || target.worldObj != minecraft.theWorld) return;
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         if (hud != null && hud.isEnabled() && hud.getHudElements().isSelectedIgnoreCase(TARGET_HUD))
             targetTracker.attack(target, System.currentTimeMillis());
@@ -488,8 +491,11 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     public void tickTargets() {
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        if (targetWorld != minecraft.theWorld) {
+            targetCards.clear(); targetRenderer.clear(); targetWorld = minecraft.theWorld;
+        }
         if (hud == null || !hud.isEnabled() || !hud.getHudElements().isSelectedIgnoreCase(TARGET_HUD)) {
-            targetTracker.clear(); targetRenderer.clear();
+            targetTracker.clear(); targetRenderer.clear(); targetCards.clear();
         } else targetTracker.expire(minecraft, hud.targetHud, System.currentTimeMillis());
     }
 
@@ -502,22 +508,71 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     private void drawTargetHud(HudModule hud, ScaledResolution resolution, FontRenderer font) {
         long now = System.currentTimeMillis();
-        net.minecraft.entity.EntityLivingBase target = targetTracker.resolve(minecraft, hud.targetHud, now);
-        TargetHudData data = target == null ? (previewingHud
-                ? minecraft.thePlayer == null ? TargetHudData.sample() : TargetHudData.from(minecraft, minecraft.thePlayer)
-                : null) : TargetHudData.from(minecraft, target);
-        if (data == null) { targetRenderer.clear(); return; }
-        int width = targetRenderer.width(hud.targetHud, data, font), height = targetRenderer.height(hud.targetHud);
-        // Clamp the final scaled bounds before choosing the transform's anchor.
+        if (!previewingHud && targetWorld != minecraft.theWorld) {
+            targetCards.clear(); targetRenderer.clear(); targetWorld = minecraft.theWorld;
+        }
+        TargetHudData sample = previewingHud && minecraft.thePlayer != null ? TargetHudData.from(minecraft, minecraft.thePlayer) : TargetHudData.sample();
+        int width = targetRenderer.width(hud.targetHud, sample, font), rowHeight = targetRenderer.height(hud.targetHud);
+        int capacity = Math.max(1, Math.min(hud.targetHud.maxTargets.getInt(),
+                (int) (resolution.getScaledHeight() / targetHud.getScale() / (rowHeight + hud.targetHud.gap.getFloat()))));
+        List<TargetHudData> live = new ArrayList<TargetHudData>();
+        if (!previewingHud) for (EntityPlayer player : targetTracker.resolveAll(minecraft, hud.targetHud, now)) {
+            if (live.size() == capacity) break;
+            live.add(TargetHudData.from(minecraft, player));
+        }
+        List<TargetHudCards.Card> cards = previewingHud ? Collections.emptyList()
+                : targetCards.update(live, hud.targetHud, rowHeight, capacity, now);
+        if (!previewingHud && cards.isEmpty()) { targetRenderer.clear(); return; }
+        int height = previewingHud ? rowHeight : Math.max(1, (int) Math.ceil(TargetHudCards.height(cards, rowHeight)));
         targetHud.ensureScaledOnScreen(resolution, width, height);
         renderScaled(targetHud, resolution, () -> {
             int left = targetHud.left(resolution, width), top = targetHud.top(resolution, height);
             targetHud.setBounds(left, top, width, height);
             if (hideForDebug(targetHud, left, top, width, height, 0)) return;
-            targetRenderer.draw(hud.targetHud, data, font, left, top, width,
-                    () -> drawHudSurface(hud, targetHud, left, top, left + width, top + height),
-                    previewingHud && target == null, now);
+            if (previewingHud) drawTargetCard(hud, sample, font, left, top, width, 1, true, now);
+            else for (TargetHudCards.Card card : cards) {
+                if (card.scale < .001F) continue;
+                int y = Math.round(top + card.offset - rowHeight * (1 - card.scale) / 2);
+                drawTargetCard(hud, card.data, font, left, y, width, card.scale, false, now);
+            }
         });
+    }
+
+    private void drawTargetCard(HudModule hud, TargetHudData data, FontRenderer font, int x, int y,
+                                int width, float pop, boolean preview, long now) {
+        int height = targetRenderer.height(hud.targetHud);
+        GlStateManager.pushMatrix();
+        try {
+            GlStateManager.translate(x + width / 2F, y + height / 2F, 0);
+            GlStateManager.scale(pop, pop, 1);
+            GlStateManager.translate(-x - width / 2F, -y - height / 2F, 0);
+            targetRenderer.draw(hud.targetHud, data, font, x, y, width,
+                    () -> drawTargetGlass(hud, x, y, width, height, pop), preview, now);
+        } finally { GlStateManager.popMatrix(); }
+    }
+
+    /** Glass addresses screen pixels, so include both the widget scale and this card's pop. */
+    private void drawTargetGlass(HudModule hud, int x, int y, int width, int height, float pop) {
+        float radius = Math.min(hud.targetHud.radius.getFloat(), height / 2F);
+        if (previewingHud && !framebufferPreview) {
+            HudShapes.round(x, y, width, height, radius,
+                    RenderUtils.alpha(hud.getLiquidGlassTint().getArgb(), Math.round(82 * hud.getLiquidGlassOpacity().getFloat())));
+            return;
+        }
+        float left = x + width * (1 - pop) / 2, top = y + height * (1 - pop) / 2;
+        float right = left + width * pop, bottom = top + height * pop;
+        float scale = scalingHud ? hudTransformScale : 1;
+        if (scalingHud) {
+            left = hudTransformX + (left - hudTransformX) * scale;
+            right = hudTransformX + (right - hudTransformX) * scale;
+            top = hudTransformY + (top - hudTransformY) * scale;
+            bottom = hudTransformY + (bottom - hudTransformY) * scale;
+        }
+        if (!liquidGlass.draw(Math.round(left), Math.round(top), Math.round(right), Math.round(bottom), radius * scale * pop,
+                hud.getLiquidGlassBlur().isEnabled() ? hud.getLiquidGlassBlurStrength().getFloat() : 0,
+                hud.getLiquidGlassRefraction().getFloat(), hud.getLiquidGlassOpacity().getFloat(), hud.getLiquidGlassTint().getArgb()))
+            HudShapes.round(x, y, width, height, radius,
+                    RenderUtils.alpha(hud.getLiquidGlassTint().getArgb(), Math.round(82 * hud.getLiquidGlassOpacity().getFloat())));
     }
 
     private void drawSessionInfo(HudModule hud, ScaledResolution resolution, FontRenderer font) {

@@ -137,6 +137,8 @@ public final class ItemGlowRenderCheck {
         field(PhoneModule.class, "openedAt").setLong(phone, System.currentTimeMillis() - 4000);
         field(PhoneModule.class, "appAt").setLong(phone, System.currentTimeMillis() - 4000);
         device = new PhoneRenderer();
+        // Matched pixel comparisons must not straddle a real clock/date rollover.
+        field(PhoneRenderer.class, "wallClock").set(device, (java.util.function.LongSupplier) () -> 1792872000000L);
     }
     private static void frame() {
         target.bindFramebuffer(true); GlStateManager.depthMask(true); GlStateManager.clearColor(.10F, .14F, .18F, 1);

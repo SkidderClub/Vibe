@@ -116,7 +116,13 @@ public class CombatHooksTest {
         assertEquals(obfuscated ? "bS" : "isUsingItem", ((MethodInsnNode) next).name);
         MethodNode click = method(node, obfuscated ? "aw" : "clickMouse", "()V");
         verify(node, click);
-        assertTrue(calls(click, "missCooldownHook") > 0);
+        String clickBody="vibe$click$"+(obfuscated?"aw":"clickMouse");
+        MethodNode body=method(node,clickBody,"()V");verify(node,body);
+        assertTrue(calls(body,"missCooldownHook")>0);
+        String murder="dev/vibe/module/impl/meme/HypixelModule";
+        assertEquals(1,calls(click,"beginClickHook",murder));
+        assertTrue(callIndex(click,"beginClickHook",murder)<callIndex(click,clickBody,node.name));
+        assertEquals(2,calls(click,"endClickHook",murder));
     }
 
     private void verifyPlayer(ClassNode node, boolean obfuscated) throws Exception {

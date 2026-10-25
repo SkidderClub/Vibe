@@ -66,11 +66,13 @@ public final class HypixelModule extends Module {
     private final Set<String> announced = new HashSet<String>();
     private final Random random = new Random();
     private Object observedWorld;
-    private boolean murderRoundActive, localMurderer;
+    private boolean murderRoundActive, localMurderer, localSpectator;
     private String cachedWeaponValue;
     private Set<String> cachedWeapons = Collections.emptySet();
-    private boolean silentPending, forcedForward;
+    private boolean silentPending, silentClickScope, forcedForward;
     private int silentSlot = -1, oldFps = -1;
+    private int silentWeaponSlot = -1;
+    private net.minecraft.client.entity.EntityPlayerSP silentOwner;
     private boolean oldPauseOnLostFocus, forcedSprint, forcedKeys;
     private List<BlockPos> pitPath = Collections.emptyList();
     private BlockPos pathGoal;
@@ -126,8 +128,11 @@ public final class HypixelModule extends Module {
     public void receiveChat(String raw) {
         if (!isEnabled() || raw == null) return;
         String lower = raw.replaceAll("\u00a7[0-9A-FK-ORa-fk-or]", "").toLowerCase(Locale.ROOT);
+        if (modes.isSelected(MURDER) && (lower.contains("you died") || lower.contains("you are now spectating") || lower.contains("you are a spectator"))) {
+            localSpectator = true; localMurderer = false; return;
+        }
         if (lower.contains("game over") || lower.contains("murderer has won") || lower.contains("innocents win")
-                || lower.contains("murderer was") || lower.contains("you died") || lower.contains("victory")) { resetRound(); return; }
+                || lower.contains("murderer was") || lower.contains("victory")) { resetRound(); return; }
         if (!modes.isSelected(BLOCK_PARTY)) return;
         if (!lower.contains("color")) return;
         String[] colors = {"white","orange","magenta","light blue","yellow","lime","pink","gray","silver","cyan","purple","blue","brown","green","red","black"};
@@ -139,6 +144,14 @@ public final class HypixelModule extends Module {
         String name = entity.getName().toLowerCase(Locale.ROOT);
         if (murderers.containsKey(name)) return murdererColor.getArgb();
         return detectBow.isEnabled() && bowUsers.contains(name) ? bowColor.getArgb() : 0;
+    }
+    public int murdererColor(EntityLivingBase entity) {
+        return isMurderMysteryActive() && entity instanceof EntityPlayer
+                && murderers.containsKey(entity.getName().toLowerCase(Locale.ROOT)) ? murdererColor.getArgb() : 0;
+    }
+    public boolean isSpectating() {
+        return localSpectator || mc.thePlayer == null || mc.thePlayer.isDead
+                || mc.playerController != null && mc.playerController.isSpectator();
     }
 
     public boolean suppressVisuals() { return isEnabled() && modes.isSelected(PIT_BOT) && mc.thePlayer != null && mc.theWorld != null; }
@@ -155,7 +168,7 @@ public final class HypixelModule extends Module {
         try {
             GL11.glDisable(GL11.GL_TEXTURE_2D); GL11.glDisable(GL11.GL_DEPTH_TEST); GL11.glEnable(GL11.GL_BLEND);
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA); GL11.glLineWidth(1.7F);
-            int color = murdererColor.getArgb(); GL11.glColor4f((color >> 16 & 255) / 255F, (color >> 8 & 255) / 255F, (color & 255) / 255F, .9F);
+            int color = murdererColor.getArgb(); GL11.glColor4f((color >> 16 & 255) / 255F, (color >> 8 & 255) / 255F, (color & 255) / 255F, (color >>> 24) / 255F);
             double ox = mc.getRenderManager().viewerPosX, oy = mc.getRenderManager().viewerPosY, oz = mc.getRenderManager().viewerPosZ;
             GL11.glBegin(GL11.GL_LINES);
             GL11.glVertex3d(0, mc.thePlayer.getEyeHeight() - .15D, 0);
@@ -188,8 +201,10 @@ public final class HypixelModule extends Module {
             if (!murderers.containsKey(key)) {
                 String item = vanillaItemName(held);
                 murderers.put(key, item);
-                dev.vibe.chat.ClientChat.send("\u00a7fMurderer detected: \u00a7c" + player.getName() + " \u00a77(" + item + ")");
-                if (announce.isEnabled() && announced.add(key)) mc.thePlayer.sendChatMessage(String.format(Locale.ROOT, ACCUSATIONS[random.nextInt(ACCUSATIONS.length)], player.getName(), item));
+                if (!isSpectating()) {
+                    dev.vibe.chat.ClientChat.send("\u00a7fMurderer detected: \u00a7c" + player.getName() + " \u00a77(" + item + ")");
+                    if (announce.isEnabled() && announced.add(key)) mc.thePlayer.sendChatMessage(String.format(Locale.ROOT, ACCUSATIONS[random.nextInt(ACCUSATIONS.length)], player.getName(), item));
+                }
             }
         }
     }
@@ -209,15 +224,18 @@ public final class HypixelModule extends Module {
             if (murderRoundActive) resetRound();
             return;
         }
-        boolean round = false, knownRole = false, murderer = false;
+        boolean round = false, knownRole = false, murderer = false, spectator = false;
         for (Score score : scoreboard.getSortedScores(objective)) {
             if (score.getPlayerName().startsWith("#")) continue;
             String line = plain(ScorePlayerTeam.formatPlayerName(scoreboard.getPlayersTeam(score.getPlayerName()), score.getPlayerName()));
             if (line.startsWith("role:")) { round = knownRole = true; murderer = line.contains("murderer"); }
+            if (line.contains("spectating") || line.startsWith("role:") && (line.contains("spectator") || line.contains("dead"))) spectator = true;
             if (line.contains("innocents left:") || line.contains("time left:")) round = true;
         }
         if (!round) { if (murderRoundActive) resetRound(); return; }
+        if (!murderRoundActive) localSpectator = false;
         murderRoundActive = true;
+        localSpectator |= spectator;
         if (knownRole) localMurderer = murderer;
         else if (mc.thePlayer.inventory != null) {
             for (ItemStack item : mc.thePlayer.inventory.mainInventory) if (isMurderWeapon(item)) { localMurderer = true; break; }
@@ -372,7 +390,7 @@ public final class HypixelModule extends Module {
     }
     private String vanillaItemName(ItemStack stack) { String key = itemKey(stack).replace('_', ' '); StringBuilder result = new StringBuilder(); for (String word : key.split(" ")) if (!word.isEmpty()) result.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1)).append(' '); return result.toString().trim(); }
     private boolean onHypixel() { ServerData server = mc.getCurrentServerData(); return server != null && server.serverIP != null && server.serverIP.toLowerCase(Locale.ROOT).contains("hypixel.net"); }
-    private void resetRound() { murderers.clear(); bowUsers.clear(); announced.clear(); murderRoundActive = localMurderer = false; blockPartyColor = -1; blockPartyTarget = null; }
+    private void resetRound() { murderers.clear(); bowUsers.clear(); announced.clear(); murderRoundActive = localMurderer = localSpectator = false; blockPartyColor = -1; blockPartyTarget = null; }
     private void restoreFps() {
         if (oldFps >= 0) {
             mc.gameSettings.limitFramerate = oldFps;
@@ -397,25 +415,61 @@ public final class HypixelModule extends Module {
     }
 
     @Override protected void onDisable() {
+        finishSilentAttack();
         resetRound(); resetPath(); restoreFps(); releaseMovement();
         MoveFixModule fix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
         if (fix != null) { fix.discardOwnedState("HypixelBlockParty"); fix.discardOwnedState("PitBot"); }
     }
     private static HypixelModule active() { Vibe vibe = Vibe.getInstance(); return vibe == null || vibe.getModuleManager() == null ? null : vibe.getModuleManager().getModule(HypixelModule.class); }
+    public static int beginClickHook() {
+        HypixelModule module=active();
+        if(module==null||module.silentPending||module.mc.objectMouseOver==null)return -1;
+        int slot=beginAttackHook(module.mc.objectMouseOver.entityHit);
+        if(slot<0)return -1;
+        module.silentClickScope=true;
+        try { module.mc.playerController.updateController();return slot; }
+        catch(RuntimeException|Error failure) {module.finishSilentAttack();throw failure;}
+    }
+    public static void endClickHook(int slot) {
+        HypixelModule module=active();
+        if(slot>=0&&module!=null)module.finishSilentAttack();
+    }
     public static int beginAttackHook(Object target) {
         HypixelModule module = active();
-        if (module == null || !module.isMurderMysteryActive() || !module.silentMurderer.isEnabled() || !(target instanceof EntityLivingBase)) return -1;
+        if (module == null || !module.isMurderMysteryActive() || module.isSpectating() || !module.silentMurderer.isEnabled() || !(target instanceof EntityPlayer)
+                || module.mc.playerController == null || target == module.mc.thePlayer
+                || ((EntityLivingBase)target).worldObj != module.mc.theWorld || !((EntityLivingBase)target).isEntityAlive()) return -1;
+        if(module.silentPending) {module.mc.thePlayer.inventory.currentItem=module.silentWeaponSlot;return module.silentSlot;}
         int old = module.mc.thePlayer.inventory.currentItem;
-        for (int slot = 0; slot < 9; slot++) if (module.isMurderWeapon(module.mc.thePlayer.inventory.mainInventory[slot])) { module.silentSlot = old; module.silentPending = true; module.mc.thePlayer.inventory.currentItem = slot; return old; }
+        for (int slot = 0; slot < 9; slot++) {
+            ItemStack stack=module.mc.thePlayer.inventory.mainInventory[slot];
+            if(stack==null||stack.stackSize<=0||!module.isMurderWeapon(stack))continue;
+            module.silentSlot=old;module.silentWeaponSlot=slot;module.silentOwner=module.mc.thePlayer;module.silentPending=true;
+            module.mc.thePlayer.inventory.currentItem=slot;
+            return old;
+        }
         return -1;
     }
     public static void endAttackHook(int ignored) {
         HypixelModule module = active();
-        if (module != null && module.silentPending && module.silentSlot >= 0 && module.mc.thePlayer != null) {
-            module.mc.thePlayer.inventory.currentItem = module.silentSlot;
-            if (module.mc.playerController != null) module.mc.playerController.updateController();
-            module.silentPending = false; module.silentSlot = -1;
-        }
+        if(module!=null&&!module.silentClickScope)module.finishSilentAttack();
     }
     public static void abortAttackHook() { endAttackHook(-1); }
+    public static boolean ownsSilentSlot() {
+        HypixelModule module=active();return module!=null&&module.silentPending&&module.silentOwner==module.mc.thePlayer;
+    }
+    /** Same server-slot resolver as AutoTool, scoped to this single controller attack. */
+    public static int serverSlotHook(int vanilla) {
+        HypixelModule module=active();return ownsSilentSlot()?module.silentWeaponSlot:vanilla;
+    }
+    private void finishSilentAttack() {
+        if(!silentPending)return;
+        boolean restore=silentOwner!=null&&silentOwner==mc.thePlayer&&silentOwner.worldObj==mc.theWorld;
+        int slot=silentSlot;
+        silentPending=silentClickScope=false;silentSlot=silentWeaponSlot=-1;silentOwner=null;
+        if(restore&&slot>=0) {
+            mc.thePlayer.inventory.currentItem=slot;
+            if(mc.playerController!=null)mc.playerController.updateController();
+        }
+    }
 }

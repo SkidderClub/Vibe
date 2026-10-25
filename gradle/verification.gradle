@@ -149,6 +149,10 @@ registerRenderCheck('verifyHudVisuals', 'dev.vibe.ui.ClientChangesRenderCheck', 
         'Checks uniform ArrayList backgrounds, continuous outlines, OOF arrows, domain animation and native item pixels/performance.', false) {
     args 'hud-visuals'
 }
+registerRenderCheck('verifyServerMenuRendering','dev.vibe.ui.ClientChangesRenderCheck','server-menu-check',
+        'Checks native edit-server and direct-connect backgrounds after a cached world/editor frame.',false) {
+    args 'server-menus'
+}
 registerRenderCheck('verifyHudEditorRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'hud-editor-check',
         'Checks all HUD editor widgets and legacy layout/scale behavior.', false) {
     args 'hud-editor'

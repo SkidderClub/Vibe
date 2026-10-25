@@ -40,6 +40,13 @@ public final class FreecamProductionCheck {
                 if(type.getClassLoader()!=loader||!type.getProtectionDomain().getCodeSource().getLocation().toString().contains("/runtime/session-"))
                     throw new AssertionError("Freecam did not load from the frozen production JAR");
                 OUTPUT.println("Freecam loaded through production Forge/OptiFine after replacing the build JAR: "+collisions.getClass().getProtectionDomain().getCodeSource().getLocation());
+                for(String name:new String[]{"net.minecraft.client.Minecraft","net.minecraft.client.multiplayer.PlayerControllerMP"}) {
+                    Class<?> owner=Class.forName(name,false,loader);boolean found=false;
+                    String prefix=name.endsWith("Minecraft")?"vibe$click$":"vibe$tool$";
+                    for(java.lang.reflect.Method method:owner.getDeclaredMethods())if(method.getName().startsWith(prefix))found=true;
+                    if(!found)throw new AssertionError("Production Silent Murder scope missing from "+name);
+                }
+                OUTPUT.println("Silent Murder click and controller scopes linked through production Forge/OptiFine.");
             } catch(Throwable failure) {
                 failure.printStackTrace(ERROR);throw new RuntimeException("Production Freecam linkage failed",failure);
             }

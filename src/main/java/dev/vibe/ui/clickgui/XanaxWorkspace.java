@@ -318,6 +318,10 @@ final class XanaxWorkspace {
         }
         if (color != null || slider != null || scrolling != null) return;
         if ((!compact || showConfigs) && inside(mx, my, configX, configY, configWidth, configHeight)) return;
+        for(int i=hits.size()-1;i>=0;i--) {
+            Hit hit=hits.get(i);if(hit.kind==Kind.SLIDER&&hit.contains(mx,my)
+                    &&dev.vibe.ui.SliderWheel.adjust((Setting<?>)hit.value,dev.vibe.ui.SliderWheel.notches(amount),hit.index)){save();return;}
+        }
         for (Pane p : new Pane[] {modulesPane, settingsPane}) if (inside(mx, my, p.x, p.y, p.w, p.h)) {
             finishEditing(); p.scroll = clamp(p.scroll + (amount > 0 ? -40 : 40), 0, p.maxScroll); hits.clear(); return;
         }

@@ -25,7 +25,7 @@ public class HudWidgetsTest {
         assertEquals("Draw",d.verdict(true));assertEquals("Winning",d.verdict(false));
         assertEquals("Losing",new TargetHudData(null,"Player",18,20,0,16,0,0,0,sample.id,sample.skin).verdict(true));
     }
-    @Test public void tracksManualHitsAndCrosshairThenExpiresAndClearsAcrossWorlds() throws Exception {
+    @Test public void onlyTracksAttacksAndDoesNotRefreshTheTimerFromTheCrosshair() throws Exception {
         try(PathTestFixture f=new PathTestFixture()) {
             TargetHudSettings settings=new TargetHudSettings(s->s);settings.linger.setValue(2D);
             TargetHudTracker tracker=new TargetHudTracker();
@@ -33,8 +33,9 @@ public class HudWidgetsTest {
             tracker.attack(target,1000);assertSame(target,tracker.resolve(f.mc,settings,1001));
             assertNull(tracker.resolve(f.mc,settings,3001));
             f.mc.objectMouseOver=new MovingObjectPosition(target);
-            assertSame(target,tracker.resolve(f.mc,settings,4000));
-            f.mc.objectMouseOver=null;target.isDead=true;assertNull(tracker.resolve(f.mc,settings,4001));
+            assertNull(tracker.resolve(f.mc,settings,4000));
+            tracker.attack(target,4000);assertSame(target,tracker.resolve(f.mc,settings,4001));
+            target.isDead=true;assertNull(tracker.resolve(f.mc,settings,4002));
             target.isDead=false;tracker.attack(target,5000);f.mc.theWorld=null;
             assertNull(tracker.resolve(f.mc,settings,5001));
         }

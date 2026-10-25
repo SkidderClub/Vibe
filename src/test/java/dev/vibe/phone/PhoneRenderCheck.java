@@ -96,16 +96,28 @@ public final class PhoneRenderCheck {
                     frame(); draw(renderer, phone, 1); save(app.name().toLowerCase(java.util.Locale.ROOT) + ".png");
                     if (app == PhoneModule.App.HOME) savePortrait();
                     check();
+                    if (app == PhoneModule.App.MESSAGES) {
+                        int count = phone.conversation().messages().size();
+                        phone.act(PhoneModule.Action.SELECT);
+                        if (!phone.isMessageOpen() || phone.conversation().messages().size() != count)
+                            throw new AssertionError("Choosing a conversation sent a message");
+                        set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
+                        frame(); draw(renderer, phone, 1); save("messages-attachment.png"); check();
+                        phone.act(PhoneModule.Action.BACK);
+                        if (phone.isMessageOpen() || phone.app() != PhoneModule.App.MESSAGES)
+                            throw new AssertionError("Back did not return to conversations");
+                    }
                 }
-                phone.open(PhoneModule.App.CONTACTS); phone.act(PhoneModule.Action.SELECT);
+                phone.open(PhoneModule.App.CONTACTS); phone.act(PhoneModule.Action.RIGHT);
                 set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
-                frame(); draw(renderer, phone, 1); save("contact-details.png"); check();
-                phone.act(PhoneModule.Action.SELECT);
+                frame(); draw(renderer, phone, 1); save("contacts-message-action.png"); check();
+                phone.act(PhoneModule.Action.LEFT); phone.act(PhoneModule.Action.SELECT);
                 set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
                 frame(); draw(renderer, phone, 1); save("calling.png"); check();
                 verifyThumb(renderer, phone);
                 verifyFlappyClipping(renderer, phone);
                 verifyReplies(renderer, phone);
+                verifyContacts(renderer, phone);
                 phone.open(PhoneModule.App.PHOTOS); phone.act(PhoneModule.Action.DELETE);
                 frame(); draw(renderer, phone, 1); save("delete-confirmation.png"); check();
                 phone.open(PhoneModule.App.HOME); frame(); draw(renderer, phone, .67F); save("compact.png"); check();
@@ -246,7 +258,7 @@ public final class PhoneRenderCheck {
         java.util.concurrent.atomic.AtomicLong time = new java.util.concurrent.atomic.AtomicLong(1000);
         PhoneConversation conversation = new PhoneConversation(path, time::get, new Random(17));
         set(PhoneModule.class, phone, "conversation", conversation);
-        phone.open(PhoneModule.App.MESSAGES); conversation.sendPreset(2); time.addAndGet(1600);
+        phone.openChat(); conversation.sendPreset(2); time.addAndGet(1600);
         set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
         frame(); draw(renderer, phone, 1); ByteBuffer first = pixels(); save("messages-typing.png");
         time.addAndGet(180);
@@ -263,7 +275,12 @@ public final class PhoneRenderCheck {
         frame(); draw(renderer, phone, 1); save("messages-reply.png"); check();
         phone.open(PhoneModule.App.HOME); set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
         frame(); draw(renderer, phone, 1); save("messages-unread.png"); check();
-        phone.open(PhoneModule.App.MESSAGES); if (phone.unreadMessages() != 0) throw new AssertionError("Messages stayed unread after opening");
+        phone.open(PhoneModule.App.MESSAGES);
+        if (phone.unreadMessages() != 1 || phone.isMessageOpen()) throw new AssertionError("Inbox marked a chat read");
+        set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
+        frame(); draw(renderer, phone, 1); save("messages-inbox-unread.png"); check();
+        phone.act(PhoneModule.Action.SELECT);
+        if (!phone.isMessageOpen() || phone.unreadMessages() != 0) throw new AssertionError("Opening a chat did not mark it read");
         phone.open(PhoneModule.App.TELEPHONE); phone.act(PhoneModule.Action.SELECT);
         Field audio = PhoneModule.class.getDeclaredField("callAudio"); audio.setAccessible(true);
         ((CallFixture) audio.get(phone)).finished = true; phone.updateCommunications(false);
@@ -274,6 +291,37 @@ public final class PhoneRenderCheck {
         phone.act(PhoneModule.Action.SELECT); if (!phone.isCalling()) throw new AssertionError("Cannot call again");
         phone.stopCommunications(); set(PhoneModule.class, phone, "interactionAt", 0L);
         System.out.println("Phone replies: animated typing pixels, two-way bubbles, unread badge/read state, ended call and redial passed.");
+    }
+    private static void verifyContacts(PhoneRenderer renderer, PhoneModule phone) throws Exception {
+        for (PhoneContact contact : PhoneContact.values()) {
+            if (contact == PhoneContact.ESOUND) continue;
+            phone.open(PhoneModule.App.CONTACTS);
+            while (phone.contactSelection() < contact.ordinal()) phone.act(PhoneModule.Action.DOWN);
+            while (phone.contactSelection() > contact.ordinal()) phone.act(PhoneModule.Action.UP);
+            Path file = OUTPUT.resolve("fixture-profile/contact-" + contact.id + ".json"); Files.deleteIfExists(file);
+            set(PhoneModule.class, phone, "conversation", new PhoneConversation(file, contact));
+            set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
+            set(PhoneModule.class, phone, "notificationUntil", 0L);
+            set(PhoneModule.class, phone, "interactionAt", 0L);
+            frame(); draw(renderer, phone, 1); save("contact-" + contact.id + ".png"); check();
+            phone.act(PhoneModule.Action.SELECT);
+            if (!phone.isCalling() || phone.callContact() != contact) throw new AssertionError("Cannot call " + contact.name);
+            set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
+            frame(); draw(renderer, phone, 1); save("calling-" + contact.id + ".png"); check();
+            phone.stopCommunications(); phone.openChat(); phone.act(PhoneModule.Action.SELECT);
+            set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
+            set(PhoneModule.class, phone, "notificationUntil", 0L);
+            set(PhoneModule.class, phone, "interactionAt", 0L);
+            frame(); draw(renderer, phone, 1); save("messages-" + contact.id + ".png"); check();
+            if (contact == PhoneContact.VOGEL) {
+                if (!phone.conversation().isBlocked()) throw new AssertionError("Vogel did not block the sender");
+                phone.open(PhoneModule.App.CONTACTS);
+                set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
+                frame(); draw(renderer, phone, 1); save("contact-vogel-blocked.png"); check();
+            }
+        }
+        phone.stopCommunications(); set(PhoneModule.class, phone, "interactionAt", 0L);
+        System.out.println("Seven contacts: imported portraits, per-contact calls, random messages and Vogel's blocked UI passed.");
     }
     private static final class CallFixture implements PhoneCallPlayer {
         boolean finished;

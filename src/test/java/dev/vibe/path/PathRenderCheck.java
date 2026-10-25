@@ -188,6 +188,18 @@ public final class PathRenderCheck {
         murder.getGoldPath().setEnabled(false); topDown(1);
         renderer.render(new net.minecraftforge.client.event.RenderWorldLastEvent(null,.5F));
         if(colored(0)+colored(1)+colored(2)!=0)throw new AssertionError("Disabled gold route remains visible");
+        net.minecraft.entity.player.EntityPlayer killer=(net.minecraft.entity.player.EntityPlayer)fixture.world.getEntityByID(2);
+        killer.inventory.mainInventory[0]=new net.minecraft.item.ItemStack(net.minecraft.init.Items.iron_sword);
+        for(dev.vibe.setting.Setting<?> setting:murder.getSettings())if(setting.getRawName().equals("Murderer ESP color"))
+            ((dev.vibe.setting.ColorSetting)setting).setValue(0xFFE648BC);
+        murder.tick();fixture.forceReplan();fixture.module.tick();
+        for(int i=0;i<200&&!fixture.module.getRoute().complete;i++)fixture.module.tick();
+        if(fixture.module.getTarget()!=killer)throw new AssertionError("Murderer route did not select the detected killer");
+        topDown(1);renderer.render(new net.minecraftforge.client.event.RenderWorldLastEvent(null,1));
+        int pink=0;data=pixels();
+        for(int i=0;i<data.length;i+=4)if((data[i]&255)>160&&(data[i+1]&255)<130&&(data[i+2]&255)>130)pink++;
+        if(pink<40)throw new AssertionError("Murderer route ignored Murderer ESP color");
+        save("path-murderer-color.png");
     }
     private static int colored(int channel) {
         byte[] data=pixels(); int count=0;

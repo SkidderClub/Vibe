@@ -229,8 +229,8 @@ public final class AutoToolModule extends Module {
     }
     public static int serverSlotHook(int vanilla) {
         AutoToolModule module = active();
-        return PickenSwitchModule.serverSlotHook(module != null && module.hasSilentSlot() ? module.spoofedSlot
-                : ScaffoldModule.serverSlotHook(vanilla));
+        return dev.vibe.module.impl.meme.HypixelModule.serverSlotHook(PickenSwitchModule.serverSlotHook(module != null && module.hasSilentSlot() ? module.spoofedSlot
+                : ScaffoldModule.serverSlotHook(vanilla)));
     }
     public static int beginActionHook() {
         int picken=PickenSwitchModule.beginActionHook();if(picken>=0)return picken;

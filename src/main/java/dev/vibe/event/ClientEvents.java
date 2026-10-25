@@ -816,7 +816,6 @@ public final class ClientEvents {
             event.setCanceled(true);
             return;
         }
-        if (Vibe.getInstance().getHudManager() != null) Vibe.getInstance().getHudManager().recordTarget((EntityLivingBase) event.target);
         if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordAttack((EntityLivingBase) event.target);
         WTapModule wTap = Vibe.getInstance().getModuleManager().getModule(WTapModule.class);
         if (wTap != null) wTap.onAttack((EntityLivingBase) event.target);
@@ -828,6 +827,12 @@ public final class ClientEvents {
         }
         GirlfriendModule girlfriend = Vibe.getInstance().getModuleManager().getModule(GirlfriendModule.class);
         if (girlfriend != null) girlfriend.onAttack((EntityLivingBase) event.target);
+    }
+
+    @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.LOWEST)
+    public void onTargetHudAttack(AttackEntityEvent event) {
+        if (event.isCanceled() || event.entityPlayer != minecraft.thePlayer || !(event.target instanceof EntityPlayer)) return;
+        if (Vibe.getInstance().getHudManager() != null) Vibe.getInstance().getHudManager().recordTarget((EntityLivingBase) event.target);
     }
 
     @SubscribeEvent
@@ -934,6 +939,7 @@ public final class ClientEvents {
         minecraft.addScheduledTask(() -> {
             fogRenderer.close(); hitmarkerRenderer.close(); phoneRenderer.close();
             oofArrowsRenderer.clear();
+            qolRenderer.clear();
             dev.vibe.module.impl.meme.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class);
             if (phone != null) phone.stopCommunications();
             dev.vibe.ui.render.ItemGlowRenderer.closeActive();

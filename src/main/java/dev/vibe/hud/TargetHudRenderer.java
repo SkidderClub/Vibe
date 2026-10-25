@@ -16,29 +16,31 @@ import net.minecraft.client.renderer.GlStateManager;
 public final class TargetHudRenderer {
     private final NeverLoseFont regular=new NeverLoseFont(java.awt.Font.PLAIN,20);
     private final NeverLoseFont bold=new NeverLoseFont(java.awt.Font.BOLD,21);
-    private final List<Particle> sparks=new ArrayList<Particle>();
-    private UUID targetId;
-    private float displayed,previousHealth;
-    private int previousHurt;
-    private long lastFrame,lastDemoBurst=-1;
+    private final java.util.Map<UUID,State> states=new java.util.LinkedHashMap<UUID,State>(16,.75F,true) {
+        @Override protected boolean removeEldestEntry(java.util.Map.Entry<UUID,State> entry) {return size()>16;}
+    };
+    private State state;
 
-    public int height(TargetHudSettings s) { return s.mode.is("Zeroday")?76:s.mode.is("LiquidGlass")?66:s.mode.is("Rise")?46:42; }
+    public int height(TargetHudSettings s) { return s.mode.is("Zeroday")?76:(s.mode.is("LiquidGlass")||s.mode.is("Rise"))?46:42; }
     public int width(TargetHudSettings s,TargetHudData d,FontRenderer font) {
         return Math.max(s.mode.is("Zeroday")?184:130,s.width.getInt());
     }
     public void draw(TargetHudSettings s,TargetHudData d,FontRenderer font,int x,int y,int w,Runnable glass,boolean preview,long now) {
         int h=height(s);
-        if(!d.id.equals(targetId)) {
-            targetId=d.id;displayed=d.fraction();previousHealth=d.health;previousHurt=d.hurtTicks;
-            lastFrame=now;sparks.clear();lastDemoBurst=-1;
+        state=states.get(d.id);
+        boolean fresh=state==null;
+        if(state==null) {
+            state=new State();state.targetId=d.id;state.displayed=d.fraction();
+            state.previousHealth=d.health;state.previousHurt=d.hurtTicks;state.lastFrame=now;
+            states.put(d.id,state);
         }
-        float dt=Math.max(0,Math.min(.1F,(now-lastFrame)/1000F));lastFrame=now;
-        displayed=s.smoothing.isEnabled()?displayed+(d.fraction()-displayed)*(1-(float)Math.exp(-dt*12)):d.fraction();
-        boolean hit=d.health<previousHealth-.01F||d.hurtTicks>previousHurt;
-        if(preview&&now/1800!=lastDemoBurst) {hit=true;lastDemoBurst=now/1800;}
-        if(!s.mode.is("Rise")||!s.particles.isEnabled())sparks.clear();
+        float dt=Math.max(0,Math.min(.1F,(now-state.lastFrame)/1000F));state.lastFrame=now;
+        state.displayed=s.smoothing.isEnabled()?state.displayed+(d.fraction()-state.displayed)*(1-(float)Math.exp(-dt*12)):d.fraction();
+        boolean hit=(fresh&&s.mode.is("LiquidGlass"))||d.health<state.previousHealth-.01F||d.hurtTicks>state.previousHurt;
+        if(preview&&now/1800!=state.lastDemoBurst) {hit=true;state.lastDemoBurst=now/1800;}
+        if(!s.supportsParticles()||!s.particles.isEnabled())state.sparks.clear();
         else if(hit)burst(s,now);
-        previousHealth=d.health;previousHurt=d.hurtTicks;
+        state.previousHealth=d.health;state.previousHurt=d.hurtTicks;
         int color=s.health.getArgb(),end=s.gradient.isEnabled()?s.healthEnd.getArgb():color;
         float hurt=s.damageTint.isEnabled()?Math.min(1,d.hurtTicks/10F):0;
         if(s.mode.is("LiquidGlass"))glass.run();
@@ -47,7 +49,7 @@ public final class TargetHudRenderer {
             HudShapes.face(d.skin,x+3,y+3,36,0,hurt);
             font.drawStringWithShadow(font.trimStringToWidth(d.name,w-48),x+44,y+5,s.text.getArgb());
             Gui.drawRect(x+44,y+20,x+w-7,y+33,0x60202025);
-            Gui.drawRect(x+44,y+20,x+44+Math.round((w-51)*displayed),y+33,color);
+            Gui.drawRect(x+44,y+20,x+44+Math.round((w-51)*state.displayed),y+33,color);
             String pct=percent(d);font.drawStringWithShadow(pct,x+44+(w-51-font.getStringWidth(pct))/2F,y+23,s.text.getArgb());
         } else if(s.mode.is("Tenacity")) {
             HudShapes.face(d.skin,x+5,y+5,32,5,hurt);
@@ -71,21 +73,23 @@ public final class TargetHudRenderer {
             gauge(font,x+84,y+34,Math.min(1,d.hurtTicks/10F),d.hurtTicks,0xFFEC777E,true,false);
             gauge(font,x+109,y+34,Math.min(1,d.angle/360F),d.angle,0xFF9ACFE5,false,true);
             regular.draw(d.verdict(s.absorption.isEnabled()),x+47,y+53,s.text.getArgb());
-            HudShapes.round(x,y+h-2,w*displayed,2,0,color);
+            HudShapes.round(x,y+h-2,w*state.displayed,2,0,color);
         } else {
-            HudShapes.face(d.skin,x+10,y+11,39,10,hurt);
-            small(font,"Target",x+59,y+9,0xFFCADAE9,false);
-            bold.draw(bold.fit(d.name,w-72),x+59,y+17,s.text.getArgb());
-            if(s.ping.isEnabled())small(font,d.ping<0?"— ms":d.ping+" ms",x+w-9,y+10,0xFFCADAE9,true);
-            bar(s,d,x+59,y+37,w-70,5,color,end);
-            regular.draw(decimal(d.total(s.absorption.isEnabled()))+" hp",x+59,y+46,s.text.getArgb());
-            String state=d.verdict(s.absorption.isEnabled());small(font,state,x+w-9,y+49,0xFFCADAE9,true);
+            HudShapes.face(d.skin,x+7,y+7,32,8,hurt);
+            String ping=d.ping<0?"— ms":d.ping+" ms";
+            float pingSpace=s.ping.isEnabled()?font.getStringWidth(ping)*.75F+6:0;
+            bold.draw(bold.fit(d.name,Math.max(1,w-55-pingSpace)),x+47,y+5,s.text.getArgb());
+            if(s.ping.isEnabled())small(font,ping,x+w-8,y+9,0xFFCADAE9,true);
+            bar(s,d,x+47,y+23,w-55,5,color,end);
+            regular.draw(decimal(d.total(s.absorption.isEnabled()))+" hp",x+47,y+31,s.text.getArgb());
+            String verdict=d.verdict(s.absorption.isEnabled());small(font,verdict,x+w-8,y+33,0xFFCADAE9,true);
+            drawParticles(s,x+23,y+23,now);
         }
         GlStateManager.color(1,1,1,1);
     }
     private void bar(TargetHudSettings s,TargetHudData d,float x,float y,float w,float h,int a,int b) {
         HudShapes.round(x,y,w,h,h/2,0x66222732);
-        float filled=Math.max(0,Math.min(w,w*displayed));
+        float filled=Math.max(0,Math.min(w,w*state.displayed));
         HudShapes.gradient(x,y,filled,h,h/2,a,b);
         if(s.absorption.isEnabled()&&d.absorption>0) {
             float extra=Math.min(w-filled,w*d.absorption/d.maxHealth);
@@ -121,15 +125,15 @@ public final class TargetHudRenderer {
         }
     }
     private void burst(TargetHudSettings s,long now) {
-        Random random=new Random(now^targetId.getLeastSignificantBits());
-        while(sparks.size()>160)sparks.remove(0);
+        Random random=new Random(now^state.targetId.getLeastSignificantBits());
+        while(state.sparks.size()>160)state.sparks.remove(0);
         for(int i=0;i<s.particleCount.getInt();i++) {
             double angle=random.nextDouble()*Math.PI*2;float speed=17+random.nextFloat()*38;
-            sparks.add(new Particle(now,(float)Math.cos(angle)*speed,(float)Math.sin(angle)*speed,s.particleSize.getFloat()*(.65F+random.nextFloat()*.65F)));
+            state.sparks.add(new Particle(now,(float)Math.cos(angle)*speed,(float)Math.sin(angle)*speed,s.particleSize.getFloat()*(.65F+random.nextFloat()*.65F)));
         }
     }
     private void drawParticles(TargetHudSettings s,float x,float y,long now) {
-        Iterator<Particle> iterator=sparks.iterator();
+        Iterator<Particle> iterator=state.sparks.iterator();
         while(iterator.hasNext()) {
             Particle p=iterator.next();float life=(now-p.born)/s.particleLifetime.getFloat();
             if(life>=1||life<0) {iterator.remove();continue;}
@@ -139,11 +143,18 @@ public final class TargetHudRenderer {
                     RenderUtils.alpha(s.particleColor.getArgb(),Math.round((s.particleColor.getArgb()>>>24)*fade)));
         }
     }
-    public int particleCount() { return sparks.size(); }
-    public void clear() {sparks.clear();targetId=null;lastFrame=0;}
+    public int particleCount() { int count=0;for(State entry:states.values())count+=entry.sparks.size();return count; }
+    public void clear() {states.clear();state=null;}
     public void close() {clear();regular.close();bold.close();}
     private static String percent(TargetHudData d) {return String.format(Locale.ROOT,"%.1f%%",d.fraction()*100);}
     private static String decimal(float n) {return String.format(Locale.ROOT,"%.1f",n);}
+    private static final class State {
+        final List<Particle> sparks=new ArrayList<Particle>();
+        UUID targetId;
+        float displayed,previousHealth;
+        int previousHurt;
+        long lastFrame,lastDemoBurst=-1;
+    }
     private static final class Particle {
         final long born;final float vx,vy,size;
         Particle(long born,float vx,float vy,float size) {this.born=born;this.vx=vx;this.vy=vy;this.size=size;}

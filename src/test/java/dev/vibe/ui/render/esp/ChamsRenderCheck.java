@@ -87,6 +87,7 @@ public final class ChamsRenderCheck {
             rgb(pixels(), W * 3 / 4, 0, 0, 0, "Transparent textured cutout");
 
             texture(255, 255, 255, 255);
+            armorDoesNotOccludeItsOwnBody(esp);
             halo(esp);
             restoreState(esp, false); restoreState(esp, true);
             preview(esp, output.resolve("materials.png"));
@@ -94,6 +95,29 @@ public final class ChamsRenderCheck {
             if (error != GL11.GL_NO_ERROR) throw new AssertionError("OpenGL error " + error);
             System.out.println("Chams OK: Flat/Glow/Metallic alpha 0/1/64/128/255, partial cover, armor, skin, cutouts, depth and exception state restoration.");
         } finally { buffer.destroy(); }
+    }
+
+    private static void armorDoesNotOccludeItsOwnBody(EspModule esp) {
+        esp.getVisibleChams().getMode().setValue("Flat");esp.getVisibleChams().getColor().setValue(0x8000FF00);
+        esp.getInvisibleChams().getColor().setValue(0xFFFF0000);
+        esp.getVisibleChams().getShowSkin().setEnabled(false);esp.getInvisibleChams().getShowSkin().setEnabled(false);
+        esp.getVisibleChams().getArmor().setEnabled(true);esp.getInvisibleChams().getArmor().setEnabled(true);
+        for(String mode:new String[]{"Flat","Glow"}) {
+            esp.getInvisibleChams().getMode().setValue(mode);scene();ChamsRenderer.beginWorld();
+            try {
+                ChamsSceneDepth.capture();
+                ChamsRenderer.draw(esp,false,1,()->layer(.5F,0));
+                ChamsRenderer.draw(esp,true,1,()->{layer(.55F,-.2F);layer(.55F,.2F);});
+            } finally {ChamsRenderer.endWorld();}
+            byte[] data=pixels();
+            for(int y=0;y<H;y++)for(int x=W/2+12;x<W;x++)
+                if((data[(y*W+x)*4]&255)>2)throw new AssertionError(mode+" hidden armor/glow leaked onto a fully visible player");
+            if((data[((H/2)*W+W/4)*4]&255)<40)throw new AssertionError("Wall-occluded armor lost hidden Chams");
+        }
+        esp.getVisibleChams().getColor().setValue(0xFF00FF00);
+    }
+    private static void layer(float scale,float z) {
+        GL11.glPushMatrix();GL11.glTranslatef(0,0,z);GL11.glScalef(scale,scale,1);quad();GL11.glPopMatrix();
     }
 
     private static void halo(EspModule esp) {

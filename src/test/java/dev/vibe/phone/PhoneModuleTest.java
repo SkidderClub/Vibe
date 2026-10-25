@@ -31,8 +31,7 @@ public class PhoneModuleTest {
         PhoneModule phone = enabled();
         assertFalse(phone.hints.isEnabled());
         assertEquals(8, PhoneModule.appCount());
-        phone.open(App.CONTACTS); phone.act(Action.SELECT);
-        assertTrue(phone.isContactOpen());
+        phone.open(App.CONTACTS);
         phone.act(Action.SELECT); assertEquals(App.TELEPHONE, phone.app()); assertTrue(phone.isCalling());
         long started = phone.callStartedAt();
         phone.advance(3600); phone.act(Action.SELECT);
@@ -41,7 +40,7 @@ public class PhoneModuleTest {
         phone.open(App.TELEPHONE); assertTrue(phone.isCalling());
         PhoneConversation conversation = new PhoneConversation(temporary.newFolder("messages").toPath().resolve("messages.json"));
         Field field = PhoneModule.class.getDeclaredField("conversation"); field.setAccessible(true); field.set(phone, conversation);
-        phone.open(App.CONTACTS); phone.act(Action.SELECT); phone.act(Action.RIGHT); phone.act(Action.SELECT);
+        phone.open(App.CONTACTS); phone.act(Action.RIGHT); phone.act(Action.SELECT);
         assertEquals(App.MESSAGES, phone.app());
         assertTrue(phone.handleKey(Keyboard.KEY_NUMPAD5, false)); assertEquals(1, conversation.messages().size());
         phone.keySetting(Action.SELECT).setValue("K");
@@ -92,7 +91,8 @@ public class PhoneModuleTest {
         time.addAndGet(10000); phone.updateCommunications(false);
         assertEquals(1, conversation.messages().size()); assertTrue(conversation.messages().get(0).incoming);
         assertEquals(1, phone.unreadMessages());
-        phone.open(App.MESSAGES); assertEquals(0, phone.unreadMessages());
+        phone.open(App.MESSAGES); assertEquals(1, phone.unreadMessages());
+        phone.act(Action.SELECT); assertTrue(phone.isMessageOpen()); assertEquals(0, phone.unreadMessages());
         phone.open(App.TELEPHONE); phone.act(Action.SELECT);
         assertTrue(phone.isCalling()); assertFalse(phone.hasCallEnded()); assertEquals(2, playback.starts);
         phone.stopCommunications(); assertFalse(phone.isCalling()); assertTrue(playback.closed);
@@ -104,7 +104,7 @@ public class PhoneModuleTest {
         PhoneConversation conversation = new PhoneConversation(temporary.newFolder("full-history").toPath().resolve("messages.json"), time::get, new java.util.Random(3));
         Field field = PhoneModule.class.getDeclaredField("conversation"); field.setAccessible(true); field.set(phone, conversation);
         for (int i = 0; i < 64; i++) conversation.sendPreset(i % 7);
-        phone.open(App.MESSAGES); for (int i = 0; i < 64; i++) phone.act(Action.UP);
+        phone.openChat(); for (int i = 0; i < 64; i++) phone.act(Action.UP);
         assertEquals(63, phone.messageScroll());
         time.addAndGet(10000); phone.updateCommunications(false);
         assertEquals(64, conversation.messages().size()); assertEquals(63, phone.messageScroll());

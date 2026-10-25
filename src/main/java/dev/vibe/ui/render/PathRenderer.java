@@ -30,14 +30,15 @@ public final class PathRenderer {
         Vec3 player = interpolate(mc.thePlayer, event.partialTicks);
         Vec3 origin = new Vec3(mc.getRenderManager().viewerPosX, mc.getRenderManager().viewerPosY, mc.getRenderManager().viewerPosZ);
         EntityLivingBase target = module.getTarget();
+        HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(HypixelModule.class);
         if (target != null && target.worldObj == mc.theWorld && !target.isDead
                 && mc.theWorld.getEntityByID(target.getEntityId()) == target) {
             TargetsModule filters = Vibe.getInstance().getModuleManager().getModule(TargetsModule.class);
             int team = filters != null && target instanceof EntityPlayer ? filters.teamColor((EntityPlayer) target) : 0;
-            draw(module.getRoute(), module, player, interpolate(target, event.partialTicks), origin, team, target.hurtTime > 0);
+            draw(module.getRoute(), module, player, interpolate(target, event.partialTicks), origin, team, target.hurtTime > 0,
+                    hypixel == null ? 0 : hypixel.murdererColor(target));
         }
         EntityItem gold = module.getGoldTarget();
-        HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(HypixelModule.class);
         if (gold != null && hypixel != null && hypixel.isGoldPathTarget(gold) && gold.worldObj == mc.theWorld
                 && mc.theWorld.getEntityByID(gold.getEntityId()) == gold)
             drawGold(module.getGoldRoute(), module, player, interpolate(gold, event.partialTicks), origin, hypixel.getGoldColor().getArgb());

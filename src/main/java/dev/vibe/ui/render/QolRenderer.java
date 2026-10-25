@@ -17,6 +17,8 @@ public final class QolRenderer {
     private int width = -1;
     private int height = -1;
     private boolean captured;
+    private net.minecraft.world.World capturedWorld;
+    public void clear() {captured=false;capturedWorld=null;}
 
     /**
      * Save the current world frame before GuiScreen draws its dark gradient.
@@ -28,8 +30,9 @@ public final class QolRenderer {
     public void capture() {
         QolModule module = Vibe.getInstance().getModuleManager().getModule(QolModule.class);
         if (minecraft.displayWidth <= 0 || minecraft.displayHeight <= 0 || module == null || !module.isEnabled()
-                || !module.getFeatures().isSelected("Hide Black Background")) {
+                || minecraft.theWorld == null || !module.getFeatures().isSelected("Hide Black Background")) {
             captured = false;
+            capturedWorld=null;
             return;
         }
         try {
@@ -50,6 +53,7 @@ public final class QolRenderer {
             GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
             minecraft.getFramebuffer().framebufferRenderExt(worldFrame.framebufferWidth, worldFrame.framebufferHeight, false);
             captured = true;
+            capturedWorld=minecraft.theWorld;
         } catch (Exception ignored) {
             captured = false;
         } finally {
@@ -60,6 +64,7 @@ public final class QolRenderer {
     /** Called after vanilla has drawn its dim background but before content. */
     public void redrawBehind(GuiScreen screen) {
         QolModule module = Vibe.getInstance().getModuleManager().getModule(QolModule.class);
+        if (minecraft.theWorld == null || minecraft.theWorld != capturedWorld) {captured=false;capturedWorld=null;return;}
         if (!captured || worldFrame == null || module == null || !module.isEnabled()
                 || !module.getFeatures().isSelected("Hide Black Background") || !shouldHide(module, screen)) {
             return;
@@ -82,7 +87,7 @@ public final class QolRenderer {
     }
 
     private boolean shouldHide(QolModule module, GuiScreen screen) {
-        if (screen == null || screen instanceof VibeClickGui) {
+        if (minecraft.theWorld == null || screen == null || screen instanceof VibeClickGui) {
             return false;
         }
         if (screen instanceof net.minecraft.client.gui.inventory.GuiInventory) {

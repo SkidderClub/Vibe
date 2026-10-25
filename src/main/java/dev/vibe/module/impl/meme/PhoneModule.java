@@ -6,6 +6,7 @@ import dev.vibe.module.Module;
 import dev.vibe.phone.FlappyGame;
 import dev.vibe.phone.PhonePhotoLibrary;
 import dev.vibe.phone.PhoneConversation;
+import dev.vibe.phone.PhoneContact;
 import dev.vibe.phone.PhoneCallAudio;
 import dev.vibe.phone.PhoneCallPlayer;
 import dev.vibe.setting.*;
@@ -13,6 +14,7 @@ import java.awt.Desktop;
 import java.net.URI;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.EnumMap;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.input.Keyboard;
 
@@ -50,7 +52,12 @@ public final class PhoneModule extends Module {
     private String reportedError = "";
     private PhonePhotoLibrary library;
     private PhoneConversation conversation;
-    private boolean contactOpen, calling;
+    private final EnumMap<PhoneContact, PhoneConversation> conversations = new EnumMap<PhoneContact, PhoneConversation>(PhoneContact.class);
+    private static final PhoneContact[] CONTACTS = PhoneContact.values();
+    private int contactSelection;
+    private PhoneContact callContact;
+    private PhoneConversation callConversation;
+    private boolean messageOpen, calling;
     private int contactAction, messageScroll;
     private long callStartedAt;
     private boolean callEnded;
@@ -68,9 +75,10 @@ public final class PhoneModule extends Module {
     @Override protected void onEnable() {
         openedAt = System.currentTimeMillis(); appAt = openedAt;
         app = App.HOME; homeSelection = 0; binding = -1; shutterRequested = confirmDelete = false;
-        contactOpen = calling = callEnded = false; contactAction = messageScroll = 0;
+        messageOpen = calling = callEnded = false; contactAction = messageScroll = 0;
         interactionAt = 0; lastAction = null;
-        conversation();
+        for (PhoneContact contact : CONTACTS) conversation(contact).resetSession();
+        callContact = null; callConversation = null;
     }
     @Override protected void onDisable() {
         shutterRequested = false; binding = -1; confirmDelete = false; stopCommunications();
@@ -100,7 +108,7 @@ public final class PhoneModule extends Module {
             return;
         }
         if (action == Action.BACK) {
-            if (app == App.CONTACTS && contactOpen) contactOpen = false;
+            if (app == App.MESSAGES && messageOpen) { messageOpen = false; messageScroll = 0; }
             else if (app == App.PHOTOS && photoOpen) photoOpen = false; else open(App.HOME);
             return;
         }
@@ -149,24 +157,37 @@ public final class PhoneModule extends Module {
                 if (action == Action.SELECT) openInternet();
                 break;
             case CONTACTS:
-                if (!contactOpen) {
-                    if (action == Action.SELECT) { contactOpen = true; contactAction = 0; }
-                } else {
-                    if (action == Action.LEFT || action == Action.UP) contactAction = 0;
-                    if (action == Action.RIGHT || action == Action.DOWN) contactAction = 1;
-                    if (action == Action.SELECT) {
-                        if (contactAction == 0) call(); else open(App.MESSAGES);
-                    }
-                }
+                if (action == Action.UP) selectContact(contactSelection - 1);
+                if (action == Action.DOWN) selectContact(contactSelection + 1);
+                if (action == Action.LEFT) contactAction = 0;
+                if (action == Action.RIGHT) contactAction = 1;
+                if (action == Action.SELECT) { if (contactAction == 0) call(); else openChat(); }
                 break;
             case TELEPHONE:
+                if (!calling) {
+                    if (action == Action.UP || action == Action.LEFT) selectContact(contactSelection - 1);
+                    if (action == Action.DOWN || action == Action.RIGHT) selectContact(contactSelection + 1);
+                }
                 if (action == Action.SELECT && !calling) call();
                 break;
             case MESSAGES:
+                if (!messageOpen) {
+                    if (action == Action.UP || action == Action.LEFT) selectContact(contactSelection - 1);
+                    if (action == Action.DOWN || action == Action.RIGHT) selectContact(contactSelection + 1);
+                    if (action == Action.SELECT) openChat();
+                    break;
+                }
                 if (action == Action.UP) messageScroll = Math.min(Math.max(0, conversation().messages().size() - 1), messageScroll + 1);
                 if (action == Action.DOWN) messageScroll = Math.max(0, messageScroll - 1);
                 if (action == Action.SELECT) {
+                    if (conversation().isBlocked()) { toast("You are blocked. Re-enable Phone to reset."); break; }
                     conversation().send(); messageScroll = 0;
+                    if (conversation().isBlocked()) {
+                        if (calling && callContact == selectedContact()) {
+                            callAudio.close(); calling = false; callEnded = true; callConversation = null;
+                        }
+                        toast(selectedContact().name + " blocked you");
+                    }
                     if (!conversation().error().isEmpty()) toast(conversation().error());
                 }
                 break;
@@ -174,11 +195,14 @@ public final class PhoneModule extends Module {
         }
     }
     public void open(App next) {
-        app = next; appAt = System.currentTimeMillis(); binding = -1; confirmDelete = false;
+        app = next; appAt = System.currentTimeMillis(); binding = -1; confirmDelete = false; messageOpen = false;
         if (next == App.PHOTOS) { photos().refresh(); photoOpen = false; }
-        if (next == App.CONTACTS) { contactOpen = false; contactAction = 0; }
-        if (next == App.MESSAGES) { conversation().markRead(); messageScroll = 0; }
+        if (next == App.CONTACTS) contactAction = 0;
+        if (next == App.MESSAGES) messageScroll = 0;
         shutterRequested = false;
+    }
+    public void openChat() {
+        open(App.MESSAGES); messageOpen = true; conversation().markRead();
     }
     public void advance(double seconds) {
         if (library != null && !library.error().isEmpty() && !library.error().equals(reportedError)) {
@@ -202,39 +226,47 @@ public final class PhoneModule extends Module {
         Minecraft mc = Minecraft.getMinecraft();
         if (!isEnabled()) return;
         if (mc == null || mc.theWorld == null || mc.thePlayer == null) { stopCommunications(); return; }
-        boolean reading = app == App.MESSAGES && messageScroll == 0 && mc.currentScreen == null
+        boolean reading = app == App.MESSAGES && messageOpen && messageScroll == 0 && mc.currentScreen == null
                 && allowsContext(false, mc.gameSettings.thirdPersonView != 0, mc.gameSettings.hideGUI);
         updateCommunications(reading);
     }
     public void updateCommunications(boolean reading) {
         if (!isEnabled()) return;
+        reading = reading && app == App.MESSAGES && messageOpen;
         if (calling) {
             callAudio.setVolume(playbackVolume());
             if (callAudio.isFinished()) {
                 String error = callAudio.error();
                 calling = false; callEnded = true; callAudio.close();
-                conversation().afterCall(); toast(error.isEmpty() ? "Call ended" : error);
+                if (callConversation != null) callConversation.afterCall();
+                callConversation = null;
+                toast(error.isEmpty() ? "Call with " + callContact.name + " ended" : error);
             }
         }
-        if (conversation == null) return;
-        PhoneConversation.Message reply = conversation.advance();
-        if (reply != null) {
-            if (app == App.MESSAGES && messageScroll > 0)
-                messageScroll = Math.min(conversation.messages().size() - 1, messageScroll + 1);
-            if (!reading) toast(PhoneConversation.CONTACT + ": " + reply.text);
-            dev.vibe.feedback.ModuleFeedback.message("phone.message", PhoneConversation.CONTACT, reply.text);
-            Minecraft mc = Minecraft.getMinecraft();
-            if (messageSounds.isEnabled() && mc != null && mc.getSoundHandler() != null) {
-                try { mc.getSoundHandler().playSound(net.minecraft.client.audio.PositionedSoundRecord.create(
-                        new net.minecraft.util.ResourceLocation("vibe", "phone.message"), 1)); }
-                catch (RuntimeException ignored) { /* Messaging still works without an audio device. */ }
+        if (conversation != null) conversations.put(selectedContact(), conversation);
+        for (PhoneConversation chat : conversations.values()) {
+            PhoneConversation.Message reply = chat.advance();
+            boolean selected = chat.contact() == selectedContact();
+            if (reply != null) {
+                if (selected && app == App.MESSAGES && messageOpen && messageScroll > 0)
+                    messageScroll = Math.min(chat.messages().size() - 1, messageScroll + 1);
+                if (!reading || !selected) toast(chat.contact().name + ": " + reply.text);
+                dev.vibe.feedback.ModuleFeedback.message("phone.message." + chat.contact().id, chat.contact().name, reply.text);
+                Minecraft mc = Minecraft.getMinecraft();
+                if (messageSounds.isEnabled() && mc != null && mc.getSoundHandler() != null) {
+                    try { mc.getSoundHandler().playSound(net.minecraft.client.audio.PositionedSoundRecord.create(
+                            new net.minecraft.util.ResourceLocation("vibe", "phone.message"), 1)); }
+                    catch (RuntimeException ignored) { /* Messaging still works without an audio device. */ }
+                }
             }
+            if (reading && selected) chat.markRead();
         }
-        if (reading) conversation.markRead();
     }
     public void stopCommunications() {
         callAudio.close(); calling = false;
         if (conversation != null) conversation.cancelPending();
+        for (PhoneConversation chat : conversations.values()) chat.cancelPending();
+        callConversation = null;
     }
     private float playbackVolume() {
         Minecraft mc = Minecraft.getMinecraft();
@@ -343,16 +375,38 @@ public final class PhoneModule extends Module {
     }
     public PhoneConversation conversation() {
         if (conversation == null) {
-            Minecraft mc = Minecraft.getMinecraft();
-            java.io.File directory = mc == null ? null : mc.mcDataDir;
-            conversation = new PhoneConversation((directory == null ? Paths.get("run/client") : directory.toPath()).resolve("vibe/phone/messages.json"));
+            conversation = conversations.get(selectedContact());
+            if (conversation == null) conversation = createConversation(selectedContact());
         }
+        conversations.put(selectedContact(), conversation);
         return conversation;
     }
+    public PhoneConversation conversation(PhoneContact contact) {
+        if (contact == selectedContact()) return conversation();
+        PhoneConversation chat = conversations.get(contact);
+        if (chat == null) { chat = createConversation(contact); conversations.put(contact, chat); }
+        return chat;
+    }
+    private PhoneConversation createConversation(PhoneContact contact) {
+        Minecraft mc = Minecraft.getMinecraft();
+        java.io.File directory = mc == null ? null : mc.mcDataDir;
+        java.nio.file.Path root = (directory == null ? Paths.get("run/client") : directory.toPath()).resolve("vibe/phone");
+        return new PhoneConversation(root.resolve(contact == PhoneContact.ESOUND ? "messages.json" : "conversations/" + contact.id + ".json"), contact);
+    }
+    private void selectContact(int index) {
+        int next = Math.max(0, Math.min(CONTACTS.length - 1, index));
+        if (next == contactSelection) return;
+        if (conversation != null) conversations.put(selectedContact(), conversation);
+        contactSelection = next; conversation = conversations.get(selectedContact());
+        messageScroll = 0;
+        if (!calling) callEnded = false;
+    }
     private void call() {
+        if (conversation().isBlocked()) { toast("You are blocked. Re-enable Phone to reset."); return; }
         open(App.TELEPHONE);
         if (!calling) {
             calling = true; callEnded = false; callStartedAt = System.currentTimeMillis();
+            callContact = selectedContact(); callConversation = conversation();
             callAudio.start(playbackVolume());
         }
     }
@@ -397,11 +451,18 @@ public final class PhoneModule extends Module {
     public String notification() { return System.currentTimeMillis() < notificationUntil ? notification : ""; }
     public static String appName(int index) { return APP_NAMES[index]; }
     public static int appCount() { return APP_NAMES.length; }
-    public boolean isContactOpen() { return contactOpen; }
+    public boolean isMessageOpen() { return messageOpen; }
     public int contactAction() { return contactAction; }
     public boolean isCalling() { return calling; }
     public boolean hasCallEnded() { return callEnded; }
-    public int unreadMessages() { return conversation == null ? 0 : conversation.unreadCount(); }
+    public int unreadMessages() {
+        if (conversation != null) conversations.put(selectedContact(), conversation);
+        int count = 0; for (PhoneConversation chat : conversations.values()) count += chat.unreadCount();
+        return count;
+    }
+    public PhoneContact selectedContact() { return CONTACTS[contactSelection]; }
+    public PhoneContact callContact() { return calling && callContact != null ? callContact : selectedContact(); }
+    public int contactSelection() { return contactSelection; }
     public long callStartedAt() { return callStartedAt; }
     public int messageScroll() { return messageScroll; }
 }

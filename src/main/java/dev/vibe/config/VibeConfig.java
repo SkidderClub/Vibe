@@ -522,6 +522,7 @@ public final class VibeConfig {
             JsonArray modules = getArray(root, "modules");
             EspConfigMigration.migrate(modules);
             ScaffoldConfigMigration.migrate(modules);
+            OofArrowsConfigMigration.migrate(modules);
             for (JsonElement element : modules) {
                 if (!element.isJsonObject()) continue;
                 JsonObject data = element.getAsJsonObject();

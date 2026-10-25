@@ -74,14 +74,17 @@ final float scale = s.scale.getFloat() * element.getScale();
         }
         boolean blend=GL11.glIsEnabled(GL11.GL_BLEND), texture=GL11.glIsEnabled(GL11.GL_TEXTURE_2D);
         boolean depth=GL11.glIsEnabled(GL11.GL_DEPTH_TEST), alphaTest=GL11.glIsEnabled(GL11.GL_ALPHA_TEST);
+        boolean lighting=GL11.glIsEnabled(GL11.GL_LIGHTING),fog=GL11.glIsEnabled(GL11.GL_FOG);
         int alphaFunction=GL11.glGetInteger(GL11.GL_ALPHA_TEST_FUNC);
         float alphaReference=GL11.glGetFloat(GL11.GL_ALPHA_TEST_REF);
         int src=GL11.glGetInteger(GL14.GL_BLEND_SRC_RGB),dst=GL11.glGetInteger(GL14.GL_BLEND_DST_RGB);
         int srcAlpha=GL11.glGetInteger(GL14.GL_BLEND_SRC_ALPHA),dstAlpha=GL11.glGetInteger(GL14.GL_BLEND_DST_ALPHA);
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT|GL11.GL_COLOR_BUFFER_BIT|GL11.GL_CURRENT_BIT|GL11.GL_LINE_BIT);
         try {
-            GlStateManager.disableDepth();
-            GlStateManager.enableBlend(); GlStateManager.tryBlendFuncSeparate(770,771,1,0);
+            GlStateManager.enableDepth();GlStateManager.disableDepth();
+            GlStateManager.enableLighting();GlStateManager.disableLighting();
+            GlStateManager.enableFog();GlStateManager.disableFog();
+            GlStateManager.resetColor();
             GlStateManager.alphaFunc(GL11.GL_GREATER,0.001f);
             // KawaseBlur captures and filters the complete framebuffer. Doing
             // that once per entry turned a twenty-row list into twenty full
@@ -95,6 +98,11 @@ final float scale = s.scale.getFloat() * element.getScale();
                 for(Row row:rows)KawaseBlur.drawRoundedRegion((int)Math.floor(row.x),(int)Math.floor(row.y),
                         (int)Math.ceil(row.x+row.width),(int)Math.ceil(row.y+rh),s.radius.getFloat()*scale,blur.getStrength().getInt(),0);
             }
+            // The blur compositor restores raw GL attributes without restoring Minecraft's
+            // cache. Synchronize AFTER blur, immediately before painting the first fill.
+            GlStateManager.disableBlend();GlStateManager.enableBlend();
+            GlStateManager.tryBlendFuncSeparate(1,0,1,0);GlStateManager.tryBlendFuncSeparate(770,771,1,0);
+            GlStateManager.resetColor();
             int background = alpha(hud.getBackground().getArgb(), s.opacity.getFloat());
             if (s.background.is("Rectangle")) {
                 RenderUtils.roundedRect(left, top, left+w, top+h, s.radius.getFloat()*scale, background);
@@ -112,6 +120,10 @@ final float scale = s.scale.getFloat() * element.getScale();
                     s.radius.getFloat()*scale,s.glow.isEnabled()?s:null,index->border(paintedRows.get(index),s));
             if(s.rail.is("Full")) drawPerimeter(boxes,s.background.is("Rectangle")?"Rectangle":"Steps",s.railWidth.getFloat()*scale,
                     s.radius.getFloat()*scale,s.glow.isEnabled()?s:null,index->paintedRows.get(index).color);
+            // Full outlines restore the background pass's disabled blend state.
+            // Text/glow must blend regardless of which rail shape was selected.
+            GlStateManager.disableBlend();GlStateManager.enableBlend();
+            GlStateManager.tryBlendFuncSeparate(770,771,1,0);
             for(int i=0;i<rows.size();i++){
                 Row r=rows.get(i);
                 float rail=s.railWidth.getFloat()*scale;
@@ -130,10 +142,12 @@ drawText(r.suffix,x+textWidth(r.name,s)*scale,y,s,hud,i,rows.size(),now,true,ele
             if(blend)GlStateManager.enableBlend();else GlStateManager.disableBlend();
             if(texture)GlStateManager.enableTexture2D();else GlStateManager.disableTexture2D();
             if(depth)GlStateManager.enableDepth();else GlStateManager.disableDepth();
+            if(lighting)GlStateManager.enableLighting();else GlStateManager.disableLighting();
+            if(fog)GlStateManager.enableFog();else GlStateManager.disableFog();
             if(alphaTest)GlStateManager.enableAlpha();else GlStateManager.disableAlpha();
             GlStateManager.alphaFunc(alphaFunction,alphaReference);
             GlStateManager.tryBlendFuncSeparate(src,dst,srcAlpha,dstAlpha);
-            GL11.glPopAttrib();GlStateManager.color(1,1,1,1);
+            GL11.glPopAttrib();GlStateManager.resetColor();GlStateManager.color(1,1,1,1);
         }
     }
 

@@ -88,6 +88,7 @@ public final class ClientChangesRenderCheck {
             Vibe vibe = new Vibe(); set(Vibe.class,null,"instance",vibe);
             ModuleManager modules = instance(ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<Module>()); set(Vibe.class,vibe,"moduleManager",modules);
+            if(args.length>0&&args[0].equals("server-menus")){ServerMenusRenderCheck.verify(mc,modules,OUTPUT);return;}
             if (args.length > 0 && args[0].equals("hud-visuals")) {
                 HudVisualsRenderCheck.verify(mc, modules, OUTPUT);
                 return;

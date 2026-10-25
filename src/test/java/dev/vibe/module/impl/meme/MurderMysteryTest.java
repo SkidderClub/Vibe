@@ -235,6 +235,43 @@ public class MurderMysteryTest {
         f.module.setEnabled(false); assertNull(f.module.getGoldTarget()); assertTrue(f.module.getGoldRoute().points.isEmpty());
     }
 
+    @Test public void spectatorGameModeSuppressesLocalWarningsAndPublicAccusations() throws Exception {
+        enableAnnouncements();
+        f.mc.playerController=new net.minecraft.client.multiplayer.PlayerControllerMP(f.mc,null);
+        PathTestFixture.set(net.minecraft.client.multiplayer.PlayerControllerMP.class,f.mc.playerController,"currentGameType",net.minecraft.world.WorldSettings.GameType.SPECTATOR);
+        PathTestFixture.Player killer=player(2,"Killer",5,new ItemStack(Items.iron_sword));
+        murder.tick();assertTrue(murder.isSpectating());
+        assertNotEquals(0,murder.murdererColor(killer));
+        assertTrue(f.player.localMessages.isEmpty());assertTrue(f.player.sentMessages.isEmpty());
+    }
+    @Test public void spectatorSidebarSuppressesAlertsEvenInAdventureGameMode() throws Exception {
+        enableAnnouncements();role("Spectator");
+        player(2,"Killer",5,new ItemStack(Items.iron_sword));murder.tick();
+        assertTrue(murder.isSpectating());assertTrue(f.player.localMessages.isEmpty());assertTrue(f.player.sentMessages.isEmpty());
+    }
+    @Test public void dyingSuppressesNewAlertsUntilTheRoundResetsEvenIfTheOldRoleLineRemains() throws Exception {
+        enableAnnouncements();murder.tick();murder.receiveChat("\u00a7cYou died!");
+        player(2,"Killer",5,new ItemStack(Items.iron_sword));murder.tick();murder.tick();
+        assertTrue(murder.isSpectating());assertTrue(f.player.localMessages.isEmpty());assertTrue(f.player.sentMessages.isEmpty());
+        murder.receiveChat("Game over");role("Innocent");murder.tick();
+        assertFalse(murder.isSpectating());assertEquals(1,f.player.localMessages.size());assertEquals(1,f.player.sentMessages.size());
+    }
+    @Test public void murdererColorOverridesArrowRainbowWhilePreservingVisibilityOpacity() throws Exception {
+        PathTestFixture.Player killer=player(2,"Killer",5,new ItemStack(Items.iron_sword));
+        PathTestFixture.Player archer=player(3,"Archer",7,new ItemStack(Items.bow));
+        int chosen=0x8042A6EF;
+        for(Setting<?> setting:murder.getSettings())if(setting.getRawName().equals("Murderer ESP color"))((dev.vibe.setting.ColorSetting)setting).setValue(chosen);
+        murder.tick();assertEquals(chosen,murder.murdererColor(killer));assertEquals(0,murder.murdererColor(archer));
+        dev.vibe.module.impl.visual.OofArrowsModule arrows=new dev.vibe.module.impl.visual.OofArrowsModule();
+        arrows.colorMode.setValue("Rainbow");arrows.distanceFade.setEnabled(false);arrows.visibleOpacity.setValue(.5D);
+        int color=dev.vibe.ui.render.OofArrowsRenderer.color(arrows,4567,4,25,true,murder.murdererColor(killer));
+        assertEquals(chosen&0xFFFFFF,color&0xFFFFFF);assertEquals(64,color>>>24);
+        assertNotEquals(chosen&0xFFFFFF,dev.vibe.ui.render.OofArrowsRenderer.color(arrows,4567,4,25,true,0)&0xFFFFFF);
+    }
+    private void enableAnnouncements() {
+        for(Setting<?> setting:murder.getSettings())if(setting.getRawName().equals("Announce murderer"))((BooleanSetting)setting).setEnabled(true);
+    }
+
     private void finishGold() {
         for (int i=0;i<200 && f.module.getGoldRoute().points.isEmpty();i++) f.module.tick();
     }

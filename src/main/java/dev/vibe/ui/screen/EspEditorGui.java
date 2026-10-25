@@ -331,7 +331,7 @@ public final class EspEditorGui extends GuiScreen {
         Element e=dragged!=null?dragged:hovered(mx,my);
         if(e!=null){e.scale.setValue(e.scale.getDouble()+(wheel>0?.05:-.05));selected=e;return;}
         if(hit(LIST_X,LIST_Y,LIST_W,LIST_BOTTOM-LIST_Y,mx,my)){
-            if(Keyboard.isKeyDown(Keyboard.KEY_LSHIFT)||Keyboard.isKeyDown(Keyboard.KEY_RSHIFT))for(Row r:rows)if(r.setting instanceof NumberSetting&&my>=top+LIST_Y+r.y-scroll&&my<top+LIST_Y+r.y-scroll+r.height){NumberSetting n=(NumberSetting)r.setting;n.setValue(n.getDouble()+(wheel>0?n.getIncrement():-n.getIncrement()));return;}
+            if(mx>=left+LIST_X+259||Keyboard.isKeyDown(Keyboard.KEY_LSHIFT)||Keyboard.isKeyDown(Keyboard.KEY_RSHIFT))for(Row r:rows)if(r.setting instanceof NumberSetting&&my>=top+LIST_Y+r.y-scroll&&my<top+LIST_Y+r.y-scroll+r.height){dev.vibe.ui.SliderWheel.adjust(r.setting,dev.vibe.ui.SliderWheel.notches(wheel),0);return;}
             scroll=Math.max(0,Math.min(maxScroll,scroll+(wheel>0?-38:38)));
         }
     }

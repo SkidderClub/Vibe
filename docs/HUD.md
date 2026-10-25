@@ -10,7 +10,9 @@ Background opacity stays uniform across rows, independently of **Bottom Fade**, 
 
 ## OOF arrows
 
-Enable **OOF Arrows** in the Visual category. Arrows appear only for entities outside the current camera view; the visibility check uses the game's projection, including FOV, pitch and camera changes. Choose Circle or screen-aspect Oval placement, radius, arrow style, size, width, entity types, range and maximum count. **Invisible Only** filters for entities with Minecraft invisibility; **Occluded Only** filters for entities hidden behind blocks. Friends are excluded by default.
+Enable **OOF Arrows** in the Visual category. **Display** chooses **Out of FOV**, **In FOV**, or **All directions**. All directions keeps indicators around the full circle, including targets currently on screen. Directions follow the actual camera matrix, including third person and Freecam. Choose Circle or screen-aspect Oval placement, radius, arrow style, size, length scale, width, entity types, range and maximum count. The default arrow proportions are compact.
+
+**Visibility** chooses All, Visible only, or Occluded only using a block ray from the camera to the target. **Invisibility** independently includes, excludes or shows only entities with Minecraft invisibility. Visible and occluded targets have separate opacity controls. Friends are excluded by default. Existing Invisible Only and Occluded Only config choices migrate to the equivalent modes when loaded.
 
 Static, Fade and Rainbow colors support opacity and applicable speed, second-color and saturation controls. Distance fading, minimum opacity, glow, outline, names and distance labels are optional. Placement clamps to the available screen space.
 
@@ -28,7 +30,9 @@ Select **Clock → Display → Analog** for the clock face, or keep **Digital**.
 
 ## Target HUD
 
-Enable **Target HUD** in the element list. **Source** chooses combat targets (KillAura, AimAssist and manual hits), the crosshair player, or both. Combat takes priority in Both. **Keep visible** controls how long the last target remains after losing the lock. Dead targets, expired targets and targets from another world are discarded.
+Enable **Target HUD** in the element list. A card appears only after your player attacks another player; looking at someone or selecting them with AimAssist/KillAura does not show a card. Cancelled attacks, incoming attacks, mobs, and your own player do not add cards. **Keep visible** sets each player's timeout after your last attack on them. Dead or unloaded players also expire, and changing worlds clears the stack.
+
+Cards pop in and out individually. **Animations** toggles that transition, and **Animation duration** controls its speed. **Max targets** defaults to four and supports up to eight, with **Card spacing** between them; the stack is limited to what fits on screen at the current HUD scale. Each card keeps its own health interpolation and particles. Expiring cards animate out while the remaining cards close the gap. The editor keeps a full-size preview even when no combat is happening.
 
 | Style | Display |
 | --- | --- |
@@ -36,6 +40,6 @@ Enable **Target HUD** in the element list. **Source** chooses combat targets (Ki
 | **Tenacity** | Rounded portrait/panel, name, percentage and slim configurable gradient bar. |
 | **Zeroday** | Live character model, health/hurt-time/relative-facing gauges, optional ping, verdict and lower health rail. Hurt time is the Minecraft hurt counter in ticks; angle is target yaw relative to player yaw, normalized to 0–360°. |
 | **Rise** | Rounded portrait, verdict/name, health value/bar and animated particles emitted from the portrait on hurt or health loss. |
-| **LiquidGlass** | Refractive glass card with portrait, name, health, verdict, optional ping and configurable gradient. |
+| **LiquidGlass** | Compact 46-pixel-high refractive card with a 32-pixel portrait, name, health, verdict, optional ping and configurable gradient. Width remains configurable; the name reserves room for ping. Hit particles emit from the portrait. |
 
-Health percentages use the target's actual maximum health. Winning/Draw/Losing compares the player's effective health with the target's; the Absorption option includes target absorption in that comparison and health text. Smooth Health interpolates the bar while numeric values remain current. Width, colors, rounding and applicable details are available in the inspector. Rise exposes particle color, count, size and lifetime; disable Particles to clear the effect immediately. Glass uses the shared blur, refraction, opacity and tint controls.
+Health percentages use the target's actual maximum health. Winning/Draw/Losing compares the player's effective health with the target's; the Absorption option includes target absorption in that comparison and health text. Smooth Health interpolates the bar while numeric values remain current. Width, colors, rounding and applicable details are available in the inspector. Rise and LiquidGlass expose particle color, count, size and lifetime; disable Particles to clear the effect immediately. Glass uses the shared blur, refraction, opacity and tint controls.

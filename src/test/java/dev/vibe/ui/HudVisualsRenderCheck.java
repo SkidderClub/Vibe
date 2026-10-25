@@ -59,6 +59,19 @@ public final class HudVisualsRenderCheck {
             if(Math.abs(red-127)>2)throw new AssertionError("Array background alpha varies by row at "+x+","+y+": "+red);
         }
         save("array-background-uniform.png");
+        frame();Gui.drawRect(0,0,960,540,-1);
+        GlStateManager.enableBlend();GL11.glDisable(GL11.GL_BLEND);
+        renderer.draw(hud,e,new ScaledResolution(mc),false);image=read();
+        for(int y=e.getTop();y<e.getTop()+e.getHeight();y++)
+            if(Math.abs((image.getRGB(x,y)>>16&255)-127)>2)throw new AssertionError("Stale blend cache darkened the first ArrayList row");
+        dev.vibe.module.impl.client.BlurModule blur=new dev.vibe.module.impl.client.BlurModule();
+        modules.registerDynamic(blur);blur.setEnabled(true);
+        frame();Gui.drawRect(0,0,960,540,-1);KawaseBlur.beginHudFrame();
+        renderer.draw(hud,e,new ScaledResolution(mc),false);image=read();save("array-background-blurred.png");
+        for(int y=e.getTop()+2;y<e.getTop()+e.getHeight()-2;y++)
+            if(Math.abs((image.getRGB(x,y)>>16&255)-127)>2)
+                throw new AssertionError("Blur darkened ArrayList background at row "+(y-e.getTop())+": "+(image.getRGB(x,y)>>16&255));
+        blur.setEnabled(false);
         hud.array.rail.setValue("Full");hud.array.gap.setValue(4D);hud.array.fade.setValue(0D);
         hud.getArrayPrimaryColor().setValue(0xFFFF6688);
         frame();renderer.draw(hud,e,new ScaledResolution(mc),false);save("array-accent-full.png");
@@ -69,6 +82,17 @@ public final class HudVisualsRenderCheck {
         hud.array.rail.setValue("None");hud.getArrayOutline().setEnabled(true);hud.array.outline.setValue("Steps");
         hud.array.glow.setEnabled(true);frame();renderer.draw(hud,e,new ScaledResolution(mc),false);save("array-outline-steps.png");
         hud.array.outline.setValue("Rectangle");frame();renderer.draw(hud,e,new ScaledResolution(mc),false);save("array-outline-rectangle.png");
+        hud.getArrayOutline().setEnabled(false);hud.array.glow.setEnabled(false);hud.array.font.setValue("Minecraft");
+        hud.array.textGlow.setEnabled(true);hud.array.textGlowStrength.setValue(1D);hud.array.textGlowRadius.setValue(3D);
+        hud.array.rail.setValue("Full");frame();renderer.draw(hud,e,new ScaledResolution(mc),false);BufferedImage full=read();save("array-text-glow-full.png");
+        hud.array.rail.setValue("Outer");frame();renderer.draw(hud,e,new ScaledResolution(mc),false);BufferedImage side=read();
+        int glowPixels=0;
+        hud.array.textGlow.setEnabled(false);frame();renderer.draw(hud,e,new ScaledResolution(mc),false);BufferedImage plain=read();
+        for(int y=e.getTop()+3;y<e.getTop()+12;y++)for(int px=e.getLeft()+8;px<e.getLeft()+e.getWidth()-7;px++) {
+            if(full.getRGB(px,y)!=side.getRGB(px,y))throw new AssertionError("Full outline changed text/glow blending");
+            if(side.getRGB(px,y)!=plain.getRGB(px,y))glowPixels++;
+        }
+        if(glowPixels==0)throw new AssertionError("ArrayList text glow rendered no pixels");
     }
     private static void verifyArrows() throws Exception {
         verifyArrowCapture();
@@ -79,6 +103,16 @@ public final class HudVisualsRenderCheck {
         for(String shape:new String[]{"Circle","Oval"})for(String style:new String[]{"Arrow","Triangle","Chevron"}) {
             frame();settings.placement.setValue(shape);settings.style.setValue(style);
             renderer.draw(settings,entries,960,540,2000);save("oof-"+shape.toLowerCase()+"-"+style.toLowerCase()+".png");
+        }
+        settings.colorMode.setValue("Static");settings.color.setValue(0xFF70E0A0);settings.distanceFade.setEnabled(false);
+        settings.glow.setEnabled(false);settings.outline.setEnabled(false);settings.names.setEnabled(false);settings.distances.setEnabled(false);
+        for(String style:new String[]{"Arrow","Triangle","Chevron"}) {
+            frame();settings.style.setValue(style);renderer.draw(settings,Collections.singletonList(new OofArrowsRenderer.Arrow("Shape",10,Math.PI/2)),960,540,0);
+            BufferedImage glyph=read();int left=960,right=-1,top=540,bottom=-1;
+            for(int y=0;y<540;y++)for(int x=0;x<960;x++)if((glyph.getRGB(x,y)&0xFFFFFF)==0x70E0A0) {
+                left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
+            }
+            if(right<left||bottom<top||(right-left+1)>1.5*(bottom-top+1))throw new AssertionError("Arrow shape is missing or too elongated: "+style);
         }
     }
     private static void verifyArrowCapture() throws Exception {
@@ -105,25 +139,83 @@ public final class HudVisualsRenderCheck {
             OofArrowsModule s=new OofArrowsModule();f.modules.registerDynamic(s);s.setEnabled(true);
             OofArrowsRenderer renderer=new OofArrowsRenderer();renderer.capture(1);
             assertArrowNames(renderer,"Side","Rear","Hidden");
-            s.invisibleOnly.setEnabled(true);renderer.capture(1);assertArrowNames(renderer,"Hidden");
-            s.invisibleOnly.setEnabled(false);s.ignoreFriends.setEnabled(false);renderer.capture(1);
+            assertArrowSide(renderer,"Side",false);assertArrowSide(renderer,"Hidden",true);
+            s.display.setValue("All directions");renderer.capture(1);assertArrowNames(renderer,"Front","Side","Rear","Hidden");
+            s.display.setValue("In FOV");renderer.capture(1);assertArrowNames(renderer,"Front");
+            s.display.setValue("Out of FOV");s.invisibility.setValue("Only");renderer.capture(1);assertArrowNames(renderer,"Hidden");
+            s.invisibility.setValue("Exclude");renderer.capture(1);assertArrowNames(renderer,"Side","Rear");
+            s.invisibility.setValue("Include");s.ignoreFriends.setEnabled(false);renderer.capture(1);
             assertArrowNames(renderer,"Side","Rear","Hidden","Friend");
-            s.ignoreFriends.setEnabled(true);s.range.setValue(8D);renderer.capture(1);assertArrowNames(renderer);
+            s.ignoreFriends.setEnabled(true);
+            f.block(5,65,0,net.minecraft.init.Blocks.stone.getDefaultState());
+            s.display.setValue("All directions");s.visibility.setValue("Visible only");renderer.capture(1);assertArrowNames(renderer,"Front","Rear","Hidden");
+            s.visibility.setValue("Occluded only");renderer.capture(1);assertArrowNames(renderer,"Side");
+            s.visibility.setValue("All");s.visibleOpacity.setValue(.3);renderer.capture(1);assertArrowNames(renderer,"Front","Side","Rear","Hidden");
+            for(OofArrowsRenderer.Arrow a:capturedArrows(renderer))
+                if(a.lineOfSight==a.name.equals("Side"))throw new AssertionError("Line of sight was not captured for "+a.name);
+            s.visibleOpacity.setValue(0D);renderer.capture(1);assertArrowNames(renderer,"Side");
+            s.occludedOpacity.setValue(0D);renderer.capture(1);assertArrowNames(renderer);
+            s.occludedOpacity.setValue(1D);
+            s.visibleOpacity.setValue(1D);s.display.setValue("Out of FOV");
+            s.range.setValue(8D);renderer.capture(1);assertArrowNames(renderer);
             s.range.setValue(128D);camera.playerViewY=90;GL11.glLoadIdentity();GL11.glRotatef(270,0,1,0);
             renderer.capture(1);assertArrowNames(renderer,"Front","Side","Rear");
+            assertArrowSide(renderer,"Front",false);assertArrowSide(renderer,"Rear",true);
             s.limit.setValue(1D);renderer.capture(1);
             if(arrowNames(renderer).size()!=1)throw new AssertionError("Arrow limit ignored");
             s.setEnabled(false);renderer.capture(1);assertArrowNames(renderer);
             renderer.clear();assertArrowNames(renderer);
+            verifyMurderArrow(f,renderer,s);
         } finally {
             GL11.glPopMatrix();GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glPopMatrix();GL11.glMatrixMode(GL11.GL_MODELVIEW);
         }
     }
+    private static void verifyMurderArrow(PathTestFixture f,OofArrowsRenderer renderer,OofArrowsModule s) throws Exception {
+        for(Object value:f.world.playerEntities) {
+            net.minecraft.entity.player.EntityPlayer player=(net.minecraft.entity.player.EntityPlayer)value;
+            player.inventory=new net.minecraft.entity.player.InventoryPlayer(player);
+        }
+        net.minecraft.entity.player.EntityPlayer killer=(net.minecraft.entity.player.EntityPlayer)f.world.getEntityByID(3);
+        killer.inventory.mainInventory[0]=new ItemStack(Items.iron_sword);
+        net.minecraft.scoreboard.Scoreboard board=new net.minecraft.scoreboard.Scoreboard();
+        net.minecraft.scoreboard.ScoreObjective objective=board.addScoreObjective("murder",net.minecraft.scoreboard.IScoreObjectiveCriteria.DUMMY);
+        objective.setDisplayName("MURDER MYSTERY");board.setObjectiveInDisplaySlot(1,objective);
+        board.getValueFromObjective("Role: Innocent",objective).setScorePoints(1);
+        PathTestFixture.set(net.minecraft.world.World.class,f.world,"worldScoreboard",board);
+        dev.vibe.module.impl.meme.HypixelModule murder=new dev.vibe.module.impl.meme.HypixelModule();
+        f.modules.registerDynamic(murder);PathTestFixture.set(Module.class,murder,"enabled",true);
+        for(dev.vibe.setting.Setting<?> setting:murder.getSettings())if(setting.getRawName().equals("Murderer ESP color"))
+            ((dev.vibe.setting.ColorSetting)setting).setValue(0xFFE648BC);
+        murder.tick();
+        s.setEnabled(true);s.display.setValue("All directions");s.visibility.setValue("All");s.invisibility.setValue("Include");
+        s.limit.setValue(20D);s.distanceFade.setEnabled(false);s.colorMode.setValue("Rainbow");
+        s.names.setEnabled(false);s.distances.setEnabled(false);s.glow.setEnabled(false);s.outline.setEnabled(false);
+        renderer.capture(1);boolean overridden=false;
+        for(OofArrowsRenderer.Arrow arrow:capturedArrows(renderer))if(arrow.name.equals("Side"))overridden=arrow.overrideColor==0xFFE648BC;
+        if(!overridden)throw new AssertionError("Detected murderer color did not reach the OOF arrow");
+        frame();renderer.draw(s,capturedArrows(renderer),960,540,2000);BufferedImage image=read();
+        int pink=0;
+        for(int y=0;y<540;y++)for(int x=0;x<960;x++)if((image.getRGB(x,y)&0xFFFFFF)==0xE648BC)pink++;
+        if(pink<5)throw new AssertionError("Murderer OOF arrow used the ordinary rainbow color");
+        save("oof-murderer-color.png");renderer.clear();
+    }
     private static Set<String> arrowNames(OofArrowsRenderer renderer) throws Exception {
-        java.lang.reflect.Field field=OofArrowsRenderer.class.getDeclaredField("arrows");field.setAccessible(true);
         Set<String> names=new LinkedHashSet<String>();
-        for(Object arrow:(List<?>)field.get(renderer))names.add(((OofArrowsRenderer.Arrow)arrow).name);
+        for(OofArrowsRenderer.Arrow arrow:capturedArrows(renderer))names.add(arrow.name);
         return names;
+    }
+    @SuppressWarnings("unchecked")
+    private static List<OofArrowsRenderer.Arrow> capturedArrows(OofArrowsRenderer renderer) throws Exception {
+        java.lang.reflect.Field field=OofArrowsRenderer.class.getDeclaredField("arrows");field.setAccessible(true);
+        return (List<OofArrowsRenderer.Arrow>)field.get(renderer);
+    }
+    private static void assertArrowSide(OofArrowsRenderer renderer,String name,boolean right) throws Exception {
+        for(OofArrowsRenderer.Arrow arrow:capturedArrows(renderer))if(arrow.name.equals(name)) {
+            float x=OofArrowsRenderer.position(960,540,90,11,false,arrow.bearing)[0];
+            if(right?x<=480:x>=480)throw new AssertionError(name+" arrow is mirrored");
+            return;
+        }
+        throw new AssertionError("Missing directional arrow: "+name);
     }
     private static void assertArrowNames(OofArrowsRenderer renderer,String... expected) throws Exception {
         Set<String> names=arrowNames(renderer);
