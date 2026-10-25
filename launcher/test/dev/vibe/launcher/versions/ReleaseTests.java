@@ -3,6 +3,8 @@ package dev.vibe.launcher.versions;
 import dev.vibe.launcher.Check;
 import dev.vibe.launcher.core.AppPaths;
 import dev.vibe.launcher.core.AppLog;
+import dev.vibe.launcher.core.ErrorCode;
+import dev.vibe.launcher.core.LauncherException;
 import dev.vibe.launcher.core.Settings;
 import dev.vibe.launcher.install.ChangelogSection;
 import java.io.IOException;
@@ -109,6 +111,26 @@ public final class ReleaseTests {
             Files.write(Files.createDirectories(paths.versions().resolve("v0.0.7")).resolve("x.part"), new byte[] { 1 });
             store.cleanLeftovers();
             Check.isTrue(!Files.exists(paths.versions().resolve("v0.0.7").resolve("x.part")), "partial download removed");
+        });
+
+        check.test("a release without a checksum is not installed", () -> {
+            Path root = Files.createDirectories(temp.resolve("unchecked"));
+            System.setProperty("vibe.launcher.home", root.toString());
+            AppPaths paths = AppPaths.detect();
+            System.clearProperty("vibe.launcher.home");
+            AppLog log = new AppLog(root.resolve("logs"));
+            VersionStore store = new VersionStore(paths, new Settings(root.resolve("settings.properties"), log), log);
+            List<ReleaseCatalog.Release> releases = ReleaseCatalog.parse("[{\"tag_name\":\"v0.0.9\",\"name\":\"\",\"body\":\"\","
+                    + "\"published_at\":\"2026-10-01T10:00:00Z\",\"html_url\":\"https://github.com/x\","
+                    + "\"assets\":[{\"name\":\"Vibe-1.8.9-0.0.9.jar\",\"browser_download_url\":\"https://github.com/x/9.jar\",\"size\":99}]}]");
+            Check.equal(1, releases.size());
+            try {
+                store.install(releases.get(0), null);
+                Check.isTrue(false, "an unverifiable JAR must be refused");
+            } catch (LauncherException error) {
+                Check.equal(ErrorCode.RELEASE_CHECKSUM, error.code);
+            }
+            Check.isTrue(!Files.exists(paths.versions().resolve("v0.0.9")), "nothing was downloaded");
         });
 
         check.test("a damaged file is not a Vibe JAR", () -> {

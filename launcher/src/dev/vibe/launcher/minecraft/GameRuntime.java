@@ -43,6 +43,10 @@ public final class GameRuntime {
     public static final String FORGE_COORD = "1.8.9-11.15.1.2318-1.8.9";
     public static final String FORGE_BASE = "https://maven.minecraftforge.net/net/minecraftforge/forge/" + FORGE_COORD + "/";
     public static final String OPTIFINE_NAME = "preview_OptiFine_1.8.9_HD_U_M6_pre2.jar";
+    // Pinned SHA-1 checksums: Forge and OptiFine publish none that the launcher could trust.
+    static final String FORGE_INSTALLER_SHA1 = "ec0293ff0776b8831f2ed90511bab76e635dda0c";
+    static final String FORGE_UNIVERSAL_SHA1 = "beda619c465af293e63952dd573c137c17c0a4cd";
+    static final String OPTIFINE_SHA1 = "0bb792be16ec78d8b62586cc4856950befb3391b";
     private static final String VERSION_MANIFEST = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json";
     private static final String MOJANG_MAVEN = "https://libraries.minecraft.net/";
     private static final String FORGE_MAVEN = "https://maven.minecraftforge.net/";
@@ -98,7 +102,7 @@ public final class GameRuntime {
     public boolean isReady() {
         try {
             if (!Files.isRegularFile(clientJar()) || !Files.isRegularFile(versionJson())) return false;
-            if (!Files.isRegularFile(installProfile()) || !Files.isRegularFile(forgeJar())) return false;
+            if (!Files.isRegularFile(installProfile()) || !isChecked(forgeJar(), 0, FORGE_UNIVERSAL_SHA1)) return false;
             if (!isOptiFine(optifineJar()) || !Natives.hasFiles(nativesDir())) return false;
             Map<String, Object> stamp = stampValues();
             if (!MC_VERSION.equals(Json.string(stamp, "minecraft"))) return false;
@@ -351,6 +355,10 @@ public final class GameRuntime {
             } catch (IOException error) {
                 throw LauncherException.wrap(error, ErrorCode.FORGE_DOWNLOAD, I18n.t("Forge could not be downloaded."));
             }
+            if (!isChecked(installer, 0, FORGE_INSTALLER_SHA1)) {
+                Files.deleteIfExists(installer);
+                throw new LauncherException(ErrorCode.FORGE_DOWNLOAD, I18n.t("The Forge download is damaged."));
+            }
             String profile = readEntry(installer, "install_profile.json");
             if (profile.isEmpty()) {
                 Files.deleteIfExists(installer);
@@ -365,16 +373,8 @@ public final class GameRuntime {
         if (Json.string(versionInfo, "minecraftArguments").isEmpty() || Json.array(versionInfo, "libraries").isEmpty()) {
             throw new LauncherException(ErrorCode.FORGE_DOWNLOAD, I18n.t("The Forge launch profile is incomplete."));
         }
-        String message = I18n.t("Downloading Forge");
-        progress.update(message, null, 0);
-        try {
-            Http.download(FORGE_BASE + "forge-" + FORGE_COORD + "-universal.jar", forgeJar(), LIBRARY_LIMIT, progress.bytes(message));
-        } catch (IOException error) {
-            throw LauncherException.wrap(error, ErrorCode.FORGE_DOWNLOAD, I18n.t("Forge could not be downloaded."));
-        }
-        if (!Files.isRegularFile(forgeJar())) {
-            throw new LauncherException(ErrorCode.FORGE_DOWNLOAD, I18n.t("Forge could not be downloaded."));
-        }
+        downloadChecked(forgeJar(), FORGE_BASE + "forge-" + FORGE_COORD + "-universal.jar", 0, FORGE_UNIVERSAL_SHA1,
+                ErrorCode.FORGE_DOWNLOAD, I18n.t("Downloading Forge"), progress);
         pass(progress, 1);
         return profile;
     }
@@ -393,7 +393,7 @@ public final class GameRuntime {
             if (!link.find()) throw new IOException("OptiFine did not offer a download link.");
             String url = "https://optifine.net/" + link.group(1).replace("&amp;", "&");
             Http.download(url, temporary, 32L * 1024L * 1024L, progress.bytes(message));
-            if (!isOptiFine(temporary)) throw new IOException("The OptiFine download is not an OptiFine JAR.");
+            if (!isOptiFine(temporary)) throw new IOException("The OptiFine download is not the expected OptiFine JAR.");
             Files.move(temporary, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             log.info("Downloaded OptiFine " + OPTIFINE_NAME + ".");
         } catch (IOException error) {
@@ -405,7 +405,7 @@ public final class GameRuntime {
     }
 
     private static boolean isOptiFine(Path jar) {
-        if (!Files.isRegularFile(jar)) return false;
+        if (!isChecked(jar, 0, OPTIFINE_SHA1)) return false;
         try {
             ZipFile zip = new ZipFile(jar.toFile());
             try {

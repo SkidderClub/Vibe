@@ -523,6 +523,8 @@ Your game profile is kept.
 
 The downloaded Vibe JAR does not match the SHA-256 checksum that GitHub publishes, or it is not a
 readable Vibe JAR. A proxy or filter that replaces downloads with a login page is a common cause.
+A release that publishes no checksum at all (no GitHub digest and no `.sha256` file) is never
+installed, because the launcher cannot verify it; pick another version.
 
 **Fix:**
 1. Open **Versions** and press **Download** again.
@@ -598,7 +600,8 @@ the download is damaged (`Could not install Gradle distribution`, `Exception in 
 **OptiFine could not be downloaded**
 
 Vibe starts with OptiFine 1.8.9 HD U M6 pre2, which is downloaded from optifine.net when the game files
-are prepared. optifine.net did not provide a download link, or the file is not a valid OptiFine JAR.
+are prepared. optifine.net did not provide a download link, or the file does not match the SHA-1
+checksum the launcher expects for this OptiFine version.
 
 **Fix:**
 1. Try again later; optifine.net is sometimes overloaded or changes its download page.
@@ -801,7 +804,8 @@ or one of its files is damaged.
 ### VL-610
 **Forge could not be downloaded**
 
-The Forge installer or its universal JAR could not be read from `maven.minecraftforge.net`.
+The Forge installer or its universal JAR could not be read from `maven.minecraftforge.net`, or it
+does not match the SHA-1 checksum the launcher expects.
 
 **Fix:**
 1. Try again in a few minutes; Maven servers are sometimes briefly overloaded.
