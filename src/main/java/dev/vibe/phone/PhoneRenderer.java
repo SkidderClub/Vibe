@@ -26,7 +26,7 @@ import org.lwjgl.opengl.GL12;
 /** A skin-textured left hand and a rounded, animated phone, drawn after the normal HUD. */
 public final class PhoneRenderer {
     public static final int WIDTH = 232, HEIGHT = 456;
-    private static final ResourceLocation ESOUND = new ResourceLocation("vibe", "textures/phone/esound.jpg");
+    private final Map<PhoneContact, ResourceLocation> avatars = new EnumMap<PhoneContact, ResourceLocation>(PhoneContact.class);
     private static final ResourceLocation DISCORD_IMAGES = new ResourceLocation("vibe", "textures/phone/fake-discord-scams.gif");
     private final PhoneFont TEXT = new PhoneFont(Font.PLAIN, 10.5F);
     private final PhoneFont SMALL = new PhoneFont(Font.PLAIN, 9.25F);
@@ -36,6 +36,7 @@ public final class PhoneRenderer {
     private final PhoneCanvas canvas = new PhoneCanvas();
     private static final int WHITE = 0xFFF4F5FF, MUTED = 0xFF9EABC8, BLUE = 0xFF8ABEFF;
     private final Minecraft mc = Minecraft.getMinecraft();
+    private java.util.function.LongSupplier wallClock = System::currentTimeMillis;
     private long previousFrame, previewAt;
     private float visibility;
     private DynamicTexture wallpaperTexture;
@@ -231,9 +232,10 @@ public final class PhoneRenderer {
     }
 
     private void home(PhoneModule phone) {
-        String time = new SimpleDateFormat("HH:mm").format(new Date());
+        Date now = new Date(wallClock.getAsLong());
+        String time = new SimpleDateFormat("HH:mm").format(now);
         centered(CLOCK, time, WIDTH / 2F, 64, WHITE);
-        centered(SMALL, new SimpleDateFormat("EEEE, d MMMM", Locale.ENGLISH).format(new Date()), WIDTH / 2, 110, 0xE6E0E6FF);
+        centered(SMALL, new SimpleDateFormat("EEEE, d MMMM", Locale.ENGLISH).format(now), WIDTH / 2, 110, 0xE6E0E6FF);
         round(24, 133, 184, 42, 14, 0x24405188);
         text(SMALL, "Apps and shortcuts", 35, 137, 0xE6D5E2FF);
         text(TITLE, "VibeOS", 35, 151, WHITE);
@@ -253,7 +255,7 @@ public final class PhoneRenderer {
         keyHints(116, 400, 192, WHITE, phone.shortKey(Action.SELECT), "Open " + PhoneModule.appName(phone.homeSelection()));
     }
     private void status(PhoneModule phone) {
-        text(SMALL, new SimpleDateFormat("HH:mm").format(new Date()), 25, 24, WHITE);
+        text(SMALL, new SimpleDateFormat("HH:mm").format(new Date(wallClock.getAsLong())), 25, 24, WHITE);
         round(86, 18, 61, 16, 8, 0xFF02040A);
         circle(135, 26, 3, 0xFF101D30); circle(135, 26, 1.3F, 0xFF284964);
         if (phone.app() == App.CAMERA) circle(155, 26, 2, 0xFF75E9A5);
@@ -426,37 +428,64 @@ public final class PhoneRenderer {
         rect(x - 2, cap, 31, 10, 0xFF3C7944); rect(x, cap + 2, 27, 6, 0xFF82C969);
     }
     private void contacts(PhoneModule phone) {
-        heading("Contacts", phone.isContactOpen() ? "Contact details" : "1 contact");
-        if (!phone.isContactOpen()) {
-            round(22, 113, 188, 66, 14, 0xFF283F62);
-            asset(ESOUND, 31, 126, 40, 40, 20);
-            text(TEXT, PhoneConversation.CONTACT, 82, 126, WHITE);
-            text(SMALL, PhoneConversation.NUMBER, 82, 146, MUTED);
-            keyHints(116, 200, 194, BLUE, phone.shortKey(Action.SELECT), "View contact");
-            return;
-        }
-        asset(ESOUND, 79, 112, 74, 74, 37);
-        centered(TITLE, PhoneConversation.CONTACT, 116, 202, WHITE);
-        centered(TEXT, PhoneConversation.NUMBER, 116, 227, MUTED);
+        heading("Contacts", "7 contacts · Fictional chats");
+        contactRows(phone, false, 38);
+        keyHints(116, 379, 194, MUTED, phone.shortKey(Action.UP), "", phone.shortKey(Action.DOWN), "Browse",
+                phone.shortKey(Action.LEFT), "", phone.shortKey(Action.RIGHT), "Action");
+        boolean blocked = phone.conversation().isBlocked();
         for (int i = 0; i < 2; i++) {
-            int x = 30 + i * 90;
-            round(x, 274, 82, 70, 14, phone.contactAction() == i ? 0xFF345D8D : 0xFF202D42);
-            if (i == 0) receiver(x + 41, 296, .65F, 0xFF90E7B4);
-            else { round(x + 29, 286, 25, 18, 7, BLUE); triangle(x + 31, 300, x + 31, 308, x + 39, 300, BLUE); }
-            centered(TEXT, i == 0 ? "Call" : "Message", x + 41, 319, WHITE);
+            int x = 22 + i * 96;
+            boolean selected = phone.contactAction() == i;
+            round(x, 402, 92, 22, 8, selected ? (i == 0 && blocked ? 0xFF493140 : 0xFF345D8D) : 0xFF202D42);
+            if (i == 0) receiver(x + 13, 413, .36F, blocked ? MUTED : 0xFF90E7B4);
+            else { round(x + 6, 408, 15, 10, 4, BLUE); triangle(x + 8, 416, x + 8, 420, x + 13, 416, BLUE); }
+            if (selected) keycap(phone.shortKey(Action.SELECT), x + 66, 404, WHITE);
+            text(SMALL, i == 0 ? blocked ? "Blocked" : "Call" : "Message", x + 26, 408, selected ? WHITE : MUTED);
         }
-        keyHints(116, 361, 194, MUTED, phone.shortKey(Action.LEFT), "", phone.shortKey(Action.RIGHT), "Choose");
-        keyHints(116, 393, 194, MUTED, phone.shortKey(Action.SELECT), "Select", phone.shortKey(Action.BACK), "Contacts");
+    }
+    /** Every contact stays visible; the messenger rows include the latest message and unread state. */
+    private void contactRows(PhoneModule phone, boolean messenger, int step) {
+        PhoneContact[] contacts = PhoneContact.values();
+        for (int i = 0; i < contacts.length; i++) {
+            PhoneContact item = contacts[i];
+            PhoneConversation chat = phone.conversation(item);
+            int y = 109 + i * step;
+            boolean selected = i == phone.contactSelection();
+            round(22, y, 188, step - 3, 11, selected ? phone.app() == App.TELEPHONE ? 0xFF28594D : 0xFF304D76 : 0x9A18283F);
+            avatar(item, 28, y + 4, step - 11);
+            text(TEXT, TEXT.fit(item.name, messenger ? 112 : 126), 65, y + 4, WHITE);
+            List<PhoneConversation.Message> history = chat.messages();
+            PhoneConversation.Message last = history.isEmpty() ? null : history.get(history.size() - 1);
+            String preview = item.number;
+            int previewColor = MUTED;
+            if (chat.isBlocked()) { preview = "Blocked"; previewColor = 0xFFF49CA5; }
+            else if (messenger) {
+                if (chat.isTyping()) { preview = "Typing..."; previewColor = BLUE; }
+                else preview = last == null ? "Start a conversation" : (last.incoming ? "" : "You: ") + last.text;
+            }
+            int unread = chat.unreadCount();
+            text(SMALL, SMALL.fit(preview, unread > 0 ? 119 : 137), 65, y + 19, previewColor);
+            if (messenger && last != null) {
+                String time = new SimpleDateFormat("HH:mm").format(new Date(last.sentAt));
+                text(KEY, time, 205 - KEY.width(time), y + 5, MUTED);
+            }
+            if (unread > 0) {
+                int badgeY = y + (messenger ? 26 : 11);
+                circle(197, badgeY, 7, BLUE);
+                centered(KEY, unread > 9 ? "9+" : Integer.toString(unread), 197, badgeY - 5, 0xFF152840);
+            }
+        }
     }
     private void telephone(PhoneModule phone) {
+        PhoneContact contact = phone.callContact();
         if (phone.isCalling()) {
             centered(SMALL, "VibeOS telephone", 116, 70, MUTED);
-            centered(TITLE, PhoneConversation.CONTACT, 116, 113, WHITE);
-            centered(TEXT, PhoneConversation.NUMBER, 116, 140, MUTED);
+            centered(TITLE, contact.name, 116, 113, WHITE);
+            centered(TEXT, contact.number, 116, 140, MUTED);
             float pulse = (float) (.5 + .5 * Math.sin((System.currentTimeMillis() - phone.callStartedAt()) / 500D));
             circle(116, 222, 56 + pulse * 7, 0x1F68E5AD);
             circle(116, 222, 50 + pulse * 3, 0x2868E5AD);
-            asset(ESOUND, 72, 178, 88, 88, 44);
+            avatar(contact, 72, 178, 88);
             centered(TITLE, "Calling...", 116, 299, WHITE);
             centered(SMALL, "Ringing", 116, 328, MUTED);
             for (int i = 0; i < 3; i++) circle(105 + i * 11, 361, 2.5F,
@@ -464,31 +493,35 @@ public final class PhoneRenderer {
             keyHints(116, 393, 194, MUTED, phone.shortKey(Action.HOME), "Home");
             return;
         }
-        heading("Telephone", "Contacts and calls");
-        round(22, 113, 188, 67, 14, 0xFF213B3A);
-        asset(ESOUND, 31, 126, 40, 40, 20);
-        text(TEXT, PhoneConversation.CONTACT, 82, 126, WHITE);
-        text(SMALL, PhoneConversation.NUMBER, 82, 146, MUTED);
-        centered(SMALL, phone.hasCallEnded() ? "Call ended" : "Ready to call", 116, 218, MUTED);
-        round(31, 254, 170, 42, 15, 0xFF2D8E61);
-        keyHints(116, 265, 154, WHITE, phone.shortKey(Action.SELECT), phone.hasCallEnded() ? "Call again" : "Call ESound");
-        receiver(116, 344, .75F, 0xFF82D4A7);
-        centered(SMALL, "ESound is your only contact.", 116, 391, MUTED);
+        heading("Telephone", phone.hasCallEnded() ? "Call ended · Choose a contact" : "Choose a contact to call");
+        contactRows(phone, false, 40);
+        keyHints(116, 407, 194, MUTED, phone.shortKey(Action.UP), "", phone.shortKey(Action.DOWN), "Browse",
+                phone.shortKey(Action.SELECT), "Call");
     }
     private void messages(PhoneModule phone) {
-        heading(PhoneConversation.CONTACT, PhoneConversation.NUMBER);
-        asset(ESOUND, 178, 59, 28, 28, 14);
+        if (!phone.isMessageOpen()) {
+            int unread = phone.unreadMessages();
+            heading("Messages", unread == 0 ? "7 conversations" : unread + " unread · 7 conversations");
+            contactRows(phone, true, 40);
+            keyHints(116, 407, 194, BLUE, phone.shortKey(Action.UP), "", phone.shortKey(Action.DOWN), "Browse",
+                    phone.shortKey(Action.SELECT), "Open chat");
+            return;
+        }
+        PhoneContact contact = phone.selectedContact();
+        PhoneConversation chat = phone.conversation();
+        heading(contact.name, contact == PhoneContact.TRUMP ? "Fictional parody · 911" : contact.number);
+        avatar(contact, 178, 59, 28);
         List<PhoneConversation.Message> messages = phone.conversation().messages();
         boolean typing = phone.conversation().isTyping() && phone.messageScroll() == 0;
         if (messages.isEmpty() && !typing) {
-            asset(ESOUND, 89, 155, 54, 54, 27);
-            centered(TEXT, "Say hello to ESound", 116, 232, WHITE);
+            avatar(contact, 89, 155, 54);
+            centered(TEXT, "Say hello to " + contact.name, 116, 232, WHITE);
             centered(SMALL, "Send a message to get started.", 116, 255, MUTED);
         } else {
             try (PhoneClip ignored = new PhoneClip(21, 109, 190, 247)) {
                 int bottom = 354;
                 if (typing) {
-                    asset(ESOUND, 22, 326, 22, 22, 11);
+                    avatar(contact, 22, 326, 22);
                     round(49, 326, 55, 25, 12, 0xFF2D3A50);
                     for (int i = 0; i < 3; i++) {
                         double phase = phone.conversation().typingElapsed() / 180D - i * .8;
@@ -513,9 +546,28 @@ public final class PhoneRenderer {
             }
         }
         if (typing) text(SMALL, "Typing...", 22, 99, BLUE);
-        round(24, 368, 184, 31, 13, 0xFF253C58);
-        keyHints(116, 375, 174, WHITE, phone.shortKey(Action.SELECT), "Send a message");
-        keyHints(116, 405, 194, MUTED, phone.shortKey(Action.UP), "", phone.shortKey(Action.DOWN), "Scroll");
+        if (chat.isBlocked()) {
+            round(24, 360, 184, 40, 13, 0xFF493140);
+            centered(TEXT, "You are blocked", 116, 365, 0xFFF49CA5);
+            centered(SMALL, "Re-enable Phone to reset", 116, 383, MUTED);
+            keyHints(116, 407, 194, MUTED, phone.shortKey(Action.UP), "", phone.shortKey(Action.DOWN), "History",
+                    phone.shortKey(Action.BACK), "Chats");
+        } else {
+            round(24, 368, 184, 31, 13, 0xFF253C58);
+            keyHints(116, 375, 174, WHITE, phone.shortKey(Action.SELECT), "Send a message");
+            keyHints(116, 405, 194, MUTED, phone.shortKey(Action.UP), "", phone.shortKey(Action.DOWN), "History",
+                    phone.shortKey(Action.BACK), "Chats");
+        }
+    }
+    private void avatar(PhoneContact contact, int x, int y, int size) {
+        if (contact.avatar == null) {
+            circle(x + size / 2F, y + size / 2F, size / 2F, contact.color);
+            centered(size < 32 ? TEXT : TITLE, contact.name.substring(0, 1), x + size / 2F, y + size / 2F - (size < 32 ? 6 : 9), WHITE);
+        } else {
+            ResourceLocation location = avatars.get(contact);
+            if (location == null) { location = new ResourceLocation("vibe", "textures/phone/" + contact.avatar); avatars.put(contact, location); }
+            asset(location, x, y, size, size, size / 2);
+        }
     }
     private List<String> wrap(String value, float width) {
         List<String> lines = new ArrayList<String>();
@@ -536,9 +588,25 @@ public final class PhoneRenderer {
     }
     private static void receiver(float x, float y, float scale, int color) {
         GlStateManager.pushMatrix(); GlStateManager.translate(x, y, 0); GlStateManager.scale(scale, scale, 1);
-        line(color, 6, -10, -12, -12, -6, -7, 3, 3, 10, 10, 12, 14, 7);
-        round(-15, -16, 10, 9, 3, color); round(8, 3, 10, 9, 3, color);
-        GlStateManager.popMatrix();
+        try {
+            // A continuous curved handle, with rounded earpieces aligned to its ends.
+            solid(color); GL11.glBegin(GL11.GL_TRIANGLE_STRIP);
+            for (int i = 0; i <= 32; i++) {
+                float t = i / 32F, u = 1 - t;
+                float px = -10 * u * u * u - 36 * u * u * t + 10 * t * t * t;
+                float py = -10 * u * u * u + 36 * u * t * t + 10 * t * t * t;
+                float dx = -6 * u * u + 72 * u * t + 30 * t * t;
+                float dy = 30 * u * u + 72 * u * t - 6 * t * t;
+                float length = (float) Math.sqrt(dx * dx + dy * dy);
+                float nx = -dy / length * 3, ny = dx / length * 3;
+                GL11.glVertex2f(px + nx, py + ny); GL11.glVertex2f(px - nx, py - ny);
+            }
+            GL11.glEnd(); endSolid();
+            GlStateManager.pushMatrix(); GlStateManager.translate(-10, -10, 0); GlStateManager.rotate(-24, 0, 0, 1);
+            round(-5, -7, 10, 14, 3.5F, color); GlStateManager.popMatrix();
+            GlStateManager.pushMatrix(); GlStateManager.translate(10, 10, 0); GlStateManager.rotate(24, 0, 0, 1);
+            round(-7, -5, 14, 10, 3.5F, color); GlStateManager.popMatrix();
+        } finally { GlStateManager.popMatrix(); }
     }
     private void boot(double seconds) {
         round(8, 9, 216, 437, 30, 0xFF111427);
@@ -564,9 +632,14 @@ public final class PhoneRenderer {
             case PHOTOS:
                 x = phone.isPhotoOpen() ? 116 : 67 + phone.photoSelection() % 2 * 95;
                 y = phone.isPhotoOpen() ? 380 : 146 + Math.min(2, phone.photoSelection() / 2) * 88; break;
-            case CONTACTS: x = phone.isContactOpen() ? 71 + phone.contactAction() * 90 : 106; y = phone.isContactOpen() ? 309 : 151; break;
-            case TELEPHONE: x = 116; y = phone.isCalling() ? 398 : 276; break;
-            case MESSAGES: x = 116; y = 384; break;
+            case CONTACTS:
+                x = 106; y = 127 + phone.contactSelection() * 38;
+                if (phone.lastAction() == Action.LEFT || phone.lastAction() == Action.RIGHT || phone.lastAction() == Action.SELECT) {
+                    x = 68 + phone.contactAction() * 96; y = 413;
+                }
+                break;
+            case TELEPHONE: x = 116; y = phone.isCalling() ? 398 : 127 + phone.contactSelection() * 40; break;
+            case MESSAGES: x = 116; y = phone.isMessageOpen() ? 384 : 127 + phone.contactSelection() * 40; break;
             case INTERNET: x = 116; y = 347; break;
             default: break;
         }

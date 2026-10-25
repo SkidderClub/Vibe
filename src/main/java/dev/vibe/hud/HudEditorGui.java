@@ -62,6 +62,7 @@ public final class HudEditorGui extends GuiScreen {
     private final List<Guide> guides = new ArrayList<Guide>();
     /** Clickable areas of the last frame, so drawing and hit testing always share one layout. */
     private final List<Hit> hits = new ArrayList<Hit>();
+    private final List<WheelTarget> wheelTargets = new ArrayList<WheelTarget>();
     private HudManager.HudElement selected;
     private HudManager.HudElement dragged;
     private boolean resizing;
@@ -85,6 +86,7 @@ public final class HudEditorGui extends GuiScreen {
     private long savedAt;
     /** The HUD at the game's own resolution; the canvas shows it scaled down. */
     private Framebuffer preview;
+    private final HudEditorBackground background = new HudEditorBackground();
     private boolean previewUnavailable;
 
     public HudEditorGui(HudManager manager) {
@@ -144,6 +146,7 @@ public final class HudEditorGui extends GuiScreen {
         if (dragged != null) moveSelected(mouseX, mouseY);
         if (drag != null) drag.at(mouseX, mouseY);
         hits.clear();
+        wheelTargets.clear();
         KawaseBlur.drawBackdrop(width, height, 8, partialTicks);
         drawRect(0, 0, width, height, 0x70000000);
         AccountScreenStyle.window(left, top, panelWidth, panelHeight);
@@ -179,7 +182,7 @@ public final class HudEditorGui extends GuiScreen {
         }
         hitTop = Integer.MIN_VALUE;
         hitBottom = Integer.MAX_VALUE;
-        scrollbar(innerLeft + listWidth - 3, areaTop, contentBottom, elementsScroll, max);
+        scrollbar(innerLeft + listWidth - 3, areaTop, contentBottom, elementsScroll, max,false);
     }
 
     private void drawElementRow(final String id, int right, int y, int mouseX, int mouseY) {
@@ -211,7 +214,7 @@ public final class HudEditorGui extends GuiScreen {
                 GlStateManager.pushMatrix();
                 GlStateManager.translate(canvasX, canvasY, 0.0F);
                 GlStateManager.scale(previewScale, previewScale, 1.0F);
-                drawHud();
+                drawHud(false);
                 GlStateManager.popMatrix();
             }
             GlStateManager.enableBlend();
@@ -240,8 +243,19 @@ public final class HudEditorGui extends GuiScreen {
         }
     }
 
-    private void drawHud() {
-        for (String id : manager.getElementIds()) if (manager.isEnabled(id)) manager.drawPreview(manager.getElement(id), fontRendererObj);
+    public void captureGameView() { background.capture(mc); }
+
+    private void drawHud(boolean physicalPixels) {
+        ScaledResolution resolution = new ScaledResolution(mc);
+        background.draw(resolution.getScaledWidth(), resolution.getScaledHeight());
+        manager.beginEditorPreview(physicalPixels);
+        Framebuffer previousTarget = KawaseBlur.useHudTarget(physicalPixels ? preview : null);
+        try {
+            for (String id : manager.getElementIds()) if (manager.isEnabled(id)) manager.drawPreview(manager.getElement(id), fontRendererObj);
+        } finally {
+            KawaseBlur.useHudTarget(previousTarget);
+            manager.endEditorPreview();
+        }
     }
 
     /**
@@ -274,7 +288,7 @@ public final class HudEditorGui extends GuiScreen {
             preview.framebufferClear();
             GlStateManager.depthMask(depthMask);
             preview.bindFramebuffer(true);
-            drawHud();
+            drawHud(true);
         } finally {
             OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER, previous);
             GL11.glViewport(viewport.get(0), viewport.get(1), viewport.get(2), viewport.get(3));
@@ -349,7 +363,7 @@ public final class HudEditorGui extends GuiScreen {
         }
         hitTop = Integer.MIN_VALUE;
         hitBottom = Integer.MAX_VALUE;
-        scrollbar(inspectorLeft + inspectorWidth - 3, scrollTop, contentBottom, settingsScroll, max);
+        scrollbar(inspectorLeft + inspectorWidth - 3, scrollTop, contentBottom, settingsScroll, max,true);
     }
 
     private void drawIdentity(int x, int right, int y) {
@@ -394,6 +408,17 @@ public final class HudEditorGui extends GuiScreen {
 
     private void drawTheme(int x, int right, int y, int mouseX, int mouseY) {
         final HudManager.HudElement element = selected;
+        if (HudManager.TARGET_HUD.equals(element.getId())) {
+            AccountScreenStyle.panel(x, y, right - x, CONTROL, SURFACE, BORDER);
+            AccountScreenStyle.rawText("Style", x + 10, y + 8, TEXT);
+            AccountScreenStyle.rawText(effectiveTheme(element), x + 10, y + 24, ACCENT);
+            addHit(x, y, right, y + CONTROL, (mx, my) -> {
+                ModeSetting setting = Vibe.getInstance().getModuleManager().getModule(HudModule.class).targetHud.mode;
+                java.util.List<String> modes = setting.getModes();
+                setting.setValue(modes.get((modes.indexOf(setting.getValue()) + 1) % modes.size())); persist();
+            });
+            return;
+        }
         AccountScreenStyle.panel(x, y, right - x, CONTROL, SURFACE, BORDER);
         AccountScreenStyle.rawText(AccountScreenStyle.fit("Theme", right - x - 20), x + 10, y + 8, TEXT);
         int segmentsLeft = x + 8, segmentsRight = right - 8, segmentsTop = y + 21;
@@ -427,6 +452,7 @@ public final class HudEditorGui extends GuiScreen {
             String value = numberValue(number.getDouble(), number.getIncrement());
             settingName(name, x, rightText(value, right, y, ACCENT) - 8, y);
             final int trackLeft = x + 10, trackRight = right - 10, trackY = y + 26;
+            wheelTargets.add(new WheelTarget(number,trackLeft,Math.max(settingsTop(),y+18),trackRight,Math.min(contentBottom,y+SLIDER_ROW)));
             int knob = trackLeft + Math.round((trackRight - trackLeft) * ratio(number.getDouble(), number.getMinimum(), number.getMaximum()));
             track(trackLeft, trackRight, trackY);
             MenuRoundedRenderer.rect(trackLeft, trackY - 1, knob - trackLeft, 3, 1, ACCENT);
@@ -438,6 +464,7 @@ public final class HudEditorGui extends GuiScreen {
             String value = numberValue(range.getMin(), range.getIncrement()) + " - " + numberValue(range.getMax(), range.getIncrement());
             settingName(name, x, rightText(value, right, y, ACCENT) - 8, y);
             final int trackLeft = x + 10, trackRight = right - 10, trackY = y + 26;
+            wheelTargets.add(new WheelTarget(range,trackLeft,Math.max(settingsTop(),y+18),trackRight,Math.min(contentBottom,y+SLIDER_ROW)));
             int from = trackLeft + Math.round((trackRight - trackLeft) * ratio(range.getMin(), range.getMinimum(), range.getMaximum()));
             int to = trackLeft + Math.round((trackRight - trackLeft) * ratio(range.getMax(), range.getMinimum(), range.getMaximum()));
             track(trackLeft, trackRight, trackY);
@@ -608,12 +635,17 @@ public final class HudEditorGui extends GuiScreen {
         for (int i = 0; i < rows.length; i++) Gui.drawRect(x + 1 + i, y + rows[i], x + 2 + i, y + rows[i] + 2, color);
     }
 
-    private static void scrollbar(int x, int top, int bottom, int scroll, int max) {
+    private void scrollbar(int x, int top, int bottom, int scroll, int max,boolean settings) {
         if (max <= 0 || bottom <= top) return;
-        int track = bottom - top, thumb = Math.max(12, track * track / (track + max));
+        int track = bottom - top, thumb = dev.vibe.ui.ScrollbarDrag.thumb(track,max,12);
         int y = top + (track - thumb) * scroll / max;
         Gui.drawRect(x, top, x + 3, bottom, BORDER);
         RenderUtils.roundedRect(x, y, x + 3, y + thumb, 1, ACCENT);
+        addHit(x-4,top,x+5,bottom,(mx,my)->{
+            final dev.vibe.ui.ScrollbarDrag moving=new dev.vibe.ui.ScrollbarDrag(top,bottom,settings?settingsScroll:elementsScroll,max,12,my);
+            drag=(ax,ay)->{if(settings)settingsScroll=moving.at(ay);else elementsScroll=moving.at(ay);};
+            drag.at(mx,my);
+        });
     }
 
     private static void gradient(int left, int top, int right, int bottom, int topLeft, int topRight, int bottomRight, int bottomLeft) {
@@ -696,6 +728,11 @@ public final class HudEditorGui extends GuiScreen {
         int mouseX = Mouse.getEventX() * width / Math.max(1, mc.displayWidth);
         int mouseY = height - Mouse.getEventY() * height / Math.max(1, mc.displayHeight) - 1;
         int step = wheel > 0 ? -1 : 1;
+        for(WheelTarget target:wheelTargets)if(hit(target.left,target.top,target.right,target.bottom,mouseX,mouseY)) {
+            int handle=target.setting instanceof RangeSetting?dev.vibe.ui.SliderWheel.nearestHandle((RangeSetting)target.setting,
+                    (mouseX-target.left)/(double)Math.max(1,target.right-target.left)):0;
+            if(dev.vibe.ui.SliderWheel.adjust(target.setting,dev.vibe.ui.SliderWheel.notches(wheel),handle)){persist();return;}
+        }
         if (selected != null && insideCanvas(mouseX, mouseY)) {
             selected.setScale(selected.getScale() - step * .05F);
             persist();
@@ -728,6 +765,7 @@ public final class HudEditorGui extends GuiScreen {
     @Override public void onGuiClosed() {
         if (preview != null) preview.deleteFramebuffer();
         preview = null;
+        background.close();
         super.onGuiClosed();
     }
 
@@ -838,7 +876,9 @@ public final class HudEditorGui extends GuiScreen {
         else if (HudManager.WATERMARK.equals(element)) { settings.add(hud.getWatermarkOutline()); settings.add(hud.getWatermarkDetails()); settings.add(hud.getWatermarkText()); }
         else if (HudManager.ARRAY_LIST.equals(element)) { settings.add(hud.getArrayOutline()); settings.add(hud.getArrayListModules()); settings.add(hud.getArrayPrimaryColor()); settings.add(hud.getArraySecondaryColor()); settings.add(hud.getBackground()); settings.addAll(hud.array.all); }
         else if (HudManager.COORDINATES.equals(element)) settings.add(hud.getCoordinatesOutline());
-        else if (HudManager.SCOREBOARD.equals(element)) settings.add(hud.getReplaceScoreboardServer());
+        else if (HudManager.SCOREBOARD.equals(element)) { settings.add(hud.getReplaceScoreboardServer()); settings.addAll(hud.scoreboardColors.all); }
+        else if (HudManager.CLOCK.equals(element)) settings.addAll(hud.clock.all);
+        else if (HudManager.TARGET_HUD.equals(element)) settings.addAll(hud.targetHud.all);
         else if (HudManager.ARMOR.equals(element)) settings.add(hud.getArmorDisplayMode());
         else if (HudManager.HEALTH.equals(element)) { settings.add(hud.getHealthMaximumColor()); settings.add(hud.getHealthMinimumColor()); settings.add(hud.getHealthAbsorption()); settings.add(hud.getHealthAbsorptionColor()); settings.add(hud.getHealthHideFull()); }
         else if (HudManager.NOTIFICATIONS.equals(element)) {
@@ -861,11 +901,14 @@ public final class HudEditorGui extends GuiScreen {
         if (setting instanceof ColorSetting && editingColor == setting) return ROW + PICKER;
         return headerHeight(setting);
     }
-    private String effectiveTheme(HudManager.HudElement element) { if (element.getTheme() != null) return element.getTheme(); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); return hud == null ? "Vibe" : hud.getMode().getValue(); }
-    private String friendlyName(String id) { String value; if (HudManager.ARRAY_LIST.equals(id)) value = "Array list"; else if (HudManager.SESSION_INFO.equals(id)) value = "Statistics"; else if (HudManager.MOTION_GRAPH.equals(id)) value = "Motion graph"; else if (HudManager.CPS_GRAPH.equals(id)) value = "CPS graph"; else if (HudManager.MUSIC.equals(id)) value = "Music"; else { value = id == null ? "" : id.replace('_', ' '); value = value.isEmpty() ? value : Character.toUpperCase(value.charAt(0)) + value.substring(1); } return LanguageManager.translate(value); }
+    private String effectiveTheme(HudManager.HudElement element) { if (HudManager.TARGET_HUD.equals(element.getId())) return Vibe.getInstance().getModuleManager().getModule(HudModule.class).targetHud.mode.getValue(); if (element.getTheme() != null) return element.getTheme(); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); return hud == null ? "Vibe" : hud.getMode().getValue(); }
+    private String friendlyName(String id) { String value; if (HudManager.TARGET_HUD.equals(id)) value = "Target HUD"; else if (HudManager.ARRAY_LIST.equals(id)) value = "Array list"; else if (HudManager.SESSION_INFO.equals(id)) value = "Statistics"; else if (HudManager.MOTION_GRAPH.equals(id)) value = "Motion graph"; else if (HudManager.CPS_GRAPH.equals(id)) value = "CPS graph"; else if (HudManager.MUSIC.equals(id)) value = "Music"; else { value = id == null ? "" : id.replace('_', ' '); value = value.isEmpty() ? value : Character.toUpperCase(value.charAt(0)) + value.substring(1); } return LanguageManager.translate(value); }
     private String displayName(Setting<?> setting, String element) {
         String value = setting.getRawName();
-        if (HudManager.ARRAY_LIST.equals(element)) value = value.replaceFirst("(?i)^ArrayList\\s*", "").replaceFirst("(?i)^Array\\s*", "");
+        if (HudManager.TARGET_HUD.equals(element)) value = value.replaceFirst("(?i)^Target HUD\\s+", "");
+        else if (HudManager.CLOCK.equals(element)) value = value.replaceFirst("(?i)^Clock\\s+", "");
+        else if (HudManager.SCOREBOARD.equals(element)) value = value.replaceFirst("(?i)^Scoreboard\\s+", "");
+        else if (HudManager.ARRAY_LIST.equals(element)) value = value.replaceFirst("(?i)^ArrayList\\s*", "").replaceFirst("(?i)^Array\\s*", "");
         else if (HudManager.NOTIFICATIONS.equals(element)) value = value.replaceFirst("(?i)^Notifications\\s+", "");
         else if (element != null) {
             // The inspector already names the element, so "Watermark Outline" reads as "Outline" when that is translated too.
@@ -881,6 +924,10 @@ public final class HudEditorGui extends GuiScreen {
     private static float position(int mouse, int from, int to) { return clamp((mouse - from) / (float) Math.max(1, to - from)); }
     private static float ratio(double value, double min, double max) { return (float) Math.max(0D, Math.min(1D, (value - min) / Math.max(.000001D, max - min))); } private static float clamp(float value) { return Math.max(0.0F, Math.min(1.0F, value)); } private static String numberValue(double value, double increment) { return increment >= 1D ? Integer.toString((int) Math.round(value)) : String.format(java.util.Locale.ROOT, "%.2f", value); }
     private interface Pointer { void at(int mouseX, int mouseY); }
+    private static final class WheelTarget {
+        final Setting<?> setting;final int left,top,right,bottom;
+        WheelTarget(Setting<?> setting,int left,int top,int right,int bottom){this.setting=setting;this.left=left;this.top=top;this.right=right;this.bottom=bottom;}
+    }
     private static final class Hit { final int left, top, right, bottom; final Pointer action; Hit(int left, int top, int right, int bottom, Pointer action) { this.left = left; this.top = top; this.right = right; this.bottom = bottom; this.action = action; } }
     private static final class Guide { final boolean vertical; final int position; Guide(boolean vertical, int position) { this.vertical = vertical; this.position = position; } }
     private static final class GuiLine { static void outline(int left, int top, int right, int bottom, int color) { Gui.drawRect(left, top, right, top + 1, color); Gui.drawRect(left, bottom - 1, right, bottom, color); Gui.drawRect(left, top, left + 1, bottom, color); Gui.drawRect(right - 1, top, right, bottom, color); } }

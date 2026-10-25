@@ -67,6 +67,47 @@ registerRenderCheck('verifyToggleFeedback', 'dev.vibe.feedback.FeedbackRenderChe
         'Checks module notification rendering, editor bounds, themes and graphics state.')
 registerRenderCheck('verifyFreecamRendering', 'dev.vibe.camera.FreecamRenderCheck', 'freecam-render-check',
         'Checks FPV camera transforms, player visibility, knockback projection and the drone OSD.', true)
+
+def freecamProductionForge = configurations.create('freecamProductionForge') { transitive = false }
+dependencies.add(freecamProductionForge.name, "net.minecraftforge:forge:${minecraft_version}-${forge_version}:universal")
+tasks.register('verifyFreecamProduction', JavaExec) {
+    group = 'verification'
+    description = 'Checks Freecam production loading through Forge/OptiFine while the build JAR is replaced.'
+    dependsOn tasks.named('testClasses'), tasks.named('remapJar')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    def libraries = sourceSets.test.runtimeClasspath.filter { it.isFile() && !it.name.startsWith('forge-') && !it.name.startsWith('minecraft-') }
+    classpath = sourceSets.test.output + libraries + freecamProductionForge + files(
+            new File(gradle.gradleUserHomeDir, 'caches/unimined/net/minecraft/minecraft/1.8.9/minecraft-1.8.9-client.jar'),
+            tasks.named('remapJar').flatMap { it.archiveFile })
+    def optifine = layout.buildDirectory.file('optifine/preview_OptiFine_1.8.9_HD_U_M6_pre2.jar').get().asFile
+    if (optifine.isFile()) classpath += files(optifine)
+    mainClass = 'dev.vibe.verify.FreecamProductionCheck'
+    workingDir project.projectDir
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    jvmArgs '-XX:-OmitStackTraceInFastThrow', '-Dfml.coreMods.load=dev.vibe.core.MoveFixLoadingPlugin'
+    args layout.buildDirectory.dir('freecam-production-check').get().asFile.absolutePath, (optifine.isFile() ? 'optifine' : 'forge')
+    File frozenClient = null
+    File mutableClient = null
+    doFirst {
+        File builtClient = tasks.named('remapJar').get().archiveFile.get().asFile.canonicalFile
+        def checkDirectory = layout.buildDirectory.dir('freecam-production-check').get().asFile.toPath()
+        java.nio.file.Files.createDirectories(checkDirectory)
+        File fixture = java.nio.file.Files.createTempDirectory(checkDirectory, 'fixture-').toFile()
+        mutableClient = new File(fixture, builtClient.name)
+        java.nio.file.Files.copy(builtClient.toPath(), mutableClient.toPath())
+        frozenClient = vibeFreezeLaunchJar(mutableClient, new File(fixture, 'runtime'))
+        classpath = project.files(classpath.files.collect { entry -> entry.canonicalFile == builtClient ? frozenClient : entry })
+        systemProperty 'vibe.check.mutableJar', mutableClient.absolutePath
+        systemProperty 'vibe.check.frozenJar', frozenClient.absolutePath
+    }
+    doLast {
+        java.nio.file.Files.deleteIfExists(frozenClient.toPath())
+        java.nio.file.Files.deleteIfExists(frozenClient.parentFile.toPath())
+        java.nio.file.Files.deleteIfExists(frozenClient.parentFile.parentFile.toPath())
+        java.nio.file.Files.deleteIfExists(mutableClient.toPath())
+        java.nio.file.Files.deleteIfExists(mutableClient.parentFile.toPath())
+    }
+}
 registerRenderCheck('verifyPathRendering', 'dev.vibe.path.PathRenderCheck', 'path-render-check',
         'Checks Path routing, cached world lines, depth modes, colors, styles and camera/render state.', true)
 registerRenderCheck('verifyVisualEffects', 'dev.vibe.ui.VisualEffectsRenderCheck', 'visual-effects-check',
@@ -100,6 +141,22 @@ registerRenderCheck('verifyLicensesRendering', 'dev.vibe.ui.menu.LicensesRenderC
         'Checks offline license reading, scrolling and menu layout.')
 registerRenderCheck('verifyClientChanges', 'dev.vibe.ui.ClientChangesRenderCheck', 'client-changes-check',
         'Checks recent client screens, including a muted live radio smoke test.')
+registerRenderCheck('verifyHudRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'hud-refresh-check',
+        'Checks target HUD styles, particles, clock, game-view background, scales and editor framebuffers.', false) {
+    args 'hud-refresh'
+}
+registerRenderCheck('verifyHudVisuals', 'dev.vibe.ui.ClientChangesRenderCheck', 'hud-visuals-check',
+        'Checks uniform ArrayList backgrounds, continuous outlines, OOF arrows, domain animation and native item pixels/performance.', false) {
+    args 'hud-visuals'
+}
+registerRenderCheck('verifyServerMenuRendering','dev.vibe.ui.ClientChangesRenderCheck','server-menu-check',
+        'Checks native edit-server and direct-connect backgrounds after a cached world/editor frame.',false) {
+    args 'server-menus'
+}
+registerRenderCheck('verifyHudEditorRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'hud-editor-check',
+        'Checks all HUD editor widgets and legacy layout/scale behavior.', false) {
+    args 'hud-editor'
+}
 registerRenderCheck('verifyConfigRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'config-render-check',
         'Checks local/online config tabs, scrolling and compact layouts without rewriting profiles.', false) {
     args 'configs'

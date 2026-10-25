@@ -96,6 +96,11 @@ public final class NeverLoseRenderCheck {
             click(workspace, number, 0); frame(800, 540, 1); workspace.draw(800, 540, num(number, "x") + num(number, "w") + 100, num(number, "y")); workspace.release(0);
             check(main.number.getDouble() == main.number.getMaximum(), "Number slider failed to clamp");
             render(workspace, 800, 540, 1, null);
+            number=hit(workspace,"SLIDER",main.number);int oldScroll=num(workspace,"scroll");
+            workspace.wheel(num(number,"x")+num(number,"w")/2,num(number,"y")+4,-120);
+            check(main.number.getDouble()==main.number.getMaximum()-main.number.getIncrement(),"Hovered NeverLose slider did not accept wheel input");
+            check(num(workspace,"scroll")==oldScroll,"Wheel scrolled content while adjusting a NeverLose slider");
+            workspace.wheel(num(number,"x")+num(number,"w")/2,num(number,"y")+4,120);
             Object range = hit(workspace, "SLIDER", main.range);
             workspace.click(num(range, "x") + 2, num(range, "y") + 5, 0);
             frame(800, 540, 1); workspace.draw(800, 540, num(range, "x") + num(range, "w") + 100, num(range, "y")); workspace.release(0);

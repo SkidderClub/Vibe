@@ -67,8 +67,8 @@ public final class PhoneConversation {
         public final boolean attachment, incoming;
         private final int preset;
         private boolean read;
-        private Message(int preset, long sentAt) {
-            this.text = PRESETS[preset]; this.sentAt = sentAt; this.attachment = preset == 3;
+        private Message(PhoneContact contact, int preset, String text, long sentAt) {
+            this.text = text; this.sentAt = sentAt; this.attachment = contact == PhoneContact.ESOUND && preset == 3;
             this.preset = preset; incoming = false; read = true;
         }
         private Message(String text, long sentAt, boolean read) {
@@ -82,6 +82,7 @@ public final class PhoneConversation {
         PendingReply(String text) { this.text = text; }
     }
     private final Path file;
+    private final PhoneContact contact;
     private final List<Message> messages = new ArrayList<Message>();
     private final Deque<PendingReply> pending = new ArrayDeque<PendingReply>();
     private final Random random;
@@ -89,12 +90,20 @@ public final class PhoneConversation {
     private String error = "";
     private String lastReply = "";
     private int lastPreset = -1;
+    private boolean blocked;
 
     public PhoneConversation(Path file) {
-        this(file, () -> System.nanoTime() / 1000000L, new Random());
+        this(file, PhoneContact.ESOUND);
+    }
+    public PhoneConversation(Path file, PhoneContact contact) {
+        this(file, contact, () -> System.nanoTime() / 1000000L, new Random());
     }
     PhoneConversation(Path file, LongSupplier clock, Random random) {
+        this(file, PhoneContact.ESOUND, clock, random);
+    }
+    PhoneConversation(Path file, PhoneContact contact, LongSupplier clock, Random random) {
         this.file = file.toAbsolutePath().normalize();
+        this.contact = Objects.requireNonNull(contact, "contact");
         this.clock = clock; this.random = random;
         if (!Files.isRegularFile(this.file)) return;
         try (Reader reader = Files.newBufferedReader(this.file, StandardCharsets.UTF_8)) {
@@ -108,28 +117,37 @@ public final class PhoneConversation {
                     lastReply = text;
                 } else {
                     int preset = entry.get("preset").getAsInt();
-                    if (preset < 0 || preset >= PRESETS.length) continue;
-                    messages.add(new Message(preset, entry.get("sentAt").getAsLong())); lastPreset = preset;
+                    if (preset < 0 || preset >= presetCount()) continue;
+                    messages.add(new Message(contact, preset, presetText(preset), entry.get("sentAt").getAsLong())); lastPreset = preset;
                 }
             }
         } catch (IOException | RuntimeException failure) { error = "Could not load messages"; }
     }
 
     public void send() {
-        int preset = random.nextInt(PRESETS.length - (lastPreset < 0 ? 0 : 1));
+        if (blocked) return;
+        if (presetCount() == 1) { sendPreset(0); return; }
+        int preset = random.nextInt(presetCount() - (lastPreset < 0 ? 0 : 1));
         if (preset >= lastPreset && lastPreset >= 0) preset++;
         sendPreset(preset);
     }
 
     public void sendPreset(int preset) {
-        if (preset < 0 || preset >= PRESETS.length) throw new IllegalArgumentException("Unknown message");
-        messages.add(new Message(preset, System.currentTimeMillis())); lastPreset = preset;
-        String reply = random.nextInt(100) < 65 ? choose(LUCKY_REPLIES)
-                : random.nextBoolean() ? CONTEXT_REPLIES[preset] : choose(BUSY_REPLIES);
+        if (preset < 0 || preset >= presetCount()) throw new IllegalArgumentException("Unknown message");
+        if (blocked) return;
+        messages.add(new Message(contact, preset, presetText(preset), System.currentTimeMillis())); lastPreset = preset;
+        if (contact == PhoneContact.VOGEL) {
+            blocked = true; pending.clear(); trim(); save(); return;
+        }
+        String reply = contact == PhoneContact.ESOUND
+                ? random.nextInt(100) < 65 ? choose(LUCKY_REPLIES)
+                    : random.nextBoolean() ? CONTEXT_REPLIES[preset] : choose(BUSY_REPLIES)
+                : choose(contact.replies(preset));
         enqueue(reply); trim(); save();
     }
     public void afterCall() {
-        String text = choose(CALL_REPLIES); lastReply = text;
+        if (blocked) return;
+        String text = choose(contact == PhoneContact.ESOUND ? CALL_REPLIES : contact.callReplies()); lastReply = text;
         // Let an existing typing bubble finish, then prioritize the missed-call reply.
         PendingReply active = pending.pollFirst();
         pending.addFirst(new PendingReply(text));
@@ -143,7 +161,7 @@ public final class PhoneConversation {
         return replies[index];
     }
     private void enqueue(String text) {
-        if (text.equals(lastReply)) text = choose(BUSY_REPLIES);
+        if (text.equals(lastReply) && contact == PhoneContact.ESOUND) text = choose(BUSY_REPLIES);
         lastReply = text;
         if (pending.size() == MAX_PENDING) pending.removeLast();
         pending.addLast(new PendingReply(text));
@@ -174,6 +192,12 @@ public final class PhoneConversation {
         save();
     }
     public void cancelPending() { pending.clear(); }
+    /** Session restrictions reset only when the Phone module is enabled again. */
+    public void resetSession() { pending.clear(); blocked = false; }
+    public boolean isBlocked() { return blocked; }
+    public PhoneContact contact() { return contact; }
+    public int presetCount() { return contact == PhoneContact.ESOUND ? PRESETS.length : contact.presetCount(); }
+    public String presetText(int index) { return contact == PhoneContact.ESOUND ? PRESETS[index] : contact.preset(index); }
     int pendingCount() { return pending.size(); }
     private void trim() {
         if (messages.size() > LIMIT) messages.remove(0);

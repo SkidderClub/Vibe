@@ -56,6 +56,12 @@ existing terminal, the script returns to the prompt. Set `VIBE_NO_PAUSE=1` when 
 from another script. `run.bat --dry-run` checks the Gradle task setup without
 launching the game.
 
+OptiFine launches use a separate client JAR for each session under `run/launch-artifacts/`.
+Rebuilding or cleaning `build/` therefore cannot remove classes that the running game
+has not loaded yet. The session copy is removed after a normal exit; a failed launch
+can leave its copy for diagnosis. Freecam's production-loading regression check is
+`.\gradlew.bat verifyFreecamProduction`.
+
 The launchers use the actual project path without assigning a drive letter.
 On its first start, `run.bat` copies `options*.txt` and resource packs from
 `%APPDATA%\.minecraft` into `run/client/` once, without overwriting existing files.

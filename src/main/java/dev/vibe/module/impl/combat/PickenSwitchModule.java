@@ -131,7 +131,7 @@ public final class PickenSwitchModule extends Module {
     private void clear() { originalSlot = enchantedSlot = -1; silent = false; returnedAfterAttack = false; }
     @Override protected void onEnable() { stableTicks = 0; }
     private static PickenSwitchModule active() { Vibe vibe = Vibe.getInstance(); return vibe == null || vibe.getModuleManager() == null ? null : vibe.getModuleManager().getModule(PickenSwitchModule.class); }
-    public static int beginAttackHook(Object target) { PickenSwitchModule module = active(); return module == null ? -1 : module.beforeAttack(target); }
+    public static int beginAttackHook(Object target) { PickenSwitchModule module = active(); return module == null || dev.vibe.module.impl.meme.HypixelModule.ownsSilentSlot() ? -1 : module.beforeAttack(target); }
     /** The wrapper invokes this only after vanilla has sent and processed its attack path. */
     public static void endAttackHook(int ignored) {
         PickenSwitchModule module = active();

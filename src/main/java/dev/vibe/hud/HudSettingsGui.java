@@ -50,7 +50,11 @@ public final class HudSettingsGui extends GuiScreen {
         } else if (HudManager.COORDINATES.equals(element)) {
             settings.add(hud.getCoordinatesOutline());
         } else if (HudManager.SCOREBOARD.equals(element)) {
-            settings.add(hud.getReplaceScoreboardServer());
+            settings.add(hud.getReplaceScoreboardServer()); settings.addAll(hud.scoreboardColors.all);
+        } else if (HudManager.CLOCK.equals(element)) {
+            settings.addAll(hud.clock.all);
+        } else if (HudManager.TARGET_HUD.equals(element)) {
+            settings.addAll(hud.targetHud.all);
         } else if (HudManager.ARMOR.equals(element)) {
             settings.add(hud.getArmorDisplayMode());
         } else if (HudManager.HEALTH.equals(element)) {
@@ -212,6 +216,18 @@ public final class HudSettingsGui extends GuiScreen {
     @Override public void handleMouseInput() throws IOException {
         super.handleMouseInput();
         int wheel = org.lwjgl.input.Mouse.getEventDWheel();
+        int mx=org.lwjgl.input.Mouse.getEventX()*width/Math.max(1,mc.displayWidth),my=height-org.lwjgl.input.Mouse.getEventY()*height/Math.max(1,mc.displayHeight)-1;
+        if(wheel!=0&&mx>=width/2-108&&mx<width/2+108&&my>=50&&my<height-16) {
+            int y=50-scroll;
+            for(Setting<?> setting:settings)if(setting.isVisible()) {
+                int row=setting instanceof NumberSetting?30:22;
+                if(setting instanceof NumberSetting&&my>=y&&my<y+row&&dev.vibe.ui.SliderWheel.adjust(setting,dev.vibe.ui.SliderWheel.notches(wheel),0)) {
+                    Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());return;
+                }
+                y+=row;
+                if(setting instanceof MultiSelectSetting&&openMulti.contains(setting))y+=((MultiSelectSetting)setting).getOptions().size()*14;
+            }
+        }
         if (wheel != 0) scroll = Math.max(0, Math.min(Math.max(0,settingsHeight()-(height-66)),scroll-(wheel>0?36:-36)));
     }
     private String describe(Setting<?> setting) {

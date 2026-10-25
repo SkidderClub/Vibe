@@ -118,6 +118,21 @@ public final class MainMenuEvents {
         event.setCanceled(true);
     }
 
+    @SubscribeEvent
+    public void onServerFormBackground(GuiScreenEvent.BackgroundDrawnEvent event) {
+        if(Minecraft.getMinecraft().theWorld!=null||!(event.gui instanceof net.minecraft.client.gui.GuiScreenAddServer
+                ||event.gui instanceof net.minecraft.client.gui.GuiScreenServerList))return;
+        // Own the complete backdrop after vanilla's gradient, before form controls.
+        dev.vibe.ui.GuiRenderState.prepare(false);
+        Gui.drawRect(0,0,event.gui.width,event.gui.height,0xFF111218);
+        try {shaders.draw(event.gui.width,event.gui.height);}
+        catch(RuntimeException ignored) {
+            GL20.glUseProgram(0);Minecraft.getMinecraft().getFramebuffer().bindFramebuffer(true);
+            Minecraft.getMinecraft().entityRenderer.setupOverlayRendering();
+            Gui.drawRect(0,0,event.gui.width,event.gui.height,0xFF111218);
+        }
+    }
+
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onMenuMouse(GuiScreenEvent.MouseInputEvent.Pre event) {
         if (!(event.gui instanceof GuiMainMenu) || presentation == null) return;

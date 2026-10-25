@@ -28,8 +28,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
@@ -56,6 +54,7 @@ public final class HudManager {
     public static final String COORDINATES = "coordinates";
     public static final String SCOREBOARD = "scoreboard";
     public static final String CLOCK = "clock";
+    public static final String TARGET_HUD = "targethud";
     public static final String SESSION_INFO = "sessioninfo";
     public static final String MOTION_GRAPH = "motiongraph";
     public static final String STALKER = "stalker";
@@ -74,6 +73,12 @@ public final class HudManager {
     private final HudElement arrayList = new HudElement(ARRAY_LIST, 9, 9, true, false);
     private final HudElement coordinates = new HudElement(COORDINATES, 9, 42, false, false);
     private final HudElement scoreboard = new HudElement(SCOREBOARD, 9, 0, true, false, false, true);
+    private final HudElement targetHud = new HudElement(TARGET_HUD, 30, 68, false, false, true);
+    private final TargetHudTracker targetTracker = new TargetHudTracker();
+    private final TargetHudRenderer targetRenderer = new TargetHudRenderer();
+    private final TargetHudCards targetCards = new TargetHudCards();
+    private net.minecraft.world.World targetWorld;
+    private boolean framebufferPreview;
     private final HudElement clock = new HudElement(CLOCK, 9, 70, false, false);
     private final HudElement sessionInfo = new HudElement(SESSION_INFO, 9, 96, false, false);
     private final HudElement motionGraph = new HudElement(MOTION_GRAPH, 9, 120, false, false);
@@ -94,8 +99,6 @@ public final class HudManager {
     private final dev.vibe.hud.MusicVisualizer musicVisualizer = new dev.vibe.hud.MusicVisualizer();
     private final long sessionStarted = System.currentTimeMillis();
     private final LiquidGlassRenderer liquidGlass = new LiquidGlassRenderer();
-    /** Reused by the clock widget; the HUD is only drawn on the render thread. */
-    private final SimpleDateFormat clockFormat = new SimpleDateFormat("HH:mm:ss");
     private ItemStack[] sampleArmor;
     private final float[] motionSamples = new float[96];
     private int motionSampleIndex;
@@ -121,43 +124,48 @@ public final class HudManager {
         if (hud == null || !hud.isEnabled() || minecraft.thePlayer == null) {
             return;
         }
-        ScaledResolution resolution = new ScaledResolution(minecraft);
-        FontRenderer font = minecraft.fontRendererObj;
-        if (hud.getHudElements().isSelectedIgnoreCase(WATERMARK)) {
-            renderScaled(watermark, resolution, () -> drawWatermark(hud, resolution, font));
-        }
-        if (hud.getHudElements().isSelectedIgnoreCase(ARRAY_LIST)) {
-            drawArrayList(hud, resolution, font);
-        }
-        if (hud.getHudElements().isSelectedIgnoreCase(COORDINATES)) {
-            renderScaled(coordinates, resolution, () -> drawCoordinates(hud, resolution, font));
-        }
-        if (hud.getHudElements().isSelectedIgnoreCase(CLOCK)) {
-            renderScaled(clock, resolution, () -> drawClock(hud, resolution, font));
-        }
-        if (hud.getHudElements().isSelectedIgnoreCase(SESSION_INFO)) {
-            renderScaled(sessionInfo, resolution, () -> drawSessionInfo(hud, resolution, font));
-        }
-        if (hud.getHudElements().isSelectedIgnoreCase(MOTION_GRAPH)) {
-            renderScaled(motionGraph, resolution, () -> drawMotionGraph(hud, resolution, font));
-        }
-        if (hud.getHudElements().isSelectedIgnoreCase(STALKER)) {
-            renderScaled(stalker, resolution, () -> drawStalker(hud, resolution, font));
-        }
-        if (hud.getHudElements().isSelectedIgnoreCase(ARMOR)) {
-            renderScaled(armor, resolution, () -> drawArmor(hud, resolution, font));
-        }
-        if (hud.getHudElements().isSelectedIgnoreCase(INVENTORY)) {
-            renderScaled(inventory, resolution, () -> drawInventory(hud, resolution, font));
-        }
-        if (hud.getHudElements().isSelectedIgnoreCase(HEALTH)) {
-            renderScaled(health, resolution, () -> drawHealth(hud, resolution, font));
-        }
-        if (hud.getHudElements().isSelectedIgnoreCase(CPS)) {
-            renderScaled(cps, resolution, () -> drawCps(resolution, font));
-        }
-        if (hud.getHudElements().isSelectedIgnoreCase(CPS_GRAPH)) {
-            renderScaled(cpsGraph, resolution, () -> drawCpsGraph(hud, resolution, font));
+        try (dev.vibe.ui.render.HudItemGeometryRenderer.Scope items = dev.vibe.ui.render.HudItemGeometryRenderer.begin()) {
+            ScaledResolution resolution = new ScaledResolution(minecraft);
+            FontRenderer font = minecraft.fontRendererObj;
+            if (hud.getHudElements().isSelectedIgnoreCase(WATERMARK)) {
+                renderScaled(watermark, resolution, () -> drawWatermark(hud, resolution, font));
+            }
+            if (hud.getHudElements().isSelectedIgnoreCase(ARRAY_LIST)) {
+                drawArrayList(hud, resolution, font);
+            }
+            if (hud.getHudElements().isSelectedIgnoreCase(COORDINATES)) {
+                renderScaled(coordinates, resolution, () -> drawCoordinates(hud, resolution, font));
+            }
+            if (hud.getHudElements().isSelectedIgnoreCase(TARGET_HUD)) {
+                drawTargetHud(hud, resolution, font);
+            }
+            if (hud.getHudElements().isSelectedIgnoreCase(CLOCK)) {
+                renderScaled(clock, resolution, () -> drawClock(hud, resolution, font));
+            }
+            if (hud.getHudElements().isSelectedIgnoreCase(SESSION_INFO)) {
+                renderScaled(sessionInfo, resolution, () -> drawSessionInfo(hud, resolution, font));
+            }
+            if (hud.getHudElements().isSelectedIgnoreCase(MOTION_GRAPH)) {
+                renderScaled(motionGraph, resolution, () -> drawMotionGraph(hud, resolution, font));
+            }
+            if (hud.getHudElements().isSelectedIgnoreCase(STALKER)) {
+                renderScaled(stalker, resolution, () -> drawStalker(hud, resolution, font));
+            }
+            if (hud.getHudElements().isSelectedIgnoreCase(ARMOR)) {
+                renderScaled(armor, resolution, () -> drawArmor(hud, resolution, font));
+            }
+            if (hud.getHudElements().isSelectedIgnoreCase(INVENTORY)) {
+                renderScaled(inventory, resolution, () -> drawInventory(hud, resolution, font));
+            }
+            if (hud.getHudElements().isSelectedIgnoreCase(HEALTH)) {
+                renderScaled(health, resolution, () -> drawHealth(hud, resolution, font));
+            }
+            if (hud.getHudElements().isSelectedIgnoreCase(CPS)) {
+                renderScaled(cps, resolution, () -> drawCps(resolution, font));
+            }
+            if (hud.getHudElements().isSelectedIgnoreCase(CPS_GRAPH)) {
+                renderScaled(cpsGraph, resolution, () -> drawCpsGraph(hud, resolution, font));
+            }
         }
     }
 
@@ -215,14 +223,14 @@ public final class HudManager {
         int height = settings.height.getInt();
         int left = x, top = y, right = x + width, bottom = y + height;
         float radius = Math.min(settings.radius.getFloat(), height / 2F);
-        if (scalingHud && !previewingHud) {
+        if (scalingHud && (!previewingHud || framebufferPreview)) {
             left = Math.round(hudTransformX + (left - hudTransformX) * hudTransformScale);
             top = Math.round(hudTransformY + (top - hudTransformY) * hudTransformScale);
             right = Math.round(hudTransformX + (right - hudTransformX) * hudTransformScale);
             bottom = Math.round(hudTransformY + (bottom - hudTransformY) * hudTransformScale);
             radius *= hudTransformScale;
         }
-        if (!previewingHud && liquidGlass.draw(left, top, right, bottom, radius,
+        if ((!previewingHud || framebufferPreview) && liquidGlass.draw(left, top, right, bottom, radius,
                 hud.getLiquidGlassBlur().isEnabled() ? hud.getLiquidGlassBlurStrength().getFloat() : 0,
                 hud.getLiquidGlassRefraction().getFloat(), hud.getLiquidGlassOpacity().getFloat() * settings.opacity.getFloat() * opacity,
                 hud.getLiquidGlassTint().getArgb())) return;
@@ -240,7 +248,7 @@ public final class HudManager {
         int anchorY = element.verticallyCentred || element.centred ? resolution.getScaledHeight() / 2 + element.y
                 : element.bottomAnchored ? resolution.getScaledHeight() - element.y : element.y;
         long boundsBefore = element.boundsRevision;
-        if (!previewingHud && element.getWidth() > 1 && element.getHeight() > 1 && blurEnabled(element.id))
+        if ((!previewingHud || framebufferPreview) && element.getWidth() > 1 && element.getHeight() > 1 && blurEnabled(element.id))
             KawaseBlur.drawRegion(element.getLeft(), element.getTop(),
                     element.getLeft() + element.getWidth(), element.getTop() + element.getHeight(),
                     element == scoreboard ? 4 : 3, 0.0F);
@@ -330,7 +338,7 @@ public final class HudManager {
     }
 
     private boolean blurEnabled(String element) {
-        if (previewingHud || scalingHud) return false;
+        if ((previewingHud && !framebufferPreview) || scalingHud) return false;
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         if (hud == null) return false;
         String activeTheme = theme(getElement(element), hud);
@@ -350,6 +358,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     private String theme(HudElement element, HudModule hud) {
+        if (element == targetHud) return hud.targetHud.mode.getValue();
         return element != null && element.getTheme() != null ? element.getTheme() : hud.getMode().getValue();
     }
 
@@ -357,11 +366,10 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     private void drawHudSurface(HudModule hud, HudElement element, int left, int top, int right, int bottom) {
         String theme = theme(element, hud);
         if ("LiquidGlass".equalsIgnoreCase(theme)) {
-            float radius = Math.min(8, (bottom - top) / 2.0F);
+            float radius = Math.min(element == targetHud ? hud.targetHud.radius.getFloat() : 8, (bottom - top) / 2.0F);
             // The shader addresses framebuffer pixels directly. Supply the
-            // transformed rectangle for scaled in-world widgets; the editor
-            // uses a tinted sample because its canvas has another transform.
-            if (scalingHud && !previewingHud) {
+            // transformed rectangle for scaled widgets and the full-size editor target.
+            if (scalingHud && (!previewingHud || framebufferPreview)) {
                 int scaledLeft = Math.round(hudTransformX + (left - hudTransformX) * hudTransformScale);
                 int scaledTop = Math.round(hudTransformY + (top - hudTransformY) * hudTransformScale);
                 int scaledRight = Math.round(hudTransformX + (right - hudTransformX) * hudTransformScale);
@@ -371,10 +379,10 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
                         hud.getLiquidGlassRefraction().getFloat(), hud.getLiquidGlassOpacity().getFloat(),
                         hud.getLiquidGlassTint().getArgb())) return;
             }
-            if (scalingHud || previewingHud) {
-                RenderUtils.roundedRect(left, top, right, bottom, radius,
+            if (previewingHud && !framebufferPreview) {
+                HudShapes.round(left-.5F, top-.5F, right-left+1, bottom-top+1, radius+.5F, 0x66FFFFFF);
+                HudShapes.round(left, top, right-left, bottom-top, radius,
                         RenderUtils.alpha(hud.getLiquidGlassTint().getArgb(), Math.round(82 * hud.getLiquidGlassOpacity().getFloat())));
-                RenderUtils.roundedOutline(left, top, right, bottom, radius, 1, 0x88FFFFFF);
                 return;
             }
             if (!liquidGlass.draw(left, top, right, bottom, radius, hud.getLiquidGlassBlur().isEnabled()
@@ -450,7 +458,121 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     private void drawClock(HudModule hud, ScaledResolution resolution, FontRenderer font) {
-        drawSimpleWidget(clock, clockFormat.format(new Date()), hud, resolution, font, 0.22F);
+        java.time.ZonedDateTime now = java.time.ZonedDateTime.now();
+        if (hud.clock.display.is("Analog")) {
+            int width = Math.max(hud.clock.diameter.getInt(), hud.clock.digital.isEnabled() ? font.getStringWidth(ClockRenderer.time(hud.clock, now)) : 0);
+            if (hud.clock.date.isEnabled()) width = Math.max(width, font.getStringWidth(ClockRenderer.date(now)));
+            int height = ClockRenderer.height(hud.clock);
+            clock.ensureOnScreen(resolution, width, height);
+            int left = clock.left(resolution, width), top = clock.top(resolution, height);
+            if ("LiquidGlass".equalsIgnoreCase(theme(clock, hud)))
+                drawHudSurface(hud, clock, left, top, left + width, top + height);
+            ClockRenderer.draw(hud.clock, font, left + (width - hud.clock.diameter.getInt()) / 2, top, now);
+            clock.setBounds(left, top, width, height);
+        } else {
+            String time = ClockRenderer.time(hud.clock, now), date = ClockRenderer.date(now);
+            int width = Math.max(font.getStringWidth(time), hud.clock.date.isEnabled() ? font.getStringWidth(date) : 0) + 20;
+            int height = hud.clock.date.isEnabled() ? 39 : 24;
+            clock.ensureOnScreen(resolution, width, height);
+            int left = clock.left(resolution, width), top = clock.top(resolution, height);
+            drawHudSurface(hud, clock, left, top, left + width, top + height);
+            font.drawStringWithShadow(time, left + (width - font.getStringWidth(time)) / 2F, top + 8, hud.clock.text.getArgb());
+            if (hud.clock.date.isEnabled()) font.drawStringWithShadow(date, left + (width - font.getStringWidth(date)) / 2F, top + 24, hud.clock.marks.getArgb());
+            clock.setBounds(left, top, width, height);
+        }
+    }
+
+    public void recordTarget(net.minecraft.entity.EntityLivingBase target) {
+        if (!(target instanceof EntityPlayer) || target == minecraft.thePlayer || target.worldObj != minecraft.theWorld) return;
+        HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        if (hud != null && hud.isEnabled() && hud.getHudElements().isSelectedIgnoreCase(TARGET_HUD))
+            targetTracker.attack(target, System.currentTimeMillis());
+    }
+
+    public void tickTargets() {
+        HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        if (targetWorld != minecraft.theWorld) {
+            targetCards.clear(); targetRenderer.clear(); targetWorld = minecraft.theWorld;
+        }
+        if (hud == null || !hud.isEnabled() || !hud.getHudElements().isSelectedIgnoreCase(TARGET_HUD)) {
+            targetTracker.clear(); targetRenderer.clear(); targetCards.clear();
+        } else targetTracker.expire(minecraft, hud.targetHud, System.currentTimeMillis());
+    }
+
+    public void beginEditorPreview(boolean physicalPixels) {
+        framebufferPreview = physicalPixels;
+        KawaseBlur.beginHudFrame();
+    }
+    public void endEditorPreview() { framebufferPreview = false; }
+    public boolean isFramebufferPreview() { return framebufferPreview; }
+
+    private void drawTargetHud(HudModule hud, ScaledResolution resolution, FontRenderer font) {
+        long now = System.currentTimeMillis();
+        if (!previewingHud && targetWorld != minecraft.theWorld) {
+            targetCards.clear(); targetRenderer.clear(); targetWorld = minecraft.theWorld;
+        }
+        TargetHudData sample = previewingHud && minecraft.thePlayer != null ? TargetHudData.from(minecraft, minecraft.thePlayer) : TargetHudData.sample();
+        int width = targetRenderer.width(hud.targetHud, sample, font), rowHeight = targetRenderer.height(hud.targetHud);
+        int capacity = Math.max(1, Math.min(hud.targetHud.maxTargets.getInt(),
+                (int) (resolution.getScaledHeight() / targetHud.getScale() / (rowHeight + hud.targetHud.gap.getFloat()))));
+        List<TargetHudData> live = new ArrayList<TargetHudData>();
+        if (!previewingHud) for (EntityPlayer player : targetTracker.resolveAll(minecraft, hud.targetHud, now)) {
+            if (live.size() == capacity) break;
+            live.add(TargetHudData.from(minecraft, player));
+        }
+        List<TargetHudCards.Card> cards = previewingHud ? Collections.emptyList()
+                : targetCards.update(live, hud.targetHud, rowHeight, capacity, now);
+        if (!previewingHud && cards.isEmpty()) { targetRenderer.clear(); return; }
+        int height = previewingHud ? rowHeight : Math.max(1, (int) Math.ceil(TargetHudCards.height(cards, rowHeight)));
+        targetHud.ensureScaledOnScreen(resolution, width, height);
+        renderScaled(targetHud, resolution, () -> {
+            int left = targetHud.left(resolution, width), top = targetHud.top(resolution, height);
+            targetHud.setBounds(left, top, width, height);
+            if (hideForDebug(targetHud, left, top, width, height, 0)) return;
+            if (previewingHud) drawTargetCard(hud, sample, font, left, top, width, 1, true, now);
+            else for (TargetHudCards.Card card : cards) {
+                if (card.scale < .001F) continue;
+                int y = Math.round(top + card.offset - rowHeight * (1 - card.scale) / 2);
+                drawTargetCard(hud, card.data, font, left, y, width, card.scale, false, now);
+            }
+        });
+    }
+
+    private void drawTargetCard(HudModule hud, TargetHudData data, FontRenderer font, int x, int y,
+                                int width, float pop, boolean preview, long now) {
+        int height = targetRenderer.height(hud.targetHud);
+        GlStateManager.pushMatrix();
+        try {
+            GlStateManager.translate(x + width / 2F, y + height / 2F, 0);
+            GlStateManager.scale(pop, pop, 1);
+            GlStateManager.translate(-x - width / 2F, -y - height / 2F, 0);
+            targetRenderer.draw(hud.targetHud, data, font, x, y, width,
+                    () -> drawTargetGlass(hud, x, y, width, height, pop), preview, now);
+        } finally { GlStateManager.popMatrix(); }
+    }
+
+    /** Glass addresses screen pixels, so include both the widget scale and this card's pop. */
+    private void drawTargetGlass(HudModule hud, int x, int y, int width, int height, float pop) {
+        float radius = Math.min(hud.targetHud.radius.getFloat(), height / 2F);
+        if (previewingHud && !framebufferPreview) {
+            HudShapes.round(x, y, width, height, radius,
+                    RenderUtils.alpha(hud.getLiquidGlassTint().getArgb(), Math.round(82 * hud.getLiquidGlassOpacity().getFloat())));
+            return;
+        }
+        float left = x + width * (1 - pop) / 2, top = y + height * (1 - pop) / 2;
+        float right = left + width * pop, bottom = top + height * pop;
+        float scale = scalingHud ? hudTransformScale : 1;
+        if (scalingHud) {
+            left = hudTransformX + (left - hudTransformX) * scale;
+            right = hudTransformX + (right - hudTransformX) * scale;
+            top = hudTransformY + (top - hudTransformY) * scale;
+            bottom = hudTransformY + (bottom - hudTransformY) * scale;
+        }
+        if (!liquidGlass.draw(Math.round(left), Math.round(top), Math.round(right), Math.round(bottom), radius * scale * pop,
+                hud.getLiquidGlassBlur().isEnabled() ? hud.getLiquidGlassBlurStrength().getFloat() : 0,
+                hud.getLiquidGlassRefraction().getFloat(), hud.getLiquidGlassOpacity().getFloat(), hud.getLiquidGlassTint().getArgb()))
+            HudShapes.round(x, y, width, height, radius,
+                    RenderUtils.alpha(hud.getLiquidGlassTint().getArgb(), Math.round(82 * hud.getLiquidGlassOpacity().getFloat())));
     }
 
     private void drawSessionInfo(HudModule hud, ScaledResolution resolution, FontRenderer font) {
@@ -646,7 +768,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             armoured |= pieces[index] != null;
         }
         // An empty frame would be hard to place, so the editor fills it with a sample set.
-        if (!armoured && previewingHud) pieces = sampleArmor();
+        if (!armoured && previewingHud && minecraft.thePlayer == null) pieces = sampleArmor();
         net.minecraft.client.renderer.entity.RenderItem renderer = minecraft.getRenderItem();
         net.minecraft.client.renderer.RenderHelper.enableGUIStandardItemLighting();
         GlStateManager.enableDepth();
@@ -873,7 +995,9 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         // Keep the scoreboard a single HUD surface. Per-row black rectangles
         // were painting over Vibe blur and LiquidGlass completely.
         drawHudSurface(hud, scoreboard, backgroundLeft, top, backgroundRight, backgroundBottom);
-        font.drawString(title, left + (contentWidth - font.getStringWidth(title)) / 2, top + 1, 0xFFFFFFFF);
+        int titleX = left + (contentWidth - font.getStringWidth(title)) / 2;
+        if (hud.getReplaceScoreboardServer().isEnabled()) hud.scoreboardColors.draw(font, title, titleX, top + 1, System.currentTimeMillis());
+        else font.drawString(title, titleX, top + 1, 0xFFFFFFFF);
         // Scores are sorted ascending; as in vanilla, the highest one is the first row under the title.
         int y = top + font.FONT_HEIGHT + 3;
         for (int index = rows.size() - 1; index >= 0; index--) {
@@ -929,6 +1053,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     public HudElement getElement(String id) {
+        if (TARGET_HUD.equals(id)) return targetHud;
         if (NOTIFICATIONS.equals(id)) return notifications;
         if (MUSIC.equals(id)) return music;
         if (WATERMARK.equals(id)) {
@@ -971,7 +1096,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     public String[] getElementIds() {
         return new String[] {WATERMARK, ARRAY_LIST, COORDINATES, SCOREBOARD, CLOCK, SESSION_INFO, MOTION_GRAPH, STALKER,
-                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, NOTIFICATIONS, MUSIC};
+                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, TARGET_HUD, NOTIFICATIONS, MUSIC};
     }
 
     public boolean isEnabled(String id) {
@@ -994,8 +1119,9 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         if (hud == null) return;
         ScaledResolution resolution = new ScaledResolution(minecraft);
         previewingHud = true;
-        try {
-            if (element == notifications) drawNotifications();
+        try (dev.vibe.ui.render.HudItemGeometryRenderer.Scope items = dev.vibe.ui.render.HudItemGeometryRenderer.begin()) {
+            if (element == targetHud) drawTargetHud(hud, resolution, font);
+            else if (element == notifications) drawNotifications();
             else if (element == arrayList) arrayRenderer.draw(hud, arrayList, resolution, true);
             else if (element == watermark) renderScaled(element, resolution, () -> drawWatermark(hud, resolution, font));
             else if (element == coordinates) renderScaled(element, resolution, () -> drawCoordinates(hud, resolution, font));
@@ -1061,6 +1187,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         root.add(COORDINATES, coordinates.toJson());
         root.add(SCOREBOARD, scoreboard.toJson());
         root.add(CLOCK, clock.toJson());
+        root.add(TARGET_HUD, targetHud.toJson());
         root.add(SESSION_INFO, sessionInfo.toJson());
         root.add(MOTION_GRAPH, motionGraph.toJson());
         root.add(STALKER, stalker.toJson());
@@ -1082,6 +1209,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         arrayList.fromJson(root.has(ARRAY_LIST) && root.get(ARRAY_LIST).isJsonObject() ? root.getAsJsonObject(ARRAY_LIST) : null);
         coordinates.fromJson(root.has(COORDINATES) && root.get(COORDINATES).isJsonObject() ? root.getAsJsonObject(COORDINATES) : null);
         scoreboard.fromJson(root.has(SCOREBOARD) && root.get(SCOREBOARD).isJsonObject() ? root.getAsJsonObject(SCOREBOARD) : null);
+        targetHud.fromJson(root.has(TARGET_HUD) && root.get(TARGET_HUD).isJsonObject() ? root.getAsJsonObject(TARGET_HUD) : null);
         clock.fromJson(root.has(CLOCK) && root.get(CLOCK).isJsonObject() ? root.getAsJsonObject(CLOCK) : null);
         sessionInfo.fromJson(root.has(SESSION_INFO) && root.get(SESSION_INFO).isJsonObject() ? root.getAsJsonObject(SESSION_INFO) : null);
         motionGraph.fromJson(root.has(MOTION_GRAPH) && root.get(MOTION_GRAPH).isJsonObject() ? root.getAsJsonObject(MOTION_GRAPH) : null);
@@ -1190,7 +1318,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
                 x = defaultX;
                 y = defaultY;
                 rightAnchored = defaultRightAnchored;
-                centred = HEALTH.equals(id) || CPS.equals(id);
+                centred = HEALTH.equals(id) || CPS.equals(id) || TARGET_HUD.equals(id);
                 verticallyCentred = defaultVerticallyCentred;
             }
         }
@@ -1274,7 +1402,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             x = defaultX;
             y = defaultY;
             rightAnchored = defaultRightAnchored;
-            centred = HEALTH.equals(id) || CPS.equals(id);
+            centred = HEALTH.equals(id) || CPS.equals(id) || TARGET_HUD.equals(id);
             verticallyCentred = defaultVerticallyCentred;
         }
 

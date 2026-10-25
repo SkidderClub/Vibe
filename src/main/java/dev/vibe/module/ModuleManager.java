@@ -31,6 +31,7 @@ public final class ModuleManager {
         register(new EspModule());
         register(new EspEditorModule());
         register(new TargetEspModule());
+        register(new OofArrowsModule());
         register(new PathModule());
         register(new ItemEspModule());
         register(new HitmarkerModule());

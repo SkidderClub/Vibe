@@ -59,7 +59,8 @@ final class AugustusBackend implements AutoCloseable {
     void mouse() {
         int button = Mouse.getEventButton();
         if (button >= 0 && button < 5) queueMouse(button,Mouse.getEventButtonState());
-        wheel += Mouse.getEventDWheel() / 120F;
+        int delta=Mouse.getEventDWheel();
+        if(delta!=0&&!AugustusImGui.wheel(Mouse.getEventX(),(int)ImGui.getIO().getDisplaySizeY()-Mouse.getEventY()-1,delta))wheel += delta / 120F;
     }
 
     void queueMouse(int button, boolean down) {

@@ -81,6 +81,7 @@ public final class VibeClickGui extends GuiScreen {
     private int skeetY = Integer.MIN_VALUE;
     private int skeetScroll;
     private int skeetMaxScroll;
+    private dev.vibe.ui.ScrollbarDrag skeetScrollbar;
     private int skeetWidth = SKEET_WIDTH;
     private int skeetHeight = SKEET_HEIGHT;
     private boolean draggingSkeet;
@@ -217,6 +218,7 @@ public final class VibeClickGui extends GuiScreen {
         skeetY = Math.max(32, Math.min(height - boardHeight - 8, skeetY));
         int right = skeetX + boardWidth;
         int bottom = skeetY + boardHeight;
+        if(skeetScrollbar!=null)skeetScroll=skeetScrollbar.at(mouseY);
 
         // Koks' original compact 350x300 workspace: a 50px icon rail, a
         // flat charcoal work surface and a thin animated accent at the top.
@@ -675,6 +677,10 @@ public final class VibeClickGui extends GuiScreen {
         if (isSkeetTheme()) {
             int boardWidth = boardWidth();
             int boardHeight = boardHeight();
+            if(mouseButton==0&&skeetMaxScroll>0&&contains(mouseX,mouseY,skeetX+boardWidth-14,skeetY+5,skeetX+boardWidth-5,skeetY+boardHeight-5)) {
+                skeetScrollbar=new dev.vibe.ui.ScrollbarDrag(skeetY+5,skeetY+boardHeight-5,skeetScroll,skeetMaxScroll,16,mouseY);
+                skeetScroll=skeetScrollbar.at(mouseY);return;
+            }
             // The first card begins at skeetY + 5.  The old 26px drag region
             // covered that whole row, stealing clicks from the first modules.
             // Only the thin title strip is draggable, and never by right-click.
@@ -803,6 +809,7 @@ public final class VibeClickGui extends GuiScreen {
             dragging = null;
             draggingSkeet = false;
             resizingSkeet = false;
+            skeetScrollbar=null;
             if (draggingSlider != null) {
                 Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
                 draggingSlider = null;
@@ -858,7 +865,28 @@ public final class VibeClickGui extends GuiScreen {
         if (wheel == 0) {
             return;
         }
-        if (isXanaxTheme()) { xanax.wheel(mouseX(), mouseY(), wheel); return; }
+        wheel(org.lwjgl.input.Mouse.getEventX()*width/Math.max(1,mc.displayWidth),
+                height-org.lwjgl.input.Mouse.getEventY()*height/Math.max(1,mc.displayHeight)-1,wheel);
+    }
+
+    void wheel(int mx,int my,int wheel) {
+        if(wheel==0)return;
+        if(skeetScrollbar!=null)return;
+        if(isXanaxTheme()){xanax.wheel(mx,my,wheel);return;}
+        if(isNeverLoseTheme()){neverLose.wheel(mx,my,wheel);return;}
+        if(colorPopup!=null&&colorPopup.contains(mx,my))return;
+        for(int i=targets.size()-1;i>=0;i--) {
+            Target target=targets.get(i);
+            if(!target.contains(mx,my)||(isSkeetTheme()&&!insideSkeetContent(mx,my)))continue;
+            if(target.type==TargetType.NUMBER||target.type==TargetType.RANGE) {
+                int handle=target.setting instanceof RangeSetting?dev.vibe.ui.SliderWheel.nearestHandle((RangeSetting)target.setting,
+                        (mx-target.left)/(double)Math.max(1,target.right-target.left)):0;
+                dev.vibe.ui.SliderWheel.adjust(target.setting,dev.vibe.ui.SliderWheel.notches(wheel),handle);
+                if(Vibe.getInstance().getConfig()!=null)Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
+                return;
+            }
+        }
+        if(draggingSlider!=null)return;
         if (isSkeetTheme()) {
             int boardWidth = boardWidth();
             int boardHeight = boardHeight();
@@ -866,7 +894,7 @@ public final class VibeClickGui extends GuiScreen {
             int contentTop = skeetY + 5;
             int contentRight = skeetX + boardWidth - 6;
             int contentBottom = skeetY + boardHeight - 5;
-            if (skeetMaxScroll > 0 && contains(mouseX(), mouseY(), contentLeft, contentTop, contentRight, contentBottom)) {
+            if (skeetMaxScroll > 0 && contains(mx, my, contentLeft, contentTop, contentRight, contentBottom)) {
                 int next = Math.max(0, Math.min(skeetMaxScroll, skeetScroll + (wheel > 0 ? -22 : 22)));
                 if (next != skeetScroll) {
                     skeetScroll = next;
@@ -874,12 +902,8 @@ public final class VibeClickGui extends GuiScreen {
             }
             return;
         }
-        if (isNeverLoseTheme()) {
-            neverLose.wheel(mouseX(), mouseY(), wheel);
-            return;
-        }
-        int pointerX = mouseX();
-        int pointerY = mouseY();
+        int pointerX = mx;
+        int pointerY = my;
         if (!isOverFuturisticPanel(pointerX, pointerY)) return;
         // Futuristic panels are an unconstrained workspace.  Wheel input
         // scrolls the workspace directly, independently of card height.
@@ -979,6 +1003,7 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     public void onGuiClosed() {
+        skeetScrollbar=null;
         Keyboard.enableRepeatEvents(false);
         neverLose.close();
         xanax.close();

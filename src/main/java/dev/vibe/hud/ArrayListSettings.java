@@ -24,7 +24,7 @@ public final class ArrayListSettings {
     public final NumberSetting padding = new NumberSetting("Array Padding", 4, 0, 12, .5);
     public final ModeSetting background = new ModeSetting("Array Background Shape", "Steps", "None", "Steps", "Rectangle");
     public final NumberSetting radius = new NumberSetting("Array Corner Radius", 0, 0, 8, .5);
-    public final ModeSetting rail = new ModeSetting("Array Accent Rail", "Outer", "None", "Outer", "Inner", "Both");
+    public final ModeSetting rail = new ModeSetting("Array Accent Rail", "Outer", "None", "Outer", "Inner", "Both", "Full");
     public final NumberSetting railWidth = new NumberSetting("Array Rail Width", 1, .5, 4, .5, () -> !rail.is("None"));
     public final ModeSetting outline = new ModeSetting("Array Outline Shape", "Steps", "Steps", "Rectangle", "Rows");
     public final BooleanSetting outlineAccent = new BooleanSetting("Array Outline Accent", true);

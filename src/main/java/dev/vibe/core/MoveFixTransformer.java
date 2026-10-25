@@ -95,7 +95,8 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
                 }
             }, 0);
             byte[] result = writer.toByteArray();
-            return target == 8 ? dev.vibe.core.ToolActionTransformer.transform(result) : result;
+            return target == 8 ? dev.vibe.core.ToolActionTransformer.transform(result)
+                    : target == 5 ? dev.vibe.core.SilentMurderClickTransformer.transform(result) : result;
         } catch (Throwable ignored) {
             // A failed optional hook must never stop Forge from loading Vibe.
             return bytes;

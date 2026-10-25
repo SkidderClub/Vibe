@@ -24,6 +24,8 @@ public final class KawaseBlur {
     private static boolean unavailable;
     private static boolean roundedCompositeUnavailable;
     private static Framebuffer roundedFramebuffer;
+    private static Framebuffer hudTarget;
+    public static Framebuffer useHudTarget(Framebuffer target) { Framebuffer old = hudTarget; hudTarget = target; return old; }
     private static ShaderGroup roundedShader;
     private static int roundedWidth = -1;
     private static int roundedHeight = -1;
@@ -93,7 +95,7 @@ public final class KawaseBlur {
         if (preparedRoundedFrame == hudFrame && preparedRoundedPasses >= safePasses) return;
         try {
             ensureRoundedShader(minecraft);
-            copyFramebuffer(minecraft.getFramebuffer(), roundedFramebuffer);
+            copyFramebuffer(hudTarget == null ? minecraft.getFramebuffer() : hudTarget, roundedFramebuffer);
             // A single Kawase iteration has the visual softness intended for
             // compact HUDs while avoiding a second full-resolution pass.
             roundedShader.loadShaderGroup(partialTicks);
@@ -181,7 +183,7 @@ public final class KawaseBlur {
 
     /** Restore the scaled GUI transform after a framebuffer/post-process pass. */
     private static void restoreGuiProjection(Minecraft minecraft) {
-        minecraft.getFramebuffer().bindFramebuffer(true);
+        (hudTarget == null ? minecraft.getFramebuffer() : hudTarget).bindFramebuffer(true);
         minecraft.entityRenderer.setupOverlayRendering();
     }
 

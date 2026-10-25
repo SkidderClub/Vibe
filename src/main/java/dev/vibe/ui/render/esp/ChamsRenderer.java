@@ -32,8 +32,18 @@ public final class ChamsRenderer {
 
     private ChamsRenderer() { }
 
-    public static void beginWorld() { worldDepth++; }
-    public static void endWorld() { worldDepth = Math.max(0, worldDepth - 1); if(worldDepth==0)ChamsGlow.finish(); }
+    public static void beginWorld() {
+        if(worldDepth++!=0)return;
+        ChamsSceneDepth.invalidate();
+        Vibe vibe=Vibe.getInstance();
+        EspModule esp=vibe==null||vibe.getModuleManager()==null?null:vibe.getModuleManager().getModule(EspModule.class);
+        Minecraft mc=Minecraft.getMinecraft();
+        if(esp!=null&&esp.isEnabled()&&esp.getModes().isSelected("Chams")&&mc!=null&&mc.entityRenderer!=null&&mc.getFramebuffer()!=null) {
+            try {ChamsSceneDepth.capture();}
+            catch(RuntimeException|Error failure) {worldDepth--;ChamsSceneDepth.invalidate();throw failure;}
+        }
+    }
+    public static void endWorld() { worldDepth = Math.max(0, worldDepth - 1); if(worldDepth==0){ChamsGlow.finish();ChamsSceneDepth.invalidate();} }
 
     private static EspModule module(Object candidate) {
         if (directPreview || worldDepth == 0 || !(candidate instanceof EntityLivingBase)) return null;
@@ -133,11 +143,13 @@ public final class ChamsRenderer {
             GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA,
                     GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
             boolean shader = prepareMaterial();
+            boolean sceneDepth=false;
             if (shader) {
                 material.bind();
                 material.integer("Skin", 0);
                 material.integer("NativeMesh", nativeMesh ? 1 : 0);
                 material.integer("MaskPass",0);
+                sceneDepth=ChamsSceneDepth.bind(material,worldDepth>0&&previewSide<0);
             } else {
                 GL20.glUseProgram(0);
                 // Full-bright fallback must not inherit lightmap or hurt-flash combiners.
@@ -149,19 +161,25 @@ public final class ChamsRenderer {
                 GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL11.GL_TEXTURE_ENV_MODE, GL11.GL_MODULATE);
             }
             EspModule.ChamsSettings hidden=esp.getChams(profile,false),visible=esp.getChams(profile,true);
-            if(previewSide!=1)pass(hidden,armor,opacity,previewSide==0?GL11.GL_ALWAYS:GL11.GL_GREATER,false,shader,geometry,team,hurt,overrideColor);
+            if(shader)material.integer("SceneSide",sceneDepth?0:-1);
+            if(previewSide!=1)pass(hidden,armor,opacity,previewSide==0||sceneDepth?GL11.GL_ALWAYS:GL11.GL_GREATER,false,shader,geometry,team,hurt,overrideColor);
             // Write the visible model back to the depth buffer. Cape and other
             // vanilla player layers are rendered afterwards and must still be
             // occluded by the body rather than painting through its front.
+            if(shader)material.integer("SceneSide",sceneDepth?1:-1);
             if(previewSide!=0)pass(visible,armor,opacity,previewSide==1?GL11.GL_ALWAYS:GL11.GL_LEQUAL,true,shader,geometry,team,hurt,overrideColor);
             if(shader&&((previewSide!=1&&hidden.getMode().is("Glow"))||(previewSide!=0&&visible.getMode().is("Glow")))) {
+                final boolean useSceneDepth=sceneDepth;
                 ChamsGlow.capture(()->{
                     if(nativeMesh)GL11.glDisable(GL11.GL_CULL_FACE);
                     material.integer("MaskPass",1);
+                    if(useSceneDepth)ChamsSceneDepth.origin(material,true);
                     try {
-                        if(previewSide!=1&&hidden.getMode().is("Glow"))pass(hidden,armor,opacity,previewSide==0?GL11.GL_ALWAYS:GL11.GL_GREATER,false,true,geometry,team,hurt,overrideColor);
+                        material.integer("SceneSide",useSceneDepth?0:-1);
+                        if(previewSide!=1&&hidden.getMode().is("Glow"))pass(hidden,armor,opacity,previewSide==0||useSceneDepth?GL11.GL_ALWAYS:GL11.GL_GREATER,false,true,geometry,team,hurt,overrideColor);
+                        material.integer("SceneSide",useSceneDepth?1:-1);
                         if(previewSide!=0&&visible.getMode().is("Glow"))pass(visible,armor,opacity,previewSide==1?GL11.GL_ALWAYS:GL11.GL_LEQUAL,false,true,geometry,team,hurt,overrideColor);
-                    } finally {material.integer("MaskPass",0);}
+                    } finally {material.integer("MaskPass",0);if(useSceneDepth)ChamsSceneDepth.origin(material,false);}
                 });
             }
             if(worldDepth==0&&previewDepth==0)ChamsGlow.finish();

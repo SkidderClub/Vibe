@@ -1,5 +1,19 @@
 // OptiFine patches obfuscated Minecraft bytecode. Use the built mod and normal
 // Forge launch environment for run.bat, with Unimined still preparing assets/natives.
+ext.vibeFreezeLaunchJar = { File source, File root ->
+    if (!source.isFile()) throw new GradleException('Client JAR is missing: ' + source)
+    java.nio.file.Files.createDirectories(root.toPath())
+    def session = java.nio.file.Files.createTempDirectory(root.toPath(), 'session-')
+    File frozen = session.resolve(source.name).toFile()
+    java.nio.file.Files.copy(source.toPath(), frozen.toPath())
+    // Reject an incomplete build before the game starts, with a useful launcher error.
+    new java.util.jar.JarFile(frozen).withCloseable { archive ->
+        if (archive.getEntry('dev/vibe/Vibe.class') == null || archive.getEntry('dev/vibe/camera/DroneCollisions.class') == null)
+            throw new GradleException('Client JAR is incomplete: ' + source)
+    }
+    frozen
+}
+
 if (providers.gradleProperty('vibeOptifine').isPresent()) {
     def optifineName = 'preview_OptiFine_1.8.9_HD_U_M6_pre2.jar'
     def optifineJar = layout.buildDirectory.file('optifine/' + optifineName)
@@ -36,6 +50,7 @@ if (providers.gradleProperty('vibeOptifine').isPresent()) {
     }
     afterEvaluate {
         tasks.named('runClient').configure { client ->
+            File frozenClient = null
             dependsOn prepareOptifine, tasks.named('remapJar')
             // Unimined 1.4.1 downloads this original client while configuring Forge.
             File vanilla = new File(gradle.gradleUserHomeDir, 'caches/unimined/net/minecraft/minecraft/1.8.9/minecraft-1.8.9-client.jar')
@@ -45,7 +60,22 @@ if (providers.gradleProperty('vibeOptifine').isPresent()) {
             args '--tweakClass', 'optifine.OptiFineForgeTweaker'
             doFirst {
                 if (!vanilla.isFile()) throw new GradleException('Unimined did not prepare the Minecraft 1.8.9 client: ' + vanilla)
+                File builtClient = tasks.named('remapJar').get().archiveFile.get().asFile.canonicalFile
+                // Java 8/Forge load classes lazily. Rewriting build/libs during a running
+                // session invalidates its open ZIP and makes later classes disappear.
+                // Keep this outside build/ so even `clean build` cannot change a live JAR.
+                frozenClient = vibeFreezeLaunchJar(builtClient, project.file('run/launch-artifacts'))
+                client.classpath = project.files(client.classpath.files.collect { entry ->
+                    entry.canonicalFile == builtClient ? frozenClient : entry
+                })
+                logger.lifecycle('[Vibe] Session client JAR: ' + frozenClient)
                 logger.lifecycle('[Vibe] Starting Forge + Vibe + OptiFine 1.8.9 HD U M6 pre2')
+            }
+            doLast {
+                if (frozenClient != null) {
+                    java.nio.file.Files.deleteIfExists(frozenClient.toPath())
+                    java.nio.file.Files.deleteIfExists(frozenClient.parentFile.toPath())
+                }
             }
         }
     }
