@@ -145,9 +145,14 @@ public final class Http {
         }
     }
 
-    public static String sha256(Path file) throws IOException {
+    public static String sha256(Path file) throws IOException { return hash("SHA-256", file); }
+
+    /** Mojang publishes SHA-1 checksums for Minecraft files. */
+    public static String sha1(Path file) throws IOException { return hash("SHA-1", file); }
+
+    private static String hash(String algorithm, Path file) throws IOException {
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            MessageDigest digest = MessageDigest.getInstance(algorithm);
             InputStream input = Files.newInputStream(file);
             try {
                 byte[] buffer = new byte[65536];
@@ -160,7 +165,7 @@ public final class Http {
             for (byte value : digest.digest()) hex.append(String.format(Locale.ROOT, "%02x", value & 0xFF));
             return hex.toString();
         } catch (java.security.NoSuchAlgorithmException error) {
-            throw new IOException("SHA-256 is unavailable.", error);
+            throw new IOException(algorithm + " is unavailable.", error);
         }
     }
 

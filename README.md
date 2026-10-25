@@ -92,11 +92,14 @@ lists all of them, for example:
 ## Desktop launcher
 
 `launcher/VibeLauncher.jar` is the easiest way to play: start it and press **Play**.
-It downloads Vibe from `SkidderClub/Vibe` (later updates fetch only changed files),
-installs private Java 8/21 runtimes, builds Vibe and starts the persistent Forge 1.8.9
-profile with OptiFine. It picks the account from Vibe's encrypted vault, opens the
-Alt Manager for new sign-ins, manages custom mods, shares the menu themes, can start
-straight into GTA7 or GTA8, and shows the build and game output in its console.
+It downloads ready-made Vibe JARs from `VibeUpdate/VibeReleases`, keeps every
+downloaded version under `versions/` and starts the persistent Forge 1.8.9 profile
+with OptiFine through a private Java 8 runtime. Minecraft, Forge and OptiFine are
+prepared once, without a source checkout or Gradle. The **Versions** page switches
+between downloaded and published versions and shows their release notes. It picks
+the account from Vibe's encrypted vault, opens the Alt Manager for new sign-ins,
+manages custom mods, shares the menu themes, can start straight into GTA7 or GTA8,
+and shows the game output in its console.
 Rebuild it with `launcher\buildLauncher.bat` (Windows) or `launcher/buildLauncher.sh`.
 See [launcher/README.md](launcher/README.md) for details, data locations and releases.
 Every launcher error shows a code such as `VL-101`; [docs/LAUNCHER_ERRORS.md](docs/LAUNCHER_ERRORS.md)

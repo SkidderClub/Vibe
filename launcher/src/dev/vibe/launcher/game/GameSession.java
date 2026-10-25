@@ -6,7 +6,7 @@ import dev.vibe.launcher.core.I18n;
 import dev.vibe.launcher.core.LauncherException;
 import dev.vibe.launcher.core.Platform;
 import dev.vibe.launcher.core.Text;
-import java.io.File;
+import dev.vibe.launcher.minecraft.LaunchCommand;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -18,21 +18,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Properties;
 
 /**
- * One Gradle {@code runClient} run: builds Vibe and starts Forge 1.8.9 with
- * OptiFine in the persistent profile.
+ * One running Minecraft: a direct Java process that Forge 1.8.9 starts with
+ * OptiFine and the Vibe JAR from {@code mods/}.
  *
  * <p>Output goes straight into a log file instead of a pipe, so Minecraft keeps
  * running even if the launcher is closed; the launcher tails that file for its
- * console and progress. Vibe writes {@code VIBE_LAUNCH_READY_FILE} when its first
- * screen is drawn, which is how the launcher knows the game window is up.</p>
+ * console. Vibe writes {@code VIBE_LAUNCH_READY_FILE} when its first screen is
+ * drawn, which is how the launcher knows the game window is up.</p>
  */
 public final class GameSession {
-    public enum Stage { CONFIGURING, COMPILING, PACKAGING, OPTIFINE, ASSETS, STARTING, RUNNING }
+    public enum Stage { STARTING, RUNNING }
 
     public interface Listener {
         void output(List<String> lines);
@@ -42,23 +40,20 @@ public final class GameSession {
     }
 
     public static final class Request {
-        public Path projectRoot, java8, jdk21, logFile, readyFile, sessionFile;
-        public int memoryMb;
+        public LaunchCommand.Launch launch;
+        public Path logFile, readyFile, sessionFile;
     }
 
-    private final Path logFile, readyFile, sessionFile, projectRoot;
+    private final Path logFile, readyFile, sessionFile;
     private final Listener listener;
     private final Process process;
     private final long pid;
     private volatile boolean reachedGame;
     private volatile boolean stopping;
     private volatile Stage stage;
-    private final List<String> failure = new ArrayList<String>();
-    private boolean collectingFailure;
     private final FailureAnalyzer analyzer = new FailureAnalyzer();
 
-    private GameSession(Path projectRoot, Path logFile, Path readyFile, Path sessionFile, Listener listener, Process process, long pid) {
-        this.projectRoot = projectRoot;
+    private GameSession(Path logFile, Path readyFile, Path sessionFile, Listener listener, Process process, long pid) {
         this.logFile = logFile;
         this.readyFile = readyFile;
         this.sessionFile = sessionFile;
@@ -68,45 +63,16 @@ public final class GameSession {
     }
 
     public static GameSession start(Request request, Listener listener) throws IOException {
+        if (request.launch == null || request.launch.command.isEmpty()) {
+            throw new LauncherException(ErrorCode.JAVA_START, I18n.t("Minecraft could not be started."));
+        }
         Files.createDirectories(request.logFile.getParent());
         Files.createDirectories(request.readyFile.getParent());
         Files.deleteIfExists(request.readyFile);
 
-        // Start the Gradle wrapper directly, as gradlew(.bat) would: no cmd.exe or sh in between
-        // means no shell quoting, no LF-only batch file quirks, and destroy() reaches Gradle itself.
-        Path wrapper = request.projectRoot.resolve("gradle").resolve("wrapper").resolve("gradle-wrapper.jar");
-        if (!Files.isRegularFile(wrapper)) throw new LauncherException(ErrorCode.SOURCE_DAMAGED, I18n.t("The Vibe source has no Gradle wrapper ({0}).", wrapper));
-        Path java = Platform.javaExecutable(request.jdk21, false);
-        if (!Files.isRegularFile(java)) throw new LauncherException(ErrorCode.JAVA_BROKEN, I18n.t("Java 21 is missing at {0}.", java));
-        List<String> command = new ArrayList<String>();
-        command.add(java.toString());
-        command.add("-Xmx64m");
-        command.add("-Xms64m");
-        command.add("-Dorg.gradle.appname=gradlew");
-        command.add("-classpath");
-        command.add(wrapper.toString());
-        command.add("org.gradle.wrapper.GradleWrapperMain");
-        command.add("runClient");
-        command.add("-PvibeOptifine");
-        command.add("-PvibePersistentRun");
-        command.add("-PvibeMaxMemory=" + request.memoryMb);
-        command.add("--no-daemon");
-        command.add("--console=plain");
-        // Toolchains come from environment variables so installation paths never need shell quoting.
-        command.add("-Porg.gradle.java.installations.fromEnv=VIBE_JAVA8_HOME,VIBE_JDK21_HOME");
-        command.add("-Porg.gradle.java.installations.auto-download=false");
-
-        ProcessBuilder builder = new ProcessBuilder(command);
-        builder.directory(request.projectRoot.toFile());
-        Map<String, String> environment = builder.environment();
-        put(environment, "JAVA_HOME", request.jdk21.toString());
-        String path = get(environment, "PATH");
-        put(environment, "PATH", request.jdk21.resolve("bin") + File.pathSeparator + (path == null ? "" : path));
-        environment.put("VIBE_JAVA8", request.java8.toString());
-        environment.put("VIBE_JAVA8_HOME", request.java8.toString());
-        environment.put("VIBE_JDK21_HOME", request.jdk21.toString());
-        environment.put("VIBE_LAUNCH_READY_FILE", request.readyFile.toString());
-        environment.put("VIBE_NO_PAUSE", "1");
+        ProcessBuilder builder = new ProcessBuilder(request.launch.command);
+        builder.directory(request.launch.workDir.toFile());
+        builder.environment().putAll(request.launch.environment);
         builder.redirectErrorStream(true);
         builder.redirectOutput(ProcessBuilder.Redirect.appendTo(request.logFile.toFile()));
         builder.redirectInput(ProcessBuilder.Redirect.from(Platform.nullDevice()));
@@ -117,32 +83,14 @@ public final class GameSession {
             process = builder.start();
         } catch (IOException error) {
             // "Cannot run program": blocked by an antivirus, not executable, or a broken runtime.
-            throw new LauncherException(ErrorCode.JAVA_START, I18n.t("Java 21 could not be started: {0}", Text.describe(error)), error);
+            throw new LauncherException(ErrorCode.JAVA_START, I18n.t("Minecraft could not be started: {0}", Text.describe(error)), error);
         }
         long pid = Platform.pid(process);
-        GameSession session = new GameSession(request.projectRoot, request.logFile, request.readyFile, request.sessionFile, listener, process, pid);
+        GameSession session = new GameSession(request.logFile, request.readyFile, request.sessionFile, listener, process, pid);
         session.writeSessionFile();
+        session.setStage(Stage.STARTING);
         session.startThreads(offset);
         return session;
-    }
-
-    /**
-     * ProcessBuilder's environment is a case-sensitive map even on Windows, where the
-     * variable is usually spelled "Path"; adding "PATH" next to it would hide it.
-     */
-    static String get(Map<String, String> environment, String name) {
-        for (Map.Entry<String, String> entry : environment.entrySet()) if (entry.getKey().equalsIgnoreCase(name)) return entry.getValue();
-        return null;
-    }
-
-    static void put(Map<String, String> environment, String name, String value) {
-        String key = name;
-        for (String existing : new ArrayList<String>(environment.keySet())) {
-            if (!existing.equalsIgnoreCase(name)) continue;
-            if (key.equals(name)) key = existing;
-            else environment.remove(existing);
-        }
-        environment.put(key, value);
     }
 
     /** Picks up a game started by an earlier launcher run (Java 9+ only). */
@@ -168,12 +116,11 @@ public final class GameSession {
             try { Files.deleteIfExists(sessionFile); } catch (IOException ignored) { /* stale marker */ }
             return null;
         }
-        Path log = new File(values.getProperty("log", "")).toPath();
-        Path ready = new File(values.getProperty("ready", "")).toPath();
-        GameSession session = new GameSession(null, log, ready, sessionFile, listener, null, pid);
+        Path log = new java.io.File(values.getProperty("log", "")).toPath();
+        Path ready = new java.io.File(values.getProperty("ready", "")).toPath();
+        GameSession session = new GameSession(log, ready, sessionFile, listener, null, pid);
         session.reachedGame = Files.exists(ready);
-        // Replaying the log tail must not move a running game back to a build stage.
-        if (session.reachedGame) session.stage = Stage.RUNNING;
+        session.stage = session.reachedGame ? Stage.RUNNING : Stage.STARTING;
         long offset = 0;
         try { offset = Files.exists(log) ? Math.max(0, Files.size(log) - 64 * 1024) : 0; } catch (IOException ignored) { /* start at 0 */ }
         session.startThreads(offset);
@@ -188,8 +135,6 @@ public final class GameSession {
 
     public void stop() {
         stopping = true;
-        // Java 8 cannot see child processes: find Minecraft by path first, while the session is still open.
-        if (!Platform.processApiAvailable() && projectRoot != null) Platform.destroyGameProcesses(projectRoot);
         if (process != null) Platform.destroyTree(process);
         else Platform.destroyTree(pid);
     }
@@ -223,49 +168,15 @@ public final class GameSession {
                 }
                 tailer.finish();
                 try { Files.deleteIfExists(sessionFile); } catch (IOException ignored) { /* stale marker is cleaned later */ }
-                listener.exited(code, reachedGame, failureSummary());
+                listener.exited(code, reachedGame, "");
             }
         }, "Vibe process");
         waiter.setDaemon(true);
         waiter.start();
     }
 
-    private synchronized String failureSummary() {
-        if (failure.isEmpty()) return "";
-        StringBuilder text = new StringBuilder();
-        for (String line : failure) {
-            if (text.length() > 0) text.append('\n');
-            text.append(line);
-        }
-        return text.toString();
-    }
-
-    private void inspect(String line) {
-        String trimmed = line.trim();
-        if (trimmed.startsWith("> Configure project") && stage == null) setStage(Stage.CONFIGURING);
-        else if (trimmed.startsWith("> Task :")) {
-            String task = trimmed.substring(8).split("\\s+")[0].toLowerCase(Locale.ROOT);
-            if (task.equals("runclient")) setStage(Stage.STARTING);
-            else if (task.equals("prerunclient") || task.contains("assets") || task.contains("natives")) setStage(Stage.ASSETS);
-            else if (task.equals("prepareoptifine")) setStage(Stage.OPTIFINE);
-            else if (task.endsWith("jar") || task.startsWith("remap")) setStage(Stage.PACKAGING);
-            else if (task.contains("compile") || task.contains("resources") || task.contains("classes") || task.startsWith("generate")) setStage(Stage.COMPILING);
-            else if (stage == null) setStage(Stage.CONFIGURING);
-        }
-        Stage current = stage;
-        analyzer.accept(line, current != null && current.ordinal() >= Stage.STARTING.ordinal());
-        synchronized (this) {
-            if (trimmed.startsWith("* What went wrong")) { collectingFailure = true; failure.clear(); return; }
-            if (collectingFailure) {
-                // The deepest cause comes last, e.g. "repo.maven.apache.org: Name or service not known".
-                if (trimmed.startsWith("* Try") || trimmed.startsWith("* Get more help") || failure.size() >= 16) collectingFailure = false;
-                else if (!trimmed.isEmpty()) failure.add(trimmed.startsWith("> ") ? trimmed.substring(2) : trimmed);
-            }
-        }
-    }
-
     private void setStage(Stage next) {
-        if (stage != null && next.ordinal() <= stage.ordinal()) return;
+        if (stage == next) return;
         stage = next;
         listener.stage(next);
     }
@@ -355,7 +266,7 @@ public final class GameSession {
         }
 
         private void deliver(List<String> lines) {
-            for (String line : lines) inspect(line);
+            for (String line : lines) analyzer.accept(line);
             listener.output(lines);
         }
     }

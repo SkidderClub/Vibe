@@ -7,6 +7,7 @@ import dev.vibe.launcher.core.Text;
 import dev.vibe.launcher.game.AccountVault;
 import dev.vibe.launcher.game.LaunchMode;
 import dev.vibe.launcher.skin.SkinService;
+import dev.vibe.launcher.versions.VersionStore;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -62,7 +63,7 @@ final class PlayBar extends Stack.Panel {
         });
         controller.addListener(event -> {
             switch (event) {
-                case STATE: case SOURCE: case SETTINGS: case ACCOUNTS: case SKIN: refresh(); break;
+                case STATE: case VERSIONS: case SETTINGS: case ACCOUNTS: case SKIN: refresh(); break;
                 default: repaint();
             }
         });
@@ -97,15 +98,15 @@ final class PlayBar extends Stack.Panel {
         mode.subtitle = I18n.t(current.description);
         mode.enabled = state == State.IDLE;
 
-        boolean busy = state == State.PREPARING || state == State.BUILDING || state == State.STOPPING;
+        boolean busy = state == State.PREPARING || state == State.STARTING || state == State.STOPPING;
         secondary.setVisible(busy || state == State.RUNNING);
         secondary.setEnabled(state != State.STOPPING);
-        if (state == State.RUNNING || state == State.STOPPING) {
+        if (state == State.RUNNING || state == State.STARTING || state == State.STOPPING) {
             secondary.setText(I18n.t("Stop"));
             secondary.setIcon(Icons.STOP);
             secondary.setKind(FlatButton.Kind.DANGER);
         } else {
-            secondary.setText(state == State.BUILDING ? I18n.t("Stop") : I18n.t("Cancel"));
+            secondary.setText(I18n.t("Cancel"));
             secondary.setIcon(Icons.CLOSE);
             secondary.setKind(FlatButton.Kind.SECONDARY);
         }
@@ -130,7 +131,7 @@ final class PlayBar extends Stack.Panel {
 
     private void secondaryAction() {
         State state = controller.state();
-        if (state == State.RUNNING) {
+        if (state == State.RUNNING || state == State.STARTING) {
             if (Dialogs.confirm(this, I18n.t("Stop Vibe?"), I18n.t("Minecraft will be closed immediately. Unsaved progress in singleplayer may be lost."), I18n.t("Stop"), true)) {
                 controller.stop();
             }
@@ -267,7 +268,7 @@ final class PlayBar extends Stack.Panel {
                 State state = controller.state();
                 String title, detail;
                 Color titleColor = Style.text(), detailColor = Style.muted();
-                boolean bar = state == State.PREPARING || state == State.BUILDING || state == State.STOPPING;
+                boolean bar = state == State.PREPARING || state == State.STARTING || state == State.STOPPING;
                 if (state == State.IDLE) {
                     LauncherController.Failure failure = controller.lastFailure();
                     if (failure != null) {
@@ -275,8 +276,8 @@ final class PlayBar extends Stack.Panel {
                         detail = failure.code.hint();
                         titleColor = Style.danger();
                     } else if (!controller.sourceInstalled()) {
-                        title = I18n.t("Vibe is not installed yet");
-                        detail = I18n.t("Press Play to download and set up everything automatically.");
+                        title = I18n.t("No Vibe version yet");
+                        detail = I18n.t("Download one on the Versions page, then press Play.");
                     } else {
                         title = I18n.t("Ready to play");
                         detail = summary();
@@ -305,10 +306,9 @@ final class PlayBar extends Stack.Panel {
             List<String> parts = new ArrayList<String>();
             String version = controller.vibeVersion();
             if (!version.isEmpty()) parts.add("Vibe " + version);
-            String revision = controller.installedRevision();
-            if (!revision.isEmpty()) parts.add(Text.shortSha(revision));
-            if (controller.sourceUpdateAvailable()) parts.add(controller.settings().autoUpdate() ? I18n.t("update installs on launch") : I18n.t("update available"));
-            else if (controller.settings().sourceCommitTime() > 0) parts.add(I18n.ago(controller.settings().sourceCommitTime()));
+            VersionStore.Installed installed = controller.selectedVersion();
+            if (installed != null && installed.installedAt > 0) parts.add(I18n.t("installed {0}", I18n.ago(installed.installedAt)));
+            if (controller.updateAvailable()) parts.add(controller.settings().autoUpdate() ? I18n.t("update installs on launch") : I18n.t("update available"));
             return String.join("  ·  ", parts);
         }
 
@@ -371,10 +371,10 @@ final class PlayBar extends Stack.Panel {
                 boolean active = state == State.IDLE || controller.canQueueLaunch();
                 if (state == State.RUNNING) { label = I18n.t("RUNNING"); sub = controller.displayName(); }
                 else if (state == State.STOPPING) { label = I18n.t("STOPPING"); sub = ""; }
-                else if (state == State.BUILDING || (state == State.PREPARING && controller.launchQueued())) {
+                else if (state == State.STARTING || (state == State.PREPARING && controller.launchQueued())) {
                     double fraction = controller.progress();
                     label = fraction >= 0 ? Math.round(fraction * 100) + "%" : I18n.t("STARTING");
-                    sub = state == State.BUILDING ? I18n.t("Building Vibe") : I18n.t("Preparing");
+                    sub = state == State.STARTING ? I18n.t("Starting Minecraft") : I18n.t("Preparing");
                 } else {
                     label = controller.sourceInstalled() ? I18n.t("PLAY") : I18n.t("INSTALL & PLAY");
                     sub = controller.mode().label;
@@ -394,7 +394,7 @@ final class PlayBar extends Stack.Panel {
                     g.setPaint(new GradientPaint(0, 0, new Color(255, 255, 255, 38), 0, h, new Color(255, 255, 255, 0)));
                     g.fill(new java.awt.geom.RoundRectangle2D.Double(inset, inset, w - inset * 2, h / 2.0, 28, 28));
                 }
-                if (!active && (state == State.BUILDING || state == State.PREPARING)) {
+                if (!active && (state == State.STARTING || state == State.PREPARING)) {
                     double fraction = controller.progress();
                     Graphics2D clip = (Graphics2D) g.create();
                     clip.clip(new java.awt.geom.RoundRectangle2D.Double(inset, inset, w - inset * 2, h - inset * 2, 28, 28));

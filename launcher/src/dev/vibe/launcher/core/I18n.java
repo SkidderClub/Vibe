@@ -357,6 +357,94 @@ public final class I18n {
         de("Opens the Los Vibes city", "Öffnet die Stadt Los Vibes");
         de("Opens Vibe's account manager", "Öffnet den Account-Manager von Vibe");
 
+        // Versions page
+        de("Versions", "Versionen");
+        de("Download a Vibe release, switch versions and read what changed. Saves, settings and mods are shared.",
+                "Lade ein Vibe-Release herunter, wechsle Versionen und lies die Änderungen. Welten, Einstellungen und Mods werden gemeinsam genutzt.");
+        de("Update to latest", "Auf neueste aktualisieren");
+        de("Installed", "Installiert");
+        de("Available on GitHub", "Auf GitHub verfügbar");
+        de("Refresh", "Aktualisieren");
+        de("Refreshing…", "Aktualisiere…");
+        de("None yet", "Noch keine");
+        de("{0} downloaded", "{0} heruntergeladen");
+        de("No Vibe version yet", "Noch keine Vibe-Version");
+        de("Download a release below. Press Play afterwards and the launcher prepares Minecraft once.",
+                "Lade unten ein Release herunter. Klicke danach auf Spielen; der Launcher richtet Minecraft einmalig ein.");
+        de("ACTIVE", "AKTIV");
+        de("pre-release", "Vorabversion");
+        de("Notes", "Änderungen");
+        de("Use", "Verwenden");
+        de("Download", "Herunterladen");
+        de("Remove Vibe {0}?", "Vibe {0} entfernen?");
+        de("The downloaded JAR is deleted. Saves, settings, accounts and mods stay.",
+                "Die heruntergeladene JAR wird gelöscht. Welten, Einstellungen, Accounts und Mods bleiben.");
+        de("Nothing loaded", "Nichts geladen");
+        de("{0} releases", "{0} Releases");
+        de("Loading releases…", "Lade Releases…");
+        de("No releases found", "Keine Releases gefunden");
+        de("Use Refresh to read the release list from GitHub again.",
+                "Nutze „Aktualisieren“, um die Release-Liste erneut von GitHub zu laden.");
+        de("No release notes were published for this version.", "Für diese Version wurden keine Änderungen veröffentlicht.");
+        de("published {0}", "veröffentlicht {0}");
+        de("installed {0}", "installiert {0}");
+        de("Download one on the Versions page, then press Play.", "Lade auf der Versionen-Seite eine herunter und klicke dann auf Spielen.");
+        de("No release notes found for this Vibe version.", "Für diese Vibe-Version wurden keine Änderungen gefunden.");
+        de("The release notes appear once a Vibe version has been downloaded.",
+                "Die Änderungen erscheinen, sobald eine Vibe-Version heruntergeladen ist.");
+
+        // Version management
+        de("Preparing Vibe", "Bereite Vibe vor");
+        de("Vibe {0} is ready", "Vibe {0} ist bereit");
+        de("Vibe {0} is ready.", "Vibe {0} ist bereit.");
+        de("It starts with the next Play.", "Sie startet beim nächsten Klick auf Spielen.");
+        de("Vibe {0} could not be installed", "Vibe {0} konnte nicht installiert werden");
+        de("Switching to Vibe {0}", "Wechsle zu Vibe {0}");
+        de("Vibe {0} is not installed.", "Vibe {0} ist nicht installiert.");
+        de("Could not switch the Vibe version", "Die Vibe-Version konnte nicht gewechselt werden");
+        de("Removing Vibe {0}", "Entferne Vibe {0}");
+        de("Vibe {0} could not be removed", "Vibe {0} konnte nicht entfernt werden");
+        de("Vibe could not be updated", "Vibe konnte nicht aktualisiert werden");
+        de("Vibe could not be reinstalled", "Vibe konnte nicht neu installiert werden");
+        de("Reinstalling Vibe {0}", "Installiere Vibe {0} neu");
+        de("Repairing game files", "Repariere Spieldateien");
+        de("Game files repaired", "Spieldateien repariert");
+        de("Minecraft, Forge and OptiFine were downloaded again.", "Minecraft, Forge und OptiFine wurden erneut heruntergeladen.");
+        de("The game files could not be repaired", "Die Spieldateien konnten nicht repariert werden");
+        de("Minecraft is running", "Minecraft läuft");
+        de("Close Minecraft to switch versions.", "Schließe Minecraft, um die Version zu wechseln.");
+        de("No Vibe version could be found. Check your internet connection and refresh the version list.",
+                "Es wurde keine Vibe-Version gefunden. Prüfe deine Internetverbindung und aktualisiere die Versionsliste.");
+        de("No Vibe version is installed and GitHub is not reachable: {0}", "Keine Vibe-Version installiert und GitHub nicht erreichbar: {0}");
+        de("No Vibe version is installed. Pick one on the Versions page.", "Es ist keine Vibe-Version installiert. Wähle auf der Versionen-Seite eine aus.");
+        de("The Vibe version file is missing. Reinstall it on the Versions page.",
+                "Die Vibe-Versionsdatei fehlt. Installiere sie auf der Versionen-Seite neu.");
+        de("Java 8 is ready.", "Java 8 ist bereit.");
+        de("Minecraft closed before the window appeared (exit code {0}).",
+                "Minecraft wurde beendet, bevor das Fenster erschien (Exit-Code {0}).");
+
+        // Settings: versions and repair
+        de("Before each launch, download the newest Vibe release from GitHub and switch to it.",
+                "Lädt vor jedem Start das neueste Vibe-Release von GitHub und wechselt darauf.");
+        de("The launcher keeps its own Eclipse Temurin runtime, verified by checksum. Minecraft 1.8.9 runs on Java 8.",
+                "Der Launcher nutzt eine eigene, per Prüfsumme verifizierte Eclipse-Temurin-Runtime. Minecraft 1.8.9 läuft mit Java 8.");
+        de("Java 8 is deleted and downloaded again (about 200 MB).", "Java 8 wird gelöscht und neu heruntergeladen (etwa 200 MB).");
+        de("Vibe versions", "Vibe-Versionen");
+        de("Repair game files", "Spieldateien reparieren");
+        de("Minecraft, Forge and OptiFine are downloaded and unpacked again. Versions, worlds, settings and mods are kept.",
+                "Minecraft, Forge und OptiFine werden erneut heruntergeladen und entpackt. Versionen, Welten, Einstellungen und Mods bleiben erhalten.");
+        de("Repair game files?", "Spieldateien reparieren?");
+        de("Minecraft's files are downloaded again (about 500 MB). Your game profile stays untouched.",
+                "Minecrafts Dateien werden erneut heruntergeladen (etwa 500 MB). Dein Spielprofil bleibt unverändert.");
+        de("Repair", "Reparieren");
+        de("Downloads the active Vibe version again. Worlds, settings, accounts and mods are kept.",
+                "Lädt die aktive Vibe-Version erneut herunter. Welten, Einstellungen, Accounts und Mods bleiben erhalten.");
+        de("The installed Vibe version is downloaded again. Your game profile stays untouched.",
+                "Die installierte Vibe-Version wird erneut heruntergeladen. Dein Spielprofil bleibt unverändert.");
+        de("No Vibe version is downloaded yet. Choose one on the Versions page.",
+                "Es ist noch keine Vibe-Version heruntergeladen. Wähle auf der Versionen-Seite eine aus.");
+        de("Active: Vibe {0}", "Aktiv: Vibe {0}");
+
         // Error codes: title and fix of every ErrorCode (see docs/LAUNCHER_ERRORS.md)
         de("No internet connection", "Keine Internetverbindung");
         de("Check your Wi-Fi or network cable and try again.", "Prüfe dein WLAN oder Netzwerkkabel und versuche es erneut.");
@@ -390,7 +478,7 @@ public final class I18n {
         de("Close Minecraft and programs that have Vibe's files open, then try again. A restart helps if nothing else does.",
                 "Schließe Minecraft und Programme, die Dateien von Vibe geöffnet haben, und versuche es erneut. Hilft nichts davon, starte den PC neu.");
         de("Not enough disk space", "Nicht genug Speicherplatz");
-        de("Free up disk space and try again. The first start needs about 3 GB.", "Gib Speicherplatz frei und versuche es erneut. Der erste Start braucht etwa 3 GB.");
+        de("Free up disk space and try again. The first start needs about 1.5 GB.", "Gib Speicherplatz frei und versuche es erneut. Der erste Start braucht etwa 1,5 GB.");
         de("File system error", "Dateisystemfehler");
         de("A file could not be read or written. Try again; if it repeats, check the drive for errors.",
                 "Eine Datei konnte nicht gelesen oder geschrieben werden. Versuche es erneut; passiert es wieder, prüfe das Laufwerk auf Fehler.");
@@ -407,13 +495,13 @@ public final class I18n {
         de("The Java download was damaged on the way. Try again; an antivirus or proxy may be altering downloads.",
                 "Der Java-Download wurde unterwegs beschädigt. Versuche es erneut; eventuell verändert ein Virenscanner oder Proxy Downloads.");
         de("Java installation unusable", "Java-Installation unbrauchbar");
-        de("Settings → Java → Reinstall downloads both runtimes again.", "Einstellungen → Java → Neu installieren lädt beide Runtimes neu herunter.");
+        de("Settings → Java → Reinstall downloads Java 8 again.", "Einstellungen → Java → Neu installieren lädt Java 8 neu herunter.");
         de("Java could not be started", "Java konnte nicht gestartet werden");
         de("An antivirus may have blocked Java. Allow the launcher's runtime folder, then use Settings → Java → Reinstall.",
                 "Vermutlich hat ein Virenscanner Java blockiert. Gib den Runtime-Ordner des Launchers frei und nutze dann Einstellungen → Java → Neu installieren.");
         de("Wrong Java version", "Falsche Java-Version");
-        de("The build did not find the Java version it needs. Settings → Java → Reinstall sets up Java 8 and Java 21 again.",
-                "Der Build hat die benötigte Java-Version nicht gefunden. Einstellungen → Java → Neu installieren richtet Java 8 und Java 21 neu ein.");
+        de("Minecraft 1.8.9 only runs on Java 8. Settings → Java → Reinstall sets Java 8 up again.",
+                "Minecraft 1.8.9 läuft nur mit Java 8. Einstellungen → Java → Neu installieren richtet Java 8 neu ein.");
         de("Vibe could not be downloaded", "Vibe konnte nicht heruntergeladen werden");
         de("Check your connection to GitHub and try again.", "Prüfe deine Verbindung zu GitHub und versuche es erneut.");
         de("Last update did not finish", "Letztes Update nicht abgeschlossen");
@@ -426,8 +514,14 @@ public final class I18n {
         de("Close Minecraft and programs that use the game folder, then try again. Your worlds are kept.",
                 "Schließe Minecraft und Programme, die den Spielordner nutzen, und versuche es erneut. Deine Welten bleiben erhalten.");
         de("Vibe files are missing", "Vibe-Dateien fehlen");
-        de("Settings → Troubleshooting → Reinstall Vibe downloads the source again; your profile is kept.",
-                "Einstellungen → Fehlerbehebung → Vibe neu installieren lädt den Quellcode neu; dein Profil bleibt erhalten.");
+        de("Settings → Troubleshooting → Reinstall Vibe downloads the release again; your profile is kept.",
+                "Einstellungen → Fehlerbehebung → Vibe neu installieren lädt die Version neu herunter; dein Profil bleibt erhalten.");
+        de("Vibe version download damaged", "Vibe-Version beschädigt");
+        de("The JAR did not match its checksum and was discarded. Try again or pick another version on the Versions page.",
+                "Die JAR passte nicht zur Prüfsumme und wurde verworfen. Versuche es erneut oder wähle auf der Versionen-Seite eine andere Version.");
+        de("Vibe version has no JAR", "Vibe-Version hat keine JAR");
+        de("This GitHub release has no downloadable JAR. Pick another version on the Versions page or report it.",
+                "Dieses GitHub-Release enthält keine herunterladbare JAR. Wähle auf der Versionen-Seite eine andere Version oder melde das Problem.");
         de("Build failed", "Build fehlgeschlagen");
         de("The console shows why. Settings → Troubleshooting → Clear build cache often helps.",
                 "Die Konsole zeigt den Grund. Oft hilft Einstellungen → Fehlerbehebung → Build-Cache leeren.");
@@ -441,8 +535,8 @@ public final class I18n {
         de("Gradle's own download failed or is damaged. Check your connection and try again (see help).",
                 "Der Download von Gradle selbst ist fehlgeschlagen oder beschädigt. Prüfe deine Verbindung und versuche es erneut (siehe Hilfe).");
         de("OptiFine could not be downloaded", "OptiFine konnte nicht heruntergeladen werden");
-        de("optifine.net did not deliver the file. Try again later or save the OptiFine JAR by hand (see help).",
-                "optifine.net hat die Datei nicht geliefert. Versuche es später erneut oder speichere die OptiFine-JAR von Hand (siehe Hilfe).");
+        de("optifine.net did not deliver the file. Try again later or save the OptiFine JAR in the launcher's minecraft/optifine folder by hand (see help).",
+                "optifine.net hat die Datei nicht geliefert. Versuche es später erneut oder speichere die OptiFine-JAR von Hand im minecraft/optifine-Ordner des Launchers (siehe Hilfe).");
         de("Not enough memory for the build", "Zu wenig Arbeitsspeicher für den Build");
         de("Close other programs and try again. The build needs about 3 GB of free RAM.",
                 "Schließe andere Programme und versuche es erneut. Der Build braucht etwa 3 GB freien Arbeitsspeicher.");
@@ -455,6 +549,8 @@ public final class I18n {
         de("Minecraft files are missing", "Minecraft-Dateien fehlen");
         de("Minecraft 1.8.9 was not prepared. Delete the Unimined cache (see help) and start again with internet.",
                 "Minecraft 1.8.9 wurde nicht vorbereitet. Lösche den Unimined-Cache (siehe Hilfe) und starte erneut mit Internet.");
+        de("Settings → Troubleshooting → Repair game files downloads Minecraft 1.8.9 again; your profile is kept.",
+                "Einstellungen → Fehlerbehebung → Spieldateien reparieren lädt Minecraft 1.8.9 neu herunter; dein Profil bleibt erhalten.");
         de("The crash report or the console shows the cause. Disable your own mods to test whether one of them is responsible.",
                 "Der Absturzbericht oder die Konsole zeigt die Ursache. Deaktiviere deine eigenen Mods, um zu testen, ob einer davon schuld ist.");
         de("Minecraft could not reserve its memory", "Minecraft konnte seinen Arbeitsspeicher nicht reservieren");
@@ -472,6 +568,20 @@ public final class I18n {
         de("Game libraries could not be loaded", "Spielbibliotheken konnten nicht geladen werden");
         de("Clear the build cache so the LWJGL libraries are unpacked again, and allow them in your antivirus.",
                 "Leere den Build-Cache, damit die LWJGL-Bibliotheken neu entpackt werden, und erlaube sie in deinem Virenscanner.");
+        de("Settings → Troubleshooting → Repair game files unpacks the LWJGL libraries again, and allow them in your antivirus.",
+                "Einstellungen → Fehlerbehebung → Spieldateien reparieren entpackt die LWJGL-Bibliotheken neu; erlaube sie in deinem Virenscanner.");
+        de("Minecraft could not be downloaded", "Minecraft konnte nicht heruntergeladen werden");
+        de("Check your connection to Mojang and try again. Settings → Troubleshooting → Repair game files restarts the download.",
+                "Prüfe deine Verbindung zu Mojang und versuche es erneut. Einstellungen → Fehlerbehebung → Spieldateien reparieren startet den Download neu.");
+        de("Minecraft assets could not be downloaded", "Minecraft-Ressourcen konnten nicht heruntergeladen werden");
+        de("The game files download failed. Check your connection and use Settings → Troubleshooting → Repair game files.",
+                "Der Download der Spieldateien ist fehlgeschlagen. Prüfe deine Verbindung und nutze Einstellungen → Fehlerbehebung → Spieldateien reparieren.");
+        de("Forge could not be downloaded", "Forge konnte nicht heruntergeladen werden");
+        de("Forge's download server did not answer. Try again in a few minutes or use Settings → Troubleshooting → Repair game files.",
+                "Der Downloadserver von Forge hat nicht geantwortet. Versuche es in ein paar Minuten erneut oder nutze Einstellungen → Fehlerbehebung → Spieldateien reparieren.");
+        de("Minecraft runtime incomplete", "Minecraft-Runtime unvollständig");
+        de("Some game files are missing or damaged. Use Settings → Troubleshooting → Repair game files.",
+                "Einige Spieldateien fehlen oder sind beschädigt. Nutze Einstellungen → Fehlerbehebung → Spieldateien reparieren.");
         de("Java crashed", "Java ist abgestürzt");
         de("Usually the graphics driver or an overlay (Discord, RivaTuner, …). Update the driver and turn overlays off.",
                 "Meist liegt es am Grafiktreiber oder an einem Overlay (Discord, RivaTuner, …). Aktualisiere den Treiber und schalte Overlays aus.");

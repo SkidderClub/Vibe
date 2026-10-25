@@ -19,7 +19,6 @@ final class SettingsPage extends JPanel {
     private final Label sourceStatus = new Label("", Style.small(), Label.Tone.MUTED, 3);
     private final Label launcherStatus = new Label("", Style.small(), Label.Tone.MUTED, 2);
     private final Label java8 = new Label("", Style.small(), Label.Tone.MUTED);
-    private final Label jdk21 = new Label("", Style.small(), Label.Tone.MUTED);
     private final FlatButton updateVibe, updateLauncher;
     private final JPanel folders = new JPanel(new GridLayout(0, 3, 10, 10));
 
@@ -52,7 +51,7 @@ final class SettingsPage extends JPanel {
         // Updates
         Card updates = Pages.section(I18n.t("Updates"), Icons.DOWNLOAD);
         Toggle auto = new Toggle(settings.autoUpdate(), on -> { settings.setAutoUpdate(on); refresh(); });
-        updates.add(Pages.setting(I18n.t("Update Vibe automatically"), I18n.t("Before each launch, download the newest Vibe from GitHub. Only changed files are downloaded."), auto));
+        updates.add(Pages.setting(I18n.t("Update Vibe automatically"), I18n.t("Before each launch, download the newest Vibe release from GitHub and switch to it."), auto));
         updates.add(Pages.divider());
         updateVibe = new FlatButton(I18n.t("Update now"), Icons.DOWNLOAD, FlatButton.Kind.PRIMARY, controller::updateVibeNow);
         FlatButton check = new FlatButton(I18n.t("Check now"), Icons.REFRESH, FlatButton.Kind.SECONDARY, controller::checkForUpdates);
@@ -79,14 +78,13 @@ final class SettingsPage extends JPanel {
 
         // Java
         Card java = Pages.section(I18n.t("Java"), Icons.JAVA);
-        java.add(Label.small(I18n.t("The launcher keeps its own Eclipse Temurin runtimes, verified by checksum: Java 8 runs Minecraft 1.8.9, Java 21 builds Vibe.")));
+        java.add(Label.small(I18n.t("The launcher keeps its own Eclipse Temurin runtime, verified by checksum. Minecraft 1.8.9 runs on Java 8.")));
         Stack.Panel javaRow = Stack.row(18);
         Stack.Panel javaText = Stack.column(4);
         javaText.add(java8);
-        javaText.add(jdk21);
         javaRow.add(javaText, Stack.FILL);
         javaRow.add(new FlatButton(I18n.t("Reinstall"), Icons.REFRESH, FlatButton.Kind.SECONDARY, () -> {
-            if (Dialogs.confirm(this, I18n.t("Reinstall Java?"), I18n.t("Both runtimes are deleted and downloaded again (about 250 MB)."), I18n.t("Reinstall"), false)) controller.repairRuntimes();
+            if (Dialogs.confirm(this, I18n.t("Reinstall Java?"), I18n.t("Java 8 is deleted and downloaded again (about 200 MB)."), I18n.t("Reinstall"), false)) controller.repairRuntimes();
         }));
         java.add(javaRow);
         body.add(java);
@@ -100,6 +98,7 @@ final class SettingsPage extends JPanel {
         addFolder(I18n.t("Screenshots"), controller.profile().screenshots());
         addFolder(I18n.t("Crash reports"), controller.profile().crashReports());
         addFolder(I18n.t("Launcher data"), controller.paths().root());
+        addFolder(I18n.t("Vibe versions"), controller.versionsFolder());
         files.add(folders);
         files.add(Pages.divider());
         files.add(Pages.setting(I18n.t("Import from Minecraft"), I18n.t("Copy options.txt and resource packs from your normal .minecraft folder. Nothing in Vibe's profile is overwritten."),
@@ -108,12 +107,14 @@ final class SettingsPage extends JPanel {
 
         // Troubleshooting
         Card repair = Pages.section(I18n.t("Troubleshooting"), Icons.WARNING);
-        repair.add(Pages.setting(I18n.t("Clear build cache"), I18n.t("Fixes builds that fail after an update. The next launch compiles Vibe from scratch."),
-                new FlatButton(I18n.t("Clear"), Icons.BROOM, FlatButton.Kind.SECONDARY, controller::cleanBuild)));
+        repair.add(Pages.setting(I18n.t("Repair game files"), I18n.t("Minecraft, Forge and OptiFine are downloaded and unpacked again. Versions, worlds, settings and mods are kept."),
+                new FlatButton(I18n.t("Repair"), Icons.REFRESH, FlatButton.Kind.SECONDARY, () -> {
+                    if (Dialogs.confirm(this, I18n.t("Repair game files?"), I18n.t("Minecraft's files are downloaded again (about 500 MB). Your game profile stays untouched."), I18n.t("Repair"), false)) controller.repairRuntime();
+                })));
         repair.add(Pages.divider());
-        repair.add(Pages.setting(I18n.t("Reinstall Vibe"), I18n.t("Downloads the complete Vibe source again. Worlds, settings, accounts and mods are kept."),
+        repair.add(Pages.setting(I18n.t("Reinstall Vibe"), I18n.t("Downloads the active Vibe version again. Worlds, settings, accounts and mods are kept."),
                 new FlatButton(I18n.t("Reinstall"), Icons.REFRESH, FlatButton.Kind.SECONDARY, () -> {
-                    if (Dialogs.confirm(this, I18n.t("Reinstall Vibe?"), I18n.t("The source is downloaded again. Your game profile stays untouched."), I18n.t("Reinstall"), false)) controller.reinstallSource();
+                    if (Dialogs.confirm(this, I18n.t("Reinstall Vibe?"), I18n.t("The installed Vibe version is downloaded again. Your game profile stays untouched."), I18n.t("Reinstall"), false)) controller.reinstallVersion();
                 })));
         repair.add(Pages.divider());
         repair.add(Pages.setting(I18n.t("Error codes"), I18n.t("Every error shows a code such as VL-101. The guide explains each code and how to fix it."),
@@ -126,7 +127,7 @@ final class SettingsPage extends JPanel {
         add(Scroll.of(body), BorderLayout.CENTER);
         controller.addListener(event -> {
             switch (event) {
-                case SOURCE: case LAUNCHER_UPDATE: case STATE: case SETTINGS: refresh(); break;
+                case VERSIONS: case LAUNCHER_UPDATE: case STATE: case SETTINGS: refresh(); break;
                 default: break;
             }
         });
@@ -150,24 +151,20 @@ final class SettingsPage extends JPanel {
 
     private void refresh() {
         boolean idle = controller.state() == LauncherController.State.IDLE;
-        String revision = controller.installedRevision();
+        String version = controller.vibeVersion();
         StringBuilder source = new StringBuilder();
         if (!controller.sourceInstalled()) {
-            source.append(I18n.t("Not installed yet. It is downloaded on the first launch."));
+            source.append(I18n.t("No Vibe version is downloaded yet. Choose one on the Versions page."));
         } else {
-            source.append(I18n.t("Installed: {0}", Text.shortSha(revision)));
-            String message = controller.settings().sourceMessage();
-            if (!message.isEmpty()) source.append(" · “").append(Text.shorten(message, 60)).append("”");
-            long time = controller.settings().sourceCommitTime();
-            if (time > 0) source.append(" · ").append(I18n.ago(time));
+            source.append(I18n.t("Active: Vibe {0}", version));
             source.append('\n');
-            if (controller.remote() == null) source.append(controller.remoteError().isEmpty() ? I18n.t("Checking GitHub…") : I18n.t("GitHub not reachable: {0}", controller.remoteError()));
-            else if (controller.sourceUpdateAvailable()) source.append(I18n.t("A newer version is available: {0}", Text.shortSha(controller.remote().head)));
+            if (!controller.releasesError().isEmpty()) source.append(I18n.t("GitHub not reachable: {0}", controller.releasesError()));
+            else if (controller.updateAvailable()) source.append(I18n.t("Version {0} is available.", controller.latestStable().version()));
             else source.append(I18n.t("Up to date."));
         }
         sourceStatus.setText(source.toString());
-        sourceStatus.setTone(controller.sourceUpdateAvailable() ? Label.Tone.WARNING : Label.Tone.MUTED);
-        updateVibe.setVisible(controller.sourceUpdateAvailable() && !controller.settings().autoUpdate());
+        sourceStatus.setTone(controller.updateAvailable() || !controller.releasesError().isEmpty() ? Label.Tone.WARNING : Label.Tone.MUTED);
+        updateVibe.setVisible(controller.updateAvailable() && !controller.settings().autoUpdate());
         updateVibe.setEnabled(idle);
 
         LauncherUpdater.Release release = controller.launcherUpdate();
@@ -175,9 +172,8 @@ final class SettingsPage extends JPanel {
         updateLauncher.setVisible(release != null);
         updateLauncher.setEnabled(idle);
 
-        String java8Home = controller.settings().java8Home(), jdk21Home = controller.settings().jdk21Home();
+        String java8Home = controller.settings().java8Home();
         java8.setText("Java 8:  " + (java8Home.isEmpty() ? I18n.t("installed on first launch") : java8Home));
-        jdk21.setText("Java 21:  " + (jdk21Home.isEmpty() ? I18n.t("installed on first launch") : jdk21Home));
         revalidate();
         repaint();
     }
