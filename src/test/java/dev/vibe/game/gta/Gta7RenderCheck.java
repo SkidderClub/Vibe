@@ -72,7 +72,7 @@ public class Gta7RenderCheck {
             performanceCheck();
             game.respawn();game.time=8;
             renderStateChecks();
-            fog.setEnabled(true);fog.tint.setValue("Rainbow");crosshair.setEnabled(true);
+            fog.setEnabled(true);fog.tint.setValue("Love");crosshair.setEnabled(true);
             frame("effects-fog-crosshair",false,false);
             mc.gameSettings.thirdPersonView=2;frame("effects-crosshair-independent-camera",false,false);mc.gameSettings.thirdPersonView=0;
             fog.method.setValue("Gaussian");frame("effects-fog-gaussian",false,false);

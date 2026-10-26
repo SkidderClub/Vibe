@@ -431,11 +431,6 @@ final class NeverLoseWorkspace {
             return;
         }
         if (color != null || slider != null) return;
-        if(insideContent(mx,my))for(int i=hits.size()-1;i>=0;i--) {
-            Hit hit=hits.get(i);if(hit.kind!=Kind.SLIDER||!hit.contains(mx,my))continue;
-            int handle=hit.value instanceof RangeSetting?dev.vibe.ui.SliderWheel.nearestHandle((RangeSetting)hit.value,(mx-hit.x)/(double)Math.max(1,hit.w)):0;
-            if(dev.vibe.ui.SliderWheel.adjust((Setting<?>)hit.value,dev.vibe.ui.SliderWheel.notches(amount),handle)){save();return;}
-        }
         if (insideContent(mx, my)) { scroll = clamp(scroll + (amount > 0 ? -38 : 38), 0, maxScroll); hits.clear(); }
     }
 

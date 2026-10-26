@@ -393,6 +393,7 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onRenderTick(TickEvent.RenderTickEvent event) {
+        if (event.phase == TickEvent.Phase.START) dev.vibe.ui.render.ChunkAnimationHooks.beginFrame();
         if (event.phase == TickEvent.Phase.END) {
             // F1 can skip the entire HUD event. Draw once after the frame so the
             // Phone's visibility preference also works with hidden HUDs and menus.

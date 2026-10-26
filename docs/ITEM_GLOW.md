@@ -8,8 +8,13 @@ and camera remain in use.
 - **Color Mode:** Static, Gradient or Rainbow; RGBA colors and animation speed.
 - **Radius, Intensity, Opacity, Falloff:** halo size, strength and soft edge decay.
 - **Fade:** a smooth breathing effect; Fade Speed and Minimum Glow set its cycle.
-- **Inner Glow:** optional tint over the object. Zero preserves the original
-  item colors and Phone screen.
+- **Inner Glow:** strength of the effect inside the object. Zero preserves the
+  original item colors and Phone screen, including when an inner mode is selected.
+- **Inner Mode:** Tint fills the silhouette; Soft fades toward its edge; Rim
+  lights its inner boundary; Pulse breathes independently of the outer halo;
+  Scan moves a soft highlight across the object. All five work on held items and
+  the Phone. Inner Speed controls Pulse and Scan; Inner Width controls Scan.
+  Existing profiles keep their original Tint appearance.
 - **Quality:** Performance, Balanced or High. Balanced is the default.
 
 Settings save through the normal module/profile system. Ordinary item animations
@@ -27,6 +32,9 @@ The Phone reuses its existing supersampled canvas texture as the coverage source
 then draws only a transformed halo around that canvas. It needs no separate capture,
 scene copy, depth target or full-screen pass. Wide radii adapt the blur resolution to keep
 filter taps close together without increasing the shader's sampling cost.
+The inner modes reuse that coverage and blur in the existing composite shader;
+they add no geometry draws, render targets, or blur passes. Their light stays
+inside the source's alpha coverage and leaves the world and HUD untouched.
 Held-item and small Phone buffers persist across frames and are freed on disable,
 disconnect, resize or quality changes. Incompatible external framebuffer passes
 retain ordinary rendering. Unsupported hardware uses the normal renderer.

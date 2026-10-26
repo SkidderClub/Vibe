@@ -1,6 +1,9 @@
 package dev.vibe.server;
 
 import dev.vibe.ui.server.ServerBrowserGui;
+import dev.vibe.miniblox.MinibloxProtocol;
+import dev.vibe.miniblox.MinibloxRuntime;
+import java.net.InetSocketAddress;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 import net.minecraft.client.Minecraft;
@@ -12,6 +15,7 @@ import net.minecraft.util.Session;
 import net.minecraftforge.client.event.GuiOpenEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.fml.common.network.FMLNetworkEvent;
 
 public final class ServerBrowserEvents {
     private final Minecraft mc;
@@ -20,6 +24,7 @@ public final class ServerBrowserEvents {
     private volatile boolean prepared;
     private Session cachedSession;
     private String cachedAccount;
+    private MinibloxRuntime miniblox;
     public ServerBrowserEvents(Minecraft mc, Path file) {
         this.mc = mc; history = new ServerJoinHistory(file); tracker = new ServerJoinTracker(history);
     }
@@ -34,6 +39,19 @@ public final class ServerBrowserEvents {
     }
     public ServerJoinHistory.Result result(ServerData data) { return tracker.get(currentAccount(), data.serverIP); }
     public String error() { return history.error(); }
+    public synchronized MinibloxRuntime miniblox() {
+        if (miniblox == null) miniblox = new MinibloxRuntime(mc.mcDataDir.toPath().resolve("vibe/miniblox"));
+        return miniblox;
+    }
+    public synchronized void shutdown() { if (miniblox != null) miniblox.close(); }
+    @SubscribeEvent public void connected(FMLNetworkEvent.ClientConnectedToServerEvent event) {
+        MinibloxRuntime runtime;
+        synchronized (this) { runtime = miniblox; }
+        if (runtime == null || event.isLocal || !(event.manager.channel().remoteAddress() instanceof InetSocketAddress)) return;
+        InetSocketAddress address = (InetSocketAddress) event.manager.channel().remoteAddress();
+        if (address.getAddress() != null && address.getAddress().isLoopbackAddress() && runtime.owns(address.getPort()))
+            MinibloxProtocol.install(event.manager.channel());
+    }
     public void prepare(ServerData data) {
         tracker.begin(currentAccount(), data.serverIP); prepared = true;
     }

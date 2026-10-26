@@ -537,6 +537,12 @@ public final class VibeConfig {
                         ? data.getAsJsonObject("settings") : new JsonObject();
                 for (Setting<?> setting : module.getSettings()) {
                     JsonElement savedSetting = settings.get(setting.getRawName());
+                    if (module instanceof dev.vibe.module.impl.visual.FogModule) {
+                        dev.vibe.module.impl.visual.FogModule fog = (dev.vibe.module.impl.visual.FogModule) module;
+                        if (setting == fog.color && savedSetting == null) savedSetting = settings.get("Fog Color");
+                        if (setting == fog.tint && savedSetting != null && savedSetting.isJsonPrimitive()
+                                && "Rainbow".equalsIgnoreCase(savedSetting.getAsString())) savedSetting = new JsonPrimitive("Love");
+                    }
                     // Velocity used the singular Mode key briefly before its
                     // multi-select setting returned to the original Modes
                     // name. Accept both spellings during profile migration.
@@ -558,6 +564,10 @@ public final class VibeConfig {
                             ((ModeSetting) setting).setValue("Custom");
                         }
                     } else readSetting(setting, savedSetting);
+                }
+                if (module instanceof dev.vibe.module.impl.visual.FogModule && settings.has("Fog Color") && !settings.has("Secondary Color")) {
+                    dev.vibe.module.impl.visual.FogModule fog = (dev.vibe.module.impl.visual.FogModule) module;
+                    fog.secondaryColor.setValue(fog.color.getArgb());
                 }
                 if (module instanceof HudModule) {
                     if (getInt(root, "format", 1) < 3) ((HudModule) module).migrateLegacyArrayListModules();

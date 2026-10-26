@@ -2,6 +2,7 @@ package dev.vibe.ui.server;
 
 import dev.vibe.Vibe;
 import dev.vibe.server.*;
+import dev.vibe.miniblox.MinibloxServer;
 import dev.vibe.ui.*;
 import dev.vibe.ui.account.AccountManagerGui;
 import dev.vibe.ui.menu.MainMenuShaderManager;
@@ -67,6 +68,7 @@ public final class ServerBrowserGui extends GuiScreen {
     @Override public void initGui() {
         l = new ServerBrowserLayout(width, height); buttonList.clear(); positions.clear(); hovers.clear();rowVisuals.clear();
         if (saved == null) saved = new ServerList(mc);
+        MinibloxServer.ensure(saved);
         servers.clear(); for (int i = 0; i < saved.countServers(); i++) servers.add(saved.getServerData(i));
         if (pings != null) pings.close(); pings = new ServerPings(network);
         stopLan(); lan.clear();
@@ -107,6 +109,7 @@ public final class ServerBrowserGui extends GuiScreen {
         for (GuiButton b : buttonList) {
             b.visible = deleting ? b.id >= 8 : b.id < 8;
             b.enabled = b.id == 4 ? selected != null : (b.id == 5 || b.id == 6) ? selected != null && !selected.isOnLAN() : true;
+            if ((b.id == 6 || b.id == 9) && MinibloxServer.is(selected)) b.enabled = false;
             if (b.id == 7) {
                 b.displayString = accountName;
                 b.enabled = Vibe.getInstance() != null && Vibe.getInstance().getAccountManager() != null;
@@ -257,24 +260,23 @@ public final class ServerBrowserGui extends GuiScreen {
             case 3: pings.close(); pings = new ServerPings(network); notice = ""; break;
             case 4: connect(selected); break;
             case 5: if (selected != null && !selected.isOnLAN()) { form = 3; editOriginal = selected; draft = new ServerData(selected.serverName, selected.serverIP, false); draft.copyFrom(selected); mc.displayGuiScreen(new GuiScreenAddServer(this, draft)); } break;
-            case 6: deleting = selected != null && !selected.isOnLAN(); updateButtons(); break;
+            case 6: deleting = selected != null && !selected.isOnLAN() && !MinibloxServer.is(selected); updateButtons(); break;
             case 7: if (Vibe.getInstance() != null && Vibe.getInstance().getAccountManager() != null) mc.displayGuiScreen(new AccountManagerGui(this, shaders, Vibe.getInstance().getAccountManager())); break;
             case 8: deleting = false; updateButtons(); break;
-            case 9: if (selected != null) { int index = servers.indexOf(selected); if (index >= 0) { saved.removeServerData(index); saved.saveServerList(); servers.remove(index); } selected = null; deleting = false; updateRows(); clampScroll(); updateButtons(); } break;
+            case 9: if (selected != null && !MinibloxServer.is(selected)) { int index = servers.indexOf(selected); if (index >= 0) { saved.removeServerData(index); saved.saveServerList(); servers.remove(index); } selected = null; deleting = false; updateRows(); clampScroll(); updateButtons(); } break;
             default: break;
         }
     }
     private void connect(ServerData data) {
-        if (data == null) return;
-        if (joins != null) joins.prepare(data);
-        mc.displayGuiScreen(new GuiConnecting(this, mc, data));
+        MinibloxConnectGui.connect(this, mc, data, joins);
     }
     @Override public void confirmClicked(boolean accepted, int id) {
         int action = form; form = 0;
         if (accepted && draft != null) {
             if (action == 1) { saved.addServerData(draft); saved.saveServerList(); selected = draft; }
             else if (action == 3 && editOriginal != null) {
-                editOriginal.serverName = draft.serverName; editOriginal.serverIP = draft.serverIP; editOriginal.copyFrom(draft); saved.saveServerList(); selected = editOriginal;
+                boolean builtIn = MinibloxServer.is(editOriginal);
+                editOriginal.serverName = draft.serverName; editOriginal.serverIP = builtIn ? MinibloxServer.ADDRESS : draft.serverIP; editOriginal.copyFrom(draft); saved.saveServerList(); selected = editOriginal;
             }
         }
         mc.displayGuiScreen(this);
@@ -341,7 +343,7 @@ public final class ServerBrowserGui extends GuiScreen {
         if (search.isFocused() && search.textboxKeyTyped(typed, key)) { query = search.getText(); targetScroll = scroll = 0; updateRows(); return; }
         if (key == Keyboard.KEY_F5) { for (GuiButton button : buttonList) if (button.id == 3) { actionPerformed(button); break; } return; }
         if (key == Keyboard.KEY_RETURN || key == Keyboard.KEY_NUMPADENTER) { connect(selected); return; }
-        if (key == Keyboard.KEY_DELETE && selected != null && !selected.isOnLAN()) { deleting = true; updateButtons(); return; }
+        if (key == Keyboard.KEY_DELETE && selected != null && !selected.isOnLAN() && !MinibloxServer.is(selected)) { deleting = true; updateButtons(); return; }
         if ((key == Keyboard.KEY_UP || key == Keyboard.KEY_DOWN) && !rows.isEmpty()) {
             int index = rows.indexOf(selected); index = Math.max(0, Math.min(rows.size() - 1, index + (key == Keyboard.KEY_DOWN ? 1 : -1))); selected = rows.get(index);
             targetScroll = Math.max(index * l.step + l.row - l.listH, Math.min(targetScroll, index * l.step)); clampScroll(); updateButtons();
@@ -366,7 +368,7 @@ public final class ServerBrowserGui extends GuiScreen {
                 motd=fontRendererObj.trimStringToWidth(text,Math.max(1,available));
             }
             if(!Objects.equals(rawPopulation,data.populationInfo)){rawPopulation=data.populationInfo;population=SMALL.fit(rawPopulation==null?"":rawPopulation.replaceAll("\u00a7.",""),70);}
-            if(ping!=data.pingToServer){ping=data.pingToServer;latency=source.isOnLAN()?"LAN":ping==-2?"Pinging":ping<0?"Offline":ping+" ms";}
+            if(ping!=data.pingToServer){ping=data.pingToServer;latency=MinibloxServer.is(source)?"Bridge":source.isOnLAN()?"LAN":ping==-2?"Pinging":ping<0?"Offline":ping+" ms";}
             if(!Objects.equals(rawAddress,source.serverIP)||hidden!=mc.gameSettings.hideServerAddress){rawAddress=source.serverIP;hidden=mc.gameSettings.hideServerAddress;address=SMALL.fit(source.isOnLAN()?"Local network":hidden?"Saved server":rawAddress,available);}
             long now=System.currentTimeMillis();if(joins!=null&&now>=nextResult){
                 nextResult=now+200;ServerJoinHistory.Result value=joins.result(source);if(value!=result){result=value;badge=ServerStatusBadge.kind(value);}

@@ -44,7 +44,7 @@ public final class FreecamModule extends Module {
 
     public FreecamModule() {
         super("Freecam", "Fly the third-person camera as an FPV drone; WASD pitch/roll, mouse steer, Space/Shift thrust",
-                Category.MOVEMENT, Keyboard.KEY_NONE);
+                Category.VISUAL, Keyboard.KEY_NONE);
     }
 
     @Override protected void onEnable() { tick(); }

@@ -112,6 +112,8 @@ registerRenderCheck('verifyPathRendering', 'dev.vibe.path.PathRenderCheck', 'pat
         'Checks Path routing, cached world lines, depth modes, colors, styles and camera/render state.', true)
 registerRenderCheck('verifyVisualEffects', 'dev.vibe.ui.VisualEffectsRenderCheck', 'visual-effects-check',
         'Checks Fog, Torus and the other shader effects.')
+registerRenderCheck('verifyChunkAnimations', 'dev.vibe.ui.render.ChunkAnimationRenderCheck', 'chunk-animation-check',
+        'Checks transformed terrain rendering on both VBO and display-list paths, animation modes and matrix restoration.', true)
 registerRenderCheck('verifyRavenVisuals', 'dev.vibe.ui.RavenVisualRenderCheck', 'raven-visual-check',
         'Checks Raven saturation shader pixels, resize, coexistence and cleanup.')
 registerRenderCheck('verifyChamsRendering', 'dev.vibe.ui.render.esp.ChamsRenderCheck', 'chams-render-check',
@@ -152,6 +154,17 @@ registerRenderCheck('verifyHudVisuals', 'dev.vibe.ui.ClientChangesRenderCheck', 
 registerRenderCheck('verifyServerMenuRendering','dev.vibe.ui.ClientChangesRenderCheck','server-menu-check',
         'Checks native edit-server and direct-connect backgrounds after a cached world/editor frame.',false) {
     args 'server-menus'
+}
+
+tasks.register('verifyMinibloxRuntime', JavaExec) {
+    group = 'verification'
+    description = 'Opt-in online Miniblox installer, local protocol handshake and process lifecycle check.'
+    dependsOn tasks.named('testClasses')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    classpath = sourceSets.test.runtimeClasspath + sourceSets.main.runtimeClasspath
+    mainClass = 'dev.vibe.miniblox.MinibloxRuntimeSmoke'
+    workingDir project.projectDir
+    args layout.buildDirectory.dir('miniblox-runtime-check').get().asFile.absolutePath
 }
 registerRenderCheck('verifyHudEditorRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'hud-editor-check',
         'Checks all HUD editor widgets and legacy layout/scale behavior.', false) {

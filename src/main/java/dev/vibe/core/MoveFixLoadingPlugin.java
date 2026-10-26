@@ -3,7 +3,7 @@ package dev.vibe.core;
 import java.util.Map;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
 
-/** Bootstrap for the three local 1.8.9 hooks required by MoveFix. */
+/** Bootstrap for Vibe's client-side movement and rendering hooks. */
 @IFMLLoadingPlugin.Name("VibeMoveFix")
 @IFMLLoadingPlugin.MCVersion("1.8.9")
 @IFMLLoadingPlugin.TransformerExclusions({"dev.vibe.core."})
@@ -17,7 +17,8 @@ public final class MoveFixLoadingPlugin implements IFMLLoadingPlugin {
                 "dev.vibe.core.CustomModelTransformer",
                 "dev.vibe.core.HudItemsTransformer",
                 "dev.vibe.core.RavenFeatureTransformer",
-                "dev.vibe.core.FreecamTransformer"
+                "dev.vibe.core.FreecamTransformer",
+                "dev.vibe.core.ChunkAnimationTransformer"
         };
     }
 

@@ -60,7 +60,7 @@ public final class VisualEffectsRenderCheck {
             pattern();byte[] original=pixels();fog.blur.setValue(false);renderer.render(fog,.05f,100,0,0);
             if(renderer.hasFailed())throw new AssertionError("Fog shader compilation failed");
             sameRegion(original,pixels(),0,W,"Scene-only fog must preserve pixels");
-            fog.tint.setValue("Custom");fog.color.setValue(0xFFFF0000);fog.tintOpacity.setValue(100D);fog.start.setValue(10D);fog.end.setValue(30D);fog.sky.setValue(false);
+            fog.tint.setValue("Custom");fog.color.setValue(0xFFFF0000);fog.secondaryColor.setValue(0xFFFF0000);fog.tintOpacity.setValue(100D);fog.start.setValue(10D);fog.end.setValue(30D);fog.sky.setValue(false);
             pattern();GL11.glEnable(GL11.GL_FOG);GL11.glEnable(GL11.GL_DEPTH_TEST);GL11.glDepthMask(true);GL13.glActiveTexture(GL13.GL_TEXTURE2);
             int bound=GL11.glGenTextures();GL11.glBindTexture(GL11.GL_TEXTURE_2D,bound);
             renderer.render(fog,.05f,100,0,0);byte[] tinted=pixels();
@@ -78,7 +78,23 @@ public final class VisualEffectsRenderCheck {
                 if(variance(blurred,W/3+30,W*2/3-30)>=variance(original,W/3+30,W*2/3-30)*.8)throw new AssertionError(method+" did not blur far geometry");
                 image(output.resolve("fog-"+method.toLowerCase(java.util.Locale.ROOT)+".png"),blurred);
             }
-            fog.tint.setValue("Rainbow");pattern();renderer.render(fog,.05f,100,25,15);image(output.resolve("fog-rainbow.png"),pixels());
+            fog.tint.setValue("Love");pattern();renderer.render(fog,.05f,100,25,15);image(output.resolve("fog-love.png"),pixels());
+            fog.tint.setValue("Custom");fog.color.setValue(0xFFFF0000);fog.secondaryColor.setValue(0xFF0000FF);fog.fadeSpeed.setValue(0D);fog.blur.setValue(false);
+            pattern();renderer.render(fog,.05f,100,25,15);byte[] fade=pixels();
+            sameRegion(original,fade,0,W/3,"Two-color fade changed near objects");sameRegion(original,fade,W*2/3,W,"Two-color fade changed excluded sky");
+            int min=255,max=0;
+            for(int x=W/3+5;x<W*2/3-5;x++){int index=(H/2*W+x)*4;min=Math.min(min,fade[index]&255);max=Math.max(max,fade[index]&255);if((fade[index+1]&255)>2)throw new AssertionError("Custom fog escaped its two colors");}
+            if(max-min<25)throw new AssertionError("Two-color fog has no visible gradient");image(output.resolve("fog-custom-fade.png"),fade);
+            fog.fadeSpeed.setValue(5D);pattern();renderer.render(fog,.05f,100,25,15);byte[] moving=pixels();Thread.sleep(120);pattern();renderer.render(fog,.05f,100,25,15);
+            if(Arrays.equals(moving,pixels()))throw new AssertionError("Fog fade does not animate");
+            fog.fadeSpeed.setValue(0D);
+            for(String preset:new String[]{"Red","Green","Blue","Yellow","Gray","Purple","LightBlue","China","Bavaria","Catton Candy"}){
+                fog.tint.setValue(preset);pattern();renderer.render(fog,.05f,100,25,15);byte[] result=pixels();
+                sameRegion(original,result,0,W/3,preset+" changed near objects");sameRegion(original,result,W*2/3,W,preset+" changed excluded sky");
+                image(output.resolve("fog-"+preset.toLowerCase(java.util.Locale.ROOT).replace(' ','-')+".png"),result);
+            }
+            fog.tint.setValue("Custom");fog.color.setValue(0xFFFF0000);fog.secondaryColor.setValue(0xFF0000FF);fog.blur.setValue(true);
+            for(String method:new String[]{"Kawase","Gaussian"}){fog.method.setValue(method);pattern();renderer.render(fog,.05f,100,25,15);if(renderer.hasFailed())throw new AssertionError("Gradient blur failed: "+method);}
             // Reflection uses the exact packaged shader and torus mesh, without a Minecraft world.
             pattern();try(EffectState state=new EffectState();SceneTexture scene=new SceneTexture();EffectProgram reflection=new EffectProgram("Reflection.vert","Reflection.frag")) {
                 scene.capture(0,0,W,H,false);GL11.glDisable(GL11.GL_DEPTH_TEST);reflection.bind();FogRenderer.texture(0,scene.color);

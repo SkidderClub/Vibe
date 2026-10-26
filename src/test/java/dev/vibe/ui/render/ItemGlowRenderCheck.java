@@ -98,6 +98,7 @@ public final class ItemGlowRenderCheck {
                 if (field(ItemGlowRenderer.class, "width").getInt(renderer) != 960) throw new AssertionError("Resize did not refresh the capture target");
             } finally { smaller.deleteFramebuffer(); target = mainTarget; mc.displayWidth = W; mc.displayHeight = H; field(Minecraft.class, "framebufferMc").set(mc, target); }
             frame(); scene(); check();
+            verifyInnerModes(renderer,phoneEffect);
             String timing = benchmark(); Files.write(OUT.resolve("timings.txt"), timing.getBytes("UTF-8"));
             glow.setEnabled(false); frame(); scene(); check();
             if (field(ItemGlowRenderer.class, "capture").getInt(renderer) != 0) throw new AssertionError("Disabling the module did not free GPU targets");
@@ -175,6 +176,43 @@ public final class ItemGlowRenderCheck {
         }
         if (halo < 500) throw new AssertionError("No visible halo outside the item and phone: " + halo);
         if (difference(original[60 * W + 500], lit[60 * W + 500]) > 1) throw new AssertionError("The existing HUD/background was included in the mask");
+    }
+    private static void verifyInnerModes(Object renderer,Object phoneEffect)throws Exception {
+        field(PhoneModule.class,"appAt").setLong(phone,System.currentTimeMillis()-4000);
+        glow.colorMode.setValue("Static");glow.color.setValue(0xFF73DCCF);glow.innerSpeed.setValue(0D);
+        glow.setEnabled(false);frame();scene();int[] source=pixels();
+        glow.setEnabled(true);glow.innerGlow.setValue(0D);frame();scene();int[] baseline=pixels();
+        int heldAlloc=field(ItemGlowRenderer.class,"allocations").getInt(renderer),phoneAlloc=field(PhoneItemGlow.class,"allocations").getInt(phoneEffect);
+        List<int[]> images=new ArrayList<int[]>();
+        for(String mode:new String[]{"Tint","Soft","Rim","Pulse","Scan"}) {
+            glow.innerGlow.setValue(.4D);glow.innerMode.setValue(mode);
+            frame();int before=swordDraws;scene();int[] image=pixels();save("inner-"+mode.toLowerCase(java.util.Locale.ROOT)+".png",image);check();
+            if(swordDraws!=before+1)throw new AssertionError("An inner glow mode redrew the held geometry");
+            int held=0,phonePixels=0;
+            for(int y=0;y<H;y++)for(int x=0;x<W;x++) {
+                int at=y*W+x;
+                if(difference(baseline[at],image[at])<=3)continue;
+                if(difference(source[at],0xFF1A242E)<=2)throw new AssertionError(mode+" inner glow escaped the object silhouette");
+                if(x<420)phonePixels++;if(x>800)held++;
+            }
+            if(held<100||phonePixels<100)throw new AssertionError(mode+" is not visible on both held items and Phone: "+held+", "+phonePixels);
+            for(int[] previous:images)if(Arrays.equals(previous,image))throw new AssertionError("Inner modes have identical output");
+            images.add(image);
+            if(heldAlloc!=field(ItemGlowRenderer.class,"allocations").getInt(renderer)||phoneAlloc!=field(PhoneItemGlow.class,"allocations").getInt(phoneEffect))
+                throw new AssertionError("Changing inner modes allocated new GPU targets");
+        }
+        long started=field(ItemGlowModule.class,"visualStarted").getLong(glow);
+        glow.innerGlow.setValue(0D);frame();ItemGlowRenderer.held(()->Gui.drawRect(398,55,400,150,0xFF1D2A35));int[] plainThin=pixels();
+        glow.innerMode.setValue("Soft");glow.innerGlow.setValue(.4D);frame();ItemGlowRenderer.held(()->Gui.drawRect(398,55,400,150,0xFF1D2A35));int[] softThin=pixels();
+        int thinPixels=0;for(int i=0;i<softThin.length;i++)if(difference(plainThin[i],softThin[i])>3)thinPixels++;
+        if(thinPixels<100)throw new AssertionError("Soft inner glow disappeared on a thin object");
+        glow.innerMode.setValue("Pulse");glow.innerSpeed.setValue(1D);
+        field(ItemGlowModule.class,"visualStarted").setLong(glow,System.nanoTime()-250000000L);frame();scene();int[] peak=pixels();
+        field(ItemGlowModule.class,"visualStarted").setLong(glow,System.nanoTime()-750000000L);frame();scene();int[] trough=pixels();
+        if(Arrays.equals(peak,trough))throw new AssertionError("Inner Pulse did not animate");
+        field(ItemGlowModule.class,"visualStarted").setLong(glow,started);
+        glow.innerGlow.setValue(0D);glow.innerMode.setValue("Tint");glow.innerSpeed.resetToDefault();glow.colorMode.setValue("Gradient");
+        System.out.println("Inner glow: five distinct modes on real held-item and Phone pixels, confined coverage, pulse animation, one geometry draw and reused GPU buffers passed.");
     }
     private static int difference(int a, int b) { return Math.max(Math.abs((a >> 16 & 255) - (b >> 16 & 255)), Math.max(Math.abs((a >> 8 & 255) - (b >> 8 & 255)), Math.abs((a & 255) - (b & 255)))); }
     private static float depth(int x, int y) { FloatBuffer value = BufferUtils.createFloatBuffer(1); GL11.glReadPixels(x, H - 1 - y, 1, 1, GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, value); return value.get(0); }

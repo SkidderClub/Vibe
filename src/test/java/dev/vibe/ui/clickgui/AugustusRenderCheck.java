@@ -108,8 +108,8 @@ public final class AugustusRenderCheck {
             if (controls.amount.getDouble() < 60 || controls.amount.getDouble() > 80)
                 throw new AssertionError("Filled slider did not change value: " + controls.amount.getDouble());
             double beforeWheel=controls.amount.getDouble();
-            if(!AugustusImGui.wheel(435,222,120)||controls.amount.getDouble()!=beforeWheel+controls.amount.getIncrement())
-                throw new AssertionError("Hovered Augustus slider ignored the mouse wheel");
+            backend.queueWheel(120); frame(backend, modules, 1280, 720, 435, 222);
+            if(controls.amount.getDouble()!=beforeWheel) throw new AssertionError("Mouse wheel changed an Augustus slider");
             controls.group.toggle("Players");
             click(backend, modules, 0, 1225, 110);
             if (!controls.flag.isEnabled() || !controls.mode.is("Basic") || controls.amount.getDouble() != 25

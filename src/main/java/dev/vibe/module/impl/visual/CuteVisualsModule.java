@@ -37,24 +37,8 @@ public final class CuteVisualsModule extends Module {
     public ColorSetting getSecondaryColor() { return secondaryColor; }
     public double[] palette(double red, double green, double blue, float phase) {
         if (colorPreset.is("Love")) return new double[] {red, green, blue, 1};
-        int first, second;
-        switch (colorPreset.getValue()) {
-            case "Custom": first = primaryColor.getArgb(); second = secondaryColor.getArgb(); break;
-            case "China": first = 0xFFFF3333; second = 0xFFFFDE33; break;
-            case "Bavaria": first = 0xFF3399FF; second = 0xFFFFFFFF; break;
-            case "Catton Candy": first = 0xFFFF99CC; second = 0xFF88D8FF; break;
-            default:
-                switch (colorPreset.getValue()) {
-                    case "Red": first = 0xFFFF4D4D; break;
-                    case "Green": first = 0xFF55DD77; break;
-                    case "Blue": first = 0xFF4477FF; break;
-                    case "Yellow": first = 0xFFFFDD55; break;
-                    case "Gray": first = 0xFFBBBBBB; break;
-                    case "Purple": first = 0xFFB366FF; break;
-                    default: first = 0xFF88D8FF; break;
-                }
-                second = dev.vibe.ui.RenderUtils.blend(first, 0xFF000000, .24F);
-        }
+        int first = dev.vibe.ui.VisualPalette.primary(colorPreset.getValue(), primaryColor.getArgb());
+        int second = dev.vibe.ui.VisualPalette.secondary(colorPreset.getValue(), first, secondaryColor.getArgb());
         int color = dev.vibe.ui.RenderUtils.blend(first, second, Math.max(0, Math.min(1, phase)));
         return new double[] {(color >> 16 & 255) / 255.0, (color >> 8 & 255) / 255.0,
                 (color & 255) / 255.0, (color >>> 24) / 255.0};

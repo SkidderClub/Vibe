@@ -50,11 +50,14 @@ public final class FogRenderer implements AutoCloseable {
             OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER, state.destination());
             scene.capture(x, y, w, h, true);
             target(0); tint.bind(); texture(0, scene.color);
-            tint.integer("Tex0", 0); tint.integer("RGBPuke", module.tint.is("Rainbow") ? 1 : 0);
-            tint.vec3("Color", module.color.getRed()/255f, module.color.getGreen()/255f, module.color.getBlue()/255f);
+            tint.integer("Tex0", 0); tint.integer("RGBPuke", module.tint.is("Love") ? 1 : 0);
+            int first = module.primaryColor(), second = module.secondaryColor();
+            tint.integer("TwoTone", module.twoTone() && first != second ? 1 : 0);
+            tint.vec3("Color", (first>>16&255)/255f, (first>>8&255)/255f, (first&255)/255f);
+            tint.vec3("Color2", (second>>16&255)/255f, (second>>8&255)/255f, (second&255)/255f);
             tint.scalar("Opacity", module.tint.is("Scene") ? 0 : module.tintOpacity.getFloat()/100);
             tint.vec2("SV", module.saturation.getFloat()/100, module.brightness.getFloat()/100);
-            tint.scalar("Time", (System.nanoTime()-started)/1e9f * module.speed.getFloat());
+            tint.scalar("Time", (System.nanoTime()-started)/1e9f * (module.twoTone() ? module.fadeSpeed.getFloat() : module.speed.getFloat()));
             tint.scalar("Yaw", yaw); tint.scalar("Pitch", pitch); tint.integer("Alpha", 0); quad();
             int output = 0;
             if (module.blur.isEnabled()) {

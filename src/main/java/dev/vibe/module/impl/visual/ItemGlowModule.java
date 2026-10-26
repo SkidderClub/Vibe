@@ -22,6 +22,11 @@ public final class ItemGlowModule extends Module {
     public final NumberSetting opacity = addSetting(new NumberSetting("Opacity", .8, 0, 1, .05));
     public final NumberSetting falloff = addSetting(new NumberSetting("Falloff", 1.4, .5, 3, .1));
     public final NumberSetting innerGlow = addSetting(new NumberSetting("Inner Glow", 0, 0, .4, .02));
+    public final ModeSetting innerMode = addSetting(new ModeSetting("Inner Mode", "Tint", "Tint", "Soft", "Rim", "Pulse", "Scan"));
+    public final NumberSetting innerSpeed = addSetting(new NumberSetting("Inner Speed", .35, 0, 3, .05,
+            () -> innerGlow.getDouble() > 0 && (innerMode.is("Pulse") || innerMode.is("Scan"))));
+    public final NumberSetting innerWidth = addSetting(new NumberSetting("Inner Width", .12, .03, .5, .01,
+            () -> innerGlow.getDouble() > 0 && innerMode.is("Scan")));
     public final BooleanSetting fade = addSetting(new BooleanSetting("Fade", true));
     public final NumberSetting fadeSpeed = addSetting(new NumberSetting("Fade Speed", .6, .1, 3, .1, () -> fade.isEnabled()));
     public final NumberSetting minimumGlow = addSetting(new NumberSetting("Minimum Glow", .65, 0, 1, .05, () -> fade.isEnabled()));
@@ -42,6 +47,8 @@ public final class ItemGlowModule extends Module {
     }
     public int downsample() { return quality.is("Performance") ? 4 : quality.is("High") ? 2 : 3; }
     public int blurLimit() { return quality.is("Performance") ? 640 : quality.is("High") ? 1440 : 960; }
+    public int innerModeIndex() { return innerMode.is("Soft") ? 1 : innerMode.is("Rim") ? 2 : innerMode.is("Pulse") ? 3 : innerMode.is("Scan") ? 4 : 0; }
+    public float innerPhaseAt(double seconds) { double phase = seconds * innerSpeed.getDouble(); return (float) (phase - Math.floor(phase)); }
     public double seconds() { return (System.nanoTime() - visualStarted) / 1.0e9; }
     @Override protected void onDisable() { dev.vibe.ui.render.ItemGlowRenderer.requestRelease(); }
 }

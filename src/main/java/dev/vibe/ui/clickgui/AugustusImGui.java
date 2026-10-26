@@ -45,7 +45,6 @@ public final class AugustusImGui {
     private static final int TEXT=0xFFF0F0F0, BLUE=0xFFFF9D00, GREEN=0xFF00FF00, RED=0xFF0000FF;
     private static final int GOLD=0xFF19ACE7, BG=0xFF181818, BORDER=0xFF252525;
     private static final Set<Setting<?>> collapsed = new HashSet<Setting<?>>();
-    private static final List<WheelTarget> wheelTargets=new ArrayList<WheelTarget>();
     private static Category category = Category.COMBAT;
     private static Module selected;
     private static Module binding;
@@ -116,7 +115,6 @@ public final class AugustusImGui {
     }
 
     public static void closed() {
-        wheelTargets.clear();
         binding = null;
         draggingWindow = false;
         resizingWindow = false;
@@ -129,7 +127,6 @@ public final class AugustusImGui {
 
     // Also used by the offscreen render check with isolated modules.
     static void drawWorkspace(int displayWidth, int displayHeight, List<Module> allModules) {
-        wheelTargets.clear();
         ClickGuiModule clickGui = null;
         for (Module module : allModules) if (module instanceof ClickGuiModule) { clickGui = (ClickGuiModule) module; break; }
         float rounding = clickGui == null || clickGui.getAugustusRoundedCorners().isEnabled() ? 8 : 0;
@@ -375,16 +372,13 @@ public final class AugustusImGui {
             NumberSetting value = (NumberSetting) setting;
             label(setting.getName() + ":");
             value.setValue(slider("value", value.getDouble(), value.getMinimum(), value.getMaximum(), value.getIncrement()));
-            wheelTarget(value,0);
         } else if (setting instanceof RangeSetting) {
             RangeSetting value = (RangeSetting) setting;
             label(setting.getName() + " min:");
             value.setMin(slider("min", value.getMin(), value.getMinimum(), value.getMaximum(), value.getIncrement()));
-            wheelTarget(value,0);
             ImGui.setCursorPosX(left);
             label(setting.getName() + " max:");
             value.setMax(slider("max", value.getMax(), value.getMinimum(), value.getMaximum(), value.getIncrement()));
-            wheelTarget(value,1);
         } else if (setting instanceof ColorSetting) {
             ColorSetting value = (ColorSetting) setting;
             label(setting.getName() + ":");
@@ -488,28 +482,6 @@ public final class AugustusImGui {
         String text = BigDecimal.valueOf(value).setScale(6, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
         draw.addText(Math.round(x + (width - textWidth(text)) / 2), y + 3, TEXT, text);
         return value;
-    }
-
-    private static void wheelTarget(Setting<?> setting,int handle) {
-        if(ImGui.isItemVisible())wheelTargets.add(new WheelTarget(setting,handle,ImGui.getItemRectMinX(),
-                Math.max(ImGui.getItemRectMinY(),ImGui.getWindowPosY()),ImGui.getItemRectMaxX(),
-                Math.min(ImGui.getItemRectMaxY(),ImGui.getWindowPosY()+ImGui.getWindowHeight())));
-    }
-    static boolean wheel(int x,int y,int delta) {
-        if(ImGui.isPopupOpen("",imgui.flag.ImGuiPopupFlags.AnyPopupId|imgui.flag.ImGuiPopupFlags.AnyPopupLevel))return false;
-        for(int i=wheelTargets.size()-1;i>=0;i--) {
-            WheelTarget target=wheelTargets.get(i);
-            if(x>=target.left&&x<target.right&&y>=target.top&&y<target.bottom
-                    &&dev.vibe.ui.SliderWheel.adjust(target.setting,dev.vibe.ui.SliderWheel.notches(delta),target.handle)) {
-                if(Vibe.getInstance()!=null&&Vibe.getInstance().getConfig()!=null)Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
-                return true;
-            }
-        }
-        return false;
-    }
-    private static final class WheelTarget {
-        final Setting<?> setting;final int handle;final float left,top,right,bottom;
-        WheelTarget(Setting<?> setting,int handle,float left,float top,float right,float bottom){this.setting=setting;this.handle=handle;this.left=left;this.top=top;this.right=right;this.bottom=bottom;}
     }
 
     private static float textWidth(String text) { return ImGui.calcTextSize(text).x; }

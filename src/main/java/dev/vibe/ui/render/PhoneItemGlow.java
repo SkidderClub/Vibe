@@ -66,7 +66,7 @@ final class PhoneItemGlow {
             composite.vec3("Secondary", (second >> 16 & 255) / 255F, (second >> 8 & 255) / 255F, (second & 255) / 255F);
             composite.vec2("ColorAlpha", (first >>> 24) / 255F, (second >>> 24) / 255F);
             composite.scalar("Strength", module.intensity.getFloat() * module.opacity.getFloat() * module.fadeAt(seconds));
-            composite.scalar("Falloff", module.falloff.getFloat()); composite.scalar("InnerGlow", module.innerGlow.getFloat());
+            composite.scalar("Falloff", module.falloff.getFloat()); ItemGlowRenderer.innerSettings(composite, module, seconds);
             GL11.glEnable(GL11.GL_BLEND); GL20.glBlendEquationSeparate(GL14.GL_FUNC_ADD, GL14.GL_FUNC_ADD);
             GL14.glBlendFuncSeparate(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_COLOR, GL11.GL_ZERO, GL11.GL_ONE);
             int x = left - pad, y = top - pad;

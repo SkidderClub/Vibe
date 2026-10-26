@@ -55,7 +55,8 @@ public final class ReconnectEvents {
             }
             if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordRandomCracked(name);
         }
-        mc.displayGuiScreen(new GuiConnecting(new GuiMultiplayer(new GuiMainMenu()), mc, lastServer));
+        dev.vibe.ui.server.MinibloxConnectGui.connect(new GuiMultiplayer(new GuiMainMenu()), mc, lastServer,
+                Vibe.getInstance().getServerBrowser());
     }
     @SubscribeEvent public void draw(GuiScreenEvent.DrawScreenEvent.Post event) {
         if (!(event.gui instanceof GuiDisconnected) || error.isEmpty()) return;

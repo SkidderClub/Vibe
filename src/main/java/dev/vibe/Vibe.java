@@ -113,7 +113,7 @@ public final class Vibe {
         config.restoreSession(moduleManager);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try { config.saveSession(moduleManager); }
-            finally { extensions.shutdown(); }
+            finally { try { extensions.shutdown(); } finally { serverBrowser.shutdown(); } }
         }, "Vibe-Shutdown"));
         feedback.start();
         refreshLoadedCounts();

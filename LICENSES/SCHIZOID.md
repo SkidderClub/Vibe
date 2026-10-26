@@ -45,6 +45,11 @@ shaders, blur methods, fonts and artwork are not included.
 
 ## Building and distributing this combination
 
+On 2026-10-26, Vibe extended FogModule, FogRenderer and Tint.frag with shared
+Cute Visuals color presets and animated two-color gradients. Love retains the
+existing rainbow shader. The additions reuse the original tint/blur passes and
+preserve the Schizoid notices above.
+
 Vibe combines GPLv3 and AGPLv3 components under section 13 of those licenses. The
 AGPL network-interaction provisions apply to the combination when their conditions
 are met. The top-level GPL

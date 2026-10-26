@@ -27,6 +27,16 @@ public class ItemGlowTest {
         glow.colorMode.setValue("Rainbow"); glow.colorSpeed.setValue(1D);
         assertNotEquals(glow.colorAt(0, 0), glow.colorAt(2, 0));
     }
+    @Test public void innerModesExposeTheirAnimationControlsAndKeepLegacyTintDefaults() {
+        ItemGlowModule glow = new ItemGlowModule();
+        assertEquals(0,glow.innerGlow.getDouble(),0); assertEquals(0,glow.innerModeIndex());
+        assertFalse(glow.innerSpeed.isVisible()); assertFalse(glow.innerWidth.isVisible());
+        glow.innerGlow.setValue(.3D); glow.innerMode.setValue("Rim"); assertEquals(2,glow.innerModeIndex());
+        glow.innerMode.setValue("Scan"); assertEquals(4,glow.innerModeIndex());
+        assertTrue(glow.innerSpeed.isVisible()); assertTrue(glow.innerWidth.isVisible());
+        glow.innerSpeed.setValue(1D); assertEquals(.25,glow.innerPhaseAt(10000.25),.00001);
+        glow.innerMode.setValue("Pulse"); assertEquals(3,glow.innerModeIndex()); assertFalse(glow.innerWidth.isVisible());
+    }
     @Test public void qualityBoundsTheBlurAndHooksCoverBothRenderers() throws Exception {
         ItemGlowModule glow = new ItemGlowModule();
         assertEquals(3, glow.downsample()); assertEquals(960, glow.blurLimit());

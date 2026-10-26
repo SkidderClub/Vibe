@@ -4,6 +4,7 @@ import dev.vibe.module.impl.client.ClickGuiModule;
 import dev.vibe.ui.MenuRoundedRenderer;
 import dev.vibe.ui.NeverLoseFont;
 import dev.vibe.ui.RenderUtils;
+import dev.vibe.ui.ScrollingText;
 import java.awt.Color;
 import net.minecraft.client.renderer.GlStateManager;
 import org.lwjgl.opengl.GL11;
@@ -54,6 +55,7 @@ final class DropdownStyle {
         GL11.glShadeModel(GL11.GL_FLAT);GlStateManager.enableAlpha();GlStateManager.enableTexture2D();GlStateManager.resetColor();GlStateManager.color(1,1,1,1);
     }
     private static void color(int c){GL11.glColor4f((c>>16&255)/255F,(c>>8&255)/255F,(c&255)/255F,(c>>>24)/255F);}
-    static void label(String s,float x,float y,float width,int color){LABEL.draw(LABEL.fit(s,Math.max(1,width)),x,y,color);}
-    static void center(String s,int x,int y,int w,int color){String fitted=LABEL.fit(s,w-12);LABEL.draw(fitted,Math.round(x+(w-LABEL.width(fitted))/2),y,color);}
+    int footerHeight() { return novo ? 4 : radius + 2; }
+    static void label(String s,float x,float y,float width,int color){ScrollingText.draw(LABEL,s,x,y,width,color,ScrollingText.Alignment.LEFT);}
+    static void center(String s,int x,int y,int w,int color){ScrollingText.draw(LABEL,s,x+6,y,w-12,color,ScrollingText.Alignment.CENTER);}
 }

@@ -51,6 +51,7 @@ public final class ModuleManager {
         register(new CustomCosmeticsModule());
         register(new CustomModelRendererModule());
         register(new FogModule());
+        register(new ChunkAnimationModule());
         register(new MusicModule());
         register(new AnimationsModule());
         register(new AmbienceModule());

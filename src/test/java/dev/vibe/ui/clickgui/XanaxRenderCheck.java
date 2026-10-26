@@ -92,8 +92,9 @@ public final class XanaxRenderCheck {
             render(gui, 786, 638, 1, null);
             number=hit(gui,"SLIDER",main.range);
             gui.wheel(num(number,"x")+num(number,"w")/2,num(number,"y")+3,-120);
-            check(main.range.getDouble()==main.range.getMaximum()-main.range.getIncrement(),"Hovered Xanax slider ignored the mouse wheel");
+            check(main.range.getDouble()==main.range.getMaximum(),"Mouse wheel changed a Xanax slider");
             gui.wheel(num(number,"x")+num(number,"w")/2,num(number,"y")+3,120);
+            render(gui, 786, 638, 1, null);
             Object pair = hit(gui, "SLIDER", main.cps);
             click(gui, pair, 0); frame(786, 638, 1); gui.draw(786, 638, num(pair, "x") + num(pair, "w") + 500, num(pair, "y")); gui.release(0);
             check(main.cps.getMin() == main.cps.getMax(), "Range bounds crossed");

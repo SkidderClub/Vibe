@@ -16,6 +16,7 @@ import dev.vibe.setting.StringSetting;
 import dev.vibe.ui.GuiClip;
 import dev.vibe.ui.KawaseBlur;
 import dev.vibe.ui.RenderUtils;
+import dev.vibe.ui.ScrollingText;
 import dev.vibe.ui.render.ParticlesRenderer;
 import dev.vibe.ui.render.WaifuRenderer;
 import java.io.IOException;
@@ -202,8 +203,8 @@ public final class VibeClickGui extends GuiScreen {
         int accent=style.suizide&&style.light?0xFFFFFFFF:style.accent(.4F,y);
         if(setting instanceof NumberSetting||setting instanceof RangeSetting){
             String value=setting instanceof NumberSetting?compact(((NumberSetting)setting).getDouble()):compact(((RangeSetting)setting).getMin())+" - "+compact(((RangeSetting)setting).getMax());
-            float valueW=DropdownStyle.LABEL.width(value);DropdownStyle.label(setting.getName(),x+4,y+2,w-valueW-13,muted);
-            DropdownStyle.LABEL.draw(value,x+w-valueW-5,y+2,text);
+            float valueW=Math.min(w*.42F,DropdownStyle.LABEL.width(value));DropdownStyle.label(setting.getName(),x+4,y+2,w-valueW-13,muted);
+            ScrollingText.draw(DropdownStyle.LABEL,value,x+w-valueW-5,y+2,valueW,text,ScrollingText.Alignment.RIGHT);
             int left=x+6,right=x+w-6,sy=y+23;double min,max,low,high;
             if(setting instanceof NumberSetting){NumberSetting n=(NumberSetting)setting;min=n.getMinimum();max=n.getMaximum();low=min;high=n.getDouble();}
             else {RangeSetting r=(RangeSetting)setting;min=r.getMinimum();max=r.getMaximum();low=r.getMin();high=r.getMax();}
@@ -235,7 +236,7 @@ public final class VibeClickGui extends GuiScreen {
             dropdownTarget(TargetType.COLOR_TOGGLE,sx-1,y,x+w,y+22,null,setting,-1,owner);
         }else if(setting instanceof ModeSetting){
             String value=LanguageManager.translate(((ModeSetting)setting).getValue());
-            String fit=DropdownStyle.LABEL.fit(value,reserve-14);DropdownStyle.LABEL.draw(fit,x+w-14-DropdownStyle.LABEL.width(fit),y+3,text);
+            ScrollingText.draw(DropdownStyle.LABEL,value,x+w-reserve,y+3,reserve-14,text,ScrollingText.Alignment.RIGHT);
             NeverLoseStyle.chevron(x+w-9,y+10,dropdown.modeOpen((ModeSetting)setting),text);
             dropdownTarget(TargetType.MODE,x,y,x+w,y+22,null,setting,-1,owner);
             dropdown.drawInlineMode(this,(ModeSetting)setting,x,y+22,w,owner);
@@ -1004,18 +1005,6 @@ public final class VibeClickGui extends GuiScreen {
         if(colorPopup!=null&&colorPopup.contains(mx,my))return;
         if(isDropdownTheme()&&dropdown.wheelPopup(mx,my,wheel))return;
         if(isDropdownTheme()&&dropdown.panWheel(mx,my,wheel))return;
-        for(int i=targets.size()-1;i>=0;i--) {
-            Target target=targets.get(i);
-            if(!target.contains(mx,my)||(isSkeetTheme()&&!insideSkeetContent(mx,my)))continue;
-            if(isDropdownTheme()&&!dropdown.accepts(target.dropdownPanel,mx,my))continue;
-            if(target.type==TargetType.NUMBER||target.type==TargetType.RANGE) {
-                int handle=target.setting instanceof RangeSetting?dev.vibe.ui.SliderWheel.nearestHandle((RangeSetting)target.setting,
-                        (mx-target.left)/(double)Math.max(1,target.right-target.left)):0;
-                dev.vibe.ui.SliderWheel.adjust(target.setting,dev.vibe.ui.SliderWheel.notches(wheel),handle);
-                if(Vibe.getInstance().getConfig()!=null)Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
-                return;
-            }
-        }
         if(draggingSlider!=null)return;
         if(isDropdownTheme()){dropdown.wheel(mx,my,wheel);return;}
         if (isSkeetTheme()) {

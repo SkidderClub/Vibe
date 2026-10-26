@@ -63,10 +63,13 @@ final class DropdownWorkspace {
         for(Panel p:panels)p.modules.clear();
         for(Module module:Vibe.getInstance().getModuleManager().getModules())categories.get(module.getCategory()).modules.add(module);
         for(Panel p:panels) {
-            p.content=4;for(Module module:p.modules)p.content+=style.rowHeight+(host.dropdownExpanded(module)?host.dropdownSettingsHeight(module):0);
-            int available=Math.max(style.headerHeight+20,height-p.y-(horizontalMax>0?37:22));
-            p.h=p.collapsed?style.headerHeight:Math.min(available,style.headerHeight+p.content+5);
-            p.max=Math.max(0,p.content-Math.max(0,p.h-style.headerHeight-3));p.target=Math.max(0,Math.min(p.max,p.target));p.scroll+=(p.target-p.scroll)*ease;
+            p.content=2;for(Module module:p.modules)p.content+=style.rowHeight+(host.dropdownExpanded(module)?host.dropdownSettingsHeight(module):0);
+            int margin=horizontalMax>0?37:22;
+            int minimum=style.headerHeight+style.rowHeight+style.footerHeight()+2;
+            if(!p.collapsed)p.y=clamp(p.y,4,height-minimum-margin);
+            int available=Math.max(minimum,height-p.y-margin);
+            p.h=p.collapsed?style.headerHeight:Math.min(available,style.headerHeight+p.content+style.footerHeight());
+            p.max=Math.max(0,p.content-Math.max(0,p.h-style.headerHeight-style.footerHeight()));p.target=Math.max(0,Math.min(p.max,p.target));p.scroll=Math.max(0,Math.min(p.max,p.scroll+(p.target-p.scroll)*ease));
         }
         for(Panel p:panels)drawPanelGlow(p);
         for(Panel p:panels) drawPanel(host,p,mx,my,ease,now);
@@ -95,15 +98,15 @@ final class DropdownWorkspace {
             dev.vibe.ui.MenuRoundedRenderer.verticalGradient(x,y,panelWidth,p.h,radius,body,0xE5C7FFE6);
         }
         if(style.suizide) {
-            try(GuiClip clip=GuiClip.local(x,y,panelWidth,style.headerHeight)){roundedGradient(x,y,panelWidth,style.headerHeight+radius,radius,style.accent(0,y),style.accent(1,y));}
+            try(GuiClip clip=GuiClip.local(x,y,panelWidth,style.headerHeight)){roundedGradient(x,y,panelWidth,style.headerHeight+(p.collapsed?0:radius),radius,style.accent(0,y),style.accent(1,y));}
         } else {
-            try(GuiClip clip=GuiClip.local(x,y,panelWidth,style.headerHeight)){rect(x,y,panelWidth,style.headerHeight+radius,radius,style.novo?0xF20D0D13:0xF7111113);}
+            try(GuiClip clip=GuiClip.local(x,y,panelWidth,style.headerHeight)){rect(x,y,panelWidth,style.headerHeight+(p.collapsed?0:radius),radius,style.novo?0xF20D0D13:0xF7111113);}
         }
         String title=p.category.getLabel();
         if(style.novo){NeverLoseStyle.icon(p.category,x+8,y+7,0xFFD3D2DF);label(title,x+25,y+4,panelWidth-38,0xFFE8E7ED);}
-        else {String fitted=HEADER.fit(title,panelWidth-18);HEADER.draw(fitted,x+(panelWidth-HEADER.width(fitted))/2,y+4,0xFFF7F7F9);}
+        else ScrollingText.draw(HEADER,title,x+9,y+4,panelWidth-(p.collapsed?30:18),0xFFF7F7F9,ScrollingText.Alignment.CENTER);
         if(p.collapsed){NeverLoseStyle.chevron(x+panelWidth-12,y+11,false,0xFFAAAAAE);return;}
-        int top=y+style.headerHeight,bottom=y+p.h-(style.novo?4:radius>0?3:0);
+        int top=y+style.headerHeight,bottom=y+p.h-style.footerHeight();
         host.dropdownClip(p.name,top,bottom);
         try(GuiClip clip=GuiClip.local(x,top,panelWidth,bottom-top)) {
             int rowY=top+2-Math.round(p.scroll);
@@ -116,9 +119,7 @@ final class DropdownWorkspace {
                     if(style.packet) {
                         if(on>.01F) {
                             int c1=RenderUtils.blend(body,style.accent(0,rowY),on),c2=RenderUtils.blend(body,style.accent(1,rowY),on);
-                            boolean last=module==p.modules.get(p.modules.size()-1)&&!expanded&&p.max==0;
-                            if(last)try(GuiClip lastRow=GuiClip.local(rx,rowY,rw,style.rowHeight)){roundedGradient(rx,rowY-radius,rw,style.rowHeight+radius,radius,c1,c2);}
-                            else gradient(rx,rowY,rw,style.rowHeight,c1,c2);
+                            gradient(rx,rowY,rw,style.rowHeight,c1,c2);
                         } else if(hover>.01F) Gui.drawRect(rx,rowY,rx+rw,rowY+style.rowHeight,RenderUtils.alpha(0xFFFFFFFF,Math.round(hover*12)));
                     } else if(style.suizide) {
                         int inactive=RenderUtils.blend(style.row,style.light?0xFFFFFFFF:0xFF30303A,hover*.6F);
@@ -127,7 +128,7 @@ final class DropdownWorkspace {
                     int color=style.novo?RenderUtils.blend(style.text,style.accent(0,rowY),on):module.isEnabled()?0xFFFFFFFF:style.text;
                     String name=host.dropdownBinding(module)?"Press a key...":module.getName();
                     // One text pass: the optional glow belongs behind the panel, never offset glyphs.
-                    center(name,rx,rowY+(style.rowHeight-14)/2,rw,color);
+                    center(name,rx,rowY+(style.rowHeight-14)/2,rw-(!style.packet&&host.dropdownHasSettings(module)?13:0),color);
                     if(!style.packet&&host.dropdownHasSettings(module))NeverLoseStyle.chevron(rx+rw-11,rowY+style.rowHeight/2-1,expanded,color);
                     host.dropdownModuleTarget(module,x,rowY,x+panelWidth,rowY+style.rowHeight,p.name);
                     if(over)hovered=module;
@@ -144,10 +145,11 @@ final class DropdownWorkspace {
             int color=style.accent(0,y);Gui.drawRect(x,y+p.h-3,x+panelWidth,y+p.h-1,color);
             Gui.drawRect(x,y+p.h-1,x+panelWidth,y+p.h,RenderUtils.alpha(color,100));
         }
+        else Gui.drawRect(x+radius,y+p.h-5,x+panelWidth-radius,y+p.h-4,RenderUtils.alpha(style.accent(.5F,y),55));
         if(p.max>0){int track=bottom-top,thumb=ScrollbarDrag.thumb(track,p.max,15),sy=top+Math.round((track-thumb)*p.scroll/p.max);
             rect(x+panelWidth-3,sy,2,thumb,1,RenderUtils.alpha(style.muted,150));}
     }
-    boolean accepts(String owner,int mx,int my) {Panel p=at(mx,my);return p!=null&&p.name.equals(owner)&&!p.collapsed&&my>=p.y+style.headerHeight&&my<p.y+p.h-(style.novo?4:3);}
+    boolean accepts(String owner,int mx,int my) {Panel p=at(mx,my);return p!=null&&p.name.equals(owner)&&!p.collapsed&&my>=p.y+style.headerHeight&&my<p.y+p.h-style.footerHeight();}
     private Panel at(int mx,int my){for(int i=panels.size()-1;i>=0;i--){Panel p=panels.get(i);if(mx>=screenX(p)&&mx<screenX(p)+panelWidth&&my>=p.y&&my<p.y+p.h)return p;}return null;}
     boolean click(int mx,int my,int button) {
         if(mode!=null&&!inlineMode()) {
@@ -165,7 +167,7 @@ final class DropdownWorkspace {
             else if(button==0){dragging=p;dragX=mx+Math.round(horizontal)-p.x;dragY=my-p.y;panels.remove(p);panels.add(p);}
             return true;
         }
-        if(button==0&&p.max>0&&mx>=screenX(p)+panelWidth-6){scrolling=p;scrollbar=new ScrollbarDrag(p.y+style.headerHeight,p.y+p.h-(style.novo?4:3),Math.round(p.scroll),p.max,15,my);p.target=p.scroll=scrollbar.at(my);return true;}
+        if(button==0&&p.max>0&&mx>=screenX(p)+panelWidth-6){scrolling=p;scrollbar=new ScrollbarDrag(p.y+style.headerHeight,p.y+p.h-style.footerHeight(),Math.round(p.scroll),p.max,15,my);p.target=p.scroll=scrollbar.at(my);return true;}
         return false;
     }
     boolean wheelPopup(int mx,int my,int delta){if(mode==null||inlineMode())return false;modeScroll=clamp(modeScroll-(delta>0?20:-20),0,Math.max(0,mode.getModes().size()*20+6-modeH));return true;}

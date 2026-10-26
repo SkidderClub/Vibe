@@ -132,7 +132,7 @@ public final class ItemGlowRenderer {
             double seconds = module.seconds();
             colors(module.colorAt(seconds, 0), module.colorAt(seconds, 1));
             composite.scalar("Strength", module.intensity.getFloat() * module.opacity.getFloat() * module.fadeAt(seconds));
-            composite.scalar("Falloff", module.falloff.getFloat()); composite.scalar("InnerGlow", module.innerGlow.getFloat());
+            composite.scalar("Falloff", module.falloff.getFloat()); innerSettings(composite, module, seconds);
             FogRenderer.quad();
         } catch (Exception failure) {
             // The real source was already drawn into Minecraft's own color/depth attachments.
@@ -140,6 +140,12 @@ public final class ItemGlowRenderer {
         }
     }
 
+    static void innerSettings(EffectProgram program, ItemGlowModule module, double seconds) {
+        program.scalar("InnerGlow", module.innerGlow.getFloat());
+        program.integer("InnerMode", module.innerModeIndex());
+        program.scalar("InnerPhase", module.innerPhaseAt(seconds));
+        program.scalar("InnerWidth", module.innerWidth.getFloat());
+    }
     private void colors(int first, int second) {
         composite.vec3("Primary", (first >> 16 & 255) / 255F, (first >> 8 & 255) / 255F, (first & 255) / 255F);
         composite.vec3("Secondary", (second >> 16 & 255) / 255F, (second >> 8 & 255) / 255F, (second & 255) / 255F);

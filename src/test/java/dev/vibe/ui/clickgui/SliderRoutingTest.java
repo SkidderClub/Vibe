@@ -11,17 +11,17 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class SliderRoutingTest {
-    @Test public void skeetAndFuturisticWheelTargetsAdjustSettingsInsteadOfScrolling() throws Exception {
+    @Test public void skeetAndFuturisticWheelsNeverChangeNumericSettings() throws Exception {
         try(PathTestFixture f=new PathTestFixture()) {
             ClickGuiModule theme=new ClickGuiModule();f.modules.registerDynamic(theme);
             for(String name:new String[]{"Skeet","Futuristic"}) {
                 theme.getTheme().setValue(name);VibeClickGui gui=gui();
                 NumberSetting number=new NumberSetting("Value",5,0,10,.5);
-                addTarget(gui,"NUMBER",number);gui.wheel(220,90,120);assertEquals(5.5,number.getDouble(),0);
-                assertEquals(100,field("skeetScroll").getInt(gui));
+                addTarget(gui,"NUMBER",number);gui.wheel(220,90,-120);assertEquals(5,number.getDouble(),0);
+                if(name.equals("Skeet"))assertEquals(122,field("skeetScroll").getInt(gui));
                 ((List<?>)field("targets").get(gui)).clear();RangeSetting range=new RangeSetting("Range",2,6,0,10,1);
-                addTarget(gui,"RANGE",range);gui.wheel(190,90,120);assertEquals(3,range.getMin(),0);
-                gui.wheel(270,90,120);assertEquals(7,range.getMax(),0);
+                addTarget(gui,"RANGE",range);gui.wheel(190,90,120);assertEquals(2,range.getMin(),0);
+                gui.wheel(270,90,120);assertEquals(6,range.getMax(),0);
             }
         }
     }

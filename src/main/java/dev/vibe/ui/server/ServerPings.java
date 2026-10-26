@@ -24,6 +24,11 @@ final class ServerPings implements AutoCloseable {
     private final boolean enabled;
     ServerPings(boolean enabled) { this.enabled = enabled; }
     ServerData get(ServerData source) {
+        if (dev.vibe.miniblox.MinibloxServer.is(source)) {
+            source.serverMOTD = "Join to start the Miniblox translation layer";
+            source.populationInfo = "Built-in"; source.pingToServer = -3;
+            return source;
+        }
         if (!enabled || source.isOnLAN()) return source;
         ServerData copy = pending.get(source);
         if (copy == null && !closed) {

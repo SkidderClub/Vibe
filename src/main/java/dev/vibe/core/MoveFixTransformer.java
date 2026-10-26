@@ -310,6 +310,8 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
             super.visitCode();
             visitVarInsn(Opcodes.ALOAD, 0);
             visitMethodInsn(Opcodes.INVOKESTATIC, HOOK, "beginPacketRotationHook", "(Ljava/lang/Object;)V", false);
+            visitVarInsn(Opcodes.ALOAD, 0);
+            visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/miniblox/MinibloxProtocol", "captureHook", "(Ljava/lang/Object;)V", false);
         }
 
         @Override

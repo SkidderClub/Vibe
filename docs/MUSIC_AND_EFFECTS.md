@@ -4,9 +4,14 @@
 
 Enable **Visual → Fog**. Start/End Distance use world units. The end is always
 at least 0.1 beyond the start, including when an old profile reverses the sliders.
-Choose Kawase or Gaussian blur, strength, overall opacity and Scene/Custom/Rainbow
-color. Rainbow adds Schizoid's animated noise tint with opacity, saturation,
-brightness and speed controls. Affect Sky includes/excludes the sky. Keep Vanilla
+Choose Kawase or Gaussian blur, strength, overall opacity and a Color Mode.
+**Love** keeps the original animated rainbow, including opacity, saturation,
+brightness and speed controls. **Custom** fades smoothly between Primary Color
+and Secondary Color; Fade Speed controls its animation (zero freezes it).
+Red, Green, Blue, Yellow, Gray, Purple, LightBlue, China, Bavaria and Catton Candy
+share Cute Visuals' palettes. Scene preserves the scene's colors. Existing Rainbow
+profiles migrate to Love; old single-color Custom profiles keep matching endpoints.
+Affect Sky includes/excludes the sky. Keep Vanilla
 Fog retains the game's normal fog beneath the effect.
 
 The same settings affect Minecraft and GTA7. Fog runs before the hand/weapon and
@@ -14,6 +19,25 @@ HUD, using the active view's depth buffer. OpenGL 2.0 shaders and framebuffer
 support are required; unsupported hardware keeps the normal rendering path.
 Third-party shader packs that replace the depth pipeline need live compatibility
 testing; standard Forge rendering and GTA7's own framebuffer are supported.
+
+## ChunkAnimation
+
+Enable **Visual → ChunkAnimation** to ease newly compiled terrain into place.
+Choose Rise, Drop, Slide or Grow, a duration of 150–2000 ms, and movement distance
+for the first three modes. Rise with 600 ms and 16 blocks is the default.
+
+Animations start when the first mesh is ready, rather than when compilation begins.
+All terrain layers share one frame time. Block edits, translucent sorting and old
+chunks viewed again do not restart them; recycling a render chunk to another position
+resets its animation. Enabling the module does not animate meshes compiled while it
+was off, and disabling it restores normal terrain placement immediately.
+
+The module transforms vanilla's cached mesh inside its existing matrix scope, on
+both VBO and display-list renderers. It adds no draw passes, mesh rebuilds, framebuffer
+copies, chunk maps or per-frame objects. One timestamp is stored on each render chunk;
+finished sections take the early return path. Tile entities and collision remain in
+their normal world positions. Renderer replacements such as OptiFine require separate
+compatibility testing.
 
 ## Hitmarker → Torus
 

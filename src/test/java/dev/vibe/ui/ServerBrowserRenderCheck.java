@@ -58,6 +58,16 @@ public final class ServerBrowserRenderCheck {
                 footer.sort(Comparator.comparingInt((GuiButton b)->b.yPosition).thenComparingInt(b->b.xPosition));
                 int[] order={4,2,1,5,6,3,0};for(int i=0;i<order.length;i++)if(footer.get(i).id!=order[i]||footer.get(i).height!=20)throw new AssertionError("Vanilla footer arrangement changed");
                 if (size[0] == 960) {
+                    ServerData miniblox = null;
+                    for (ServerData data : servers) if (dev.vibe.miniblox.MinibloxServer.is(data)) miniblox = data;
+                    if (miniblox == null) throw new AssertionError("Default Miniblox server is missing");
+                    set(screen,"selected",miniblox); screen.updateScreen();
+                    for(GuiButton button:buttons(screen))if(button.id==6&&button.enabled)throw new AssertionError("Miniblox Delete button is enabled");
+                    invoke(screen,"keyTyped",new Class<?>[]{char.class,int.class},'\0',org.lwjgl.input.Keyboard.KEY_DELETE);
+                    if((Boolean)get(ServerBrowserGui.class,screen,"deleting"))throw new AssertionError("Delete key can delete Miniblox");
+                    invoke(screen,"actionPerformed",new Class<?>[]{GuiButton.class},new GuiButton(9,0,0,"Delete"));
+                    if(!servers(screen).contains(miniblox))throw new AssertionError("Confirmation can delete Miniblox");
+                    set(screen,"selected",servers.get(0));
                     // Begin drag at row 0, drop after row 2. Native NBT must change only on release.
                     ServerBrowserLayout l = new ServerBrowserLayout(960,540); int x = l.listX + 70, y = l.listY + 25;
                     invoke(screen, "mouseClicked", new Class<?>[] {int.class,int.class,int.class}, x,y,0);
@@ -84,6 +94,34 @@ public final class ServerBrowserRenderCheck {
                     capture(mc, screen, output.resolve("server-browser-filter-empty.png"), -1,-1);
                 }
                 screen.onGuiClosed();
+            }
+            // Moving the built-in row uses exactly the same native persistence as other servers.
+            ServerBrowserGui builtIn = new ServerBrowserGui(new GuiMainMenu(),shaders,joins,false);
+            set(builtIn,"saved",list);setup(mc,builtIn,960,540);
+            ServerData miniblox = dev.vibe.miniblox.MinibloxServer.ensure(list);
+            set(builtIn,"selected",miniblox);
+            ServerBrowserLayout moveBounds = new ServerBrowserLayout(960,540);
+            int rowIndex=servers(builtIn).indexOf(miniblox),max=moveBounds.maxScroll(servers(builtIn).size());
+            set(builtIn,"scroll",(float)max);set(builtIn,"targetScroll",(float)max);
+            capture(mc,builtIn,output.resolve("server-browser-miniblox.png"),-1,-1);
+            int bx=moveBounds.listX+70,by=moveBounds.listY+rowIndex*moveBounds.step-max+20;
+            invoke(builtIn,"mouseClicked",new Class<?>[]{int.class,int.class,int.class},bx,by,0);
+            invoke(builtIn,"mouseClickMove",new Class<?>[]{int.class,int.class,int.class,long.class},bx,moveBounds.listY+20,0,100L);
+            invoke(builtIn,"mouseReleased",new Class<?>[]{int.class,int.class,int.class},bx,moveBounds.listY+20,0);
+            ServerList moved = new ServerList(mc);int newIndex=-1;
+            for(int i=0;i<moved.countServers();i++)if(dev.vibe.miniblox.MinibloxServer.is(moved.getServerData(i)))newIndex=i;
+            if(newIndex<0||newIndex>=rowIndex)throw new AssertionError("Miniblox move was not persisted");
+            dev.vibe.miniblox.MinibloxServer.ensure(moved);
+            if(!dev.vibe.miniblox.MinibloxServer.is(moved.getServerData(newIndex)))throw new AssertionError("Default injection reset Miniblox order");
+            builtIn.onGuiClosed();
+            for(int[] size:new int[][]{{960,540},{320,240}}){
+                MinibloxConnectGui progress=new MinibloxConnectGui(new GuiMainMenu(),miniblox,null);
+                java.lang.reflect.Field request=MinibloxConnectGui.class.getDeclaredField("attempt");request.setAccessible(true);
+                dev.vibe.miniblox.MinibloxRuntime.Attempt attempt=new dev.vibe.miniblox.MinibloxRuntime.Attempt();
+                attempt.message="Installing translation layer dependencies";request.set(progress,attempt);setup(mc,progress,size[0],size[1]);
+                capture(mc,progress,output.resolve("miniblox-install-"+size[0]+".png"),-1,-1);
+                attempt.error="Could not install Miniblox dependencies. See vibe/miniblox/install.log.";
+                capture(mc,progress,output.resolve("miniblox-error-"+size[0]+".png"),-1,-1);progress.onGuiClosed();
             }
             // Real scaled GUI projection must use the same logical bounds for rendering and input.
             ServerBrowserGui scaled = new ServerBrowserGui(new GuiMainMenu(),shaders,joins,false);set(scaled,"saved",list);

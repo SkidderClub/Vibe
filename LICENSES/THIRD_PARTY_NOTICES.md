@@ -50,6 +50,16 @@ checks documentation and packaging consistency, not permission to distribute.
 
 ## Maintaining these notices
 
+### Optional Miniblox translation layer
+
+Vibe can download and run [7GrandDad's Miniblox Translation Layer](https://github.com/7GrandDadPGN/MinibloxTranslationLayer)
+as a separate local Node.js process. The integration pins revision
+`842d2fd9779982bb8689a536c9f91e7f428eb7b0`. Its source and `LICENSE.md`
+(AGPL-3.0-or-later) remain in the downloaded installation; the upstream server code
+and npm dependencies are not bundled into Vibe's JAR. The Java movement adapter
+implements its documented custom-payload wire format. See `docs/MINIBLOX.md` for
+the installation location, launcher wrapper and protocol integration.
+
 The Gothaj Scaffold port has a pinned source revision, helper mapping, original
 asset provenance and Forge integration notes in [GOTHAJ-SCAFFOLD.md](GOTHAJ-SCAFFOLD.md).
 The source repository did not contain an upstream license file; that document
