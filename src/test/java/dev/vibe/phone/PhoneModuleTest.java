@@ -30,7 +30,7 @@ public class PhoneModuleTest {
     @Test public void contactsRouteToActiveCallsAndMessagesUseTheSelectBinding() throws Exception {
         PhoneModule phone = enabled();
         assertFalse(phone.hints.isEnabled());
-        assertEquals(8, PhoneModule.appCount());
+        assertEquals(9, PhoneModule.appCount());
         phone.open(App.CONTACTS);
         phone.act(Action.SELECT); assertEquals(App.TELEPHONE, phone.app()); assertTrue(phone.isCalling());
         long started = phone.callStartedAt();

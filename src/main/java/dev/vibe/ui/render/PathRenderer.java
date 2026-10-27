@@ -26,7 +26,7 @@ public final class PathRenderer {
     public void render(RenderWorldLastEvent event) {
         Minecraft mc = Minecraft.getMinecraft();
         PathModule module = Vibe.getInstance().getModuleManager().getModule(PathModule.class);
-        if (module == null || !module.isEnabled() || mc.thePlayer == null || mc.theWorld == null) return;
+        if (module == null || !module.shouldRender() || mc.thePlayer == null || mc.theWorld == null) return;
         Vec3 player = interpolate(mc.thePlayer, event.partialTicks);
         Vec3 origin = new Vec3(mc.getRenderManager().viewerPosX, mc.getRenderManager().viewerPosY, mc.getRenderManager().viewerPosZ);
         EntityLivingBase target = module.getTarget();

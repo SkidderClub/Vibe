@@ -1,5 +1,9 @@
 # Path (Visual)
 
+**Movement → AutoWalk → Path** can follow this route and display its line without
+changing the Path toggle. See [AutoWalk](AUTOWALK.md) for walking, rotation speed
+and autojump settings. Path itself still only calculates and renders the route.
+
 Path draws a thin world-space walking route around blocks to one nearby entity. It is only a visual guide: it never moves, rotates, attacks, changes perspective or sends packets. It also renders in Freecam, independently of Hide HUD.
 
 ## Targets

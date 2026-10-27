@@ -97,6 +97,9 @@ public class FreecamHooksTest implements Opcodes {
             assertEquals(1, calls(method(after, obfuscated ? "aw" : "clickMouse", "()V"), "cameraActiveHook"));
             assertEquals(1, calls(method(after, obfuscated ? "ax" : "rightClickMouse", "()V"), "cameraActiveHook"));
             assertEquals(1, calls(method(after, obfuscated ? "b" : "sendClickBlockToController", "(Z)V"), "cameraActiveHook"));
+            assertEquals(1, calls(method(after, obfuscated ? "aw" : "clickMouse", "()V"), "bodyClickBlockingHook", "dev/vibe/module/impl/movement/AntiAFKModule"));
+            assertEquals(1, calls(method(after, obfuscated ? "b" : "sendClickBlockToController", "(Z)V"), "bodyClickBlockingHook", "dev/vibe/module/impl/movement/AntiAFKModule"));
+            assertEquals(0, calls(method(after, obfuscated ? "ax" : "rightClickMouse", "()V"), "bodyClickBlockingHook", "dev/vibe/module/impl/movement/AntiAFKModule"));
         }
         if (kind == 4 || kind == 5) {
             int yaw = 0, pitch = 0;
@@ -129,10 +132,13 @@ public class FreecamHooksTest implements Opcodes {
     }
 
     private static int calls(MethodNode method, String name) {
+        return calls(method, name, HOOK);
+    }
+    private static int calls(MethodNode method, String name, String owner) {
         int count = 0;
         for (AbstractInsnNode instruction : method.instructions.toArray()) if (instruction instanceof MethodInsnNode) {
             MethodInsnNode call = (MethodInsnNode) instruction;
-            if (call.owner.equals(HOOK) && (name == null || name.equals(call.name))) count++;
+            if (call.owner.equals(owner) && (name == null || name.equals(call.name))) count++;
         }
         return count;
     }

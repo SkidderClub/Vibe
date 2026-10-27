@@ -134,6 +134,7 @@ public final class ClientEvents {
     private final ParticlesRenderer particlesRenderer = new ParticlesRenderer();
     private final QolRenderer qolRenderer = new QolRenderer();
     private final HitmarkerRenderer hitmarkerRenderer = new HitmarkerRenderer();
+    private final dev.vibe.ui.render.esp.DamageEspRenderer damageEspRenderer = new dev.vibe.ui.render.esp.DamageEspRenderer();
     private final dev.vibe.ui.effect.FogRenderer fogRenderer = new dev.vibe.ui.effect.FogRenderer();
     private final BedEspRenderer bedEspRenderer = new BedEspRenderer();
     private final BlockChangeEspRenderer blockChangeEspRenderer = new BlockChangeEspRenderer();
@@ -159,6 +160,8 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onKey(InputEvent.KeyInputEvent event) {
+        dev.vibe.module.impl.movement.AntiAFKModule antiAFK = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.AntiAFKModule.class);
+        if (antiAFK != null) antiAFK.keyboardInput(Keyboard.getEventKey());
         if (!Keyboard.getEventKeyState()) {
             return;
         }
@@ -261,6 +264,10 @@ public final class ClientEvents {
             // Minecraft samples MovementInput for this tick.
             dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
             if (hypixel != null) hypixel.tick();
+            dev.vibe.module.impl.movement.AutoWalkModule autoWalk = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.AutoWalkModule.class);
+            if (autoWalk != null) autoWalk.tick();
+            dev.vibe.module.impl.movement.AntiAFKModule antiAFK = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.AntiAFKModule.class);
+            if (antiAFK != null) antiAFK.tick();
             // A normal GuiContainer click is handled before the player update
             // for this client tick.  Keeping automated container input here
             // preserves that same order instead of injecting a window click
@@ -300,6 +307,10 @@ public final class ClientEvents {
             if (scaffold != null) scaffold.tickEnd();
             dev.vibe.module.impl.visual.PathModule path = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.PathModule.class);
             if (path != null) path.tick();
+            dev.vibe.module.impl.movement.AntiAFKModule antiAFK = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.AntiAFKModule.class);
+            if (antiAFK != null) antiAFK.tickEnd();
+            dev.vibe.module.impl.visual.DamageESPModule damageESP = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.DamageESPModule.class);
+            if (damageESP != null) damageESP.tick();
         }
         if (event.phase != TickEvent.Phase.END) {
             return;
@@ -372,6 +383,8 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onMouseInput(InputEvent.MouseInputEvent event) {
+        dev.vibe.module.impl.movement.AntiAFKModule antiAFK = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.AntiAFKModule.class);
+        if (antiAFK != null) antiAFK.mouseInput(Mouse.getEventButton(), Mouse.getEventDWheel(), Mouse.getEventDX(), Mouse.getEventDY());
         ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
         if (scripts != null && !scripts.mouse(Mouse.getEventButton(), Mouse.getEventButtonState())) {
             event.setCanceled(true);
@@ -765,6 +778,7 @@ public final class ClientEvents {
         targetEspRenderer.render(event);
         pathRenderer.render(event);
         hitmarkerRenderer.renderWorld(event);
+        damageEspRenderer.render(event);
         skeletalRenderer.render(event);
         customCosmeticsRenderer.render(event);
         if (hypixel != null) hypixel.renderWorld();
@@ -939,6 +953,9 @@ public final class ClientEvents {
     public void onScriptDisconnect(FMLNetworkEvent.ClientDisconnectionFromServerEvent event) {
         minecraft.addScheduledTask(() -> {
             fogRenderer.close(); hitmarkerRenderer.close(); phoneRenderer.close();
+            damageEspRenderer.close();
+            dev.vibe.module.impl.visual.DamageESPModule damageESP = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.DamageESPModule.class);
+            if (damageESP != null) damageESP.clear();
             oofArrowsRenderer.clear();
             qolRenderer.clear();
             dev.vibe.module.impl.meme.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class);

@@ -65,6 +65,7 @@ public final class PathModule extends Module {
     private final RouteState mainPath = new RouteState(), goldPath = new RouteState();
     private long nextSelection;
     private int searchOptions;
+    private boolean walkingRequested,walkingJumps=true,walkingLine;
 
     public PathModule() {
         super("Path", "Draw a walking route to a nearby player or selected target", Category.VISUAL, Keyboard.KEY_NONE);
@@ -76,7 +77,7 @@ public final class PathModule extends Module {
 
     public void tick() {
         Minecraft mc = Minecraft.getMinecraft();
-        if (!isEnabled() || mc == null || mc.theWorld == null || mc.thePlayer == null || mc.thePlayer.isDead) {
+        if ((!isEnabled() && !walkingRequested) || mc == null || mc.theWorld == null || mc.thePlayer == null || mc.thePlayer.isDead) {
             clear(); return;
         }
         if (world != mc.theWorld) { clear(); world = mc.theWorld; }
@@ -128,7 +129,7 @@ public final class PathModule extends Module {
                 boolean optimize = now >= nextOptimize;
                 if (optimize && !route.nodes.isEmpty()) nextOptimize = now + optimizeInterval.getInt()*1_000_000L;
                 search = new PathPlanner(terrain, searchStart, searchGoal, range.getInt(), searchBudget.getInt(),
-                        24, jumps.isEnabled(), drop.getInt(), diagonals.isEnabled(), reuse.isEnabled() ? route.nodes : null,
+                        24, allowJumps(), drop.getInt(), diagonals.isEnabled(), reuse.isEnabled() ? route.nodes : null,
                         optimize, stability.getDouble()/100);
                 searchSince = now;
             }
@@ -224,7 +225,7 @@ public final class PathModule extends Module {
         hash = hash * 31 + (murderTargets() ? 1 : 0);
         HypixelModule hypixel = hypixel();
         hash = hash * 31 + (hypixel != null && hypixel.isMurderMysteryActive() && hypixel.getGoldPath().isEnabled() ? 1 : 0);
-        hash = hash * 31 + range.getInt(); hash = hash * 31 + (jumps.isEnabled() ? 1 : 0);
+        hash = hash * 31 + range.getInt(); hash = hash * 31 + (allowJumps() ? 1 : 0);
         hash = hash * 31 + drop.getInt(); hash = hash * 31 + searchBudget.getInt();
         hash = hash * 31 + (diagonals.isEnabled() ? 1 : 0); hash = hash * 31 + (reuse.isEnabled() ? 1 : 0);
         hash = hash * 31 + stability.getInt();
@@ -248,6 +249,9 @@ public final class PathModule extends Module {
     }
 
     public PathRoute getRoute() { return mainPath.route; }
+    public void requestWalking(boolean active,boolean jumpAllowed,boolean line) { walkingRequested=active;walkingJumps=jumpAllowed;walkingLine=line; }
+    public boolean shouldRender() { return isEnabled() || walkingRequested && walkingLine; }
+    private boolean allowJumps() { return walkingRequested ? walkingJumps : jumps.isEnabled(); }
     public PathRoute getGoldRoute() { return goldPath.route; }
     public EntityItem getGoldTarget() { return goldTarget; }
     public EntityLivingBase getTarget() { return target; }

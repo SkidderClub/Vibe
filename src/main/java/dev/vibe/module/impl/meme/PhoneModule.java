@@ -4,6 +4,7 @@ import dev.vibe.Vibe;
 import dev.vibe.module.Category;
 import dev.vibe.module.Module;
 import dev.vibe.phone.FlappyGame;
+import dev.vibe.phone.TetrisGame;
 import dev.vibe.phone.PhonePhotoLibrary;
 import dev.vibe.phone.PhoneConversation;
 import dev.vibe.phone.PhoneContact;
@@ -20,11 +21,11 @@ import org.lwjgl.input.Keyboard;
 
 /** VibeOS controller. App state is independent of rendering and game movement. */
 public final class PhoneModule extends Module {
-    public enum App { HOME, SETTINGS, CAMERA, FLAPPY, PHOTOS, INTERNET, CONTACTS, TELEPHONE, MESSAGES }
+    public enum App { HOME, SETTINGS, CAMERA, FLAPPY, PHOTOS, INTERNET, CONTACTS, TELEPHONE, MESSAGES, TETRIS }
     public enum Action { HOME, UP, DOWN, LEFT, RIGHT, SELECT, BACK, DELETE }
     public static final String INTERNET_URL = "https://www.youtube.com/@heisthacksjp";
-    private static final String[] APP_NAMES = {"Settings", "Camera", "Flappy Bird", "Photos", "Internet", "Contacts", "Telephone", "Messages"};
-    private static final App[] HOME_APPS = {App.SETTINGS, App.CAMERA, App.FLAPPY, App.PHOTOS, App.INTERNET, App.CONTACTS, App.TELEPHONE, App.MESSAGES};
+    private static final String[] APP_NAMES = {"Settings", "Camera", "Flappy Bird", "Photos", "Internet", "Contacts", "Telephone", "Messages", "Tetris"};
+    private static final App[] HOME_APPS = {App.SETTINGS, App.CAMERA, App.FLAPPY, App.PHOTOS, App.INTERNET, App.CONTACTS, App.TELEPHONE, App.MESSAGES, App.TETRIS};
     private static final int[] COLORS = {0xFFB5B1A8, 0xFF292B33, 0xFFEAE8E3, 0xFF5E95CC, 0xFFE6ACB6, 0xFF9778E5, 0xFF56C6B0};
     private static final String[] COLOR_NAMES = {"Titanium", "Midnight", "Starlight", "Ocean", "Rose", "Violet", "Mint"};
     private static final int[] BACKGROUNDS = {0xFF281446, 0xFF062D4E, 0xFF631E50, 0xFF102D30, 0xFF151722, 0xFF4330A1, 0xFF84254D, 0xFF0D6160};
@@ -41,6 +42,7 @@ public final class PhoneModule extends Module {
     public final BooleanSetting messageSounds = addSetting(new BooleanSetting("Message Sound", true));
     public final NumberSetting callVolume = addSetting(new NumberSetting("Call Volume", 70, 0, 100, 5));
     public final NumberSetting bestScore = addSetting(new NumberSetting("Flappy Best", 0, 0, 1000000, 1));
+    public final NumberSetting tetrisBest = addSetting(new NumberSetting("Tetris Best", 0, 0, 100000000, 1));
     private final StringSetting[] keys = new StringSetting[Action.values().length];
     private App app = App.HOME;
     private int homeSelection, settingSelection, photoSelection;
@@ -65,6 +67,8 @@ public final class PhoneModule extends Module {
     private long interactionAt;
     private Action lastAction;
     private final FlappyGame flappy = new FlappyGame();
+    private final TetrisGame tetris = new TetrisGame();
+    private boolean tetrisBestDirty;
 
     public PhoneModule() {
         super("Phone", "Hold a phone running VibeOS", Category.MEME, Keyboard.KEY_NONE);
@@ -81,6 +85,7 @@ public final class PhoneModule extends Module {
         callContact = null; callConversation = null;
     }
     @Override protected void onDisable() {
+        tetris.stopAutoplay(); saveTetrisBest();
         shutterRequested = false; binding = -1; confirmDelete = false; stopCommunications();
     }
     public boolean handleKey(int key, boolean repeat) {
@@ -141,6 +146,15 @@ public final class PhoneModule extends Module {
             case FLAPPY:
                 if (action == Action.SELECT || action == Action.UP) flappy.flap();
                 break;
+            case TETRIS:
+                if (action == Action.SELECT) tetris.toggleAutoplay();
+                if (action == Action.LEFT) tetris.move(-1);
+                if (action == Action.RIGHT) tetris.move(1);
+                if (action == Action.UP) tetris.rotate();
+                if (action == Action.DOWN) tetris.softDrop();
+                if (action == Action.DELETE) tetris.hardDrop();
+                trackTetrisBest();
+                break;
             case PHOTOS:
                 int count = photos().photos().size();
                 if (action == Action.DELETE && count > 0) confirmDelete = true;
@@ -195,6 +209,7 @@ public final class PhoneModule extends Module {
         }
     }
     public void open(App next) {
+        if (app == App.TETRIS && next != App.TETRIS) saveTetrisBest();
         app = next; appAt = System.currentTimeMillis(); binding = -1; confirmDelete = false; messageOpen = false;
         if (next == App.PHOTOS) { photos().refresh(); photoOpen = false; }
         if (next == App.CONTACTS) contactAction = 0;
@@ -215,6 +230,11 @@ public final class PhoneModule extends Module {
         if (app == App.FLAPPY) {
             flappy.advance(seconds);
             if (flappy.getScore() > bestScore.getInt()) { bestScore.setValue((double) flappy.getScore()); persist(); }
+        }
+        if (app == App.TETRIS) {
+            TetrisGame.Phase previous = tetris.phase(); tetris.advance(seconds);
+            trackTetrisBest();
+            if (previous != TetrisGame.Phase.OVER && tetris.phase() == TetrisGame.Phase.OVER) saveTetrisBest();
         }
         if (library != null && library.revision() != lastPhotoRevision) {
             lastPhotoRevision = library.revision();
@@ -448,6 +468,9 @@ public final class PhoneModule extends Module {
     public long appAt() { return appAt; }
     public long flashAt() { return flashAt; }
     public FlappyGame game() { return flappy; }
+    public TetrisGame tetris() { return tetris; }
+    private void trackTetrisBest() { if(tetris.score()>tetrisBest.getInt()){tetrisBest.setValue((double)tetris.score());tetrisBestDirty=true;} }
+    private void saveTetrisBest() { if (tetrisBestDirty) { persist(); tetrisBestDirty = false; } }
     public String notification() { return System.currentTimeMillis() < notificationUntil ? notification : ""; }
     public static String appName(int index) { return APP_NAMES[index]; }
     public static int appCount() { return APP_NAMES.length; }

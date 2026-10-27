@@ -113,6 +113,11 @@ public class CombatHooksTest {
         if (!obfuscated) assertTrue(finish < callIndex(method,"updateEntities","net/minecraft/client/multiplayer/WorldClient"));
         AbstractInsnNode next = method.instructions.get(bedPrepare).getNext();
         assertTrue(next instanceof MethodInsnNode);
+        assertEquals("prepareClickHook", ((MethodInsnNode) next).name);
+        assertEquals("dev/vibe/module/impl/movement/AntiAFKModule", ((MethodInsnNode) next).owner);
+        assertEquals(1, calls(method, "prepareClickHook", "dev/vibe/module/impl/movement/AntiAFKModule"));
+        next = next.getNext();
+        assertTrue(next instanceof MethodInsnNode);
         assertEquals(obfuscated ? "bS" : "isUsingItem", ((MethodInsnNode) next).name);
         MethodNode click = method(node, obfuscated ? "aw" : "clickMouse", "()V");
         verify(node, click);

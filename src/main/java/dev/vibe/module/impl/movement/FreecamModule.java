@@ -126,6 +126,7 @@ public final class FreecamModule extends Module {
 
     /** Called in the renderer's mouse path before vanilla can write player yaw/pitch. */
     public static void mouseLookHook(Object entity, float yaw, float pitch) {
+        AntiAFKModule.lookInputHook(yaw, pitch);
         FreecamModule module = active();
         if (module != null && entity == module.cameraPlayer) {
             module.flight.look(yaw * 0.15, -pitch * 0.15, module.flightMode.is("Angle"));
@@ -141,6 +142,7 @@ public final class FreecamModule extends Module {
         MovementInput input = module.cameraPlayer.movementInput;
         input.moveForward = input.moveStrafe = 0;
         input.jump = input.sneak = false;
+        AntiAFKModule.freecamBodyInputHook(input);
     }
 
     public static boolean cameraActiveHook() { return active() != null; }

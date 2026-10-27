@@ -59,6 +59,8 @@ registerRenderCheck('verifyBattlefrontRendering', 'dev.vibe.game.battlefront.Bat
         'battlefront-render-check', 'Renders Battlefront 3 scenes offscreen.', true)
 registerRenderCheck('verifyVisualRendering', 'dev.vibe.ui.VisualRenderCheck', 'visual-render-check',
         'Checks inventory and GUI rendering state.')
+registerRenderCheck('verifyDamageEspRendering', 'dev.vibe.ui.render.esp.DamageEspRenderCheck', 'damage-esp-render-check',
+        'Checks DamageESP fonts, health deltas, fade/depth pixels, camera roll and GL state preservation.', true)
 registerRenderCheck('verifyPhoneRendering', 'dev.vibe.phone.PhoneRenderCheck', 'phone-render-check',
         'Checks VibeOS apps, the phone hand, photo capture and graphics state.')
 registerRenderCheck('verifyItemGlow', 'dev.vibe.ui.render.ItemGlowRenderCheck', 'item-glow-check',

@@ -63,7 +63,19 @@ public final class FreecamTransformer implements IClassTransformer, Opcodes {
             }
             if (minecraft && ((method.desc.equals("()V") && named(method.name, "clickMouse", "func_147116_af", "aw",
                     "rightClickMouse", "func_147121_ag", "ax"))
-                    || (method.desc.equals("(Z)V") && named(method.name, "sendClickBlockToController", "func_147115_a", "b")))) guardActive(method);
+                    || (method.desc.equals("(Z)V") && named(method.name, "sendClickBlockToController", "func_147115_a", "b")))) {
+                InsnList hook = new InsnList(); hook.add(call("cameraActiveHook", "()Z"));
+                if (!named(method.name, "rightClickMouse", "func_147121_ag", "ax"))
+                    hook.add(new MethodInsnNode(INVOKESTATIC, "dev/vibe/module/impl/movement/AntiAFKModule", "bodyClickBlockingHook", "(Z)Z", false));
+                if (method.desc.equals("(Z)V")) {
+                    // A diverted camera click becomes a normal release. Returning
+                    // here would prevent vanilla from aborting a previous body dig.
+                    LabelNode resume = new LabelNode(); hook.add(new JumpInsnNode(IFEQ, resume));
+                    hook.add(new InsnNode(ICONST_0)); hook.add(new VarInsnNode(ISTORE, 1));
+                    hook.add(resume); hook.add(new FrameNode(F_SAME, 0, null, 0, null));
+                    method.instructions.insert(hook);
+                } else guard(method, hook);
+            }
             // The F3 profiler pie chart renders outside GuiIngame's overlay events.
             if (minecraft && method.desc.equals("(J)V") && named(method.name, "displayDebugInfo", "func_71366_a", "a")) {
                 guardHideHud(method);

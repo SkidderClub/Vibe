@@ -93,6 +93,11 @@ public final class PhoneRenderCheck {
                         phone.photos().awaitIdle(); phone.photos().image(phone.photos().photos().get(0)); phone.photos().awaitIdle();
                     }
                     if (app == PhoneModule.App.MESSAGES) phone.conversation().sendPreset(3);
+                    if (app == PhoneModule.App.TETRIS) {
+                        phone.act(PhoneModule.Action.SELECT);
+                        for(int step=0;step<220;step++)phone.advance(.1);
+                        if(!phone.tetris().autoplay()||phone.tetris().pieces()<1)throw new AssertionError("Tetris autoplay did not play");
+                    }
                     frame(); draw(renderer, phone, 1); save(app.name().toLowerCase(java.util.Locale.ROOT) + ".png");
                     if (app == PhoneModule.App.HOME) savePortrait();
                     check();
@@ -108,6 +113,7 @@ public final class PhoneRenderCheck {
                             throw new AssertionError("Back did not return to conversations");
                     }
                 }
+                verifyTetrisClipping(renderer,phone);
                 phone.open(PhoneModule.App.CONTACTS); phone.act(PhoneModule.Action.RIGHT);
                 set(PhoneModule.class, phone, "appAt", System.currentTimeMillis() - 2000);
                 frame(); draw(renderer, phone, 1); save("contacts-message-action.png"); check();
@@ -179,6 +185,22 @@ public final class PhoneRenderCheck {
         if (coverage[1] < 120 || coverage[1] < coverage[0] + 80)
             throw new AssertionError("Tilted edges are not filtered: direct=" + coverage[0] + ", filtered=" + coverage[1]);
         System.out.println("Tilted edge coverage: " + coverage[0] + " direct rows, " + coverage[1] + " filtered rows.");
+    }
+    private static void verifyTetrisClipping(PhoneRenderer renderer,PhoneModule phone)throws Exception{
+        phone.open(PhoneModule.App.TETRIS);phone.tetris().reset();set(PhoneModule.class,phone,"appAt",System.currentTimeMillis()-2000);
+        frame();drawTilted(renderer,phone,1,0,false);ByteBuffer baseline=pixels();
+        for(int[] position:new int[][]{{-8,-8},{12,28}}){
+            set(TetrisGame.class,phone.tetris(),"x",position[0]);set(TetrisGame.class,phone.tetris(),"y",position[1]);
+            frame();drawTilted(renderer,phone,1,0,false);ByteBuffer image=pixels();
+            for(int y=120;y<460;y++)for(int x=60;x<310;x++){
+                if(x>=78&&x<=220&&y>=148&&y<=427)continue;
+                int at=((599-y)*1100+x)*4;
+                for(int channel=0;channel<3;channel++)if(Math.abs((baseline.get(at+channel)&255)-(image.get(at+channel)&255))>3)throw new AssertionError("Tetris escaped the board");
+            }
+            check();
+        }
+        phone.tetris().reset();phone.act(PhoneModule.Action.SELECT);for(int i=0;i<180;i++)phone.advance(.1);
+        frame();drawTilted(renderer,phone,1,-3.5F);save("tetris-tilted.png");check();
     }
     private static void verifyFlappyClipping(PhoneRenderer renderer, PhoneModule phone) throws Exception {
         phone.open(PhoneModule.App.FLAPPY);

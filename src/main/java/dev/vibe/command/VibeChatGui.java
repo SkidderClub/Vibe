@@ -1,12 +1,15 @@
 package dev.vibe.command;
 
 import dev.vibe.Vibe;
-import java.io.IOException;
 import net.minecraft.client.gui.GuiChat;
-import org.lwjgl.input.Keyboard;
+import net.minecraft.client.gui.GuiTextField;
+import net.minecraft.client.network.NetHandlerPlayClient;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.client.C14PacketTabComplete;
 
 /** Replaces vanilla chat only to keep dot commands local and offer Tab completion. */
 public final class VibeChatGui extends GuiChat {
+    private String[] localResponse;
 
     @Override
     public void sendChatMessage(String message, boolean addToChat) {
@@ -18,21 +21,39 @@ public final class VibeChatGui extends GuiChat {
     }
 
     @Override
-    protected void keyTyped(char typedChar, int keyCode) throws IOException {
-        if (keyCode == Keyboard.KEY_TAB && inputField.getText().startsWith(".")) {
-            String suggestion = Vibe.getInstance().getCommandManager().firstSuggestion(inputField.getText());
-            if (suggestion != null) {
-                String current = inputField.getText();
-                if (suggestion.toLowerCase().startsWith(current.toLowerCase())) {
-                    inputField.setText(current + suggestion.substring(current.length()));
-                } else {
-                    inputField.setText(suggestion);
-                }
-                inputField.setCursorPositionEnd();
+    public void autocompletePlayerNames() {
+        super.autocompletePlayerNames();
+        // The request sets vanilla's waiting flag after dispatch. Deliver only
+        // after its method returns, including the recursive vanilla selection.
+        if (localResponse != null) {
+            String[] response = localResponse;
+            localResponse = null;
+            onAutocompleteResponse(response);
+        }
+    }
+
+    public static void sendAutocomplete(Object handler, Object packet, Object screen) {
+        if (screen instanceof VibeChatGui && packet instanceof C14PacketTabComplete) {
+            String text = ((C14PacketTabComplete) packet).getMessage();
+            if (text.startsWith(".")) {
+                ((VibeChatGui) screen).localResponse = Vibe.getInstance().getCommandManager()
+                        .getSuggestions(text).toArray(new String[0]);
                 return;
             }
         }
-        super.keyTyped(typedChar, keyCode);
+        ((NetHandlerPlayClient) handler).addToSendQueue((Packet<?>) packet);
+    }
+
+    /** Local candidates are complete command lines; vanilla names remain last-word replacements. */
+    public static int completionStart(Object field, int words, int position, boolean skipSpaces, Object screen) {
+        GuiTextField text = (GuiTextField) field;
+        return screen instanceof VibeChatGui && text.getText().startsWith(".") ? 0
+                : text.func_146197_a(words, position, skipSpaces);
+    }
+
+    public static String completionPrefix(String text, int start, Object screen) {
+        return screen instanceof VibeChatGui && text.startsWith(".")
+                ? text.substring(start, ((VibeChatGui) screen).inputField.getCursorPosition()) : text.substring(start);
     }
 
     @Override

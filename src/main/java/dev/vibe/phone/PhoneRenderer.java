@@ -171,6 +171,7 @@ public final class PhoneRenderer {
             case SETTINGS: settings(phone); break;
             case CAMERA: camera(phone); break;
             case FLAPPY: flappy(phone); break;
+            case TETRIS: tetris(phone); break;
             case PHOTOS: photos(phone); break;
             case INTERNET: internet(phone); break;
             case CONTACTS: contacts(phone); break;
@@ -389,6 +390,69 @@ public final class PhoneRenderer {
         round(31, 328, 170, 37, 12, 0xFF326ADB);
         keyHints(116, 338, 154, WHITE, phone.shortKey(Action.SELECT), "Open YouTube");
         keyHints(116, 390, 194, MUTED, phone.shortKey(Action.HOME), "Home");
+    }
+    private void tetris(PhoneModule phone) {
+        TetrisGame game=phone.tetris();
+        heading("Tetris", "Personal best: "+phone.tetrisBest.getInt());
+        round(155,60,59,19,8,game.autoplay()?0xFF235F55:0xFF2B3650);
+        centered(SMALL,game.autoplay()?"Auto on":"Manual",184.5F,64,game.autoplay()?0xFF9AF5CA:MUTED);
+        round(17,107,136,266,9,0xFF3B4D6B);round(18,108,134,264,8,0xFF0B1425);
+        round(157,110,57,62,9,0xFF1C2B43);text(SMALL,"Score",164,118,MUTED);
+        centered(TEXT,TEXT.fit(String.valueOf(game.score()),45),185.5F,139,WHITE);
+        round(157,179,57,70,9,0xFF1C2B43);text(SMALL,"Level",164,188,MUTED);text(TEXT,String.valueOf(game.level()),207-TEXT.width(String.valueOf(game.level())),188,WHITE);
+        text(SMALL,"Lines",164,222,MUTED);text(TEXT,String.valueOf(game.lines()),207-TEXT.width(String.valueOf(game.lines())),222,WHITE);
+        round(157,256,57,117,9,0xFF1C2B43);text(SMALL,"Next",164,264,MUTED);
+        try(PhoneClip ignored=new PhoneClip(20,110,130,260)){
+            solid(WHITE);GL11.glBegin(GL11.GL_QUADS);
+            try{
+                for(int row=0;row<TetrisGame.HEIGHT;row++)for(int col=0;col<TetrisGame.WIDTH;col++){
+                    blockQuad(20+col*13,110+row*13,12.5F,12.5F,(row+col)%2==0?0xFF17253B:0xFF19283F);
+                    int value=game.cell(col,row);
+                    if(value!=0){int shade=TetrisGame.COLORS[value-1];
+                        if((game.clearMask()&(1<<row))!=0)shade=RenderUtils.blend(shade,WHITE,.4F+.6F*(float)Math.sin(game.clearProgress()*Math.PI));
+                        tetrisCell(20+col*13,110+row*13,13,shade,false);
+                    }
+                }
+                if(game.phase()==TetrisGame.Phase.READY||game.phase()==TetrisGame.Phase.PLAYING){
+                    int ghost=game.ghostY(),shade=TetrisGame.COLORS[game.type()];
+                    for(int i=0;i<4;i++){
+                        int cx=game.x()+TetrisGame.cellX(game.type(),game.rotation(),i),cy=TetrisGame.cellY(game.type(),game.rotation(),i);
+                        tetrisCell(20+cx*13,110+(ghost+cy)*13,13,shade,true);
+                        tetrisCell(20+cx*13,110+(game.y()+cy)*13,13,shade,false);
+                    }
+                }
+            }finally{GL11.glEnd();endSolid();}
+        }
+        solid(WHITE);GL11.glBegin(GL11.GL_QUADS);
+        try{for(int preview=0;preview<3;preview++)for(int cell=0;cell<4;cell++){
+            int type=game.next(preview);tetrisCell(168+TetrisGame.cellX(type,0,cell)*8,285+preview*28+TetrisGame.cellY(type,0,cell)*8,8,TetrisGame.COLORS[type],false);
+        }}finally{GL11.glEnd();endSolid();}
+        if(game.phase()==TetrisGame.Phase.READY||game.phase()==TetrisGame.Phase.OVER){
+            round(25,205,120,79,11,0xEF15253D);
+            centered(TEXT,game.phase()==TetrisGame.Phase.OVER?"Game over":"Ready to stack",85,216,WHITE);
+            centered(SMALL,game.phase()==TetrisGame.Phase.OVER?"Score "+game.score():"Make room for more",85,235,MUTED);
+            keyHints(85,255,107,BLUE,phone.shortKey(game.phase()==TetrisGame.Phase.OVER?Action.DELETE:Action.UP),game.phase()==TetrisGame.Phase.OVER?"New game":"Play");
+        }
+        if(game.phase()==TetrisGame.Phase.CLEARING){
+            String[] names={"","Single","Double","Triple","Tetris"};
+            round(48,222,76,25,10,0xEB244166);centered(TEXT,names[game.cleared()],86,228,WHITE);
+        }
+        keyHints(116,380,196,MUTED,phone.shortKey(Action.LEFT),"",phone.shortKey(Action.RIGHT),"Move",phone.shortKey(Action.UP),"Rotate",phone.shortKey(Action.DOWN),"Soft drop");
+        keyHints(116,404,196,MUTED,phone.shortKey(Action.DELETE),"Hard drop",phone.shortKey(Action.SELECT),"Autoplay",phone.shortKey(Action.HOME),"Home");
+    }
+    /** Cells from the board, live piece, ghost and previews are batched into two draw calls. */
+    private static void tetrisCell(float x,float y,float size,int shade,boolean ghost){
+        float edge=Math.max(.7F,size*.07F);
+        if(ghost){int tint=0x65000000|(shade&0xFFFFFF);
+            blockQuad(x+1,y+1,size-2,edge,tint);blockQuad(x+1,y+size-1-edge,size-2,edge,tint);
+            blockQuad(x+1,y+1,edge,size-2,tint);blockQuad(x+size-1-edge,y+1,edge,size-2,tint);return;
+        }
+        blockQuad(x+.6F,y+.6F,size-1.2F,size-1.2F,RenderUtils.blend(shade,0xFF000000,.3F));
+        blockQuad(x+1,y+1,size-2,size-3,shade);
+        blockQuad(x+1,y+1,size-2,edge,RenderUtils.blend(shade,WHITE,.3F));
+    }
+    private static void blockQuad(float x,float y,float width,float height,int shade){
+        color(shade);GL11.glVertex2f(x,y);GL11.glVertex2f(x,y+height);GL11.glVertex2f(x+width,y+height);GL11.glVertex2f(x+width,y);
     }
     private void flappy(PhoneModule phone) {
         heading("Flappy Bird", "Personal best: " + phone.bestScore.getInt());
@@ -629,6 +693,7 @@ public final class PhoneRenderer {
                 x = 108; y = 126 + (phone.settingSelection() - first) * 38; break;
             case CAMERA: x = 116; y = 377; break;
             case FLAPPY: x = 78; y = 256; break;
+            case TETRIS: x = phone.lastAction()==Action.SELECT?126:72; y = 408; break;
             case PHOTOS:
                 x = phone.isPhotoOpen() ? 116 : 67 + phone.photoSelection() % 2 * 95;
                 y = phone.isPhotoOpen() ? 380 : 146 + Math.min(2, phone.photoSelection() / 2) * 88; break;
@@ -690,7 +755,7 @@ public final class PhoneRenderer {
         }
     }
     private static void icon(int index, float x, float y, int size) {
-        int[] colors = {0xFF626D81, 0xFF8395AD, 0xFFFFBC4B, 0xFFF5F1EF, 0xFF419DDF, 0xFF8E94AE, 0xFF35AF72, 0xFF36A98B};
+        int[] colors = {0xFF626D81, 0xFF8395AD, 0xFFFFBC4B, 0xFFF5F1EF, 0xFF419DDF, 0xFF8E94AE, 0xFF35AF72, 0xFF36A98B,0xFF514475};
         round((int)x, (int)y, size, size, size * .25F, colors[index]);
         GlStateManager.pushMatrix(); GlStateManager.translate(x + size / 2F, y + size / 2F, 0); GlStateManager.scale(size / 49F, size / 49F, 1);
         try {
@@ -720,6 +785,9 @@ public final class PhoneRenderer {
                     round(-16, -12, 32, 23, 9, WHITE); triangle(-12, 5, -12, 17, -1, 7, WHITE);
                     for (int i = -1; i <= 1; i++) circle(i * 8, -1, 2, 0xFF36A98B);
                     break;
+                case 8:
+                    rect(-15,-3,9,9,0xFF62D8E9);rect(-5,-3,9,9,0xFF62D8E9);rect(5,-3,9,9,0xFF62D8E9);rect(-5,-13,9,9,0xFF62D8E9);
+                    rect(-15,7,9,9,0xFFF1CE76);rect(-5,7,9,9,0xFFBA91EF);rect(5,7,9,9,0xFFBA91EF);break;
                 default: break;
             }
         } finally { GlStateManager.popMatrix(); }

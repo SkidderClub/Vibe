@@ -216,6 +216,7 @@ public final class MoveFixModule extends Module {
             forcedJump = false;
         }
     }
+    public boolean hasForcedMovement() { return forcedMovementOwner != null; }
 
     /** Advances an unowned fake rotation toward the local camera. */
     public void tick() {
@@ -301,6 +302,11 @@ public final class MoveFixModule extends Module {
      * real-camera movement vector with every legal keyboard input at fake yaw
      * and writes the closest forward/sideways pair.
      */
+    /** Freecam inserts only AntiAFK's body input after diverting camera controls. */
+    public void correctInjectedInput(MovementInput input) {
+        if (!hasForcedMovement()) correctKeyboardInput(input);
+    }
+
     private void correctKeyboardInput(MovementInput input) {
         FakeRotation rotation = activeRotation();
         Minecraft minecraft = Minecraft.getMinecraft();
@@ -678,6 +684,8 @@ public final class MoveFixModule extends Module {
             moveForward = vanillaInput.moveForward;
             jump = vanillaInput.jump;
             sneak = vanillaInput.sneak;
+            AutoWalkModule.inputHook(this);
+            AntiAFKModule.inputHook(this);
             ScaffoldModule scaffold = Vibe.getInstance() == null || Vibe.getInstance().getModuleManager() == null ? null
                     : Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
             if (scaffold != null) scaffold.beforeMoveInput(this);

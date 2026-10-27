@@ -175,6 +175,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
                     && ("isUsingItem".equals(name) || "func_71039_bw".equals(name) || "bS".equals(name))) {
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, AURA_HOOK, "prepareInputHook", "()V", false);
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, BED_AURA_HOOK, "prepareInputHook", "()V", false);
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/module/impl/movement/AntiAFKModule", "prepareClickHook", "()V", false);
                 prepared = true;
             }
             // The click/use section is over before the renderer samples the

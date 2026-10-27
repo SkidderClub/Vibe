@@ -15,10 +15,10 @@ and taps, with a connected grip that settles back after an interaction.
 | Key | Action |
 | --- | --- |
 | Numpad 8 / 2 / 4 / 6 | Up / down / left / right |
-| Numpad 5 | Open an app, select, take a photo, flap, or restart |
+| Numpad 5 | Select, take a photo, flap, or toggle Tetris autoplay |
 | Numpad 0 | Home |
 | Numpad decimal | Back / cancel |
-| Numpad 7 | Delete the selected photo, with confirmation |
+| Numpad 7 | Delete a photo with confirmation, or hard-drop in Tetris |
 
 The keys are configurable. In **Settings**, select a control and press 5, then
 press its replacement key. Esc cancels. Duplicate control keys and the module's
@@ -26,6 +26,15 @@ toggle key are rejected. **Reset controls** restores the numpad layout. A key us
 by the phone is consumed so it does not also drop an item or toggle another module.
 
 ## Apps
+
+- **Tetris:** a full 10×20 board, seven-piece shuffle, wall kicks, ghost landing,
+  three next-piece previews, line-clear animation, level/combo scoring and a saved
+  personal best. Numpad **4/6** move, **8** rotates, **2** soft-drops and **7**
+  hard-drops (or starts a new round after game over). **5 toggles autoplay**; the
+  placement player rotates and moves pieces, clears lines, and restarts after game
+  over. Turning autoplay off returns the current round to manual play. These use
+  the phone's rebindable Left, Right, Up, Down, Delete and Select controls. Games
+  pause when another app is open or the phone is hidden. Key hints use keycaps.
 
 - **Settings:** phone finish, wallpaper style, the top and bottom gradient colors,
   brightness, size, hints, shutter sound, Hide sometimes, Hide Thumb, and every control. Phone's ClickGUI

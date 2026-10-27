@@ -47,6 +47,7 @@ public final class ModuleManager {
         register(new FovChangerModule());
         register(new NoHurtCamModule());
         register(new ItemGlowModule());
+        register(new DamageESPModule());
         register(new CustomCrosshairModule());
         register(new CustomCosmeticsModule());
         register(new CustomModelRendererModule());
@@ -66,6 +67,8 @@ public final class ModuleManager {
         register(new VelocityModule());
         register(new AutoClickerModule());
         register(new SprintModule());
+        register(new AutoWalkModule());
+        register(new AntiAFKModule());
         register(new NoSlowModule());
         register(new MoveFixModule());
         register(new KillAuraModule());
