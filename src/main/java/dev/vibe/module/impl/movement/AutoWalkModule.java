@@ -22,7 +22,6 @@ public final class AutoWalkModule extends Module {
     public final NumberSetting yawSpeed=addSetting(new NumberSetting("Yaw Speed",180,20,720,10,()->mode.is("Path")));
     public final BooleanSetting rotatePitch=addSetting(new BooleanSetting("Rotate Pitch",true,()->mode.is("Path")));
     public final NumberSetting pitchSpeed=addSetting(new NumberSetting("Pitch Speed",90,10,360,5,()->mode.is("Path")&&rotatePitch.isEnabled()));
-    public final NumberSetting stopDistance=addSetting(new NumberSetting("Stop Distance",2, .5,4,.1,()->mode.is("Path")));
     public final BooleanSetting showPath=addSetting(new BooleanSetting("Show Path",true,()->mode.is("Path")));
     private boolean driving,jump,rotated,ownedSprint;
     private float wantedYaw,wantedPitch;
@@ -60,10 +59,16 @@ public final class AutoWalkModule extends Module {
         if(path==null){stop("Path module is unavailable");return;}
         EntityLivingBase target=path.getTarget();
         if(target==null||target.worldObj!=world||target.isDead||!target.isEntityAlive()||world.getEntityByID(target.getEntityId())!=target){stop("Looking for an opponent");return;}
-        if(player.getDistanceSqToEntity(target)<=stopDistance.getDouble()*stopDistance.getDouble()&&player.canEntityBeSeen(target)){stop("Opponent reached");return;}
+        BlockPos feet=new BlockPos(player.posX,player.posY+.05,player.posZ);
+        BlockPos targetFeet=new BlockPos(target.posX,target.posY+.05,target.posZ);
+        // Follow the actual player within the final cells, including a one-node
+        // route. A block-centre endpoint must not become a stopping distance.
+        double targetX=target.posX-player.posX,targetZ=target.posZ-player.posZ;
+        if(targetX*targetX+targetZ*targetZ<=4&&terrain.canStand(targetFeet)&&terrain.canMove(feet,targetFeet)){
+            steer(target.posX,target.posZ,terrain.standingY(targetFeet),target);return;
+        }
         PathRoute nextRoute=path.getRoute();
         if(nextRoute.nodes.size()<2){stop("Waiting for a path");return;}
-        BlockPos feet=new BlockPos(player.posX,player.posY+.05,player.posZ);
         if(route!=nextRoute){
             route=nextRoute;waypoint=0;double best=Double.MAX_VALUE;
             for(int i=0;i<route.nodes.size();i++){
@@ -85,15 +90,18 @@ public final class AutoWalkModule extends Module {
             }
             if(!reached||Math.abs(node.getY()-player.posY)>.6)break;waypoint++;
         }
-        if(waypoint>=route.nodes.size()){stop(route.complete?"Opponent reached":"Waiting for the rest of the path");return;}
+        if(waypoint>=route.nodes.size()){stop(route.complete?"Waiting for a fresh path":"Waiting for the rest of the path");return;}
         BlockPos next=route.nodes.get(waypoint);
         double segmentX=next.getX()+.5-player.posX,segmentZ=next.getZ()+.5-player.posZ;
         if(segmentX*segmentX+segmentZ*segmentZ>4){route=null;stop("Waiting for a fresh path");return;}
         if(!terrain.canStand(next)||!terrain.canMove(feet,next)){stop("Path is blocked; replanning");return;}
-        double nextY=terrain.standingY(next),rise=nextY-player.getEntityBoundingBox().minY;
+        steer(next.getX()+.5,next.getZ()+.5,terrain.standingY(next),target);
+    }
+    private void steer(double x,double z,double nextY,EntityLivingBase target){
+        double rise=nextY-player.getEntityBoundingBox().minY;
         if(rise>player.stepHeight+.05&&!autoJump.isEnabled()){stop("A jump is required");return;}
-        double dx=next.getX()+.5-player.posX,dz=next.getZ()+.5-player.posZ;
-        wantedYaw=(float)(Math.toDegrees(Math.atan2(dz,dx))-90);
+        double dx=x-player.posX,dz=z-player.posZ;
+        wantedYaw=dx*dx+dz*dz<.0001?player.rotationYaw:(float)(Math.toDegrees(Math.atan2(dz,dx))-90);
         wantedPitch=(float)Math.max(-35,Math.min(35,-Math.toDegrees(Math.atan2(nextY-player.posY,Math.hypot(dx,dz)))));
         jump=autoJump.isEnabled()&&player.onGround&&rise>player.stepHeight+.05&&dx*dx+dz*dz<2.25;
         driving=true;status="Following "+target.getName();
@@ -110,8 +118,12 @@ public final class AutoWalkModule extends Module {
                 if(rotatePitch.isEnabled())player.rotationPitch=turn(player.rotationPitch,wantedPitch,pitchSpeed.getFloat()/20);
                 rotated=true;
             }
-            boolean aligned=Math.abs(MathHelper.wrapAngleTo180_float(wantedYaw-player.rotationYaw))<25;
-            input.moveForward=aligned?scale:0;input.moveStrafe=0;input.jump|=aligned&&jump;
+            // Select normal WASD directions relative to the smoothly turning
+            // view. Movement follows the route throughout the turn.
+            double angle=Math.toRadians(MathHelper.wrapAngleTo180_float(wantedYaw-player.rotationYaw));
+            input.moveForward=(float)Math.round(Math.cos(angle))*scale;
+            input.moveStrafe=-(float)Math.round(Math.sin(angle))*scale;
+            input.jump|=jump;
         }else{
             if(!mc.gameSettings.keyBindForward.isKeyDown())input.moveForward=Math.min(scale,input.moveForward+scale);
             input.jump|=jump;

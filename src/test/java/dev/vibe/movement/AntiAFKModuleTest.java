@@ -42,8 +42,35 @@ public class AntiAFKModuleTest {
         anti.tick(0); assertEquals(1, input().moveStrafe, 0); assertFalse(f.mc.gameSettings.keyBindRight.isKeyDown());
         anti.tickEnd(); anti.tickEnd(); anti.tick(250); assertTrue(input().jump); assertFalse(f.mc.gameSettings.keyBindJump.isKeyDown());
         anti.tickEnd(); float yaw = f.player.rotationYaw; anti.tick(500);
-        assertEquals(anti.rotation.getFloat(), Math.abs(f.player.rotationYaw - yaw), .001);
+        assertTrue(Math.abs(f.player.rotationYaw - yaw)>0); assertTrue(Math.abs(f.player.rotationYaw - yaw)<anti.rotation.getFloat());
+        for(int i=1;i<=7;i++)anti.tick(500+i*50);
+        assertEquals(anti.rotation.getFloat(), Math.abs(f.player.rotationYaw-yaw), .001);
         assertEquals(0, input().moveStrafe, 0); assertFalse(input().jump);
+    }
+    @Test public void freecamOnlyOptionGatesActionsAndRestartsTheIdleWait() {
+        mode("Move");anti.onlyWithFreecam.setEnabled(true);anti.idleDelay.setValue(1D);
+        anti.tick(0);anti.tick(5000);assertEquals(0,input().moveStrafe,0);
+        camera.setEnabled(true);camera.tick();anti.tick(5000);input();FreecamModule.movementInputHook(f.player);assertEquals(0,f.player.movementInput.moveStrafe,0);
+        anti.tick(5999);input();FreecamModule.movementInputHook(f.player);assertEquals(0,f.player.movementInput.moveStrafe,0);
+        anti.tick(6000);input();FreecamModule.movementInputHook(f.player);assertNotEquals(0,f.player.movementInput.moveStrafe,0);
+        camera.setEnabled(false);anti.tick(6050);assertEquals(0,input().moveStrafe,0);
+    }
+    @Test public void rotationsEaseInAndOutRespectSpeedAndWaitBeforeTheNextGesture() {
+        mode("Rotate");anti.rotation.setValue(20D);anti.rotationSpeed.setValue(60D);float start=f.player.rotationYaw,previous=start;
+        float first=0,last=0,peak=0;
+        for(int i=0;i<10;i++){
+            anti.tick(i*50);float change=Math.abs(f.player.rotationYaw-previous);previous=f.player.rotationYaw;
+            assertTrue(change<=anti.rotationSpeed.getFloat()/20+.001);assertTrue(change>0);
+            if(i==0)first=change;last=change;peak=Math.max(peak,change);
+        }
+        assertEquals(20,Math.abs(f.player.rotationYaw-start),.001);assertTrue(first<peak);assertTrue(last<peak);
+        anti.tick(699);assertEquals(previous,f.player.rotationYaw,0);anti.tick(700);assertNotEquals(previous,f.player.rotationYaw,0);
+    }
+    @Test public void smoothBodyRotationKeepsFreecamLookIndependentAndCancelsWhenItCloses() {
+        mode("Rotate");anti.onlyWithFreecam.setEnabled(true);camera.setEnabled(true);camera.tick();anti.tick(0);
+        float body=f.player.rotationYaw;FreecamModule.mouseLookHook(f.player,120,80);assertEquals(body,f.player.rotationYaw,0);
+        anti.tick(50);assertNotEquals(body,f.player.rotationYaw,0);body=f.player.rotationYaw;
+        camera.setEnabled(false);anti.tick(100);anti.tick(1000);assertEquals(body,f.player.rotationYaw,0);
     }
     @Test public void moveFixCorrectsBothNormalAndFreecamBodyMovement() {
         mode("Move"); fix.getMode().setValue("Silent"); fix.setFakeRotation("test", 90, 0);

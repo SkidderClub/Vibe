@@ -23,15 +23,19 @@ public final class AntiAFKModule extends Module {
     public final MultiSelectSetting modes = addSetting(new MultiSelectSetting("Modes",
             Arrays.asList("Move", "Switch Items", "Jump", "Rotate", "Left Click"), Collections.singleton("Rotate")));
     public final NumberSetting idleDelay = addSetting(new NumberSetting("Idle Delay (s)", 30, 0, 600, 1));
+    public final BooleanSetting onlyWithFreecam = addSetting(new BooleanSetting("Only With Freecam", false));
     public final RangeSetting actionDelay = addSetting(new RangeSetting("Action Delay (ms)", 2000, 5000, 250, 60000, 50));
     public final NumberSetting moveDuration = addSetting(new NumberSetting("Move Duration (ticks)", 2, 1, 6, 1, () -> modes.isSelected("Move")));
     public final NumberSetting rotation = addSetting(new NumberSetting("Rotation Angle", 15, 1, 90, 1, () -> modes.isSelected("Rotate")));
+    public final NumberSetting rotationSpeed = addSetting(new NumberSetting("Rotation Speed", 60, 5, 180, 5, () -> modes.isSelected("Rotate")));
     private final IdleActionSchedule schedule = new IdleActionSchedule();
     private final Random random = new Random();
     private World world;
     private EntityPlayerSP player;
     private int moveTicks, jumpTicks, nextMode, direction;
     private boolean pendingClick, ownedClick;
+    private int rotationTick, rotationTicks;
+    private float rotationStart, rotationDelta;
 
     public AntiAFKModule() { super("AntiAFK", "Perform normal player actions after you become idle", Category.MOVEMENT, Keyboard.KEY_NONE); }
     @Override protected void onEnable() { reset(now()); }
@@ -39,7 +43,7 @@ public final class AntiAFKModule extends Module {
     private static long now() { return System.nanoTime() / 1000000L; }
     private void reset(long time) { cancelActions(); schedule.userInput(time); }
     private void cancelActions() {
-        moveTicks = jumpTicks = 0; pendingClick = false;
+        moveTicks = jumpTicks = rotationTicks = rotationTick = 0; pendingClick = false;
         Minecraft mc = Minecraft.getMinecraft();
         if (ownedClick && mc != null && mc.gameSettings != null) VanillaClicks.restore(mc.gameSettings.keyBindAttack);
         ownedClick = false;
@@ -59,12 +63,21 @@ public final class AntiAFKModule extends Module {
             reset(time); return;
         }
         boolean freecam = FreecamModule.cameraActiveHook();
+        if (onlyWithFreecam.isEnabled() && !freecam) { reset(time); return; }
         if (heldInput(mc, freecam)) { reset(time); return; }
         MoveFixModule fix = module(MoveFixModule.class);
         AutoWalkModule walk = module(AutoWalkModule.class);
         ScaffoldModule scaffold = module(ScaffoldModule.class);
         if (fix != null && fix.hasForcedMovement() || walk != null && walk.isDriving()
                 || scaffold != null && scaffold.isEnabled()) { cancelActions(); return; }
+        if (rotationTicks > 0) {
+            if (!modes.isSelected("Rotate")) rotationTicks = rotationTick = 0;
+            else {
+                advanceRotation();
+                if (rotationTicks == 0) schedule.acted(time, (long) actionDelay.getMin(), (long) actionDelay.getMax(), random);
+                return;
+            }
+        }
         if (!schedule.ready(time, (long) (idleDelay.getDouble() * 1000))) return;
         List<String> options = modes.getOptions();
         for (int i = 0; i < options.size(); i++) {
@@ -84,7 +97,13 @@ public final class AntiAFKModule extends Module {
                 if (key != Keyboard.KEY_NONE) KeyBinding.onTick(key);
                 else player.inventory.changeCurrentItem(-1); // Vanilla wheel path for an unbound hotbar key.
             } else if (action.equals("Rotate")) {
-                player.setAngles(rotation.getFloat() / .15F * (random.nextBoolean() ? 1 : -1), 0);
+                rotationStart = player.rotationYaw;
+                rotationDelta = rotation.getFloat() * (random.nextBoolean() ? 1 : -1);
+                // Smoothstep peaks at 1.5 times average velocity. Account for
+                // that so the configured degrees/second remains a speed cap.
+                rotationTicks = Math.max(2, (int) Math.ceil(Math.abs(rotationDelta) * 30 / rotationSpeed.getDouble()));
+                rotationTick = 0;
+                advanceRotation();
             } else if (action.equals("Left Click")) {
                 if (player.isUsingItem()) continue;
                 pendingClick = true;
@@ -93,6 +112,13 @@ public final class AntiAFKModule extends Module {
             schedule.acted(time, (long) actionDelay.getMin(), (long) actionDelay.getMax(), random);
             return;
         }
+    }
+    private void advanceRotation() {
+        float progress = ++rotationTick / (float) rotationTicks;
+        float eased = progress * progress * (3 - 2 * progress);
+        float wanted = rotationStart + rotationDelta * eased;
+        player.setAngles((wanted - player.rotationYaw) / .15F, 0);
+        if (rotationTick >= rotationTicks) rotationTicks = rotationTick = 0;
     }
     public void tickEnd() {
         if (moveTicks > 0) moveTicks--;
@@ -103,7 +129,8 @@ public final class AntiAFKModule extends Module {
 
     private void apply(MovementInput input, boolean freecamBody) {
         Minecraft mc = Minecraft.getMinecraft();
-        if (!isEnabled() || player == null || mc.thePlayer != player || mc.currentScreen != null) return;
+        if (!isEnabled() || player == null || mc.thePlayer != player || mc.currentScreen != null
+                || onlyWithFreecam.isEnabled() && !FreecamModule.cameraActiveHook()) return;
         if (moveTicks > 0 && modes.isSelected("Move")) input.moveStrafe += direction * (input.sneak ? .3F : 1F);
         if (jumpTicks > 0 && modes.isSelected("Jump")) input.jump = true;
         if (freecamBody) {
@@ -127,6 +154,7 @@ public final class AntiAFKModule extends Module {
         if (anti == null || !anti.isEnabled() || !anti.pendingClick) return;
         anti.pendingClick = false;
         Minecraft mc = Minecraft.getMinecraft();
+        if (anti.onlyWithFreecam.isEnabled() && !FreecamModule.cameraActiveHook()) { anti.cancelActions(); return; }
         AutoClickerModule clicker = module(AutoClickerModule.class);
         KillAuraModule aura = module(KillAuraModule.class);
         if (mc.currentScreen != null || mc.thePlayer != anti.player || !mc.inGameHasFocus || mc.thePlayer.isUsingItem()

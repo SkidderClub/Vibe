@@ -11,10 +11,12 @@ Enable **Movement → AutoWalk**, or use `.toggle AutoWalk`.
   route. A separately enabled Path module keeps its own line visible.
 
 **Yaw Speed** and **Pitch Speed** are degrees per second at the normal 20-tick
-rate. **Rotate Pitch** is optional. The camera turns toward each waypoint, and
-the player turns in place until facing close enough to walk safely. **Stop Distance**
-keeps the player from pushing into the opponent. Dead or removed targets are
-replaced by Path's next eligible target.
+rate. **Rotate Pitch** is optional. The camera turns toward each waypoint while
+normal forward, backward and strafe input keeps movement directed along the route.
+Turning no longer pauses walking. At close range, AutoWalk follows the opponent's
+actual position, including within the same block, and keeps pushing toward them.
+There is no Stop Distance. Dead or removed targets are replaced by Path's next
+eligible target.
 
 **Auto Jump** handles one-block steps. Turning it off also disables jumps in the
 requested route; it does not change Path's saved Allow Jumps setting. **Sprint**

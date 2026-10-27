@@ -24,6 +24,34 @@ It reuses the process across reconnects, closes it at game exit, and the bridge 
 exits when its parent input pipe closes after a game crash. Installation/downloads run
 on a background worker; errors offer Retry and preserve diagnostic logs.
 
+## Playing other game modes
+
+The installed bridge defaults to `kitpvp` (FFA). It also handles `/play <mode>` and
+`/queue <mode>` locally to reconnect to another Miniblox game. For example:
+
+```text
+/play skywars
+/play eggwars
+/play survival
+/play creative
+```
+
+Type `/play ` or `/queue ` and press Tab to list/cycle the available identifiers.
+The pinned handler offers `skywars`, `eggwars`, `spleef`, `survival`, `creative`,
+`duels_bridge`, `blockhunt`, `parkour`, `oitq`, `kitpvp`, `blitzbuild`, `murder` and
+`pvp`. These are the bridge's supported queue identifiers; actual game availability
+is determined by Miniblox's matchmaking service.
+
+EggWars defaults to the `quads` configuration. The handler also accepts a compact
+JSON configuration, for example `/play eggwars {"type":"quads"}`. `/join <server ID>`
+joins a specific server and `/next` requests another match. The upstream README
+mentions `/q`, but the installed revision's local handler only registers `/play`
+and `/queue`; use those full commands.
+
+Verified against the installed, unmodified revision's
+[chat handler](https://github.com/7GrandDadPGN/MinibloxTranslationLayer/blob/842d2fd9779982bb8689a536c9f91e7f428eb7b0/miniblox/handlers/impl/misc.js)
+and [queue request](https://github.com/7GrandDadPGN/MinibloxTranslationLayer/blob/842d2fd9779982bb8689a536c9f91e7f428eb7b0/index.js).
+
 ## Movement compatibility
 
 Only connections to Vibe's own managed bridge install the Miniblox packet adapter.
