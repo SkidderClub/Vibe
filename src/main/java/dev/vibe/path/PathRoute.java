@@ -31,8 +31,9 @@ public final class PathRoute {
                 complete = false; break;
             }
             // Draw the actual raised jump / ledge drop, not a diagonal through the solid step.
-            if (next.yCoord > point.yCoord + .01) add(points, new Vec3(point.xCoord, next.yCoord, point.zCoord));
-            if (next.yCoord < point.yCoord - .01) add(points, new Vec3(next.xCoord, point.yCoord, next.zCoord));
+            boolean swim=terrain.isSwimming(previous)||terrain.isSwimming(step);
+            if (!swim && next.yCoord > point.yCoord + .01) add(points, new Vec3(point.xCoord, next.yCoord, point.zCoord));
+            if (!swim && next.yCoord < point.yCoord - .01) add(points, new Vec3(next.xCoord, point.yCoord, next.zCoord));
             add(points, next); nodes.add(step); point = next; previous = step;
             if (points.size() >= 512) { complete = false; break; }
         }

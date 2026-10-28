@@ -24,7 +24,9 @@ public final class CommandManager {
         }
         String[] parts = message.trim().split("\\s+");
         String command = parts[0].toLowerCase(java.util.Locale.ROOT);
-        if (".toggle".equals(command) || ".t".equals(command)) {
+        if (".e".equals(command)) {
+            dev.vibe.easter.EasterEggs.INSTANCE.command(message.trim().substring(2).trim());
+        } else if (".toggle".equals(command) || ".t".equals(command)) {
             toggle(parts);
         } else if (".bind".equals(command) || ".b".equals(command)) {
             bind(parts);
@@ -92,7 +94,10 @@ public final class CommandManager {
         }
         String root = parts[0].toLowerCase();
         String needle = parts[parts.length - 1].toLowerCase();
-        if (".toggle".equals(root) || ".t".equals(root)) {
+        if (".e".equals(root)) {
+            for (String event : dev.vibe.easter.HolidayTimeline.TEST_NAMES)
+                if (event.startsWith(needle)) results.add(".e " + event);
+        } else if (".toggle".equals(root) || ".t".equals(root)) {
             String payload = input.substring(root.length()).trim();
             String compact = compact(payload);
             for (Module module : Vibe.getInstance().getModuleManager().getModules()) {

@@ -315,7 +315,10 @@ public final class ClientEvents {
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
+        dev.vibe.easter.EasterEggs.INSTANCE.tick();
         if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().tick();
+        dev.vibe.module.impl.client.ChatterModule chatter = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.ChatterModule.class);
+        if (chatter != null) chatter.tick();
         FlagDetectorModule flagDetector = Vibe.getInstance().getModuleManager().getModule(FlagDetectorModule.class);
         if (flagDetector != null) flagDetector.tick();
         NesEmulatorModule nes = Vibe.getInstance().getModuleManager().getModule(NesEmulatorModule.class);
@@ -406,7 +409,10 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onRenderTick(TickEvent.RenderTickEvent event) {
-        if (event.phase == TickEvent.Phase.START) dev.vibe.ui.render.ChunkAnimationHooks.beginFrame();
+        if (event.phase == TickEvent.Phase.START) {
+            dev.vibe.ui.render.ChunkAnimationHooks.beginFrame();
+            dev.vibe.easter.EasterEggs.INSTANCE.beginFrame();
+        }
         if (event.phase == TickEvent.Phase.END) {
             // F1 can skip the entire HUD event. Draw once after the frame so the
             // Phone's visibility preference also works with hidden HUDs and menus.
@@ -420,6 +426,7 @@ public final class ClientEvents {
                     phoneRenderer.render(phone, new net.minecraft.client.gui.ScaledResolution(minecraft));
                 }
             }
+            dev.vibe.easter.EasterEggs.INSTANCE.renderEnd();
             return;
         }
         KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
@@ -637,6 +644,15 @@ public final class ClientEvents {
             // F3 text is assembled later in this frame; measure it before drawing.
             if (minecraft.gameSettings.showDebugInfo) deferredCrosshair = true;
             else customCrosshairRenderer.render();
+        }
+    }
+
+    @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.HIGHEST)
+    public void onSeasonalHelmet(RenderGameOverlayEvent.Pre event) {
+        if(event.type==RenderGameOverlayEvent.ElementType.HELMET
+                && dev.vibe.easter.EasterEggs.INSTANCE.shouldRenderPumpkin()) {
+            dev.vibe.easter.EasterEggs.INSTANCE.renderPumpkin(new net.minecraft.client.gui.ScaledResolution(minecraft));
+            event.setCanceled(true);
         }
     }
 
@@ -922,6 +938,8 @@ public final class ClientEvents {
             // Read the original plain text before Name Protect changes its
             // presentation. Board state continues to update when closed.
             String raw = event.message.getUnformattedText();
+            dev.vibe.module.impl.client.ChatterModule chatter = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.ChatterModule.class);
+            if (chatter != null && event.type != 2) chatter.receive(raw);
             dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
             if (hypixel != null) hypixel.receiveChat(raw);
             for (Module module : Vibe.getInstance().getModuleManager().getModules()) {
@@ -952,6 +970,9 @@ public final class ClientEvents {
     @SubscribeEvent
     public void onScriptDisconnect(FMLNetworkEvent.ClientDisconnectionFromServerEvent event) {
         minecraft.addScheduledTask(() -> {
+            dev.vibe.easter.EasterEggs.INSTANCE.clear();
+            dev.vibe.module.impl.client.ChatterModule chatter = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.ChatterModule.class);
+            if (chatter != null) chatter.clear();
             fogRenderer.close(); hitmarkerRenderer.close(); phoneRenderer.close();
             damageEspRenderer.close();
             dev.vibe.module.impl.visual.DamageESPModule damageESP = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.DamageESPModule.class);

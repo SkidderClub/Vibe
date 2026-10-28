@@ -63,16 +63,45 @@ public class AutoWalkModuleTest {
         fixture.addPlayer(2,"Opponent",2.5,64,.5);fixture.block(1,64,0,Blocks.stone.getDefaultState());fixture.block(1,65,0,Blocks.stone.getDefaultState());
         walk.mode.setValue("Path");walk.tick();fixture.module.tick();walk.tick();assertFalse("Cannot walk straight through a wall",fixture.module.getRoute().nodes.size()==1&&walk.isDriving());
     }
-    @Test public void keepsMovingTowardTheRouteWhileTheViewMakesALongSlowTurn()throws Exception{
+    @Test public void keepsForwardHeldWhileTheViewMakesALongSlowTurnEvenWhenItDrifts()throws Exception{
         PathTestFixture.Player target=fixture.addPlayer(2,"Opponent",1.5,64,.5);walk.mode.setValue("Path");walk.yawSpeed.setValue(20D);
         walk.tick();fixture.module.tick();fixture.player.rotationYaw=90;
         for(int i=0;i<100;i++){
             float previous=fixture.player.rotationYaw;walk.tick();MovementInput moving=input();
             assertTrue("Movement paused during a turn",moving.moveForward!=0||moving.moveStrafe!=0);
             assertTrue(Math.abs(MathHelper.wrapAngleTo180_float(fixture.player.rotationYaw-previous))<=1.001);
-            double angle=Math.toRadians(fixture.player.rotationYaw);
-            double x=-Math.sin(angle)*moving.moveForward+Math.cos(angle)*moving.moveStrafe;
-            assertTrue("Walking away from the target",x*(target.posX-fixture.player.posX)>0);
+            assertEquals("Forward was released during the turn",1,moving.moveForward,0);
+        }
+    }
+    @Test public void driftingOffTheRouteAtACornerDoesNotPauseForAReplacement()throws Exception{
+        fixture.addPlayer(2,"Opponent",7.5,64,.5);for(int z=-1;z<=1;z++)for(int y=64;y<=65;y++)fixture.block(2,y,z,Blocks.stone.getDefaultState());
+        walk.mode.setValue("Path");walk.tick();fixture.finishRoute();
+        fixture.player.setPosition(-2.2,64,1.7);fixture.player.rotationYaw=30;
+        for(int i=0;i<20;i++){walk.tick();assertTrue(walk.isDriving());assertEquals(1,input().moveForward,0);}
+        // Even a stale/temporarily empty shared route must not release forward.
+        fixture.setRouteState("route",dev.vibe.path.PathRoute.EMPTY);
+        fixture.world.blocks.put(new BlockPos(1,64,0),Blocks.stone.getDefaultState());fixture.forceReplan();
+        walk.tick();assertEquals(1,input().moveForward,0);
+    }
+    @Test public void waterUsesNormalJumpInputEvenWithLandAutoJumpOffAndWithoutATarget()throws Exception{
+        PathTestFixture.set(net.minecraft.entity.Entity.class,fixture.player,"inWater",true);fixture.player.onGround=false;
+        walk.autoJump.setEnabled(false);walk.tick();MovementInput swim=input();assertTrue(swim.jump);assertEquals(1,swim.moveForward,0);
+        // This is the actual vanilla water-jump handler reached by that input.
+        fixture.player.motionY=0;java.lang.reflect.Method lift=net.minecraft.entity.EntityLivingBase.class.getDeclaredMethod("updateAITick");
+        lift.setAccessible(true);if(swim.jump)lift.invoke(fixture.player);assertEquals(.04,fixture.player.motionY,.000001);
+        walk.mode.setValue("Path");walk.tick();assertFalse(walk.isDriving());assertTrue(input().jump);
+        walk.setEnabled(false);assertFalse(input().jump);
+    }
+    @Test public void pathModeSwimsAcrossWaterAndKeepsForwardWhileSurfacing()throws Exception{
+        fixture.addPlayer(2,"Opponent",7.5,64,.5);
+        for(int x=1;x<=5;x++)for(int z=-3;z<=3;z++)for(int y=60;y<=63;y++)fixture.block(x,y,z,Blocks.water.getDefaultState());
+        fixture.player.setPosition(2.5,61,.5);fixture.player.onGround=false;PathTestFixture.set(net.minecraft.entity.Entity.class,fixture.player,"inWater",true);
+        walk.autoJump.setEnabled(false);walk.mode.setValue("Path");walk.tick();fixture.finishRoute();
+        assertTrue(fixture.module.getRoute().complete);
+        for(int i=0;i<40;i++){
+            walk.tick();MovementInput swim=input();assertEquals(1,swim.moveForward,0);assertTrue(swim.jump);
+            fixture.player.setPosition(2.5,Math.min(63.6,fixture.player.posY+.08),.5);
+            if(i%5==4)fixture.forceReplan();fixture.module.tick();
         }
     }
     @Test public void followsExactTargetPositionInTheSameBlockAndAfterTheLastNode()throws Exception{

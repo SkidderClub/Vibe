@@ -98,7 +98,7 @@ public final class PathTestFixture implements AutoCloseable {
         public Map<Integer, Entity> entities;
         public boolean loaded;
         public int reads;
-        private FixtureWorld() { super(null, null, 0, null, null); }
+        protected FixtureWorld() { super(null, null, 0, null, null); }
         @Override public boolean isBlockLoaded(BlockPos pos) { return loaded && Math.abs(pos.getX()) < 32 && Math.abs(pos.getZ()) < 32; }
         @Override public IBlockState getBlockState(BlockPos pos) {
             if (!isBlockLoaded(pos)) throw new AssertionError("Path requested unloaded terrain: " + pos);

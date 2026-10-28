@@ -8,6 +8,7 @@ public final class WalkPathfinder {
     public interface Terrain {
         boolean canStand(BlockPos feet);
         boolean canMove(BlockPos from, BlockPos to);
+        default boolean isSwimming(BlockPos feet) { return false; }
     }
 
     private static final int[][] DIRECTIONS = {{1,0},{-1,0},{0,1},{0,-1}};
@@ -76,7 +77,7 @@ public final class WalkPathfinder {
                 for (int i = 0; i < (diagonals ? 8 : 4); i++) {
                     int[] direction = i < 4 ? DIRECTIONS[i] : DIAGONALS[i - 4];
                     for (int dy : HEIGHTS) {
-                        if (dy > 0 && !jumps || -dy > maxDrop) continue;
+                        if (dy > 0 && !jumps && !terrain.isSwimming(current.pos) || -dy > maxDrop) continue;
                         BlockPos next = current.pos.add(direction[0], dy, direction[1]);
                         double cost = current.cost + (i < 4 ? 1 : SQRT_TWO) + Math.abs(dy) * .5;
                         double score = cost + distance(next, goal);
@@ -90,6 +91,19 @@ public final class WalkPathfinder {
                             open.add(new Node(next, current, cost, score));
                         }
                         break;
+                    }
+                }
+                // A submerged player can surface even without horizontal room
+                // or land Auto Jump. This remains inside the same A* budget.
+                if (terrain.isSwimming(current.pos)) {
+                    BlockPos next=current.pos.up();
+                    double cost=current.cost+.5,score=cost+distance(next,goal);
+                    if (Math.abs(next.getY()-start.getY())<=verticalRange && score<costLimit-1e-9
+                            && canStep(terrain,current.pos,next,jumps,maxDrop,diagonals)) {
+                        Double old=costs.get(next);
+                        if (old==null || cost<old) {
+                            costs.put(next,cost);open.add(new Node(next,current,cost,score));
+                        }
                     }
                 }
             }
@@ -114,7 +128,8 @@ public final class WalkPathfinder {
     }
 
     public static double stepCost(BlockPos a, BlockPos b) {
-        return (a.getX()!=b.getX() && a.getZ()!=b.getZ() ? SQRT_TWO : 1) + Math.abs(a.getY()-b.getY())*.5;
+        return (a.getX()==b.getX() && a.getZ()==b.getZ() ? 0
+                : a.getX()!=b.getX() && a.getZ()!=b.getZ() ? SQRT_TWO : 1) + Math.abs(a.getY()-b.getY())*.5;
     }
 
     /** Same safety rules for new edges and reused edges. Both sides of a diagonal must be walkable. */
@@ -122,7 +137,9 @@ public final class WalkPathfinder {
                                   boolean jumps, int maxDrop, boolean diagonals) {
         int x = to.getX()-from.getX(), y = to.getY()-from.getY(), z = to.getZ()-from.getZ();
         boolean diagonal = x != 0 && z != 0;
-        if (Math.abs(x) > 1 || Math.abs(z) > 1 || x == 0 && z == 0 || y > (jumps ? 1 : 0)
+        boolean swimming=terrain.isSwimming(from);
+        boolean verticalSwim=x==0 && z==0 && y==1 && swimming && terrain.isSwimming(to);
+        if (Math.abs(x) > 1 || Math.abs(z) > 1 || x == 0 && z == 0 && !verticalSwim || y > (jumps || swimming ? 1 : 0)
                 || -y > maxDrop || diagonal && !diagonals || !terrain.canStand(to)
                 || !terrain.canMove(from, to)) return false;
         if (!diagonal) return true;

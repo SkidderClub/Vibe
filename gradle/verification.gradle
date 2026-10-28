@@ -59,6 +59,10 @@ registerRenderCheck('verifyBattlefrontRendering', 'dev.vibe.game.battlefront.Bat
         'battlefront-render-check', 'Renders Battlefront 3 scenes offscreen.', true)
 registerRenderCheck('verifyVisualRendering', 'dev.vibe.ui.VisualRenderCheck', 'visual-render-check',
         'Checks inventory and GUI rendering state.')
+registerRenderCheck('verifyChatterRendering', 'dev.vibe.ui.screen.ChatterRenderCheck', 'chatter-render-check',
+        'Checks the Skeet Chatter editor, private passwords, generation controls, resizing and real input actions.', true)
+registerRenderCheck('verifyHolidayRendering', 'dev.vibe.easter.HolidayRenderCheck', 'holiday-render-check',
+        'Checks vanilla pumpkin pack isolation, in-game April Fools overlays, texture reuse and driver state.', true)
 registerRenderCheck('verifyDamageEspRendering', 'dev.vibe.ui.render.esp.DamageEspRenderCheck', 'damage-esp-render-check',
         'Checks DamageESP fonts, health deltas, fade/depth pixels, camera roll and GL state preservation.', true)
 registerRenderCheck('verifyPhoneRendering', 'dev.vibe.phone.PhoneRenderCheck', 'phone-render-check',
@@ -72,6 +76,24 @@ registerRenderCheck('verifyFreecamRendering', 'dev.vibe.camera.FreecamRenderChec
 
 def freecamProductionForge = configurations.create('freecamProductionForge') { transitive = false }
 dependencies.add(freecamProductionForge.name, "net.minecraftforge:forge:${minecraft_version}-${forge_version}:universal")
+tasks.register('verifyHolidayProduction', JavaExec) {
+    group = 'verification'
+    description = 'Checks seasonal hook linkage through the real Forge/OptiFine launch transformers without opening the game.'
+    dependsOn tasks.named('testClasses'), tasks.named('remapJar')
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
+    def libraries = sourceSets.test.runtimeClasspath.filter { it.isFile() && !it.name.startsWith('forge-') && !it.name.startsWith('minecraft-') }
+    classpath = sourceSets.test.output + libraries + freecamProductionForge + files(
+            new File(gradle.gradleUserHomeDir, 'caches/unimined/net/minecraft/minecraft/1.8.9/minecraft-1.8.9-client.jar'),
+            tasks.named('remapJar').flatMap { it.archiveFile })
+    def optifine = layout.buildDirectory.file('optifine/preview_OptiFine_1.8.9_HD_U_M6_pre2.jar').get().asFile
+    if (optifine.isFile()) classpath += files(optifine)
+    mainClass = 'dev.vibe.verify.HolidayProductionCheck'
+    workingDir project.projectDir
+    systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
+    jvmArgs '-XX:-OmitStackTraceInFastThrow', '-Dfml.coreMods.load=dev.vibe.core.MoveFixLoadingPlugin'
+    args layout.buildDirectory.dir('holiday-production-check').get().asFile.absolutePath, (optifine.isFile() ? 'optifine' : 'forge')
+}
+
 tasks.register('verifyFreecamProduction', JavaExec) {
     group = 'verification'
     description = 'Checks Freecam production loading through Forge/OptiFine while the build JAR is replaced.'

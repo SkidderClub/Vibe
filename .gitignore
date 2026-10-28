@@ -13,6 +13,8 @@ logs/
 *.vibeaccounts
 accounts.vault
 accounts.key
+chatter.vault
+chatter.key
 vibe/cookies/
 vibe/miniblox/
 

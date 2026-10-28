@@ -249,6 +249,8 @@ public final class PathModule extends Module {
     }
 
     public PathRoute getRoute() { return mainPath.route; }
+    /** Request a refresh without restarting an in-progress, bounded search. */
+    public void refreshWalkingRoute() { if(walkingRequested && mainPath.search==null)mainPath.nextSearch=0; }
     public void requestWalking(boolean active,boolean jumpAllowed,boolean line) { walkingRequested=active;walkingJumps=jumpAllowed;walkingLine=line; }
     public boolean shouldRender() { return isEnabled() || walkingRequested && walkingLine; }
     private boolean allowJumps() { return walkingRequested ? walkingJumps : jumps.isEnabled(); }

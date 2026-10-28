@@ -14,7 +14,7 @@ public final class PathTerrain implements WalkPathfinder.Terrain {
     private static final int CACHE_LIMIT = 32768;
     private final Map<BlockPos, Cell> cells = new HashMap<>();
 
-    public PathTerrain(World world, Entity player) { terrain = new WorldWalkTerrain(world, player); }
+    public PathTerrain(World world, Entity player) { terrain = new WorldWalkTerrain(world, player,true); }
 
     @Override public boolean canStand(BlockPos feet) {
         return cell(feet).standable;
@@ -27,21 +27,22 @@ public final class PathTerrain implements WalkPathfinder.Terrain {
     public double standingY(BlockPos feet) {
         return cell(feet).height;
     }
+    @Override public boolean isSwimming(BlockPos feet) { return cell(feet).swimming; }
 
     private Cell cell(BlockPos feet) {
         Cell value = cells.get(feet);
         if (value == null) {
             double height = terrain.standingY(feet);
-            value = new Cell(terrain.canStand(feet, height), height);
+            value = new Cell(terrain.canStand(feet, height), height,terrain.isSwimming(feet));
             if (cells.size() < CACHE_LIMIT) cells.put(feet, value);
         }
         return value;
     }
 
     private static final class Cell {
-        final boolean standable;
+        final boolean standable,swimming;
         final double height;
-        Cell(boolean standable, double height) { this.standable = standable; this.height = height; }
+        Cell(boolean standable, double height,boolean swimming) { this.standable = standable; this.height = height;this.swimming=swimming; }
     }
 
     /** Airborne actors route to the ground below them, not an invented platform in mid-air. */

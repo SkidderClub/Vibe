@@ -41,6 +41,7 @@ public final class PathPlanner {
         this.terrain = new WalkPathfinder.Terrain() {
             @Override public boolean canStand(BlockPos p) { return inBounds(p) && terrain.canStand(p); }
             @Override public boolean canMove(BlockPos a, BlockPos b) { return terrain.canMove(a, b); }
+            @Override public boolean isSwimming(BlockPos p) { return inBounds(p) && terrain.isSwimming(p); }
         };
         candidate = candidate(previous);
         standing = new boolean[candidate.size()]; edges = new boolean[candidate.size()];
