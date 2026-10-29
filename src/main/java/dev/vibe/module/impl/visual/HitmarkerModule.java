@@ -23,7 +23,25 @@ import org.lwjgl.input.Keyboard;
 public final class HitmarkerModule extends Module {
 
     private final MultiSelectSetting modes = addSetting(new MultiSelectSetting("Modes",
-            Arrays.asList("2D (Crosshair)", "3D (World)", "Torus"), Arrays.asList("2D (Crosshair)")));
+            Arrays.asList("2D (Crosshair)", "3D (World)", "Torus", "Hologram"), Arrays.asList("2D (Crosshair)")));
+    public final NumberSetting hologramLifetime=addSetting(new NumberSetting("Hologram Lifetime",1000,100,5000,50,()->modes.isSelected("Hologram")));
+    public final NumberSetting hologramDelay=addSetting(new NumberSetting("Hologram Delay",100,0,1000,10,()->modes.isSelected("Hologram")));
+    public final ColorSetting hologramColor=addSetting(new ColorSetting("Hologram Color",0xFF65D8FF,()->modes.isSelected("Hologram")));
+    public final BooleanSetting hologramColorFade=addSetting(new BooleanSetting("Hologram Color Fade",false,()->modes.isSelected("Hologram")));
+    public final ColorSetting hologramEndColor=addSetting(new ColorSetting("Hologram End Color",0xFFB493FF,()->modes.isSelected("Hologram")&&hologramColorFade.isEnabled()));
+    public final NumberSetting hologramTransparency=addSetting(new NumberSetting("Hologram Transparency",45,0,100,1,()->modes.isSelected("Hologram")));
+    public final BooleanSetting hologramFade=addSetting(new BooleanSetting("Hologram Fade",true,()->modes.isSelected("Hologram")));
+    public final dev.vibe.setting.ModeSetting hologramEasing=addSetting(new dev.vibe.setting.ModeSetting("Hologram Fade Easing","Ease Out",()->modes.isSelected("Hologram")&&hologramFade.isEnabled(),"Linear","Ease In","Ease Out"));
+    public final BooleanSetting hologramGlow=addSetting(new BooleanSetting("Hologram Glow",true,()->modes.isSelected("Hologram")));
+    public final NumberSetting hologramGlowStrength=addSetting(new NumberSetting("Hologram Glow Strength",1,.1,3,.1,()->modes.isSelected("Hologram")&&hologramGlow.isEnabled()));
+    public final BooleanSetting hologramSkin=addSetting(new BooleanSetting("Hologram Skin",false,()->modes.isSelected("Hologram")));
+    public final NumberSetting hologramSkinOpacity=addSetting(new NumberSetting("Hologram Skin Opacity",65,0,100,1,()->modes.isSelected("Hologram")&&hologramSkin.isEnabled()));
+    public final BooleanSetting hologramBrightness=addSetting(new BooleanSetting("Hologram Skin Brightness Only",false,()->modes.isSelected("Hologram")&&hologramSkin.isEnabled()));
+    public final BooleanSetting hologramThroughWalls=addSetting(new BooleanSetting("Hologram Through Walls",false,()->modes.isSelected("Hologram")));
+    private final java.util.Map<net.minecraft.entity.player.EntityPlayer,dev.vibe.ui.render.HologramPose> hologramPoses=new java.util.IdentityHashMap<>();
+    private final java.util.Map<net.minecraft.entity.player.EntityPlayer,Long> pendingHolograms=new java.util.IdentityHashMap<>();
+    private final List<dev.vibe.ui.render.HologramPose> holograms=new ArrayList<>();
+    private long lastHologram;
     public final NumberSetting torusLifetime = addSetting(new NumberSetting("Torus Lifetime", 1000, 100, 5000, 50, () -> modes.isSelected("Torus")));
     public final NumberSetting torusDelay = addSetting(new NumberSetting("Torus Delay (ms)", 100, 0, 1000, 1, () -> modes.isSelected("Torus")));
     public final NumberSetting torusNoise = addSetting(new NumberSetting("Torus Noise", 50, 0, 100, 1, () -> modes.isSelected("Torus")));
@@ -66,7 +84,7 @@ public final class HitmarkerModule extends Module {
     private final List<Marker> torusMarkers = new ArrayList<Marker>();
 
     public HitmarkerModule() {
-        super("Hitmarker", "2D, 3D and expanding reflective torus hit confirmations", Category.VISUAL, Keyboard.KEY_NONE);
+        super("Hitmarker", "2D, 3D, torus and frozen player hologram hit confirmations", Category.VISUAL, Keyboard.KEY_NONE);
     }
 
     public void mark(EntityLivingBase target) {
@@ -76,6 +94,13 @@ public final class HitmarkerModule extends Module {
         lastHit = System.currentTimeMillis();
         hitTarget = target;
         captureHitPoint(target);
+        if(modes.isSelected("Hologram")&&target instanceof net.minecraft.entity.player.EntityPlayer&&(lastHologram==0||lastHit-lastHologram>=hologramDelay.getInt())){
+            pendingHolograms.entrySet().removeIf(entry->lastHit-entry.getValue()>500);
+            if(pendingHolograms.size()>=32)pendingHolograms.remove(pendingHolograms.keySet().iterator().next());
+            lastHologram=lastHit;net.minecraft.entity.player.EntityPlayer player=(net.minecraft.entity.player.EntityPlayer)target;
+            dev.vibe.ui.render.HologramPose pose=hologramPoses.get(player);
+            if(pose!=null&&lastHit-pose.created<=250)addHologram(pose.at(lastHit));else pendingHolograms.put(player,lastHit);
+        }
         boolean spawnTorus = modes.isSelected("Torus") && (lastTorus == 0 || lastHit - lastTorus >= torusDelay.getInt());
         if (spawnTorus) lastTorus = lastHit;
         Marker marker = new Marker(lastX, lastY, lastZ, lastLookX, lastLookY, lastLookZ, lastHit, spawnTorus);
@@ -150,7 +175,26 @@ public final class HitmarkerModule extends Module {
     }
 
     @Override protected void onDisable() { clear(); }
-    public void clear() { markers.clear(); torusMarkers.clear(); lastHit = lastTorus = 0; hitTarget = null; }
+    public void clear() { markers.clear(); torusMarkers.clear(); hologramPoses.clear();pendingHolograms.clear();holograms.clear();lastHologram=0;lastHit = lastTorus = 0; hitTarget = null; }
+    public void captureHologram(net.minecraft.entity.player.EntityPlayer player,dev.vibe.ui.render.HologramPose pose){
+        if(!isEnabled()||!modes.isSelected("Hologram"))return;
+        hologramPoses.entrySet().removeIf(entry->pose.created-entry.getValue().created>500);
+        if(hologramPoses.size()>=64&&!hologramPoses.containsKey(player))hologramPoses.remove(hologramPoses.keySet().iterator().next());
+        hologramPoses.put(player,pose);Long pending=pendingHolograms.remove(player);if(pending!=null&&pose.created-pending<=500)addHologram(pose.at(pending));
+        pendingHolograms.entrySet().removeIf(entry->pose.created-entry.getValue()>500);
+    }
+    private void addHologram(dev.vibe.ui.render.HologramPose pose){holograms.add(pose);while(holograms.size()>12)holograms.remove(0);}
+    public List<dev.vibe.ui.render.HologramPose> getHolograms(){long now=System.currentTimeMillis();holograms.removeIf(pose->now-pose.created>=hologramLifetime.getInt());return new ArrayList<>(holograms);}
+    public float hologramOpacity(dev.vibe.ui.render.HologramPose pose){
+        float p=Math.max(0,Math.min(1,(System.currentTimeMillis()-pose.created)/(float)hologramLifetime.getInt()));
+        float fade=1;if(hologramFade.isEnabled())fade=hologramEasing.is("Ease In")?1-p*p:hologramEasing.is("Ease Out")?(1-p)*(1-p):1-p;
+        return (1-hologramTransparency.getFloat()/100)*(hologramTint(pose)>>>24)/255F*fade;
+    }
+    public int hologramTint(dev.vibe.ui.render.HologramPose pose){
+        int from=hologramColor.getArgb();if(!hologramColorFade.isEnabled())return from;
+        int to=hologramEndColor.getArgb(),color=0;float age=Math.max(0,Math.min(1,(System.currentTimeMillis()-pose.created)/(float)hologramLifetime.getInt()));
+        for(int shift=0;shift<=24;shift+=8){int a=from>>>shift&255,b=to>>>shift&255;color|=Math.round(a+(b-a)*age)<<shift;}return color;
+    }
 
     /** Store the actual attack-ray contact and the camera direction at impact. */
     private void captureHitPoint(EntityLivingBase target) {

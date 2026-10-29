@@ -47,6 +47,10 @@ public final class FreecamProductionCheck {
                     if(!found)throw new AssertionError("Production Silent Murder scope missing from "+name);
                 }
                 OUTPUT.println("Silent Murder click and controller scopes linked through production Forge/OptiFine.");
+                for(String name:new String[]{"net.minecraft.client.renderer.ActiveRenderInfo","net.minecraft.client.renderer.EntityRenderer",
+                        "dev.vibe.module.impl.visual.SmoothF5Module","dev.vibe.ui.render.HologramRenderer","dev.vibe.ui.render.HologramPose"})Class.forName(name,false,loader).getDeclaredMethods();
+                Class.forName("dev.vibe.module.impl.movement.FreecamModule",false,loader).getMethod("frontViewHook",boolean.class);
+                OUTPUT.println("SmoothF5 camera hooks and native hologram models linked through production Forge/OptiFine.");
             } catch(Throwable failure) {
                 failure.printStackTrace(ERROR);throw new RuntimeException("Production Freecam linkage failed",failure);
             }

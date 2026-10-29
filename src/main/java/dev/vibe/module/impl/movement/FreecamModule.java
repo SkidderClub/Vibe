@@ -110,7 +110,7 @@ public final class FreecamModule extends Module {
     /** Replaces orientCamera only. Everything else keeps the real player as its view entity. */
     public static boolean orientCameraHook(float partialTicks) {
         FreecamModule module = active();
-        if (module == null) return false;
+        if (module == null) return dev.vibe.module.impl.visual.SmoothF5Module.orientCameraHook(partialTicks);
         module.framePartialTicks = partialTicks;
         module.viewMatrix.clear();
         module.viewMatrix.put(module.flight.viewMatrix(module.cameraTilt.getDouble())).flip();
@@ -177,7 +177,8 @@ public final class FreecamModule extends Module {
     }
 
     /** Render-only equivalent of third-person mode, so the real body is drawn. */
-    public static int thirdPersonHook(int vanilla) { return active() == null ? vanilla : 1; }
+    public static int thirdPersonHook(int vanilla) { return active() == null ? dev.vibe.module.impl.visual.SmoothF5Module.thirdPersonHook(vanilla) : 1; }
+    public static boolean frontViewHook(boolean vanilla) { return active()==null&&dev.vibe.module.impl.visual.SmoothF5Module.frontViewHook(vanilla); }
 
     public static float fovHook(float vanilla) {
         FreecamModule module = active();
@@ -186,13 +187,13 @@ public final class FreecamModule extends Module {
 
     public static float yawHook(Object entity, float vanilla) {
         FreecamModule module = active();
-        return module == null || entity != module.cameraPlayer ? vanilla
+        return module == null || entity != module.cameraPlayer ? dev.vibe.module.impl.visual.SmoothF5Module.yawHook(entity,vanilla)
                 : (float) module.flight.cameraYaw(module.cameraTilt.getDouble());
     }
 
     public static float pitchHook(Object entity, float vanilla) {
         FreecamModule module = active();
-        return module == null || entity != module.cameraPlayer ? vanilla
+        return module == null || entity != module.cameraPlayer ? dev.vibe.module.impl.visual.SmoothF5Module.pitchHook(entity,vanilla)
                 : (float) module.flight.cameraPitch(module.cameraTilt.getDouble());
     }
 

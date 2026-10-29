@@ -46,6 +46,7 @@ public final class ModuleManager {
         register(new BreakProgressModule());
         register(new FovChangerModule());
         register(new NoHurtCamModule());
+        register(new SmoothF5Module());
         register(new ItemGlowModule());
         register(new DamageESPModule());
         register(new CustomCrosshairModule());

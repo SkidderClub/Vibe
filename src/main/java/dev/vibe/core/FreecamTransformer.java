@@ -125,7 +125,10 @@ public final class FreecamTransformer implements IClassTransformer, Opcodes {
                 }
             }
             if (activeInfo && (method.desc.equals("(Lnet/minecraft/entity/player/EntityPlayer;Z)V") || method.desc.equals("(Lwn;Z)V"))
-                    && named(method.name, "updateRenderInfo", "func_74583_a", "a")) renderReads(method, false);
+                    && named(method.name, "updateRenderInfo", "func_74583_a", "a")) {
+                renderReads(method, false);
+                InsnList front=new InsnList();front.add(new VarInsnNode(ILOAD,1));front.add(call("frontViewHook","(Z)Z"));front.add(new VarInsnNode(ISTORE,1));method.instructions.insert(front);
+            }
             if (manager && (method.desc.equals("(Lnet/minecraft/world/World;Lnet/minecraft/client/gui/FontRenderer;Lnet/minecraft/entity/Entity;Lnet/minecraft/entity/Entity;Lnet/minecraft/client/settings/GameSettings;F)V")
                     || method.desc.equals("(Ladm;Lavn;Lpk;Lpk;Lavh;F)V"))
                     && named(method.name, "cacheActiveRenderInfo", "func_180597_a", "a")) {

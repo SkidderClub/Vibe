@@ -63,6 +63,8 @@ registerRenderCheck('verifyChatterRendering', 'dev.vibe.ui.screen.ChatterRenderC
         'Checks the Skeet Chatter editor, private passwords, generation controls, resizing and real input actions.', true)
 registerRenderCheck('verifyHolidayRendering', 'dev.vibe.easter.HolidayRenderCheck', 'holiday-render-check',
         'Checks vanilla pumpkin pack isolation, in-game April Fools overlays, texture reuse and driver state.', true)
+registerRenderCheck('verifyCameraHologramRendering', 'dev.vibe.ui.render.CameraHologramRenderCheck', 'camera-hologram-check',
+        'Checks SmoothF5, native hit hologram poses/materials/glow and pause/chest controls offscreen.', true)
 registerRenderCheck('verifyDamageEspRendering', 'dev.vibe.ui.render.esp.DamageEspRenderCheck', 'damage-esp-render-check',
         'Checks DamageESP fonts, health deltas, fade/depth pixels, camera roll and GL state preservation.', true)
 registerRenderCheck('verifyPhoneRendering', 'dev.vibe.phone.PhoneRenderCheck', 'phone-render-check',

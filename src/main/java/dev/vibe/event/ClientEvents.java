@@ -412,6 +412,9 @@ public final class ClientEvents {
         if (event.phase == TickEvent.Phase.START) {
             dev.vibe.ui.render.ChunkAnimationHooks.beginFrame();
             dev.vibe.easter.EasterEggs.INSTANCE.beginFrame();
+            dev.vibe.module.impl.visual.SmoothF5Module smooth=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.SmoothF5Module.class);
+            if(smooth!=null)smooth.frameTick(event.renderTickTime);
+            hitmarkerRenderer.installLayers();
         }
         if (event.phase == TickEvent.Phase.END) {
             // F1 can skip the entire HUD event. Draw once after the frame so the

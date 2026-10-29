@@ -34,6 +34,7 @@ public final class ChamsRenderer {
 
     public static void beginWorld() {
         if(worldDepth++!=0)return;
+        dev.vibe.ui.render.HologramRenderer.beginWorld();
         ChamsSceneDepth.invalidate();
         Vibe vibe=Vibe.getInstance();
         EspModule esp=vibe==null||vibe.getModuleManager()==null?null:vibe.getModuleManager().getModule(EspModule.class);
@@ -43,7 +44,7 @@ public final class ChamsRenderer {
             catch(RuntimeException|Error failure) {worldDepth--;ChamsSceneDepth.invalidate();throw failure;}
         }
     }
-    public static void endWorld() { worldDepth = Math.max(0, worldDepth - 1); if(worldDepth==0){ChamsGlow.finish();ChamsSceneDepth.invalidate();} }
+    public static void endWorld() { worldDepth = Math.max(0, worldDepth - 1); if(worldDepth==0){ChamsGlow.finish();ChamsSceneDepth.invalidate();dev.vibe.ui.render.HologramRenderer.endWorld();} }
 
     private static EspModule module(Object candidate) {
         if (directPreview || worldDepth == 0 || !(candidate instanceof EntityLivingBase)) return null;

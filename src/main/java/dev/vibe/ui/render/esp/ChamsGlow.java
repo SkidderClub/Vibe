@@ -9,13 +9,13 @@ import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.*;
 
 /** Depth-tested silhouette mask; one separable blur for the whole entity pass. */
-final class ChamsGlow {
+public final class ChamsGlow {
     private static int mask, horizontal, depth, framebuffer, width, height, destination, vx, vy;
     private static boolean pending, failed;
     private static EffectProgram blur;
     private ChamsGlow() { }
 
-    static void capture(Runnable geometry) {
+    public static void capture(Runnable geometry) {
         if (failed || !OpenGlHelper.framebufferSupported) return;
         try (EffectState state=new EffectState()) {
             IntBuffer viewport=BufferUtils.createIntBuffer(16); GL11.glGetInteger(GL11.GL_VIEWPORT,viewport);
@@ -47,7 +47,7 @@ final class ChamsGlow {
         }
     }
 
-    static void finish() {
+    public static void finish() {
         if(!pending)return;
         pending=false;
         try(EffectState state=new EffectState()) {

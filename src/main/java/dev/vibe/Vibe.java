@@ -97,6 +97,7 @@ public final class Vibe {
         MinecraftForge.EVENT_BUS.register(new GuiButtonLocalizationEvents());
         ReconnectEvents reconnect = new ReconnectEvents();
         MinecraftForge.EVENT_BUS.register(reconnect);
+        MinecraftForge.EVENT_BUS.register(new dev.vibe.event.ChestControlsEvents());
         FMLCommonHandler.instance().bus().register(reconnect);
         FMLCommonHandler.instance().bus().register(events);
         extensions = new ExtensionManager(minecraft.mcDataDir, moduleManager, statistics,
