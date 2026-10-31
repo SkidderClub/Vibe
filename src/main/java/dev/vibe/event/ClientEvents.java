@@ -220,6 +220,8 @@ public final class ClientEvents {
             if (Vibe.getInstance().getExtensions() != null) Vibe.getInstance().getExtensions().tickStart();
             KillAuraModule killaura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
             if (killaura != null) killaura.tickStart();
+            dev.vibe.module.impl.combat.AIAuraModule ai=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AIAuraModule.class);
+            if(ai!=null)ai.tickStart();
             // Scaffold's rotation must win: it keeps the player on the bridge.
             ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
             if (scaffold != null) scaffold.tickStart();
@@ -303,6 +305,8 @@ public final class ClientEvents {
             if (breakProgress != null) breakProgress.tick();
             KillAuraModule killaura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
             if (killaura != null) killaura.tickEnd();
+            dev.vibe.module.impl.combat.AIAuraModule ai=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AIAuraModule.class);
+            if(ai!=null)ai.tickEnd();
             ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
             if (scaffold != null) scaffold.tickEnd();
             dev.vibe.module.impl.visual.PathModule path = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.PathModule.class);
@@ -319,6 +323,8 @@ public final class ClientEvents {
         if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().tick();
         dev.vibe.module.impl.client.ChatterModule chatter = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.ChatterModule.class);
         if (chatter != null) chatter.tick();
+        dev.vibe.module.impl.combat.AIAuraModule ai=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AIAuraModule.class);
+        if(ai!=null)ai.tickMenus();
         FlagDetectorModule flagDetector = Vibe.getInstance().getModuleManager().getModule(FlagDetectorModule.class);
         if (flagDetector != null) flagDetector.tick();
         NesEmulatorModule nes = Vibe.getInstance().getModuleManager().getModule(NesEmulatorModule.class);
@@ -412,11 +418,14 @@ public final class ClientEvents {
         if (event.phase == TickEvent.Phase.START) {
             dev.vibe.ui.render.ChunkAnimationHooks.beginFrame();
             dev.vibe.easter.EasterEggs.INSTANCE.beginFrame();
+            dev.vibe.module.impl.combat.AIAuraModule ai=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AIAuraModule.class);
+            if(ai!=null)ai.frameTick(event.renderTickTime);
             dev.vibe.module.impl.visual.SmoothF5Module smooth=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.SmoothF5Module.class);
             if(smooth!=null)smooth.frameTick(event.renderTickTime);
             hitmarkerRenderer.installLayers();
         }
         if (event.phase == TickEvent.Phase.END) {
+            if(minecraft.currentScreen instanceof dev.vibe.ui.screen.AIAuraRecorderGui)return;
             // F1 can skip the entire HUD event. Draw once after the frame so the
             // Phone's visibility preference also works with hidden HUDs and menus.
             if (minecraft.theWorld != null && minecraft.thePlayer != null && !FreecamModule.hideHudHook()

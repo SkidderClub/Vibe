@@ -25,6 +25,7 @@ public final class FreecamTransformer implements IClassTransformer, Opcodes {
             MethodNode method = (MethodNode) item;
             if (renderer) {
                 if (method.desc.equals("(F)V") && named(method.name, "orientCamera", "func_78467_g", "f")) {
+                    renderReads(method,false);
                     InsnList hook = new InsnList();
                     hook.add(new VarInsnNode(FLOAD, 1));
                     hook.add(call("orientCameraHook", "(F)Z"));
@@ -160,7 +161,7 @@ public final class FreecamTransformer implements IClassTransformer, Opcodes {
                 if (named(field.name, "chunkCoordY", "field_70162_ai", "af")) hook = "terrainChunkYHook";
                 if (named(field.name, "chunkCoordZ", "field_70164_aj", "ag")) hook = "terrainChunkZHook";
             }
-            if (hook == null || !named(field.owner, "net/minecraft/entity/Entity", "net/minecraft/entity/player/EntityPlayer", "pk", "wn")) continue;
+            if (hook == null || !named(field.owner, "net/minecraft/entity/Entity", "net/minecraft/entity/EntityLivingBase", "net/minecraft/entity/player/EntityPlayer", "pk", "pr", "wn")) continue;
             method.instructions.insertBefore(field, new InsnNode(DUP));
             method.instructions.insert(field, call(hook, "(Ljava/lang/Object;" + field.desc + ")" + field.desc));
         }

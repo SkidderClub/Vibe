@@ -90,7 +90,7 @@ public final class LagRangeModule extends Module {
         if (minecraft.thePlayer == null || minecraft.theWorld == null) { target = null; return false; }
         target = CombatRangeSupport.getTarget(20.0D);
         if (target == null) return false;
-        KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
+        KillAuraModule aura = KillAuraModule.activeController();
         if ((aura == null || !aura.isEnabled()) && onlyKillAura.isEnabled() || ScaffoldModule.isActive()
                 || minecraft.thePlayer.ticksExisted < 10 || CombatRangeSupport.isInWeb(minecraft.thePlayer) || minecraft.thePlayer.isInLava()
                 || minecraft.thePlayer.isInWater() || minecraft.thePlayer.isCollidedHorizontally

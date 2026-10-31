@@ -187,13 +187,13 @@ public final class FreecamModule extends Module {
 
     public static float yawHook(Object entity, float vanilla) {
         FreecamModule module = active();
-        return module == null || entity != module.cameraPlayer ? dev.vibe.module.impl.visual.SmoothF5Module.yawHook(entity,vanilla)
+        return module == null || entity != module.cameraPlayer ? dev.vibe.module.impl.visual.SmoothF5Module.yawHook(entity,dev.vibe.module.impl.combat.AIAuraModule.cameraYawHook(entity,vanilla))
                 : (float) module.flight.cameraYaw(module.cameraTilt.getDouble());
     }
 
     public static float pitchHook(Object entity, float vanilla) {
         FreecamModule module = active();
-        return module == null || entity != module.cameraPlayer ? dev.vibe.module.impl.visual.SmoothF5Module.pitchHook(entity,vanilla)
+        return module == null || entity != module.cameraPlayer ? dev.vibe.module.impl.visual.SmoothF5Module.pitchHook(entity,dev.vibe.module.impl.combat.AIAuraModule.cameraPitchHook(entity,vanilla))
                 : (float) module.flight.cameraPitch(module.cameraTilt.getDouble());
     }
 

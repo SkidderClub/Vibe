@@ -30,7 +30,7 @@ public final class SmoothF5Module extends dev.vibe.module.Module {
         }
         if(world!=mc.theWorld||entity!=view){world=mc.theWorld;entity=view;transition.reset(mc.gameSettings.thirdPersonView);}
         transition.update(mc.gameSettings.thirdPersonView,System.nanoTime(),speed.getDouble(),easing.getValue(),direction.getValue());
-        frame=transition.frame(view.prevRotationYaw+(view.rotationYaw-view.prevRotationYaw)*partial,view.prevRotationPitch+(view.rotationPitch-view.prevRotationPitch)*partial);
+        frame=transition.frame(dev.vibe.module.impl.combat.AIAuraModule.cameraYawHook(view,view.prevRotationYaw+(view.rotationYaw-view.prevRotationYaw)*partial),dev.vibe.module.impl.combat.AIAuraModule.cameraPitchHook(view,view.prevRotationPitch+(view.rotationPitch-view.prevRotationPitch)*partial));
     }
     private boolean transitioning(){return isEnabled()&&frame!=null&&entity==Minecraft.getMinecraft().getRenderViewEntity()&&world==Minecraft.getMinecraft().theWorld&&transition.active(System.nanoTime());}
     private static SmoothF5Module active(){Vibe vibe=Vibe.getInstance();if(vibe==null||vibe.getModuleManager()==null)return null;SmoothF5Module module=vibe.getModuleManager().getModule(SmoothF5Module.class);return module!=null&&module.transitioning()?module:null;}

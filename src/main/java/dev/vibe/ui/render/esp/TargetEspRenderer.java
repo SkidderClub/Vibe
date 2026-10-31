@@ -59,7 +59,7 @@ public final class TargetEspRenderer {
     }
 
     private EntityLivingBase target() {
-        KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
+        KillAuraModule aura = KillAuraModule.activeController();
         if (aura != null && aura.isEnabled() && aura.getTarget() != null) return aura.getTarget();
         AimAssistModule aim = Vibe.getInstance().getModuleManager().getModule(AimAssistModule.class);
         return aim != null && aim.isEnabled() ? aim.getTarget() : null;

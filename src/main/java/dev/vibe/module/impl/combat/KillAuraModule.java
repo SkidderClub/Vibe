@@ -33,7 +33,7 @@ import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
 /** Selects rotations before movement; supplies clicks in vanilla's input pass. */
-public final class KillAuraModule extends Module {
+public class KillAuraModule extends Module {
     private final RangeSetting reach = addSetting(new RangeSetting("Reach", 3.0D, 3.0D, 3.0D, 6.5D, 0.05D));
     private final ModeSetting autoblock = addSetting(new ModeSetting("Autoblock Mode", "None", "None", "Vanilla", "Fake", "Legit", "AAC330", "Hypixel"));
     private final BooleanSetting onlyRightClick = addSetting(new BooleanSetting("Only When Rightclicking", false,
@@ -94,11 +94,11 @@ public final class KillAuraModule extends Module {
     private final ModeSetting targetMode = addSetting(new ModeSetting("Target Mode", "Health", "Health", "Armor", "Yaw", "Distance"));
     private final NumberSetting maxAngle = addSetting(new NumberSetting("Max Angle", 180.0D, 0.0D, 180.0D, 1.0D));
 
-    private final Minecraft minecraft = Minecraft.getMinecraft();
+    protected final Minecraft minecraft = Minecraft.getMinecraft();
     private final Random random = new Random();
-    private final AuraRotation rotation = new AuraRotation();
+    protected final AuraRotation rotation = new AuraRotation();
     private final AuraClickScheduler clicks = new AuraClickScheduler(random);
-    private EntityLivingBase target;
+    protected EntityLivingBase target;
     private EntityPlayer sessionPlayer;
     private boolean rotationInitialized;
     private boolean inputPrepared;
@@ -118,7 +118,11 @@ public final class KillAuraModule extends Module {
     private String previousClickMode = "Normal";
 
     public KillAuraModule() {
-        super("Killaura", "Automatically aims, clicks and sword-blocks using vanilla input", Category.COMBAT, Keyboard.KEY_NONE);
+        this("Killaura", "Automatically aims, clicks and sword-blocks using vanilla input");
+    }
+    protected KillAuraModule(String name,String description){super(name,description,Category.COMBAT,Keyboard.KEY_NONE);}
+    @Override protected void onEnable(){
+        if(getClass()==KillAuraModule.class&&Vibe.getInstance()!=null&&Vibe.getInstance().getModuleManager()!=null){AIAuraModule ai=Vibe.getInstance().getModuleManager().getModule(AIAuraModule.class);if(ai!=null&&ai.isEnabled())ai.setEnabled(false);}
     }
 
     public void tickStart() {
@@ -155,6 +159,7 @@ public final class KillAuraModule extends Module {
         if (target != selected) {
             clicks.reset();
             legitBlockUntil = nextLegitBlock = 0L;
+            targetChanged(target,selected);
         }
         target = selected;
         MoveFixModule fix = moveFix();
@@ -163,12 +168,17 @@ public final class KillAuraModule extends Module {
             rotation.reset(fix.getRotationYaw(), fix.getRotationPitch());
             rotationInitialized = true;
         }
-        float[] desired = rotationsTo(target);
-        boolean acceleration = rotationMode.is("Acceleration");
-        rotation.advance(desired[0], desired[1], (float) sample(acceleration ? rotationAcceleration : rotationSpeed),
-                acceleration, minecraft.gameSettings.mouseSensitivity);
+        advanceRotation(target);
         fix.setFakeRotation(getId(), rotation.getYaw(), rotation.getPitch());
     }
+    protected void advanceRotation(EntityLivingBase entity){float[] desired=rotationsTo(entity);boolean acceleration=rotationMode.is("Acceleration");rotation.advance(desired[0],desired[1],(float)sample(acceleration?rotationAcceleration:rotationSpeed),acceleration,minecraft.gameSettings.mouseSensitivity);}
+    protected void targetChanged(EntityLivingBase previous,EntityLivingBase next){}
+    protected void resetPolicy(){}
+    protected double selectionRange(){double range=Math.max(reach.getMax(),clickingRange.getDouble());return !autoblock.is("None")&&!autoblock.is("Hypixel")?Math.max(range,blockingRange.getDouble()):range;}
+    protected double clickRange(){return clickingRange.getDouble();}
+    protected double attackReach(){return sample(reach);}
+    protected boolean clickDue(long now){return clicks.isDue(now);}
+    protected int pollClicks(long now){RangeSetting cps=clickingMode.is("Drag Clicking")?dragCps:clickingMode.is("Butterfly")?butterflyCps:normalCps;return clicks.poll(now,clickingMode.getValue(),cps.getMin(),cps.getMax(),dragDuration.getMin(),dragDuration.getMax(),dragPause.getMin(),dragPause.getMax());}
 
     /** Injected after physical input/hotbar handling, before vanilla isUsingItem. */
     private void prepareInput() {
@@ -198,9 +208,9 @@ public final class KillAuraModule extends Module {
             releaseOwnedBlock();
             previousBlockMode = autoblock.getValue();
         }
-        boolean inClickRange = distanceTo(target) <= clickingRange.getDouble();
+        boolean inClickRange = distanceTo(target) <= clickRange();
         if (!inClickRange) clicks.reset();
-        boolean clickDue = inClickRange && clicks.isDue(now);
+        boolean clickDue = inClickRange && clickDue(now);
         boolean inBlockRange = swordHeld() && distanceTo(target) <= blockingRange.getDouble();
         visualBlocking = !autoblock.is("None") && inBlockRange
                 && (autoblock.is("Fake") || !onlyRightClick.isEnabled() || rightMouseDown());
@@ -230,12 +240,9 @@ public final class KillAuraModule extends Module {
             return;
         }
         blockOwned = false;
-        overrideHit(attackHit(sample(reach)));
+        overrideHit(attackHit(attackReach()));
         if (clickDue) {
-            RangeSetting cps = clickingMode.is("Drag Clicking") ? dragCps
-                    : clickingMode.is("Butterfly") ? butterflyCps : normalCps;
-            int count = clicks.poll(now, clickingMode.getValue(), cps.getMin(), cps.getMax(),
-                    dragDuration.getMin(), dragDuration.getMax(), dragPause.getMin(), dragPause.getMax());
+            int count = pollClicks(now);
             for (int i = 0; i < count; i++) VanillaClicks.pulseAttack(attack);
         }
         if (wantsBlock) {
@@ -318,7 +325,7 @@ public final class KillAuraModule extends Module {
 
     public void tickEnd() { restoreInput(); }
 
-    private boolean canOperate() {
+    protected boolean canOperate() {
         if (!isEnabled() || minecraft.thePlayer == null || minecraft.theWorld == null || minecraft.playerController == null
                 || !minecraft.thePlayer.isEntityAlive() || minecraft.thePlayer.isSpectator() || minecraft.isGamePaused()) return false;
         return minecraft.currentScreen == null || (!notInInv.isEnabled() && minecraft.currentScreen instanceof GuiContainer);
@@ -331,7 +338,7 @@ public final class KillAuraModule extends Module {
                 && VanillaClicks.physicallyDown(minecraft.gameSettings.keyBindAttack));
     }
 
-    private EntityLivingBase chooseTarget() {
+    protected EntityLivingBase chooseTarget() {
         EntityLivingBase best = null;
         for (Object value : minecraft.theWorld.loadedEntityList) {
             if (!(value instanceof EntityLivingBase)) continue;
@@ -354,22 +361,21 @@ public final class KillAuraModule extends Module {
                 && Vibe.getInstance().getTargetManager().isTarget((EntityPlayer) entity);
     }
 
-    private double score(EntityLivingBase entity) {
+    protected double score(EntityLivingBase entity) {
         if (targetMode.is("Health")) return entity.getHealth() + entity.getAbsorptionAmount();
         if (targetMode.is("Armor")) return entity.getTotalArmorValue();
         if (targetMode.is("Yaw")) return Math.abs(RotationMath.difference(rotationsTo(entity)[0], minecraft.thePlayer.rotationYaw));
         return distanceTo(entity);
     }
 
-    private boolean validTarget(EntityLivingBase entity) {
+    protected boolean validTarget(EntityLivingBase entity) {
         if (entity == null || entity == minecraft.thePlayer || entity.worldObj != minecraft.theWorld
                 || !entity.isEntityAlive() || entity.isDead || !entity.canBeCollidedWith()
                 || (entity == minecraft.thePlayer.ridingEntity && !minecraft.thePlayer.canRiderInteract())
                 || (entity instanceof EntityPlayer && ((EntityPlayer) entity).isSpectator())) return false;
         TargetsModule targets = Vibe.getInstance().getModuleManager().getModule(TargetsModule.class);
         if (targets == null || !targets.canTarget(entity)) return false;
-        double range = Math.max(reach.getMax(), clickingRange.getDouble());
-        if (!autoblock.is("None") && !autoblock.is("Hypixel")) range = Math.max(range, blockingRange.getDouble());
+        double range = selectionRange();
         if (distanceTo(entity) > range) return false;
         float[] desired = rotationsTo(entity);
         if (!RotationMath.withinAngle(desired[0], desired[1], minecraft.thePlayer.rotationYaw,
@@ -379,7 +385,7 @@ public final class KillAuraModule extends Module {
     }
 
     /** AimAssist's horizontal and vertical aimpoint choices are independent. */
-    private Vec3 aimPoint(EntityLivingBase entity) {
+    protected Vec3 aimPoint(EntityLivingBase entity) {
         AxisAlignedBB box = entity.getEntityBoundingBox();
         Vec3 eye = eyes();
         double inset = Math.min(0.1D, (box.maxY - box.minY) * 0.25D);
@@ -389,7 +395,7 @@ public final class KillAuraModule extends Module {
                 yawAimpoint.is("Closest") ? clamp(eye.zCoord, box.minZ, box.maxZ) : (box.minZ + box.maxZ) * 0.5D);
     }
 
-    private float[] rotationsTo(EntityLivingBase entity) {
+    protected float[] rotationsTo(EntityLivingBase entity) {
         Vec3 point = aimPoint(entity).subtract(eyes());
         double horizontal = Math.sqrt(point.xCoord * point.xCoord + point.zCoord * point.zCoord);
         float yaw = horizontal < 1.0E-7D ? (rotationInitialized ? rotation.getYaw() : minecraft.thePlayer.rotationYaw)
@@ -425,7 +431,7 @@ public final class KillAuraModule extends Module {
         return new MovingObjectPosition(target, point);
     }
 
-    private double distanceTo(Entity entity) {
+    protected double distanceTo(Entity entity) {
         AxisAlignedBB box = hitbox(entity);
         Vec3 eye = eyes();
         return eye.distanceTo(new Vec3(clamp(eye.xCoord, box.minX, box.maxX), clamp(eye.yCoord, box.minY, box.maxY),
@@ -437,8 +443,8 @@ public final class KillAuraModule extends Module {
         return entity.getEntityBoundingBox().expand(border, border, border);
     }
 
-    private Vec3 eyes() { return minecraft.thePlayer.getPositionEyes(1.0F); }
-    private double clamp(double value, double min, double max) { return Math.max(min, Math.min(max, value)); }
+    protected Vec3 eyes() { return minecraft.thePlayer.getPositionEyes(1.0F); }
+    protected double clamp(double value, double min, double max) { return Math.max(min, Math.min(max, value)); }
     private double sample(RangeSetting setting) { return setting.getMin() + random.nextDouble() * (setting.getMax() - setting.getMin()); }
     private boolean realBlockMode() { return autoblock.is("Vanilla") || autoblock.is("Legit") || autoblock.is("AAC330"); }
     private boolean rightMouseDown() { return Mouse.isCreated() && Mouse.isButtonDown(1); }
@@ -520,6 +526,7 @@ public final class KillAuraModule extends Module {
         legitBlockUntil = nextLegitBlock = 0L;
         resetHypixelBlock(false);
         clicks.reset();
+        resetPolicy();
     }
 
     @Override protected void onDisable() { aacReleaseResubmit = false; resetHypixelBlock(true); releaseOwnedBlock(); clear(); }
@@ -570,8 +577,12 @@ public final class KillAuraModule extends Module {
                 && aura.minecraft.currentScreen instanceof GuiContainer ? 0 : vanilla;
     }
 
+    public static KillAuraModule activeController(){return module();}
+
     private static KillAuraModule module() {
         Vibe vibe = Vibe.getInstance();
-        return vibe == null || vibe.getModuleManager() == null ? null : vibe.getModuleManager().getModule(KillAuraModule.class);
+        if(vibe==null||vibe.getModuleManager()==null)return null;
+        AIAuraModule ai=vibe.getModuleManager().getModule(AIAuraModule.class);
+        return ai!=null&&ai.isEnabled()?ai:vibe.getModuleManager().getModule(KillAuraModule.class);
     }
 }

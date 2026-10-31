@@ -61,7 +61,7 @@ public final class TickBaseModule extends Module {
 
     private void updateTargetAndBalance() {
         BacktrackModule backtrack = Vibe.getInstance().getModuleManager().getModule(BacktrackModule.class);
-        KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
+        KillAuraModule aura = KillAuraModule.activeController();
         Entity entity = backtrack != null && backtrack.isEnabled() && minecraft.theWorld != null && backtrack.getTargetId() >= 0
                 ? minecraft.theWorld.getEntityByID(backtrack.getTargetId()) : null;
         target = entity instanceof EntityLivingBase ? (EntityLivingBase) entity
@@ -107,7 +107,7 @@ public final class TickBaseModule extends Module {
         if (validTicks.isEmpty()) return;
         int bestAdvance = mode.is("Screenshot") ? validTicks.get(validTicks.size() - 1) : validTicks.get(0);
         if (bestAdvance == 0) return;
-        KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
+        KillAuraModule aura = KillAuraModule.activeController();
         if (requireKillAura.isEnabled() && (aura == null || !aura.isEnabled())) return;
         if (mode.is("Screenshot")) {
             int delayedTicks = Math.min(5, bestAdvance);
@@ -133,7 +133,7 @@ public final class TickBaseModule extends Module {
 
     private EntityLivingBase validateTarget() {
         if (target == null || minecraft.thePlayer == null || target.isDead || minecraft.thePlayer.isDead || minecraft.thePlayer.isSpectator()) return null;
-        KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
+        KillAuraModule aura = KillAuraModule.activeController();
         if (requireKillAura.isEnabled() && (aura == null || !aura.isEnabled())) return null;
         return minecraft.thePlayer.canEntityBeSeen(target) ? target : null;
     }

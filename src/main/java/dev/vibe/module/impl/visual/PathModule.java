@@ -157,7 +157,7 @@ public final class PathModule extends Module {
         if (mc == null || mc.thePlayer == null || mc.theWorld == null || Vibe.getInstance() == null) return null;
         boolean murderTargets = murderTargets();
         if (!murderTargets && targetMode.is("Combat Target")) {
-            KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
+            KillAuraModule aura = KillAuraModule.activeController();
             EntityLivingBase candidate = aura != null && aura.isEnabled() ? aura.getTarget() : null;
             if (eligible(candidate, mc)) return candidate;
             AimAssistModule aim = Vibe.getInstance().getModuleManager().getModule(AimAssistModule.class);

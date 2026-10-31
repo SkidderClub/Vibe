@@ -110,6 +110,11 @@ public abstract class Module {
     public List<Setting<?>> getSettings() {
         return Collections.unmodifiableList(settings);
     }
+    /** Specialized controllers can reuse behavior while exposing their own configuration. */
+    protected final void replaceSettings(Setting<?>... selected) {
+        settings.clear();
+        Collections.addAll(settings, selected);
+    }
 
     public String getId() {
         return name.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]+", "").replace(" ", "");

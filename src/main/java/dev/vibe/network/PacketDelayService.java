@@ -88,7 +88,7 @@ public final class PacketDelayService {
                 : Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
         if (moveFix != null) moveFix.applyToOutgoing(packet);
         KillAuraModule aura = Vibe.getInstance() == null ? null
-                : Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
+                : KillAuraModule.activeController();
         if (aura != null && aura.deferAacRelease(packet)) {
             promise.trySuccess();
             return true;

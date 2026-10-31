@@ -177,7 +177,7 @@ public final class AutoClickerModule extends Module {
         dev.vibe.Vibe vibe = dev.vibe.Vibe.getInstance();
         if (vibe == null || vibe.getModuleManager() == null) return;
         AutoClickerModule clicker = vibe.getModuleManager().getModule(AutoClickerModule.class);
-        KillAuraModule aura = vibe.getModuleManager().getModule(KillAuraModule.class);
+        KillAuraModule aura = KillAuraModule.activeController();
         if (clicker != null && (aura == null || !aura.isEnabled())) clicker.prepareVanillaClick();
     }
 

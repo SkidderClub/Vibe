@@ -51,6 +51,11 @@ public final class FreecamProductionCheck {
                         "dev.vibe.module.impl.visual.SmoothF5Module","dev.vibe.ui.render.HologramRenderer","dev.vibe.ui.render.HologramPose"})Class.forName(name,false,loader).getDeclaredMethods();
                 Class.forName("dev.vibe.module.impl.movement.FreecamModule",false,loader).getMethod("frontViewHook",boolean.class);
                 OUTPUT.println("SmoothF5 camera hooks and native hologram models linked through production Forge/OptiFine.");
+                for(String name:new String[]{"dev.vibe.module.impl.combat.AIAuraModule","dev.vibe.aiaura.AuraNetwork","dev.vibe.aiaura.AuraBrain","dev.vibe.ui.screen.AIAuraRecorderGui","dev.vibe.ui.render.AuraArenaRenderer"})Class.forName(name,false,loader).getDeclaredMethods();
+                Class.forName("dev.vibe.module.impl.combat.KillAuraModule",false,loader).getMethod("activeController");
+                Class.forName("dev.vibe.module.impl.combat.AIAuraModule",false,loader).getMethod("cameraYawHook",Object.class,float.class);
+                Class.forName("dev.vibe.module.impl.combat.AIAuraModule",false,loader).getMethod("cameraPitchHook",Object.class,float.class);
+                OUTPUT.println("AIAura neural policy, shared combat hooks and recorder linked through production Forge/OptiFine.");
             } catch(Throwable failure) {
                 failure.printStackTrace(ERROR);throw new RuntimeException("Production Freecam linkage failed",failure);
             }

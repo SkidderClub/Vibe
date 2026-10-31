@@ -14,7 +14,7 @@ public final class AuraBlockVisual {
     public static EntityPlayerSP begin() {
         Vibe vibe = Vibe.getInstance();
         if (vibe == null || vibe.getModuleManager() == null) return null;
-        KillAuraModule aura = vibe.getModuleManager().getModule(KillAuraModule.class);
+        KillAuraModule aura = KillAuraModule.activeController();
         EntityPlayerSP player = Minecraft.getMinecraft().thePlayer;
         if (aura == null || !aura.isVisualBlocking() || player == null || player.isUsingItem()) return null;
         ItemStack held = player.getHeldItem();
@@ -30,7 +30,7 @@ public final class AuraBlockVisual {
     public static void applyThirdPerson(Object renderer, Object entity) {
         Vibe vibe = Vibe.getInstance();
         if (vibe == null || vibe.getModuleManager() == null || entity != Minecraft.getMinecraft().thePlayer) return;
-        KillAuraModule aura = vibe.getModuleManager().getModule(KillAuraModule.class);
+        KillAuraModule aura = KillAuraModule.activeController();
         if (aura != null && aura.isVisualBlocking()) {
             // RenderPlayer resets this model pose on every render. No item-use
             // state is installed in Forge Pre/Post events (which can cancel).

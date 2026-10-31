@@ -42,7 +42,7 @@ public final class CustomCosmeticsRenderer {
     }
 
     private void drawKillauraCircle(CustomCosmeticsModule module, float partial) {
-        dev.vibe.module.impl.combat.KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.KillAuraModule.class);
+        dev.vibe.module.impl.combat.KillAuraModule aura = dev.vibe.module.impl.combat.KillAuraModule.activeController();
         if (aura == null || !aura.isEnabled()) return;
         EntityPlayerSP player = minecraft.thePlayer;
         double x = player.lastTickPosX + (player.posX - player.lastTickPosX) * partial;

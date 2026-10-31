@@ -73,6 +73,7 @@ public final class ModuleManager {
         register(new NoSlowModule());
         register(new MoveFixModule());
         register(new KillAuraModule());
+        register(new AIAuraModule());
         register(new SpeedModule());
         register(new FlyModule());
         register(new FreecamModule());
