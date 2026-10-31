@@ -45,8 +45,24 @@ public class AIAuraIntegrationTest {
             assertEquals(2,queue.packets.size());assertTrue(queue.packets.get(0) instanceof C0APacketAnimation);assertTrue(queue.packets.get(1) instanceof C02PacketUseEntity);
             MoveFixModule.beginPacketRotationHook(self);Method walk=EntityPlayerSP.class.getDeclaredMethod("onUpdateWalkingPlayer");walk.setAccessible(true);walk.invoke(self);MoveFixModule.endPacketRotationHook(self);assertTrue(queue.packets.get(queue.packets.size()-1) instanceof C03PacketPlayer);
             int sent=queue.packets.size();ai.tickEnd();assertEquals(sent,queue.packets.size());assertNull(f.mc.objectMouseOver);
-            AuraFixtures.bias(model,0,.05F);ai.lockFov.setEnabled(true);enemy.posX=enemy.lastTickPosX=-.5;enemy.setEntityBoundingBox(new AxisAlignedBB(-.8,64,2.7,-.2,65.8,3.3));
-            fix.beginRotationTick();ai.tickStart();fix.tick();assertTrue(self.rotationYaw>0);assertEquals(fix.getRotationYaw(),self.rotationYaw,0);ai.frameTick(0);float start=AIAuraModule.cameraYawHook(self,-999);ai.frameTick(.5F);float halfway=AIAuraModule.cameraYawHook(self,-999);ai.frameTick(1);assertEquals(self.rotationYaw,AIAuraModule.cameraYawHook(self,-999),1e-5);assertTrue(halfway>=start&&halfway<=self.rotationYaw);assertEquals(self.rotationYaw,dev.vibe.module.impl.movement.FreecamModule.yawHook(self,-999),1e-5);
+            // This phase checks camera following, not time-dependent neural acceleration.
+            // Back-to-back ticks can produce less than one quantized mouse count on a fast runner.
+            ((dev.vibe.combat.AuraRotation)get(KillAuraModule.class,ai,"rotation")).reset(30F,0F);
+            ai.lockFov.setEnabled(true);
+            enemy.posX=enemy.lastTickPosX=-.5;
+            enemy.setEntityBoundingBox(new AxisAlignedBB(-.8,64,2.7,-.2,65.8,3.3));
+            fix.beginRotationTick();ai.tickStart();fix.tick();
+            assertEquals("LockFOV copies the known spoofed yaw",30F,self.rotationYaw,0);
+            assertEquals("Visible and server-facing yaw agree",fix.getRotationYaw(),self.rotationYaw,0);
+            ai.frameTick(0);
+            float start=AIAuraModule.cameraYawHook(self,-999);
+            assertEquals("Camera interpolation starts at the preceding view",0F,start,0);
+            ai.frameTick(.5F);
+            float halfway=AIAuraModule.cameraYawHook(self,-999);
+            assertEquals("Camera reaches the midpoint halfway through a tick",(start+self.rotationYaw)*.5F,halfway,1e-5);
+            ai.frameTick(1);
+            assertEquals("Camera reaches the spoofed yaw at tick end",self.rotationYaw,AIAuraModule.cameraYawHook(self,-999),1e-5);
+            assertEquals("Perspective hooks use the same camera yaw",self.rotationYaw,dev.vibe.module.impl.movement.FreecamModule.yawHook(self,-999),1e-5);
             ai.lockFov.setEnabled(false);assertEquals(17,AIAuraModule.cameraYawHook(self,17),0);
             // A silent rotation returns monotonically after the last target disappears; no neural noise runs there.
             world.loadedEntityList.remove(enemy);self.rotationYaw=-30;float previous=fix.getRotationYaw();for(int i=0;i<80;i++){fix.beginRotationTick();ai.tickStart();fix.tick();float current=fix.getRotationYaw();assertTrue(Math.abs(current+30)<=Math.abs(previous+30)+.001);previous=current;}assertNull(ai.getTarget());assertNull(get(MoveFixModule.class,fix,"fakeRotation"));
