@@ -689,6 +689,7 @@ public final class MoveFixModule extends Module {
             ScaffoldModule scaffold = Vibe.getInstance() == null || Vibe.getInstance().getModuleManager() == null ? null
                     : Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
             if (scaffold != null) scaffold.beforeMoveInput(this);
+            dev.vibe.module.impl.combat.AutoBuffModule.inputHook(this);
             if (module.forcedMovementOwner != null) {
                 moveForward = module.forcedForward;
                 moveStrafe = module.forcedStrafe;

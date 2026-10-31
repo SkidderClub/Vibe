@@ -126,6 +126,10 @@ public final class AutoClickerModule extends Module {
     }
 
     private boolean isAllowedTarget() {
+        Entity pointed = pointedEntity();
+        TargetsModule targets = dev.vibe.Vibe.getInstance() == null ? null
+                : dev.vibe.Vibe.getInstance().getModuleManager().getModule(TargetsModule.class);
+        if (pointed != null && targets != null && !targets.inTargetArea(pointed.posX, pointed.posY, pointed.posZ)) return false;
         if (triggerMode.isEnabled()) {
             return minecraft.objectMouseOver != null
                     && minecraft.objectMouseOver.typeOfHit == MovingObjectPosition.MovingObjectType.ENTITY;

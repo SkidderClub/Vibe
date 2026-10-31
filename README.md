@@ -21,6 +21,7 @@ Use modules only where permitted by the server's rules. Vibe is client-only.
 
 - **Right Shift** opens ClickGUI; choose Skeet, Futuristic, NeverLose, Augustus or Xanax.
 - **H** opens the HUD editor. Both default keybinds can be changed.
+- **Targets → Target Area**, **AutoRespawn**, **AutoBuff** and **Crafter** are covered in [Target areas and inventory automation](docs/AUTOMATION.md).
 - **HUD Editor → Ghosts** adds the mascot. Choose **Static** for the single image or **Animated** for the sprite animation; flipping, size, opacity and body color are adjustable.
 - **`.help`** lists chat commands; **Tab** completes them.
 - **Alt Manager** in the main menu or server list manages accounts.

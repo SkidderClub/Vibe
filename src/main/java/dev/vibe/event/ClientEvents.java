@@ -127,6 +127,7 @@ public final class ClientEvents {
     private final dev.vibe.ui.render.BreakProgressRenderer breakProgressRenderer = new dev.vibe.ui.render.BreakProgressRenderer();
     private final EspRenderer espRenderer = new EspRenderer();
     private final TargetEspRenderer targetEspRenderer = new TargetEspRenderer();
+    private final dev.vibe.ui.render.TargetAreaRenderer targetAreaRenderer = new dev.vibe.ui.render.TargetAreaRenderer();
     private final SkeletalRenderer skeletalRenderer = new SkeletalRenderer();
     private final PlayerSkinRenderer playerSkinRenderer = new PlayerSkinRenderer();
     private final ChestEspRenderer chestEspRenderer = new ChestEspRenderer();
@@ -210,10 +211,15 @@ public final class ClientEvents {
             if (phone != null) phone.tickCommunications();
         }
         if (event.phase == TickEvent.Phase.START) {
+            if (Vibe.getInstance().getCommandManager() != null) Vibe.getInstance().getCommandManager().tick();
             dev.vibe.module.impl.client.MusicModule music = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.MusicModule.class);
             if (music != null) music.tick();
             MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
             if (moveFix != null) moveFix.beginRotationTick();
+            dev.vibe.module.impl.world.AutoRespawnModule respawn = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.world.AutoRespawnModule.class);
+            if (respawn != null) respawn.tick();
+            dev.vibe.module.impl.combat.AutoBuffModule autoBuff = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AutoBuffModule.class);
+            if (autoBuff != null) autoBuff.tick();
             ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
             if (scripts != null) scripts.tickStart();
             // Producers select the fake rotation before vanilla samples input.
@@ -251,9 +257,9 @@ public final class ClientEvents {
             if(picken!=null)picken.tick();
             dev.vibe.module.impl.visual.CustomCosmeticsModule customCosmetics = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.CustomCosmeticsModule.class);
             if (customCosmetics != null) customCosmetics.tick();
-            if (autoTool != null) autoTool.tick();
+            if (autoTool != null && !dev.vibe.module.impl.combat.AutoBuffModule.ownsUseInput()) autoTool.tick();
             BedAuraModule bedAura = Vibe.getInstance().getModuleManager().getModule(BedAuraModule.class);
-            if (bedAura != null) bedAura.tick();
+            if (bedAura != null && !dev.vibe.module.impl.combat.AutoBuffModule.ownsUseInput()) bedAura.tick();
             FastBreakModule fastBreak = Vibe.getInstance().getModuleManager().getModule(FastBreakModule.class);
             if (fastBreak != null) fastBreak.tick();
             NoSlowModule noSlow = Vibe.getInstance().getModuleManager().getModule(NoSlowModule.class);
@@ -275,6 +281,8 @@ public final class ClientEvents {
             // preserves that same order instead of injecting a window click
             // after the movement update at tick end.
             InventoryManagerModule inventoryManager = Vibe.getInstance().getModuleManager().getModule(InventoryManagerModule.class);
+            dev.vibe.module.impl.world.AutoCrafterModule crafter = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.world.AutoCrafterModule.class);
+            if (crafter != null) crafter.tick();
             if (inventoryManager != null) {
                 inventoryManager.tick();
             }
@@ -411,6 +419,11 @@ public final class ClientEvents {
         if (aura != null) aura.onHypixelMouse(event);
         ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
         if (scaffold != null) scaffold.onHypixelMouse(event);
+    }
+
+    @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.LOWEST)
+    public void onCameraSetup(net.minecraftforge.client.event.EntityViewRenderEvent.CameraSetup event) {
+        dev.vibe.module.impl.combat.AIAuraModule.cameraSetupHook(event);
     }
 
     @SubscribeEvent
@@ -804,6 +817,7 @@ public final class ClientEvents {
         trajectoriesRenderer.render(event);
         itemEspRenderer.render(event);
         targetEspRenderer.render(event);
+        targetAreaRenderer.render();
         pathRenderer.render(event);
         hitmarkerRenderer.renderWorld(event);
         damageEspRenderer.render(event);

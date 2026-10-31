@@ -5,6 +5,7 @@ import dev.vibe.module.Module;
 import dev.vibe.module.impl.client.FriendsModule;
 import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ModeSetting;
+import dev.vibe.setting.BlockCoordinateSetting;
 import dev.vibe.Vibe;
 import net.minecraft.item.ItemArmor;
 import net.minecraft.item.ItemStack;
@@ -28,6 +29,37 @@ public final class TargetsModule extends Module {
             () -> ignoreTeammates.isEnabled(), "Name Color", "Chestplate", "Scoreboard"));
     private final Set<String> warnedTargets = new HashSet<String>();
     private Object warningWorld;
+    public final BooleanSetting targetArea = addSetting(new BooleanSetting("Target Area", false));
+    public final BooleanSetting displayTargetArea = addSetting(new BooleanSetting("Display Target Area", false, () -> targetArea.isEnabled()));
+    public final BooleanSetting invertArea = addSetting(new BooleanSetting("Invert Target Area", false, () -> targetArea.isEnabled()));
+    public final BlockCoordinateSetting pos1X = coordinate("Pos1 X", 0), pos1Y = coordinate("Pos1 Y", 0), pos1Z = coordinate("Pos1 Z", 0);
+    public final BlockCoordinateSetting pos2X = coordinate("Pos2 X", 0), pos2Y = coordinate("Pos2 Y", 255), pos2Z = coordinate("Pos2 Z", 0);
+
+    private BlockCoordinateSetting coordinate(String name, int value) {
+        return addSetting(new BlockCoordinateSetting(name, value, () -> targetArea.isEnabled()));
+    }
+    public void setCorner(int corner, net.minecraft.util.BlockPos pos) {
+        (corner == 1 ? pos1X : pos2X).setInt(pos.getX());
+        (corner == 1 ? pos1Y : pos2Y).setInt(pos.getY());
+        (corner == 1 ? pos1Z : pos2Z).setInt(pos.getZ());
+    }
+    /** Corners select complete blocks, including either order and both endpoint blocks. */
+    public net.minecraft.util.AxisAlignedBB getTargetAreaBounds() {
+        return new net.minecraft.util.AxisAlignedBB(
+                Math.min(pos1X.getInt(), pos2X.getInt()), Math.min(pos1Y.getInt(), pos2Y.getInt()), Math.min(pos1Z.getInt(), pos2Z.getInt()),
+                (double)Math.max(pos1X.getInt(), pos2X.getInt()) + 1,
+                (double)Math.max(pos1Y.getInt(), pos2Y.getInt()) + 1,
+                (double)Math.max(pos1Z.getInt(), pos2Z.getInt()) + 1);
+    }
+    public boolean shouldDisplayTargetArea() { return targetArea.isEnabled() && displayTargetArea.isEnabled(); }
+
+    public boolean inTargetArea(double x, double y, double z) {
+        if (!targetArea.isEnabled()) return true;
+        boolean inside = x >= Math.min(pos1X.getInt(), pos2X.getInt()) && x < (double)Math.max(pos1X.getInt(), pos2X.getInt()) + 1
+                && y >= Math.min(pos1Y.getInt(), pos2Y.getInt()) && y < (double)Math.max(pos1Y.getInt(), pos2Y.getInt()) + 1
+                && z >= Math.min(pos1Z.getInt(), pos2Z.getInt()) && z < (double)Math.max(pos1Z.getInt(), pos2Z.getInt()) + 1;
+        return invertArea.isEnabled() ? !inside : inside;
+    }
 
     public TargetsModule() {
         super("Targets", "Choose which entities combat and ESP use", Category.COMBAT, Keyboard.KEY_NONE);
@@ -43,6 +75,7 @@ public final class TargetsModule extends Module {
         if (entity == null || !entity.isEntityAlive() || entity.isDead) {
             return false;
         }
+        if (!inTargetArea(entity.posX, entity.posY, entity.posZ)) return false;
         if (!invisibles.isEnabled() && entity.isInvisible()) {
             return false;
         }

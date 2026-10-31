@@ -68,6 +68,20 @@ public class InventoryManagerPlanTest {
         field(net.minecraft.inventory.ContainerChest.class,"lowerChestInventory").set(chest,new InventoryBasic("Shop",true,27));
         assertFalse((Boolean)check.invoke(stealer,chest));
     }
+    @Test public void repeatedSoupSlotsFillWithoutStealingOrDroppingOtherReservedStacks() throws Exception {
+        InventoryLayout layout=new InventoryLayout();layout.set(0,Type.SWORD);
+        inventory.items.setInventorySlotContents(36,new ItemStack(Items.diamond_sword));
+        for(int i=1;i<=8;i++){layout.set(i,Type.SOUP);inventory.items.setInventorySlotContents(8+i,new ItemStack(Items.mushroom_stew));}
+        for(int i=1;i<=8;i++){
+            Object action=plan("arrangeOne",layout);assertNotNull(action);
+            int from=integer(action,"slot"),button=integer(action,"hotbarButton");assertEquals(i,button);
+            inventory.items.setInventorySlotContents(36+button,inventory.items.getStackInSlot(from));inventory.items.setInventorySlotContents(from,null);
+        }
+        assertNull(plan("arrangeOne",layout));assertNull(plan("dropOneDuplicate",layout));
+        ((dev.vibe.setting.NumberSetting)field(InventoryManagerModule.class,"maxFoodSlots").get(module)).setValue(0D);
+        assertNull("Explicit layout assignments take priority over the generic food cap",plan("dropExcess",layout));
+        assertEquals(Items.diamond_sword,inventory.items.getStackInSlot(36).getItem());
+    }
     private Object plan(String name, InventoryLayout layout) throws Exception {
         Method method=InventoryManagerModule.class.getDeclaredMethod(name,Container.class,InventoryLayout.class); method.setAccessible(true);
         return method.invoke(module,inventory,layout);

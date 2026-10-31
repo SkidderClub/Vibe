@@ -19,6 +19,11 @@ public final class VanillaClicks {
     public static void discardPresses(KeyBinding binding) {
         while (binding.isPressed()) { /* Consume stale physical/synthetic edges. */ }
     }
+    public static void pulseUse(KeyBinding binding) {
+        int code = binding.getKeyCode();
+        KeyBinding.setKeyBindState(code, false); KeyBinding.setKeyBindState(code, true); KeyBinding.onTick(code);
+        ClickStats.recordRight();
+    }
 
     public static boolean physicallyDown(KeyBinding binding) {
         int code = binding.getKeyCode();

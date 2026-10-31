@@ -52,6 +52,11 @@ public final class FreecamProductionCheck {
                         "dev.vibe.module.impl.visual.SmoothF5Module","dev.vibe.ui.render.HologramRenderer","dev.vibe.ui.render.HologramPose"})Class.forName(name,false,loader).getDeclaredMethods();
                 Class.forName("dev.vibe.module.impl.movement.FreecamModule",false,loader).getMethod("frontViewHook",boolean.class);
                 OUTPUT.println("SmoothF5 camera hooks and native hologram models linked through production Forge/OptiFine.");
+                OUTPUT.println("Installed renderer camera hooks: "+BrandingObserver.cameraHooks);
+                if(!BrandingObserver.cameraHooks.contains("func_78467_g:yawHook")
+                        ||!BrandingObserver.cameraHooks.contains("func_78467_g:pitchHook")
+                        ||!BrandingObserver.cameraHooks.contains("func_181560_a:mouseLookHook"))
+                    throw new AssertionError("Installed first-person camera hooks are missing");
                 for(String name:new String[]{"dev.vibe.module.impl.combat.AIAuraModule","dev.vibe.aiaura.AuraNetwork","dev.vibe.aiaura.AuraBrain","dev.vibe.ui.screen.AIAuraRecorderGui","dev.vibe.ui.render.AuraArenaRenderer"})Class.forName(name,false,loader).getDeclaredMethods();
                 Class.forName("dev.vibe.module.impl.combat.KillAuraModule",false,loader).getMethod("activeController");
                 Class.forName("dev.vibe.module.impl.combat.AIAuraModule",false,loader).getMethod("cameraYawHook",Object.class,float.class);
@@ -61,6 +66,10 @@ public final class FreecamProductionCheck {
                         "dev.vibe.core.startup.GhostLoadingRenderer","net.minecraftforge.fml.client.SplashProgress$3",
                         "net.minecraftforge.fml.common.ProgressManager$ProgressBar"})Class.forName(name,false,loader).getDeclaredMethods();
                 OUTPUT.println("Ghost startup, native icon and Forge splash classes linked through production Forge/OptiFine.");
+                for(String name:new String[]{"dev.vibe.module.impl.combat.AutoBuffModule","dev.vibe.module.impl.world.AutoRespawnModule",
+                        "dev.vibe.module.impl.world.AutoCrafterModule","dev.vibe.inventory.PlayerInventorySession",
+                        "dev.vibe.inventory.CraftingPlanner","dev.vibe.setting.BlockCoordinateSetting"})Class.forName(name,false,loader).getDeclaredMethods();
+                OUTPUT.println("AutoBuff, AutoRespawn, AutoCrafter and target coordinates linked through production Forge/OptiFine.");
                 if(!BrandingObserver.hooks.contains("renderForge")||!BrandingObserver.hooks.contains("drawVanilla")||!BrandingObserver.hooks.contains("apply"))
                     throw new AssertionError("Installed ghost branding hooks missing: "+BrandingObserver.hooks);
             } catch(Throwable failure) {
@@ -70,12 +79,14 @@ public final class FreecamProductionCheck {
     }
     public static final class BrandingObserver implements IClassTransformer {
         public static final Set<String> hooks=new HashSet<String>();
+        public static final Set<String> cameraHooks=new java.util.TreeSet<String>();
         @Override public byte[] transform(String name,String mapped,byte[] bytes) {
             if(bytes==null)return null;
-            if(!"net.minecraft.client.Minecraft".equals(mapped)&&!name.equals("net.minecraftforge.fml.client.SplashProgress$3"))return bytes;
+            boolean renderer="net.minecraft.client.renderer.EntityRenderer".equals(mapped);
+            if(!renderer&&!"net.minecraft.client.Minecraft".equals(mapped)&&!name.equals("net.minecraftforge.fml.client.SplashProgress$3"))return bytes;
             org.objectweb.asm.tree.ClassNode node=new org.objectweb.asm.tree.ClassNode();new org.objectweb.asm.ClassReader(bytes).accept(node,0);
             for(Object entry:node.methods)for(org.objectweb.asm.tree.AbstractInsnNode insn:((org.objectweb.asm.tree.MethodNode)entry).instructions.toArray())
-                if(insn instanceof org.objectweb.asm.tree.MethodInsnNode){org.objectweb.asm.tree.MethodInsnNode call=(org.objectweb.asm.tree.MethodInsnNode)insn;if(call.owner.startsWith("dev/vibe/core/startup/"))hooks.add(call.name);}
+                if(insn instanceof org.objectweb.asm.tree.MethodInsnNode){org.objectweb.asm.tree.MethodInsnNode call=(org.objectweb.asm.tree.MethodInsnNode)insn;if(call.owner.startsWith("dev/vibe/core/startup/"))hooks.add(call.name);if(renderer&&call.owner.equals("dev/vibe/module/impl/movement/FreecamModule"))cameraHooks.add(((org.objectweb.asm.tree.MethodNode)entry).name+":"+call.name);}
             return bytes;
         }
     }

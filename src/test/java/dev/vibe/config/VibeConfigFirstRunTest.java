@@ -103,6 +103,29 @@ public class VibeConfigFirstRunTest {
         fail("Velocity was not persisted");
     }
 
+    @Test public void oldAutoCrafterProfileKeepsEnabledStateKeySettingsAndHudSelection() throws Exception {
+        Vibe vibe = new Vibe(); vibeField.set(null, vibe);
+        ModuleManager manager = new ModuleManager(); VibeConfig config = new VibeConfig(temporary.newFolder("crafter"));
+        field(Vibe.class, "moduleManager").set(vibe, manager); field(Vibe.class, "config").set(vibe, config);
+        JsonObject root = new JsonParser().parse("{\"format\":3,\"modules\":[{\"id\":\"autocrafter\",\"enabled\":true,\"key\":35,\"settings\":{\"Material\":\"Diamond\",\"Click Delay (ms)\":{\"min\":300,\"max\":450}}},{\"id\":\"hud\",\"settings\":{\"ArrayList Modules\":[\"AutoCrafter\",\"AutoBuff\"]}}]}").getAsJsonObject();
+        Files.createDirectories(config.getDirectory().toPath());
+        File profile=new File(config.getDirectory(),"legacy-crafter.json");Files.write(profile.toPath(),root.toString().getBytes(StandardCharsets.UTF_8));
+        assertTrue(config.load("legacy-crafter",manager));
+        dev.vibe.module.impl.world.AutoCrafterModule crafter=manager.getModule(dev.vibe.module.impl.world.AutoCrafterModule.class);
+        assertEquals("Crafter",crafter.getRawName());assertEquals("crafter",crafter.getId());
+        assertSame(crafter,manager.getModule("AutoCrafter"));assertSame(crafter,manager.getModule("Crafter"));
+        assertTrue(crafter.isEnabled());assertEquals(35,crafter.getKey());assertEquals("Diamond",crafter.material.getValue());
+        assertEquals(300,crafter.clickDelay.getMinInt());assertEquals(450,crafter.clickDelay.getMaxInt());
+        MultiSelectSetting hud=setting(manager.getModule("hud"),"ArrayList Modules",MultiSelectSetting.class);
+        assertTrue(hud.isSelected("Crafter"));assertFalse(hud.isSelected("AutoCrafter"));assertTrue(hud.isSelected("AutoBuff"));
+        assertTrue(config.save("legacy-crafter",manager));
+        JsonArray saved=new JsonParser().parse(new String(Files.readAllBytes(profile.toPath()),StandardCharsets.UTF_8)).getAsJsonObject().getAsJsonArray("modules");
+        int copies=0;for(com.google.gson.JsonElement entry:saved) {
+            String id=entry.getAsJsonObject().get("id").getAsString();assertFalse("autocrafter".equalsIgnoreCase(id));if("crafter".equals(id))copies++;
+        }
+        assertEquals(1,copies);
+    }
+
     @Test public void editsCommandsAndLegacyAutosavesNeverRewriteProfilesUntilExplicitSave() throws Exception {
         Vibe vibe = new Vibe(); vibeField.set(null, vibe);
         ModuleManager manager = new ModuleManager(); VibeConfig config = new VibeConfig(temporary.newFolder("manual"));

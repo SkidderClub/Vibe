@@ -130,7 +130,7 @@ public final class FreecamModule extends Module {
         FreecamModule module = active();
         if (module != null && entity == module.cameraPlayer) {
             module.flight.look(yaw * 0.15, -pitch * 0.15, module.flightMode.is("Angle"));
-        } else {
+        } else if (!dev.vibe.module.impl.combat.AIAuraModule.lockMouseLookHook(entity)) {
             ((Entity) entity).setAngles(yaw, pitch);
         }
     }

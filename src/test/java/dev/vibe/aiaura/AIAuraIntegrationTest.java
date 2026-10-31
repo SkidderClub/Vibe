@@ -63,7 +63,22 @@ public class AIAuraIntegrationTest {
             ai.frameTick(1);
             assertEquals("Camera reaches the spoofed yaw at tick end",self.rotationYaw,AIAuraModule.cameraYawHook(self,-999),1e-5);
             assertEquals("Perspective hooks use the same camera yaw",self.rotationYaw,dev.vibe.module.impl.movement.FreecamModule.yawHook(self,-999),1e-5);
+            float lockedYaw=self.rotationYaw,lockedPitch=self.rotationPitch;
+            dev.vibe.module.impl.movement.FreecamModule.mouseLookHook(self,80,40);
+            assertEquals("Native mouse input cannot overwrite the locked view",lockedYaw,self.rotationYaw,0);
+            assertEquals("Native mouse input cannot overwrite locked pitch",lockedPitch,self.rotationPitch,0);
+            self.rotationYaw=123;self.rotationPitch=-40;self.prevRotationYaw=-55;
+            ai.frameTick(.5F);
+            assertEquals("Render start restores the controlled yaw endpoint",lockedYaw,self.rotationYaw,0);
+            assertEquals("Render start restores the controlled pitch endpoint",lockedPitch,self.rotationPitch,0);
+            net.minecraftforge.client.event.EntityViewRenderEvent.CameraSetup view=new net.minecraftforge.client.event.EntityViewRenderEvent.CameraSetup(null,self,null,.5,-999,-999,7);
+            PathTestFixture.allocate(dev.vibe.event.ClientEvents.class).onCameraSetup(view);
+            assertEquals("The actual Forge camera event follows the interpolated view",195F,view.yaw,1e-5);
+            assertEquals("Forge camera pitch matches vanilla endpoint interpolation",self.prevRotationPitch+(self.rotationPitch-self.prevRotationPitch)*.5F,view.pitch,1e-5);
+            assertEquals("Camera lock leaves other camera effects intact",7F,view.roll,0);
             ai.lockFov.setEnabled(false);assertEquals(17,AIAuraModule.cameraYawHook(self,17),0);
+            dev.vibe.module.impl.movement.FreecamModule.mouseLookHook(self,10,0);
+            assertEquals("Turning the setting off immediately restores ordinary mouse look",lockedYaw+1.5F,self.rotationYaw,1e-5);
             // A silent rotation returns monotonically after the last target disappears; no neural noise runs there.
             world.loadedEntityList.remove(enemy);self.rotationYaw=-30;float previous=fix.getRotationYaw();for(int i=0;i<80;i++){fix.beginRotationTick();ai.tickStart();fix.tick();float current=fix.getRotationYaw();assertTrue(Math.abs(current+30)<=Math.abs(previous+30)+.001);previous=current;}assertNull(ai.getTarget());assertNull(get(MoveFixModule.class,fix,"fakeRotation"));
             ai.setEnabled(false);assertNull(get(MoveFixModule.class,fix,"fakeRotation"));
@@ -72,6 +87,22 @@ public class AIAuraIntegrationTest {
     @Test public void untrainedModuleNeverQueuesAttacksOrRotations()throws Exception{
         try(PathTestFixture f=new PathTestFixture()){
             PathTestFixture.set(Minecraft.class,f.mc,"mcDataDir",temp.newFolder());AIAuraModule ai=new AIAuraModule();MoveFixModule fix=new MoveFixModule();f.modules.registerDynamic(ai);f.modules.registerDynamic(fix);PathTestFixture.set(Module.class,ai,"enabled",true);ai.tickStart();KillAuraModule.prepareInputHook();assertNull(ai.getTarget());assertNull(get(MoveFixModule.class,fix,"fakeRotation"));assertFalse(f.mc.gameSettings.keyBindAttack.isPressed());
+        }
+    }
+    @Test public void lockDoesNotTransferToAnotherPlayerOrWorld()throws Exception{
+        try(PathTestFixture f=new PathTestFixture()){
+            AIAuraModule ai=new AIAuraModule();f.modules.registerDynamic(ai);
+            PathTestFixture.set(Module.class,ai,"enabled",true);ai.lockFov.setEnabled(true);
+            PathTestFixture.set(AIAuraModule.class,ai,"cameraFollowing",true);
+            PathTestFixture.set(AIAuraModule.class,ai,"cameraPlayer",f.player);
+            PathTestFixture.set(AIAuraModule.class,ai,"cameraYaw",30F);
+            ai.frameTick(.5F);assertEquals(15F,AIAuraModule.cameraYawHook(f.player,17),0);
+            f.mc.theWorld=null;ai.frameTick(.5F);assertEquals(17F,AIAuraModule.cameraYawHook(f.player,17),0);
+            f.mc.theWorld=f.world;
+            PathTestFixture.set(AIAuraModule.class,ai,"cameraFollowing",true);
+            f.mc.thePlayer=f.addPlayer(2,"Respawned",0,64,0);ai.frameTick(.5F);
+            assertEquals(17F,AIAuraModule.cameraYawHook(f.mc.thePlayer,17),0);
+            assertFalse(AIAuraModule.lockMouseLookHook(f.mc.thePlayer));
         }
     }
     private static Player player(TestWorld world,int id,double x,double y,double z)throws Exception{Player p=PathTestFixture.allocate(Player.class);p.setEntityId(id);p.worldObj=world;p.posX=p.lastTickPosX=x;p.posY=p.lastTickPosY=y;p.posZ=p.lastTickPosZ=z;p.width=.6F;p.height=1.8F;p.setEntityBoundingBox(new AxisAlignedBB(x-.3,y,z-.3,x+.3,y+1.8,z+.3));

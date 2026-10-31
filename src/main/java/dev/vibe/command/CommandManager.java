@@ -16,7 +16,10 @@ import org.lwjgl.input.Keyboard;
 /** Local dot-prefixed commands. They never leave the client as chat messages. */
 public final class CommandManager {
 
-    private static final List<String> ROOTS = Arrays.asList(".toggle", ".t", ".bind", ".b", ".binds", ".config", ".c", ".onlineconfig", ".ign", ".waifu", ".friend", ".f", ".target", ".script", ".scripts", ".models", ".model", ".extensions", ".source", ".help");
+    private static final List<String> ROOTS = Arrays.asList(".toggle", ".t", ".bind", ".b", ".binds", ".config", ".c", ".onlineconfig", ".ign", ".waifu", ".friend", ".f", ".target", ".pos1", ".pos2", ".vomit", ".clear", ".clearinv", ".clearinventory", ".script", ".scripts", ".models", ".model", ".extensions", ".source", ".help");
+    private final dev.vibe.inventory.InventoryDropper inventoryDropper = new dev.vibe.inventory.InventoryDropper(this::say);
+
+    public void tick() { inventoryDropper.tick(); }
 
     public boolean execute(String message) {
         if (message == null || !message.trim().startsWith(".")) {
@@ -24,7 +27,12 @@ public final class CommandManager {
         }
         String[] parts = message.trim().split("\\s+");
         String command = parts[0].toLowerCase(java.util.Locale.ROOT);
-        if (".e".equals(command)) {
+        if (".vomit".equals(command) || ".clear".equals(command) || ".clearinv".equals(command) || ".clearinventory".equals(command)) {
+            if (parts.length != 1) say("Usage: §b" + command + "§7 — drop all inventory items, including armor");
+            else inventoryDropper.start();
+        } else if (".pos1".equals(command) || ".pos2".equals(command)) {
+            position(parts, command.equals(".pos1") ? 1 : 2);
+        } else if (".e".equals(command)) {
             dev.vibe.easter.EasterEggs.INSTANCE.command(message.trim().substring(2).trim());
         } else if (".toggle".equals(command) || ".t".equals(command)) {
             toggle(parts);
@@ -283,7 +291,25 @@ public final class CommandManager {
         } else say("Usage: §b.onlineconfig <list|load <name>>");
     }
 
+    private void position(String[] parts, int corner) {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc.thePlayer == null || mc.theWorld == null) { say("Join a world to set a target area."); return; }
+        if (parts.length != 1 && parts.length != 4) { say("Usage: .pos" + corner + " [x y z]"); return; }
+        net.minecraft.util.BlockPos pos = mc.thePlayer.getPosition();
+        try {
+            if (parts.length == 4) pos = new net.minecraft.util.BlockPos(Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), Integer.parseInt(parts[3]));
+            if (Math.abs((long)pos.getX()) > 30000000 || Math.abs((long)pos.getY()) > 30000000 || Math.abs((long)pos.getZ()) > 30000000) throw new IllegalArgumentException();
+        } catch (IllegalArgumentException e) { say("Coordinates must be whole numbers between -30000000 and 30000000."); return; }
+        dev.vibe.module.impl.combat.TargetsModule targets = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.TargetsModule.class);
+        targets.setCorner(corner, pos);
+        if (Vibe.getInstance().getConfig() != null) Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
+        say("Target area position " + corner + ": " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ()
+                + (targets.targetArea.isEnabled() ? "." : ". Enable Target Area in Targets to use it."));
+    }
+
     private void help() {
+        say("§b.vomit§7 — drop all inventory items, including armor; aliases: §b.clear§7, §b.clearinv§7, §b.clearinventory");
+        say("§b.pos1 / .pos2 [x y z]§7 — set the block corners of Targets' 3D area");
         say("§b.extensions§7 — list loaded extensions and load errors");
         say(".source - source archive, repository and GPLv3/AGPLv3 licenses");
         say("§b.t <module>§7 — toggle a module");

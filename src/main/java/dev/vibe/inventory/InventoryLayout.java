@@ -32,9 +32,12 @@ public final class InventoryLayout {
         ARROW("Arrow", new ItemStack(Items.arrow)),
         FIREBALL("Fireball", new ItemStack(Items.fire_charge)),
         TNT("TNT", new ItemStack(Blocks.tnt)),
+        SOUP("Soup", new ItemStack(Items.mushroom_stew)),
+        HEAD("Head", new ItemStack(Items.skull, 1, 3)),
         GOLDEN_APPLE("Golden Apple", new ItemStack(Items.golden_apple)),
         FOOD("Food", new ItemStack(Items.carrot)),
         HEALING_POTION("Healing Potion", new ItemStack(Items.potionitem, 1, 16421)),
+        POTION("Buff Potion", new ItemStack(Items.potionitem, 1, 16386)),
         COMPASS("Compass", new ItemStack(Items.compass)),
         ENDER_PEARL("Ender Pearl", new ItemStack(Items.ender_pearl)),
         SNOWBALL("Snowballs/Eggs", new ItemStack(Items.snowball)),
@@ -56,6 +59,13 @@ public final class InventoryLayout {
 
         public String getLabel() { return label; }
         public ItemStack createPlaceholder() { return placeholder.copy(); }
+        public boolean isRepeatable() {
+            switch (this) {
+                case SWORD: case PICKAXE: case AXE: case SHOVEL: case HOE: case ROD: case BOW:
+                case HELMET: case CHESTPLATE: case LEGGINGS: case BOOTS: return false;
+                default: return true;
+            }
+        }
     }
 
     private final Map<Integer, Type> entries = new LinkedHashMap<Integer, Type>();
@@ -92,13 +102,13 @@ public final class InventoryLayout {
         if (type == null) {
             entries.remove(slot);
         } else {
-            // A category represents one preferred job, never a duplicated
-            // item. Moving Sword/Blocks/etc. therefore relocates the single
-            // assignment instead of silently creating a second copy.
+            // Supplies can reserve several physical stacks. Equipment remains unique.
+            // A drop-bin rule and a kept assignment for the same type are mutually exclusive.
             java.util.Iterator<Map.Entry<Integer, Type>> iterator = entries.entrySet().iterator();
             while (iterator.hasNext()) {
                 Map.Entry<Integer, Type> entry = iterator.next();
-                if (entry.getKey() != slot && entry.getValue() == type) iterator.remove();
+                if (entry.getKey() != slot && entry.getValue() == type
+                        && (!type.isRepeatable() || slot >= 40 || entry.getKey() >= 40)) iterator.remove();
             }
             entries.put(slot, type);
         }
@@ -169,9 +179,12 @@ public final class InventoryLayout {
             case ARROW: return item == Items.arrow;
             case FIREBALL: return item == Items.fire_charge;
             case TNT: return item == Item.getItemFromBlock(Blocks.tnt);
-            case GOLDEN_APPLE: return item == Items.golden_apple;
-            case FOOD: return item instanceof net.minecraft.item.ItemFood && item != Items.golden_apple;
+            case SOUP: return Consumables.soup(stack);
+            case HEAD: return Consumables.head(stack);
+            case GOLDEN_APPLE: return Consumables.gapple(stack);
+            case FOOD: return Consumables.food(stack);
             case HEALING_POTION: return healingPotion(stack);
+            case POTION: return Consumables.beneficialPotion(stack);
             case COMPASS: return item == Items.compass;
             case ENDER_PEARL: return item == Items.ender_pearl;
             case SNOWBALL: return item == Items.snowball || item == Items.egg;

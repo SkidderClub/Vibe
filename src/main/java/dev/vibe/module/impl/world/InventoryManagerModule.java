@@ -60,6 +60,7 @@ public final class InventoryManagerModule extends Module {
     }
 
     public void tick() {
+        if (dev.vibe.inventory.PlayerInventorySession.isBusy()) return;
         if (!isEnabled() || minecraft.thePlayer == null || !canManage()) {
             resetRuntime();
             return;
@@ -163,6 +164,7 @@ public final class InventoryManagerModule extends Module {
             if (layout.isIgnoredContainerSlot(slot)) continue;
             ItemStack stack = container.getSlot(slot).getStack();
             if (!InventoryLayout.matches(type, stack)) continue;
+            if (slot != preferred && isReserved(layout, slot, stack)) continue;
             double value = score(stack);
             if (best < 0 || value > bestScore) {
                 best = slot;
@@ -220,15 +222,18 @@ public final class InventoryManagerModule extends Module {
             if (stack.getItem() instanceof ItemBlock) blocks.add(slot);
         }
         if (food.size() > maxFoodSlots.getInt()) {
-            int slot = food.get(food.size() - 1);
-            return PendingAction.drop(slot, container.getSlot(slot).getStack());
+            for (int i = food.size() - 1; i >= 0; i--) {
+                int slot = food.get(i);
+                if (!isReserved(layout, slot, container.getSlot(slot).getStack())) return PendingAction.drop(slot, container.getSlot(slot).getStack());
+            }
         }
         if (blocks.size() > maxBlockSlots.getInt()) {
-            int smallest = blocks.get(0);
+            int smallest = -1;
             for (int slot : blocks) {
-                if (container.getSlot(slot).getStack().stackSize < container.getSlot(smallest).getStack().stackSize) smallest = slot;
+                if (!isReserved(layout, slot, container.getSlot(slot).getStack())
+                        && (smallest < 0 || container.getSlot(slot).getStack().stackSize < container.getSlot(smallest).getStack().stackSize)) smallest = slot;
             }
-            return PendingAction.drop(smallest, container.getSlot(smallest).getStack());
+            if (smallest >= 0) return PendingAction.drop(smallest, container.getSlot(smallest).getStack());
         }
         return null;
     }
@@ -304,6 +309,13 @@ public final class InventoryManagerModule extends Module {
     private boolean isUnique(Type type) {
         return type == Type.SWORD || type == Type.PICKAXE || type == Type.AXE || type == Type.SHOVEL || type == Type.HOE
                 || type == Type.HELMET || type == Type.CHESTPLATE || type == Type.LEGGINGS || type == Type.BOOTS;
+    }
+    public boolean hasPendingInteraction() { return pendingAction != null; }
+    public static boolean isReserved(InventoryLayout layout, int containerSlot, ItemStack stack) {
+        for (Map.Entry<Integer,Type> entry : layout.assignments().entrySet())
+            if (entry.getKey() < 40 && InventoryLayout.toContainerSlot(entry.getKey()) == containerSlot
+                    && InventoryLayout.matches(entry.getValue(), stack)) return true;
+        return false;
     }
 
     private long pick(RangeSetting setting) {

@@ -111,7 +111,7 @@ public final class InventoryEditorGui extends GuiScreen {
 
     private boolean available(Type type) {
         return type != Type.HELMET && type != Type.CHESTPLATE && type != Type.LEGGINGS && type != Type.BOOTS
-                && !layout.isAssigned(type);
+                && (type.isRepeatable() || !layout.isAssigned(type));
     }
 
     /** Armor is opted into directly per armour slot, never dragged from the palette. */

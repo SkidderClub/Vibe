@@ -444,7 +444,9 @@ public final class VibeConfig {
             } else if (setting instanceof MultiSelectSetting && element.isJsonArray()) {
                 Set<String> values = new LinkedHashSet<String>();
                 for (JsonElement value : element.getAsJsonArray()) {
-                    values.add(value.getAsString());
+                    String name = value.getAsString();
+                    if ("ArrayList Modules".equals(setting.getRawName()) && "AutoCrafter".equalsIgnoreCase(name)) name = "Crafter";
+                    values.add(name);
                 }
                 ((MultiSelectSetting) setting).setValue(values);
             } else if (setting instanceof MultiSelectSetting && element.isJsonPrimitive()) {
@@ -463,6 +465,7 @@ public final class VibeConfig {
         // v0.0.6 renamed BHop to Speed. Keep old profiles and keybinds alive
         // rather than silently discarding the module record.
         if ("bhop".equalsIgnoreCase(id)) id = "speed";
+        if ("autocrafter".equalsIgnoreCase(id)) id = "crafter";
         for (Module module : manager.getModules()) {
             if (module.getId().equalsIgnoreCase(id) || module.getRawName().equalsIgnoreCase(id)) {
                 return module;

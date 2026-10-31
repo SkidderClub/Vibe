@@ -49,6 +49,10 @@ def registerRenderCheck = { String name, String mainClassName, String outputDire
 
 registerRenderCheck('verifyGhostBranding', 'dev.vibe.branding.GhostBrandingRenderCheck', 'ghost-branding-check',
         'Checks ghost artwork, tint, animation, flips, HUD resize and early startup pixels.', true)
+registerRenderCheck('verifyTargetArea', 'dev.vibe.ui.render.TargetAreaRenderCheck', 'target-area-check',
+        'Verify target-area cuboid rendering, settings, camera origin and GL state.', true)
+registerRenderCheck('verifyAIAuraView', 'dev.vibe.aiaura.AIAuraViewRenderCheck', 'aiaura-view-check',
+        'Checks the locked Forge camera event and native view direction in first/third person.')
 registerRenderCheck('verifyAIAuraRendering', 'dev.vibe.ui.screen.AIAuraRecorderRenderCheck', 'aiaura-render-check',
         'Checks the AIAura practice arena, dashboard, fonts, preview isolation and small-screen layouts.', true)
 registerRenderCheck('verifyGta7Rendering', 'dev.vibe.game.gta.Gta7RenderCheck', 'gta7-render-check',

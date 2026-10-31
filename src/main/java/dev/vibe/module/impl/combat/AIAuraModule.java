@@ -67,7 +67,31 @@ public final class AIAuraModule extends KillAuraModule {
         cameraYaw=previousCameraYaw+(float)MouseMath.wrap(yaw-previousCameraYaw);cameraPitch=pitch;cameraPlayer=minecraft.thePlayer;cameraFollowing=true;
     }
     @Override protected void onDisable(){super.onDisable();returning=cameraFollowing=false;cameraPlayer=null;}
-    public void frameTick(float partial){framePartial=Math.max(0,Math.min(1,partial));if(minecraft.thePlayer!=cameraPlayer||minecraft.theWorld==null)cameraFollowing=false;}
+    public void frameTick(float partial){
+        framePartial=Math.max(0,Math.min(1,partial));
+        if(minecraft.thePlayer!=cameraPlayer||minecraft.theWorld==null)cameraFollowing=false;
+        // Vanilla updates entity interpolation fields after the module's tick.
+        // Keep the first-person hand, camera and renderer on the same endpoints.
+        if(camera(minecraft.thePlayer)==this)applyViewAngles();
+    }
+    private void applyViewAngles(){
+        cameraPlayer.prevRotationYaw=previousCameraYaw;cameraPlayer.rotationYaw=cameraYaw;
+        cameraPlayer.prevRotationPitch=previousCameraPitch;cameraPlayer.rotationPitch=cameraPitch;
+    }
+    /** Mouse deltas are still observed by input tracking, but cannot replace an active locked view. */
+    public static boolean lockMouseLookHook(Object entity){
+        AIAuraModule module=camera(entity);
+        if(module==null||module.target==null)return false;
+        module.applyViewAngles();return true;
+    }
+    /** Forge's final camera event also covers render paths that do not read the entity fields directly. */
+    public static void cameraSetupHook(net.minecraftforge.client.event.EntityViewRenderEvent.CameraSetup event){
+        AIAuraModule module=camera(event.entity);if(module==null)return;
+        module.frameTick((float)event.renderPartialTicks);
+        // orientCamera adds 180 degrees to entity yaw before posting CameraSetup.
+        event.yaw=module.previousCameraYaw+(module.cameraYaw-module.previousCameraYaw)*module.framePartial+180F;
+        event.pitch=module.previousCameraPitch+(module.cameraPitch-module.previousCameraPitch)*module.framePartial;
+    }
     private static AIAuraModule camera(Object entity){Vibe v=Vibe.getInstance();if(v==null||v.getModuleManager()==null)return null;AIAuraModule m=v.getModuleManager().getModule(AIAuraModule.class);return m!=null&&m.isEnabled()&&m.lockFov.isEnabled()&&m.cameraFollowing&&entity==m.cameraPlayer&&entity==m.minecraft.getRenderViewEntity()&&m.minecraft.currentScreen==null&&!FreecamModule.cameraActiveHook()?m:null;}
     public static float cameraYawHook(Object entity,float vanilla){AIAuraModule m=camera(entity);return m==null?vanilla:m.previousCameraYaw+(m.cameraYaw-m.previousCameraYaw)*m.framePartial;}
     public static float cameraPitchHook(Object entity,float vanilla){AIAuraModule m=camera(entity);return m==null?vanilla:m.previousCameraPitch+(m.cameraPitch-m.previousCameraPitch)*m.framePartial;}

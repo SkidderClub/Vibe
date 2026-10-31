@@ -103,6 +103,9 @@ public final class ModuleManager {
         register(new FastPlaceModule());
         register(new ScaffoldModule());
         register(new InventoryManagerModule());
+        register(new AutoBuffModule());
+        register(new AutoRespawnModule());
+        register(new AutoCrafterModule());
         register(new ChestStealerModule());
         register(new AutoToolModule());
         register(new PickenSwitchModule());
@@ -169,6 +172,7 @@ public final class ModuleManager {
         if (name == null) {
             return null;
         }
+        if ("autocrafter".equalsIgnoreCase(name)) name = "crafter";
         for (Module module : modules) {
             if (module.getRawName().equalsIgnoreCase(name) || module.getId().equalsIgnoreCase(name)) {
                 return module;

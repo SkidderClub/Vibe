@@ -326,6 +326,7 @@ public class KillAuraModule extends Module {
     public void tickEnd() { restoreInput(); }
 
     protected boolean canOperate() {
+        if (AutoBuffModule.ownsUseInput() || dev.vibe.inventory.PlayerInventorySession.isBusy()) return false;
         if (!isEnabled() || minecraft.thePlayer == null || minecraft.theWorld == null || minecraft.playerController == null
                 || !minecraft.thePlayer.isEntityAlive() || minecraft.thePlayer.isSpectator() || minecraft.isGamePaused()) return false;
         return minecraft.currentScreen == null || (!notInInv.isEnabled() && minecraft.currentScreen instanceof GuiContainer);
@@ -560,6 +561,7 @@ public class KillAuraModule extends Module {
         AutoClickerModule.prepareInputHook();
         KillAuraModule aura = module();
         if (aura != null) aura.prepareInput();
+        AutoBuffModule.prepareInputHook();
     }
 
     public static boolean allowInputHook(boolean vanilla) {

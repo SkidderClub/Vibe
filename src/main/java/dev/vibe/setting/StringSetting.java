@@ -2,7 +2,7 @@ package dev.vibe.setting;
 
 import java.util.function.BooleanSupplier;
 
-public final class StringSetting extends Setting<String> {
+public class StringSetting extends Setting<String> {
 
     private final int maxLength;
 

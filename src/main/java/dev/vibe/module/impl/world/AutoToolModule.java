@@ -237,6 +237,7 @@ public final class AutoToolModule extends Module {
         return vibe == null || vibe.getModuleManager() == null ? null : vibe.getModuleManager().getModule(AutoToolModule.class);
     }
     public static int serverSlotHook(int vanilla) {
+        if (dev.vibe.module.impl.combat.AutoBuffModule.ownsUseInput()) return vanilla;
         HotbarAction instant = currentHotbarAction();
         if (instant != null) return instant.slot;
         AutoToolModule module = active();
@@ -244,6 +245,7 @@ public final class AutoToolModule extends Module {
                 : ScaffoldModule.serverSlotHook(vanilla));
     }
     public static int beginActionHook() {
+        if (dev.vibe.module.impl.combat.AutoBuffModule.ownsUseInput()) return -1;
         HotbarAction instant = currentHotbarAction();
         if (instant != null) {
             int visible = instant.minecraft.thePlayer.inventory.currentItem;
