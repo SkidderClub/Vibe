@@ -25,6 +25,7 @@ public final class FreecamProductionCheck {
         public static void main(String[] ignored) throws Exception {
             try {
                 LaunchClassLoader loader=Launch.classLoader;
+                loader.registerTransformer(BrandingObserver.class.getName());
                 // A rebuild replaces the source JAR after the running loader has opened
                 // its client. Lazy Freecam loading must keep using the session copy.
                 File mutable=new File(System.getProperty("vibe.check.mutableJar"));
@@ -56,9 +57,26 @@ public final class FreecamProductionCheck {
                 Class.forName("dev.vibe.module.impl.combat.AIAuraModule",false,loader).getMethod("cameraYawHook",Object.class,float.class);
                 Class.forName("dev.vibe.module.impl.combat.AIAuraModule",false,loader).getMethod("cameraPitchHook",Object.class,float.class);
                 OUTPUT.println("AIAura neural policy, shared combat hooks and recorder linked through production Forge/OptiFine.");
+                for(String name:new String[]{"dev.vibe.core.startup.GhostStartup","dev.vibe.core.startup.GhostWindowIcon",
+                        "dev.vibe.core.startup.GhostLoadingRenderer","net.minecraftforge.fml.client.SplashProgress$3",
+                        "net.minecraftforge.fml.common.ProgressManager$ProgressBar"})Class.forName(name,false,loader).getDeclaredMethods();
+                OUTPUT.println("Ghost startup, native icon and Forge splash classes linked through production Forge/OptiFine.");
+                if(!BrandingObserver.hooks.contains("renderForge")||!BrandingObserver.hooks.contains("drawVanilla")||!BrandingObserver.hooks.contains("apply"))
+                    throw new AssertionError("Installed ghost branding hooks missing: "+BrandingObserver.hooks);
             } catch(Throwable failure) {
                 failure.printStackTrace(ERROR);throw new RuntimeException("Production Freecam linkage failed",failure);
             }
+        }
+    }
+    public static final class BrandingObserver implements IClassTransformer {
+        public static final Set<String> hooks=new HashSet<String>();
+        @Override public byte[] transform(String name,String mapped,byte[] bytes) {
+            if(bytes==null)return null;
+            if(!"net.minecraft.client.Minecraft".equals(mapped)&&!name.equals("net.minecraftforge.fml.client.SplashProgress$3"))return bytes;
+            org.objectweb.asm.tree.ClassNode node=new org.objectweb.asm.tree.ClassNode();new org.objectweb.asm.ClassReader(bytes).accept(node,0);
+            for(Object entry:node.methods)for(org.objectweb.asm.tree.AbstractInsnNode insn:((org.objectweb.asm.tree.MethodNode)entry).instructions.toArray())
+                if(insn instanceof org.objectweb.asm.tree.MethodInsnNode){org.objectweb.asm.tree.MethodInsnNode call=(org.objectweb.asm.tree.MethodInsnNode)insn;if(call.owner.startsWith("dev/vibe/core/startup/"))hooks.add(call.name);}
+            return bytes;
         }
     }
 }

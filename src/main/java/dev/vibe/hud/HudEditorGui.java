@@ -406,6 +406,23 @@ public final class HudEditorGui extends GuiScreen {
 
     private void drawTheme(int x, int right, int y, int mouseX, int mouseY) {
         final HudManager.HudElement element = selected;
+        if (HudManager.GHOSTS.equals(element.getId())) {
+            final ModeSetting mode = Vibe.getInstance().getModuleManager().getModule(HudModule.class).ghosts.mode;
+            AccountScreenStyle.panel(x, y, right - x, CONTROL, SURFACE, BORDER);
+            AccountScreenStyle.rawText("Mode", x + 10, y + 6, TEXT);
+            int start = x + 8, end = right - 8, top = y + 21;
+            MenuRoundedRenderer.rect(start, top, end - start, 16, 4, BACKGROUND);
+            java.util.List<String> modes = mode.getModes();
+            for (int i = 0; i < modes.size(); i++) {
+                final String value = modes.get(i);
+                int a = start + (end - start) * i / modes.size(), b = start + (end - start) * (i + 1) / modes.size();
+                boolean active = mode.is(value), hover = hovered(a, top, b, top + 16, mouseX, mouseY);
+                if (active || hover) AccountScreenStyle.panel(a, top, b - a, 16, active ? TINT : HOVER, active ? ACCENT : BORDER);
+                AccountScreenStyle.rawText(value, (a + b - fontRendererObj.getStringWidth(value)) / 2, top + 4, active ? TEXT : MUTED);
+                addHit(a, top, b, top + 16, (mx, my) -> { mode.setValue(value); persist(); });
+            }
+            return;
+        }
         if (HudManager.TARGET_HUD.equals(element.getId())) {
             AccountScreenStyle.panel(x, y, right - x, CONTROL, SURFACE, BORDER);
             AccountScreenStyle.rawText("Style", x + 10, y + 8, TEXT);
@@ -869,6 +886,7 @@ public final class HudEditorGui extends GuiScreen {
         else if (HudManager.COORDINATES.equals(element)) settings.add(hud.getCoordinatesOutline());
         else if (HudManager.SCOREBOARD.equals(element)) { settings.add(hud.getReplaceScoreboardServer()); settings.addAll(hud.scoreboardColors.all); }
         else if (HudManager.CLOCK.equals(element)) settings.addAll(hud.clock.all);
+        else if (HudManager.GHOSTS.equals(element)) { settings.addAll(hud.ghosts.all); settings.remove(hud.ghosts.mode); }
         else if (HudManager.TARGET_HUD.equals(element)) settings.addAll(hud.targetHud.all);
         else if (HudManager.ARMOR.equals(element)) settings.add(hud.getArmorDisplayMode());
         else if (HudManager.HEALTH.equals(element)) { settings.add(hud.getHealthMaximumColor()); settings.add(hud.getHealthMinimumColor()); settings.add(hud.getHealthAbsorption()); settings.add(hud.getHealthAbsorptionColor()); settings.add(hud.getHealthHideFull()); }
@@ -892,12 +910,13 @@ public final class HudEditorGui extends GuiScreen {
         if (setting instanceof ColorSetting && editingColor == setting) return ROW + PICKER;
         return headerHeight(setting);
     }
-    private String effectiveTheme(HudManager.HudElement element) { if (HudManager.TARGET_HUD.equals(element.getId())) return Vibe.getInstance().getModuleManager().getModule(HudModule.class).targetHud.mode.getValue(); if (element.getTheme() != null) return element.getTheme(); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); return hud == null ? "Vibe" : hud.getMode().getValue(); }
+    private String effectiveTheme(HudManager.HudElement element) { if (HudManager.GHOSTS.equals(element.getId())) return Vibe.getInstance().getModuleManager().getModule(HudModule.class).ghosts.mode.getValue(); if (HudManager.TARGET_HUD.equals(element.getId())) return Vibe.getInstance().getModuleManager().getModule(HudModule.class).targetHud.mode.getValue(); if (element.getTheme() != null) return element.getTheme(); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); return hud == null ? "Vibe" : hud.getMode().getValue(); }
     private String friendlyName(String id) { String value; if (HudManager.TARGET_HUD.equals(id)) value = "Target HUD"; else if (HudManager.ARRAY_LIST.equals(id)) value = "Array list"; else if (HudManager.SESSION_INFO.equals(id)) value = "Statistics"; else if (HudManager.MOTION_GRAPH.equals(id)) value = "Motion graph"; else if (HudManager.CPS_GRAPH.equals(id)) value = "CPS graph"; else if (HudManager.MUSIC.equals(id)) value = "Music"; else { value = id == null ? "" : id.replace('_', ' '); value = value.isEmpty() ? value : Character.toUpperCase(value.charAt(0)) + value.substring(1); } return LanguageManager.translate(value); }
     private String displayName(Setting<?> setting, String element) {
         String value = setting.getRawName();
         if (HudManager.TARGET_HUD.equals(element)) value = value.replaceFirst("(?i)^Target HUD\\s+", "");
         else if (HudManager.CLOCK.equals(element)) value = value.replaceFirst("(?i)^Clock\\s+", "");
+        else if (HudManager.GHOSTS.equals(element)) value = value.replaceFirst("(?i)^Ghosts\\s+", "");
         else if (HudManager.SCOREBOARD.equals(element)) value = value.replaceFirst("(?i)^Scoreboard\\s+", "");
         else if (HudManager.ARRAY_LIST.equals(element)) value = value.replaceFirst("(?i)^ArrayList\\s*", "").replaceFirst("(?i)^Array\\s*", "");
         else if (HudManager.NOTIFICATIONS.equals(element)) value = value.replaceFirst("(?i)^Notifications\\s+", "");

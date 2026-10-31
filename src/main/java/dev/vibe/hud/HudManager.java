@@ -54,6 +54,7 @@ public final class HudManager {
     public static final String COORDINATES = "coordinates";
     public static final String SCOREBOARD = "scoreboard";
     public static final String CLOCK = "clock";
+    public static final String GHOSTS = "ghosts";
     public static final String TARGET_HUD = "targethud";
     public static final String SESSION_INFO = "sessioninfo";
     public static final String MOTION_GRAPH = "motiongraph";
@@ -80,6 +81,8 @@ public final class HudManager {
     private net.minecraft.world.World targetWorld;
     private boolean framebufferPreview;
     private final HudElement clock = new HudElement(CLOCK, 9, 70, false, false);
+    private final HudElement ghosts = new HudElement(GHOSTS, 12, 142, false, true);
+    private final dev.vibe.core.startup.GhostArt ghostArt = new dev.vibe.core.startup.GhostArt();
     private final HudElement sessionInfo = new HudElement(SESSION_INFO, 9, 96, false, false);
     private final HudElement motionGraph = new HudElement(MOTION_GRAPH, 9, 120, false, false);
     private final HudElement stalker = new HudElement(STALKER, 9, 192, false, false);
@@ -141,6 +144,9 @@ public final class HudManager {
             }
             if (hud.getHudElements().isSelectedIgnoreCase(CLOCK)) {
                 renderScaled(clock, resolution, () -> drawClock(hud, resolution, font));
+            }
+            if (hud.getHudElements().isSelectedIgnoreCase(GHOSTS)) {
+                renderScaled(ghosts, resolution, () -> drawGhosts(hud, resolution));
             }
             if (hud.getHudElements().isSelectedIgnoreCase(SESSION_INFO)) {
                 renderScaled(sessionInfo, resolution, () -> drawSessionInfo(hud, resolution, font));
@@ -455,6 +461,17 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         int textLeft = left + (width - font.getStringWidth(text)) / 2;
         int textTop = top + (24 - font.FONT_HEIGHT) / 2;
         font.drawStringWithShadow(text, textLeft, textTop, RenderUtils.TEXT);
+    }
+
+    private void drawGhosts(HudModule hud, ScaledResolution resolution) {
+        GhostSettings settings = hud.ghosts;
+        int size = settings.size.getInt();
+        ghosts.ensureOnScreen(resolution, size, size);
+        int left = ghosts.left(resolution, size), top = ghosts.top(resolution, size);
+        ghostArt.draw(left, top, size, size, settings.mode.is("Animated"), settings.flipX.isEnabled(),
+                settings.flipY.isEnabled(), settings.override.isEnabled(), settings.color.getArgb(),
+                (float) settings.opacity.getDouble(), System.nanoTime() / 1000000L, settings.speed.getDouble());
+        ghosts.setBounds(left, top, size, size);
     }
 
     private void drawClock(HudModule hud, ScaledResolution resolution, FontRenderer font) {
@@ -1053,6 +1070,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     public HudElement getElement(String id) {
+        if (GHOSTS.equals(id)) return ghosts;
         if (TARGET_HUD.equals(id)) return targetHud;
         if (NOTIFICATIONS.equals(id)) return notifications;
         if (MUSIC.equals(id)) return music;
@@ -1096,7 +1114,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     public String[] getElementIds() {
         return new String[] {WATERMARK, ARRAY_LIST, COORDINATES, SCOREBOARD, CLOCK, SESSION_INFO, MOTION_GRAPH, STALKER,
-                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, TARGET_HUD, NOTIFICATIONS, MUSIC};
+                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, TARGET_HUD, NOTIFICATIONS, MUSIC, GHOSTS};
     }
 
     public boolean isEnabled(String id) {
@@ -1126,6 +1144,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             else if (element == watermark) renderScaled(element, resolution, () -> drawWatermark(hud, resolution, font));
             else if (element == coordinates) renderScaled(element, resolution, () -> drawCoordinates(hud, resolution, font));
             else if (element == clock) renderScaled(element, resolution, () -> drawClock(hud, resolution, font));
+            else if (element == ghosts) renderScaled(element, resolution, () -> drawGhosts(hud, resolution));
             else if (element == sessionInfo) renderScaled(element, resolution, () -> drawSessionInfo(hud, resolution, font));
             else if (element == motionGraph) renderScaled(element, resolution, () -> drawMotionGraph(hud, resolution, font));
             else if (element == stalker) renderScaled(element, resolution, () -> drawStalker(hud, resolution, font));
@@ -1187,6 +1206,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         root.add(COORDINATES, coordinates.toJson());
         root.add(SCOREBOARD, scoreboard.toJson());
         root.add(CLOCK, clock.toJson());
+        root.add(GHOSTS, ghosts.toJson());
         root.add(TARGET_HUD, targetHud.toJson());
         root.add(SESSION_INFO, sessionInfo.toJson());
         root.add(MOTION_GRAPH, motionGraph.toJson());
@@ -1211,6 +1231,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         scoreboard.fromJson(root.has(SCOREBOARD) && root.get(SCOREBOARD).isJsonObject() ? root.getAsJsonObject(SCOREBOARD) : null);
         targetHud.fromJson(root.has(TARGET_HUD) && root.get(TARGET_HUD).isJsonObject() ? root.getAsJsonObject(TARGET_HUD) : null);
         clock.fromJson(root.has(CLOCK) && root.get(CLOCK).isJsonObject() ? root.getAsJsonObject(CLOCK) : null);
+        ghosts.fromJson(root.has(GHOSTS) && root.get(GHOSTS).isJsonObject() ? root.getAsJsonObject(GHOSTS) : null);
         sessionInfo.fromJson(root.has(SESSION_INFO) && root.get(SESSION_INFO).isJsonObject() ? root.getAsJsonObject(SESSION_INFO) : null);
         motionGraph.fromJson(root.has(MOTION_GRAPH) && root.get(MOTION_GRAPH).isJsonObject() ? root.getAsJsonObject(MOTION_GRAPH) : null);
         stalker.fromJson(root.has(STALKER) && root.get(STALKER).isJsonObject() ? root.getAsJsonObject(STALKER) : null);

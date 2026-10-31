@@ -179,6 +179,20 @@ public final class ClientChangesRenderCheck {
                 save("hud-editor-unbuffered.png");
                 mc.gameSettings.fboEnable = true;
                 if (GL11.glIsEnabled(GL11.GL_SCISSOR_TEST)) throw new AssertionError("HUD editor leaked clipping state");
+                // The two Ghosts modes are directly selectable, including the original single image.
+                set(editor.getClass(),editor,"selected",manager.getElement(dev.vibe.hud.HudManager.GHOSTS));
+                frame(1280,720);editor.drawScreen(-1,-1,0);
+                save("hud-editor-ghosts-animated.png");
+                ((java.util.List<?>)get(editor.getClass(),editor,"hits")).clear();
+                set(editor.getClass(),editor,"hitTop",0);set(editor.getClass(),editor,"hitBottom",720);
+                Method modes=editor.getClass().getDeclaredMethod("drawTheme",int.class,int.class,int.class,int.class,int.class);
+                modes.setAccessible(true);modes.invoke(editor,32,252,32,-1,-1);
+                GuiInput.mouseClicked(editor,80,61,0);
+                if(!hud.ghosts.mode.is("Static"))throw new AssertionError("Static button did not select the single image");
+                GuiInput.mouseClicked(editor,200,61,0);
+                if(!hud.ghosts.mode.is("Animated"))throw new AssertionError("Animated button did not select the sprites");
+                hud.ghosts.mode.setValue("Static");
+                frame(1280,720);editor.drawScreen(-1,-1,0);save("hud-editor-ghosts-static.png");
                 dev.vibe.hud.HudManager.HudElement anchored = manager.getElement(dev.vibe.hud.HudManager.ARMOR);
                 anchored.setScale(1.5F);
                 net.minecraft.client.gui.ScaledResolution resolution = new net.minecraft.client.gui.ScaledResolution(mc);
@@ -191,7 +205,7 @@ public final class ClientChangesRenderCheck {
                         || anchored.getTop()+anchored.getHeight()!=resolution.getScaledHeight()-9)
                     throw new AssertionError("Scaled right/bottom anchors moved");
                 if (GL11.glGetError()!=GL11.GL_NO_ERROR) throw new AssertionError("HUD editor GL error");
-                System.out.println("HUD editor screenshot and GL state passed.");
+                System.out.println("HUD editor screenshots, Ghosts Static/Animated buttons and GL state passed.");
                 return;
             }
             if (args.length>0 && args[0].equals("liquid-glass")) {

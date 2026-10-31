@@ -1,5 +1,7 @@
 # Vibe
 
+<img align="right" src="src/main/resources/assets/vibe/branding/ghost-static.png" alt="Vibe ghost mascot" width="120" height="120">
+
 A client-side utility mod for **Minecraft Forge 1.8.9**, with combat and movement
 modules, ESP, a customizable HUD, cosmetics, an account manager and local Java scripts.
 
@@ -19,6 +21,7 @@ Use modules only where permitted by the server's rules. Vibe is client-only.
 
 - **Right Shift** opens ClickGUI; choose Skeet, Futuristic, NeverLose, Augustus or Xanax.
 - **H** opens the HUD editor. Both default keybinds can be changed.
+- **HUD Editor → Ghosts** adds the mascot. Choose **Static** for the single image or **Animated** for the sprite animation; flipping, size, opacity and body color are adjustable.
 - **`.help`** lists chat commands; **Tab** completes them.
 - **Alt Manager** in the main menu or server list manages accounts.
 - **Meme → Phone** raises a phone running VibeOS. See [Phone controls and apps](docs/PHONE.md).

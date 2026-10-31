@@ -20,7 +20,8 @@ public final class MoveFixLoadingPlugin implements IFMLLoadingPlugin {
                 "dev.vibe.core.FreecamTransformer",
                 "dev.vibe.core.ChunkAnimationTransformer",
                 "dev.vibe.core.ChatCompletionTransformer",
-                "dev.vibe.core.HolidayTransformer"
+                "dev.vibe.core.HolidayTransformer",
+                "dev.vibe.core.BrandingTransformer"
         };
     }
 

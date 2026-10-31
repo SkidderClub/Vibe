@@ -49,7 +49,7 @@ public final class HudModule extends Module {
             () -> true));
 
     private final MultiSelectSetting hudElements = addSetting(new MultiSelectSetting("HUD Elements",
-                        Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph", "notifications", "targethud"),
+                        Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph", "notifications", "targethud", "ghosts"),
             Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "notifications")));
 
     private final BooleanSetting replaceScoreboardServer = addSetting(new BooleanSetting("Replace Scoreboard Server", false,
@@ -82,6 +82,7 @@ public final class HudModule extends Module {
 
     public final dev.vibe.hud.ScoreboardDomainSettings scoreboardColors = new dev.vibe.hud.ScoreboardDomainSettings(this::addSetting, () -> replaceScoreboardServer.isEnabled());
     public final dev.vibe.hud.ClockSettings clock = new dev.vibe.hud.ClockSettings(this::addSetting);
+    public final dev.vibe.hud.GhostSettings ghosts = new dev.vibe.hud.GhostSettings(this::addSetting);
     public final dev.vibe.hud.TargetHudSettings targetHud = new dev.vibe.hud.TargetHudSettings(this::addSetting);
 
     public final dev.vibe.hud.ArrayListSettings array = new dev.vibe.hud.ArrayListSettings(this::addSetting);

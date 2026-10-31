@@ -53,6 +53,8 @@ public final class HudSettingsGui extends GuiScreen {
             settings.add(hud.getReplaceScoreboardServer()); settings.addAll(hud.scoreboardColors.all);
         } else if (HudManager.CLOCK.equals(element)) {
             settings.addAll(hud.clock.all);
+        } else if (HudManager.GHOSTS.equals(element)) {
+            settings.addAll(hud.ghosts.all);
         } else if (HudManager.TARGET_HUD.equals(element)) {
             settings.addAll(hud.targetHud.all);
         } else if (HudManager.ARMOR.equals(element)) {
