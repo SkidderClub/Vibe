@@ -19,21 +19,24 @@ import imgui.flag.ImGuiButtonFlags;
 import imgui.flag.ImGuiHoveredFlags;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import imgui.ImGuiStyle;
 import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImString;
+import imgui.internal.ImGuiContext;
 import java.util.List;
 import dev.vibe.language.LanguageManager;
 import dev.vibe.ui.RenderUtils;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.IResourceManager;
 
 /**
  * Immediate-mode Augustus workspace.  This is deliberately isolated from the
@@ -45,12 +48,14 @@ public final class AugustusImGui {
     private static final int TEXT=0xFFF0F0F0, BLUE=0xFFFF9D00, GREEN=0xFF00FF00, RED=0xFF0000FF;
     private static final int GOLD=0xFF19ACE7, BG=0xFF181818, BORDER=0xFF252525;
     private static final Set<Setting<?>> collapsed = new HashSet<Setting<?>>();
+    private static final List<Module> sourceModules = new ArrayList<>(), sortedModules = new ArrayList<>();
+    private static final Map<StringSetting, ImString> textInputs = new IdentityHashMap<>();
     private static Category category = Category.COMBAT;
     private static Module selected;
     private static Module binding;
     private static boolean unavailable;
     private static AugustusBackend backend;
-    private static imgui.internal.ImGuiContext context;
+    private static ImGuiContext context;
     private static boolean initialized;
     private static float windowX, windowY, windowWidth, windowHeight;
     private static boolean maximized, draggingWindow;
@@ -62,15 +67,30 @@ public final class AugustusImGui {
     private AugustusImGui() {
     }
 
-    public static boolean draw() {
+    public static boolean prepare() {
         if (unavailable) return false;
-        imgui.internal.ImGuiContext previous = null;
+        if (initialized) return true;
+        ImGuiContext previous = null;
         try {
-            previous = ImGui.getCurrentContext();
-            if (!initialized) {
-                context = ImGui.createContext();
-                backend = new AugustusBackend(); backend.init(); initialized = true;
-            }
+            // imgui-java reuses one mutable wrapper for get/createContext.
+            previous = new ImGuiContext(ImGui.getCurrentContext().ptr);
+            context = new ImGuiContext(ImGui.createContext().ptr);
+            backend = new AugustusBackend();
+            backend.init();
+            initialized = true;
+            return true;
+        } catch (Exception | LinkageError error) {
+            disable(error);
+            return false;
+        } finally {
+            if (previous != null) ImGui.setCurrentContext(previous);
+        }
+    }
+
+    public static boolean draw() {
+        if (!prepare()) return false;
+        final ImGuiContext previous = new ImGuiContext(ImGui.getCurrentContext().ptr);
+        try {
             ImGui.setCurrentContext(context);
             backend.newFrame(Minecraft.getMinecraft().displayWidth, Minecraft.getMinecraft().displayHeight);
             ImGui.newFrame();
@@ -79,20 +99,24 @@ public final class AugustusImGui {
             backend.render(ImGui.getDrawData());
             return true;
         } catch (Exception | LinkageError error) {
-            System.err.println("[Vibe] Augustus ImGui unavailable: " + error);
-            unavailable = true;
-            if (backend != null) backend.close();
-            if (context != null) { ImGui.destroyContext(context); context = null; }
-            initialized = false;
+            disable(error);
             return false;
         } finally {
-            if (previous != null) ImGui.setCurrentContext(previous);
+            ImGui.setCurrentContext(previous);
         }
+    }
+
+    private static void disable(final Throwable error) {
+        System.err.println("[Vibe] Augustus ImGui unavailable: " + error);
+        unavailable = true;
+        if (backend != null) backend.close();
+        if (context != null) { ImGui.destroyContext(context); context = null; }
+        initialized = false;
     }
 
     public static void handleMouse() {
         if (initialized && !unavailable) {
-            imgui.internal.ImGuiContext previous = ImGui.getCurrentContext();
+            final ImGuiContext previous = new ImGuiContext(ImGui.getCurrentContext().ptr);
             try { ImGui.setCurrentContext(context); backend.mouse(); }
             finally { ImGui.setCurrentContext(previous); }
         }
@@ -107,7 +131,7 @@ public final class AugustusImGui {
             return true;
         }
         if (initialized && !unavailable) {
-            imgui.internal.ImGuiContext previous = ImGui.getCurrentContext();
+            final ImGuiContext previous = new ImGuiContext(ImGui.getCurrentContext().ptr);
             try { ImGui.setCurrentContext(context); backend.key(); return ImGui.getIO().getWantTextInput(); }
             finally { ImGui.setCurrentContext(previous); }
         }
@@ -119,10 +143,15 @@ public final class AugustusImGui {
         draggingWindow = false;
         resizingWindow = false;
         if (initialized && !unavailable) {
-            imgui.internal.ImGuiContext previous = ImGui.getCurrentContext();
+            final ImGuiContext previous = new ImGuiContext(ImGui.getCurrentContext().ptr);
             try { ImGui.setCurrentContext(context); backend.resetInput(); }
             finally { ImGui.setCurrentContext(previous); }
         }
+    }
+
+    public static void resourcesReloaded(final IResourceManager resources) {
+        if (initialized && !unavailable)
+            backend.invalidateFont();
     }
 
     // Also used by the offscreen render check with isolated modules.
@@ -144,8 +173,16 @@ public final class AugustusImGui {
         float height = maximized ? displayHeight : Math.min(windowHeight, displayHeight);
         float originX = maximized ? 0 : Math.round(clamp(windowX, 0, displayWidth - width));
         float originY = maximized ? 0 : Math.round(clamp(windowY, 0, displayHeight - height));
-        List<Module> modules = new ArrayList<Module>(allModules);
-        Collections.sort(modules, Comparator.comparing(Module::getRawName, String.CASE_INSENSITIVE_ORDER));
+        if (!sourceModules.equals(allModules)) {
+            sourceModules.clear();
+            sourceModules.addAll(allModules);
+            sortedModules.clear();
+            sortedModules.addAll(allModules);
+            sortedModules.sort(Comparator.comparing(Module::getRawName, String.CASE_INSENSITIVE_ORDER));
+            textInputs.clear();
+        }
+
+        final List<Module> modules = sortedModules;
         if (selected == null || selected.getCategory() != category || !modules.contains(selected)) selectFirst(modules);
         float sidebar = Math.min(200, Math.max(160, width * .2F)), contentWidth = Math.max(1, width - sidebar);
         float tabsHeight = tabRows(contentWidth - 28) * 30 + 30;
@@ -371,14 +408,21 @@ public final class AugustusImGui {
         } else if (setting instanceof NumberSetting) {
             NumberSetting value = (NumberSetting) setting;
             label(setting.getName() + ":");
-            value.setValue(slider("value", value.getDouble(), value.getMinimum(), value.getMaximum(), value.getIncrement()));
+            final double updated = slider("value", value.getDouble(), value.getMinimum(), value.getMaximum(), value.getIncrement());
+            if (Double.compare(updated, value.getDouble()) != 0)
+                value.setValue(updated);
         } else if (setting instanceof RangeSetting) {
             RangeSetting value = (RangeSetting) setting;
             label(setting.getName() + " min:");
-            value.setMin(slider("min", value.getMin(), value.getMinimum(), value.getMaximum(), value.getIncrement()));
+            final double lower = slider("min", value.getMin(), value.getMinimum(), value.getMaximum(), value.getIncrement());
+            if (Double.compare(lower, value.getMin()) != 0)
+                value.setMin(lower);
+
             ImGui.setCursorPosX(left);
             label(setting.getName() + " max:");
-            value.setMax(slider("max", value.getMax(), value.getMinimum(), value.getMaximum(), value.getIncrement()));
+            final double upper = slider("max", value.getMax(), value.getMinimum(), value.getMaximum(), value.getIncrement());
+            if (Double.compare(upper, value.getMax()) != 0)
+                value.setMax(upper);
         } else if (setting instanceof ColorSetting) {
             ColorSetting value = (ColorSetting) setting;
             label(setting.getName() + ":");
@@ -390,7 +434,11 @@ public final class AugustusImGui {
             StringSetting value = (StringSetting) setting;
             label(setting.getName() + ":");
             ImGui.setNextItemWidth(Math.max(30, Math.min(320, ImGui.getContentRegionAvailX() - 12)));
-            ImString input = new ImString(value.getValue(), value.getMaxLength() * 4 + 1);
+            final ImString input = textInputs.computeIfAbsent(value,
+                    key -> new ImString(key.getValue(), key.getMaxLength() * 4 + 1));
+            if (!input.get().equals(value.getValue()))
+                input.set(value.getValue());
+
             if (ImGui.inputText("##value", input)) value.setValue(input.get());
         } else if (setting instanceof MultiSelectSetting) {
             MultiSelectSetting value = (MultiSelectSetting) setting;
@@ -488,9 +536,16 @@ public final class AugustusImGui {
 
     private static String fitText(String text, float width) {
         if (textWidth(text) <= width) return text;
-        int end = text.length();
-        while (end > 0 && textWidth(text.substring(0, end) + "...") > width) end--;
-        return text.substring(0, end) + "...";
+        int start = 0, end = text.length();
+        while (start < end) {
+            final int middle = (start + end + 1) / 2;
+            if (textWidth(text.substring(0, middle) + "...") <= width)
+                start = middle;
+            else
+                end = middle - 1;
+        }
+
+        return text.substring(0, start) + "...";
     }
 
     private static void applyStyle(float rounding, int backgroundAlpha) {
