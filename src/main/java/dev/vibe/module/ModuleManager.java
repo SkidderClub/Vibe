@@ -64,6 +64,7 @@ public final class ModuleManager {
         register(new TickBaseModule());
         register(new TimerRangeModule());
         register(new WTapModule());
+        register(new SprintResetModule());
         register(new ReachModule());
         register(new VelocityModule());
         register(new AutoClickerModule());
