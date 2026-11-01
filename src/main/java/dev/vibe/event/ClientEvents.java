@@ -46,6 +46,7 @@ import dev.vibe.module.impl.world.FastBreakModule;
 import dev.vibe.module.impl.visual.AmbienceModule;
 import dev.vibe.module.impl.meme.NesEmulatorModule;
 import dev.vibe.module.impl.combat.WTapModule;
+import dev.vibe.module.impl.combat.SprintResetModule;
 import dev.vibe.module.impl.combat.BacktrackModule;
 import dev.vibe.module.impl.combat.LagRangeModule;
 import dev.vibe.module.impl.combat.TickBaseModule;
@@ -292,6 +293,8 @@ public final class ClientEvents {
             }
             WTapModule wTap = Vibe.getInstance().getModuleManager().getModule(WTapModule.class);
             if (wTap != null) wTap.tick();
+            final SprintResetModule sprintReset = Vibe.getInstance().getModuleManager().getModule(SprintResetModule.class);
+            if (sprintReset != null) sprintReset.tick();
             BedEspModule bedEsp = Vibe.getInstance().getModuleManager().getModule(BedEspModule.class);
             if (bedEsp != null) bedEsp.tick();
             BlockChangeEspModule blockChanges = Vibe.getInstance().getModuleManager().getModule(BlockChangeEspModule.class);
@@ -350,9 +353,11 @@ public final class ClientEvents {
         if (targets != null) targets.tickWarnings();
         FullBrightModule fullBright = Vibe.getInstance().getModuleManager().getModule(FullBrightModule.class);
         if (fullBright != null) fullBright.tick();
+        final SprintResetModule sprintReset = Vibe.getInstance().getModuleManager().getModule(SprintResetModule.class);
+        if (sprintReset != null) sprintReset.applyInput();
         SprintModule sprint = Vibe.getInstance().getModuleManager().getModule(SprintModule.class);
         // Scaffold's own Sprint setting decides while it is enabled.
-        if (sprint != null && sprint.isEnabled() && !ScaffoldModule.isActive() && minecraft.thePlayer.movementInput.moveForward > 0.0F
+        if (sprint != null && sprint.isEnabled() && (sprintReset == null || !sprintReset.isStopping()) && !ScaffoldModule.isActive() && minecraft.thePlayer.movementInput.moveForward > 0.0F
                 && !minecraft.thePlayer.isSneaking() && !minecraft.thePlayer.isCollidedHorizontally) {
             minecraft.thePlayer.setSprinting(true);
         }

@@ -1,6 +1,7 @@
 package dev.vibe.module.impl.movement;
 
 import dev.vibe.Vibe;
+import dev.vibe.module.impl.combat.SprintResetModule;
 import dev.vibe.combat.RotationMath;
 import dev.vibe.module.Category;
 import dev.vibe.module.Module;
@@ -565,6 +566,11 @@ public final class MoveFixModule extends Module {
     }
 
     public static float sprintForwardHook(float vanillaForward, Object entity) {
+        final Vibe vibe = Vibe.getInstance();
+        final SprintResetModule sprintReset = vibe == null || vibe.getModuleManager() == null ? null
+                : vibe.getModuleManager().getModule(SprintResetModule.class);
+        if (sprintReset != null && sprintReset.isStopping() && entity == Minecraft.getMinecraft().thePlayer) return 0.0F;
+
         MoveFixModule module = module();
         return module == null ? vanillaForward : module.sprintForward(vanillaForward, entity);
     }
@@ -679,6 +685,7 @@ public final class MoveFixModule extends Module {
 
         @Override
         public void updatePlayerMoveState() {
+            SprintResetModule.prepareInputHook();
             vanillaInput.updatePlayerMoveState();
             moveStrafe = vanillaInput.moveStrafe;
             moveForward = vanillaInput.moveForward;
