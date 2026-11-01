@@ -20,6 +20,7 @@ import org.lwjgl.input.Mouse;
 public final class LicensesGui extends GuiScreen {
     private static final int TAB_BASE = 10;
     private static final int LINE_HEIGHT = 12;
+    private static final MenuFont DOCUMENT = new MenuFont(java.awt.Font.PLAIN, 11);
     private final GuiScreen parent;
     private final MainMenuShaderManager shaders;
     private final List<String> lines = new ArrayList<String>();
@@ -47,6 +48,10 @@ public final class LicensesGui extends GuiScreen {
         int tabWidth = (panelWidth - 40) / 4;
         for (LicenseDocuments.Page page : LicenseDocuments.Page.values()) {
             int index = page.ordinal();
+            if (page == LicenseDocuments.Page.SOURCE) {
+                buttonList.add(button(TAB_BASE + index, left + panelWidth - 130, top + 12, 56, page.label));
+                continue;
+            }
             buttonList.add(button(TAB_BASE + index, left + 14 + (index % 4) * (tabWidth + 4),
                     top + 54 + (index / 4) * 25, tabWidth, page.label));
         }
@@ -77,7 +82,7 @@ public final class LicensesGui extends GuiScreen {
         // License and copyright text is never machine-translated or replaced by a summary.
         for (String line : text.split("\n", -1)) {
             if (line.isEmpty()) lines.add("");
-            else lines.addAll(fontRendererObj.listFormattedStringToWidth(line.replace("\t", "    "), panelWidth - 48));
+            else lines.addAll(DOCUMENT.wrap(line.replace("\t", "    "), panelWidth - 48));
         }
         for (int index = 0; index < buttonList.size(); index++) {
             GuiButton button = buttonList.get(index);
@@ -91,10 +96,11 @@ public final class LicensesGui extends GuiScreen {
     @Override public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         shaders.draw(width, height);
         GuiRenderState.prepare(false);
-        drawRect(0, 0, width, height, 0x85000000);
+        MenuGlass.begin(this, shaders, width, height);
+        try {
         AccountScreenStyle.window(left, top, panelWidth, panelHeight);
         // Fit the localized heading at the normal font size on small GUI scales.
-        AccountScreenStyle.text(AccountScreenStyle.fit(dev.vibe.language.LanguageManager.translate("Licenses & credits"), panelWidth - 98),
+        AccountScreenStyle.text(AccountScreenStyle.fit(dev.vibe.language.LanguageManager.translate("Licenses & credits"), panelWidth - 158),
                 left + 14, top + 16, AccountScreenStyle.TEXT);
         AccountScreenStyle.rawText(dev.vibe.language.LanguageManager.translate("Vibe ") + Vibe.VERSION + "  /  GPLv3 + AGPLv3", left + 14, top + 35, AccountScreenStyle.MUTED);
         drawRect(left + 14, contentTop - 5, left + panelWidth - 14, contentTop - 4, AccountScreenStyle.BORDER);
@@ -102,7 +108,7 @@ public final class LicensesGui extends GuiScreen {
             for (int index = Math.max(0, scroll / LINE_HEIGHT); index < lines.size(); index++) {
                 int y = contentTop + index * LINE_HEIGHT - scroll;
                 if (y >= contentBottom) break;
-                AccountScreenStyle.rawText(lines.get(index), left + 17, y, AccountScreenStyle.TEXT);
+                DOCUMENT.draw(lines.get(index), left + 17, y, AccountScreenStyle.TEXT);
             }
         }
         if (maxScroll() > 0) {
@@ -114,6 +120,7 @@ public final class LicensesGui extends GuiScreen {
         AccountScreenStyle.rawText(AccountScreenStyle.fitRaw(footer, panelWidth - 32), left + 16,
                 contentBottom + 6, statusError ? AccountScreenStyle.ERROR : AccountScreenStyle.MUTED);
         super.drawScreen(mouseX, mouseY, partialTicks);
+        } finally { MenuGlass.end(); }
     }
 
     @Override protected void actionPerformed(GuiButton button) {

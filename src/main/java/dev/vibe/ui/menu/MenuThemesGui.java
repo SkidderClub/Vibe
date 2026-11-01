@@ -34,13 +34,15 @@ public final class MenuThemesGui extends GuiScreen {
 
     @Override public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         shaders.draw(width, height);
-        drawRect(0, 0, width, height, 0x70000000);
+        MenuGlass.begin(this, shaders, width, height);
+        try {
         AccountScreenStyle.window(left, top, panelWidth, panelHeight);
         AccountScreenStyle.title(dev.vibe.language.LanguageManager.translate("Themes"), left + 16, top + 15);
         AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("Choose your colours"), left + 16, top + 35, AccountScreenStyle.MUTED);
         AccountScreenStyle.text(saveFailed ? "Couldn't save. Try again." : "Applies to menus & accounts", left + 16,
                 top + panelHeight - 18, saveFailed ? AccountScreenStyle.ERROR : AccountScreenStyle.MUTED);
         super.drawScreen(mouseX, mouseY, partialTicks);
+        } finally { MenuGlass.end(); }
     }
 
     @Override protected void actionPerformed(GuiButton button) {
@@ -62,11 +64,12 @@ public final class MenuThemesGui extends GuiScreen {
         @Override public void drawButton(Minecraft mc, int mouseX, int mouseY) {
             hovered = mouseX >= xPosition && mouseY >= yPosition && mouseX < xPosition + width && mouseY < yPosition + height;
             boolean selected = MenuThemes.current() == preset;
-            AccountScreenStyle.panel(xPosition, yPosition, width, height, preset.surface,
-                    selected || hovered ? preset.accent : AccountScreenStyle.BORDER);
+            if (!MenuGlass.pane(xPosition, yPosition, width, height, 10, preset.surface,
+                    selected || hovered ? preset.accent : AccountScreenStyle.BORDER, true, preset))
+                AccountScreenStyle.panel(xPosition, yPosition, width, height, preset.surface, preset.accent);
             MenuRoundedRenderer.rect(xPosition + 10, yPosition + (height - 16) / 2, 16, 16, 8, preset.accent);
-            AccountScreenStyle.text(displayString, xPosition + 34, yPosition + (height - 8) / 2, AccountScreenStyle.TEXT);
-            if (selected) AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("*"), xPosition + width - 14, yPosition + (height - 8) / 2, preset.accent);
+            AccountScreenStyle.BODY_FONT.middle(displayString, xPosition + 34, yPosition, height, AccountScreenStyle.TEXT);
+            if (selected) AccountScreenStyle.BODY_FONT.middle("✓", xPosition + width - 20, yPosition, height, preset.accent);
         }
     }
 }

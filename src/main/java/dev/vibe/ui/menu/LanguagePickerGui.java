@@ -6,6 +6,7 @@ import dev.vibe.ui.GuiRenderState;
 import java.io.IOException;
 import java.util.List;
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.GuiButton;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
@@ -32,6 +33,8 @@ public final class LanguagePickerGui extends GuiScreen {
         gridTop = top + 54;
         gridBottom = top + panelHeight - 15;
         scroll = Math.max(0, Math.min(scroll, maxScroll()));
+        buttonList.clear();
+        buttonList.add(new AccountScreenStyle.Button(0,left+panelWidth-64,top+12,48,22,"Esc","",false,false));
         Keyboard.enableRepeatEvents(true);
     }
 
@@ -39,9 +42,10 @@ public final class LanguagePickerGui extends GuiScreen {
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         if (shaders != null) shaders.draw(width, height); else drawDefaultBackground();
         GuiRenderState.prepare(false);
-        drawRect(0, 0, width, height, 0x8A000000);
+        MenuGlass.begin(this, shaders, width, height);
+        try {
         AccountScreenStyle.window(left, top, panelWidth, panelHeight);
-        AccountScreenStyle.title(dev.vibe.language.LanguageManager.translate("Language selector"), left + 16, top + 15);
+        AccountScreenStyle.TITLE_FONT.draw(AccountScreenStyle.TITLE_FONT.fit(LanguageManager.translate("Language selector"),panelWidth-98),left+16,top+15,AccountScreenStyle.TEXT);
         AccountScreenStyle.rawText(AccountScreenStyle.fitRaw(LanguageManager.translate("Choose language"), panelWidth - 64),
                 left + 16, top + 35, AccountScreenStyle.MUTED);
 
@@ -62,7 +66,8 @@ public final class LanguagePickerGui extends GuiScreen {
                         hovered || selected ? AccountScreenStyle.ACCENT : AccountScreenStyle.BORDER);
                 LanguageFlags.draw(language, x + 7, y + 5);
                 String name = AccountScreenStyle.fitRaw(LanguageManager.displayName(language), tileWidth - 42);
-                AccountScreenStyle.rawText(name, x + 37, y + 10, selected ? AccountScreenStyle.TEXT : AccountScreenStyle.MUTED);
+                (selected ? AccountScreenStyle.BODY_FONT : AccountScreenStyle.SMALL_FONT).middle(name, x + 37, y, tileHeight,
+                        selected ? AccountScreenStyle.TEXT : AccountScreenStyle.MUTED);
             }
         }
         if (maxScroll() > 0) {
@@ -73,7 +78,12 @@ public final class LanguagePickerGui extends GuiScreen {
             drawRect(left + panelWidth - 12, gridTop, left + panelWidth - 9, gridBottom, 0x55000000);
             drawRect(left + panelWidth - 12, y, left + panelWidth - 9, y + thumb, AccountScreenStyle.ACCENT);
         }
-        AccountScreenStyle.rawText(dev.vibe.language.LanguageManager.translate("Esc"), left + panelWidth - 39, top + 36, AccountScreenStyle.MUTED);
+        super.drawScreen(mouseX,mouseY,partialTicks);
+        } finally { MenuGlass.end(); }
+    }
+
+    @Override protected void actionPerformed(GuiButton button) {
+        if(button.id==0)mc.displayGuiScreen(parent);
     }
 
     @Override

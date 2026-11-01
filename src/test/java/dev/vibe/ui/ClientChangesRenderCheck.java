@@ -67,7 +67,7 @@ public final class ClientChangesRenderCheck {
         try {
             Class<?> type = Class.forName("sun.misc.Unsafe"); Field field = type.getDeclaredField("theUnsafe"); field.setAccessible(true);
             unsafe = field.get(null); allocate = type.getMethod("allocateInstance",Class.class);
-            mc = args.length > 0 && args[0].equals("murder")
+            mc = args.length > 0 && (args[0].equals("murder")||args[0].equals("menu-glass"))
                     ? instance(dev.vibe.ui.render.esp.EspRenderCheck.PreviewMinecraft.class) : instance(Minecraft.class);
             set(Minecraft.class,null,"theMinecraft",mc);
             mc.gameSettings = new GameSettings(); mc.gameSettings.guiScale = 1;
@@ -88,6 +88,8 @@ public final class ClientChangesRenderCheck {
             Vibe vibe = new Vibe(); set(Vibe.class,null,"instance",vibe);
             ModuleManager modules = instance(ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<Module>()); set(Vibe.class,vibe,"moduleManager",modules);
+            if(args.length>0&&args[0].equals("menu-glass")){dev.vibe.ui.menu.GlassMenusRenderCheck.verify(mc,OUTPUT);return;}
+            if(args.length>0&&args[0].equals("breeze")){BreezeRenderCheck.verify(mc,modules,OUTPUT);return;}
             if(args.length>0&&args[0].equals("server-menus")){ServerMenusRenderCheck.verify(mc,modules,OUTPUT);return;}
             if(args.length>0&&args[0].equals("dropdown-themes")){DropdownThemesRenderCheck.verify(mc,modules,OUTPUT);return;}
             if (args.length > 0 && args[0].equals("hud-visuals")) {

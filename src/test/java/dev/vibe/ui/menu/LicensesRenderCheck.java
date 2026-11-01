@@ -86,6 +86,7 @@ public final class LicensesRenderCheck {
                 mc.displayWidth = size[0]; mc.displayHeight = size[1];
                 LicensesGui gui = new LicensesGui(null, shaders); gui.setWorldAndResolution(mc, size[0], size[1]);
                 assertButtons(buttons(gui), size[0], size[1]);
+                for(GuiButton tab:buttons(gui))if(tab.id>=10&&tab.yPosition+tab.height>=value(gui,"contentTop"))throw new AssertionError("License tab overlaps document content: "+tab.displayString);
                 List<GuiButton> menu = new ArrayList<GuiButton>();
                 for (int id : new int[] {1, 2, 6, 0, 4}) menu.add(new GuiButton(id, 0, 0, "Menu"));
                 new MainMenuPresentation(size[0], size[1]).prepare(menu);
@@ -137,7 +138,7 @@ public final class LicensesRenderCheck {
                 render(welcome, output.resolve("welcome-" + selection.toLowerCase(java.util.Locale.ROOT) + ".png"));
                 welcome.onGuiClosed();
             }
-            System.out.println("Offline document fidelity, all eight pages, scrolling, menu layout and localized rendering passed.");
+            System.out.println("Offline document fidelity, all license pages, scrolling, menu layout and localized rendering passed.");
         } finally { buffer.destroy(); }
     }
 

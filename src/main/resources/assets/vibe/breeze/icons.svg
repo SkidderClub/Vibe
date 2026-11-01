@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <title>Vibe Breeze interface icons</title>
+  <desc>Authored 24-unit interface symbols with consistent rounded strokes.</desc>
+  <defs>
+    <mask id="discord-eyes"><rect width="24" height="24" fill="white"/><ellipse cx="8.2" cy="12.8" rx="1.5" ry="1.9" fill="black"/><ellipse cx="15.8" cy="12.8" rx="1.5" ry="1.9" fill="black"/></mask>
+    <mask id="profile-face"><rect width="24" height="24" fill="white"/><circle cx="12" cy="9" r="4" fill="black"/><path d="M5 20 C3 12 21 12 19 20 C15 23 9 23 5 20 Z" fill="black"/></mask>
+    <symbol id="modules"><path d="M3 5 L8 5 M13 5 L21 5 M3 12 L14 12 M19 12 L21 12 M3 19 L5 19 M10 19 L21 19"/><path d="M9 2 L9 8 M15 9 L15 15 M6 16 L6 22"/></symbol>
+    <symbol id="configs"><path d="M8 4 L13 4 L16 7 L22 7 L22 19 L8 19 Z"/><path d="M3 8 L3 22 L18 22 M12 10 L18 10 M12 14 L18 14"/></symbol>
+    <symbol id="social"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="9" r="3"/><path d="M6 19 C6 13 18 13 18 19"/></symbol>
+    <symbol id="themes"><path d="M8 15 L17 3 C19 1 23 4 21 6 L11 17 M8 15 L11 17 C11 22 6 22 3 21 C6 20 4 15 8 15 Z"/></symbol>
+    <symbol id="search"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 L21 21"/></symbol>
+    <symbol id="back"><path d="M14 5 L7 12 L14 19 M7 12 L21 12"/></symbol>
+    <symbol id="chevrons"><path d="M7 9 L12 4 L17 9 M7 15 L12 20 L17 15"/></symbol>
+    <symbol id="check"><path d="M5 12 L10 17 L20 6"/></symbol>
+    <symbol id="check-circle"><circle cx="12" cy="12" r="10"/><path d="M6 12 L10 16 L18 7"/></symbol>
+    <symbol id="dots"><circle cx="12" cy="5" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.6" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="star"><polygon points="12,2 15,8.5 22,9.5 17,14.5 18.2,22 12,18.5 5.8,22 7,14.5 2,9.5 9,8.5"/></symbol>
+    <symbol id="star-filled"><polygon points="12,2 15,8.5 22,9.5 17,14.5 18.2,22 12,18.5 5.8,22 7,14.5 2,9.5 9,8.5" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="discord"><path d="M7 5 C4 5 3 7 2 17 C5 20 7 20 8 18 L7 16 C10 18 14 18 17 16 L16 18 C18 20 20 19 22 17 C21 7 20 5 17 5 L16 7 C13 6 11 6 8 7 Z" fill="currentColor" stroke="none" mask="url(#discord-eyes)"/></symbol>
+    <symbol id="help"><path d="M7 7 C7 1 18 1 18 7 C18 11 12 11 12 16"/><circle cx="12" cy="21" r="1.2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="expand"><rect x="2" y="4" width="20" height="16" rx="1"/><path d="M6 12 L6 8 L10 8 M18 12 L18 16 L14 16"/></symbol>
+    <symbol id="close"><path d="M12 2 L12 11 M6 5 C-2 12 3 22 12 22 C21 22 26 12 18 5"/></symbol>
+    <symbol id="profile"><circle cx="12" cy="12" r="11" fill="currentColor" stroke="none" mask="url(#profile-face)"/></symbol>
+    <symbol id="trash"><path d="M4 6 L20 6 M9 3 L15 3 M6 6 L7 22 L17 22 L18 6 M10 10 L10 18 M14 10 L14 18"/></symbol>
+    <symbol id="bookmark"><path d="M6 3 L18 3 L18 22 L12 18 L6 22 Z"/></symbol>
+  </defs>
+</svg>

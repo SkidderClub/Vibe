@@ -57,5 +57,6 @@ public final class EffectProgram implements AutoCloseable {
     public void scalar(String name, float value) { GL20.glUniform1f(location(name), value); }
     public void vec2(String name, float x, float y) { GL20.glUniform2f(location(name), x, y); }
     public void vec3(String name, float x, float y, float z) { GL20.glUniform3f(location(name), x, y, z); }
+    public void vec4(String name, float x, float y, float z, float w) { GL20.glUniform4f(location(name), x, y, z, w); }
     public void close() { if (program != 0) GL20.glDeleteProgram(program); program = 0; uniforms.clear(); }
 }

@@ -13,9 +13,11 @@ public final class ClickGuiModule extends Module {
 
     // Each style renders through VibeClickGui's shared Module/Setting model,
     // so switching the look never changes bindings, values, or config data.
-    private final ModeSetting theme = addSetting(new ModeSetting("Theme", "Skeet", "Skeet", "Futuristic", "NeverLose", "Augustus", "Xanax", "PacketV3", "Novoline", "SuizideX"));
-    private final ColorSetting primaryColor = addSetting(new ColorSetting("Primary Color", 0xFF2DE2C2, () -> !isDropdownTheme()));
-    private final ColorSetting secondaryColor = addSetting(new ColorSetting("Secondary Color", 0xFFA855F7, () -> !isDropdownTheme()));
+    private final ModeSetting theme = addSetting(new ModeSetting("Theme", "Skeet", "Skeet", "Futuristic", "NeverLose", "Augustus", "Xanax", "PacketV3", "Novoline", "SuizideX", "Breeze"));
+    private final ModeSetting breezePalette = addSetting(new ModeSetting("Breeze Theme", "Default", () -> theme.is("Breeze"), "Default", "Fancy", "Silence", "Flarial", "Leaf", "Pink", "Quantum", "Hello Kitty"));
+    private final dev.vibe.setting.StringSetting breezeFavorites = addSetting(new dev.vibe.setting.StringSetting("Breeze Favorites", "", 8192, () -> false));
+    private final ColorSetting primaryColor = addSetting(new ColorSetting("Primary Color", 0xFF2DE2C2, () -> !isDropdownTheme()&&!theme.is("Breeze")));
+    private final ColorSetting secondaryColor = addSetting(new ColorSetting("Secondary Color", 0xFFA855F7, () -> !isDropdownTheme()&&!theme.is("Breeze")));
     private final BooleanSetting augustusRoundedCorners = addSetting(new BooleanSetting("Rounded Corners", true, () -> theme.is("Augustus")));
     private final NumberSetting augustusBackgroundAlpha = addSetting(new NumberSetting("Background Alpha", 200, 0, 255, 1, () -> theme.is("Augustus")));
     private final ModeSetting packetAccent = addSetting(new ModeSetting("Packet Color Mode", "Fade", () -> theme.is("PacketV3"), "Fade", "Static", "Rainbow"));
@@ -38,6 +40,8 @@ public final class ClickGuiModule extends Module {
     }
 
     public ModeSetting getTheme() { return theme; }
+    public ModeSetting getBreezePalette() { return breezePalette; }
+    public dev.vibe.setting.StringSetting getBreezeFavorites() { return breezeFavorites; }
     private boolean isDropdownTheme(){return theme.is("PacketV3")||theme.is("Novoline")||theme.is("SuizideX");}
     public ColorSetting getPrimaryColor() { return primaryColor; }
     public ColorSetting getSecondaryColor() { return secondaryColor; }

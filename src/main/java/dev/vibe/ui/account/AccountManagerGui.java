@@ -75,7 +75,7 @@ public final class AccountManagerGui extends GuiScreen {
         int listBottom = wide ? contentBottom : contentBottom - 30;
         rowHeight = wide ? 42 : Math.min(34, Math.max(26, listBottom - listTop));
         visibleRows = Math.max(1, (listBottom - listTop) / rowHeight);
-        search = new GuiTextField(0, fontRendererObj, innerLeft + 11, searchY + 7, listWidth - 22, 14);
+        search = new dev.vibe.ui.menu.MenuTextField(0, fontRendererObj, innerLeft + 11, searchY + 5, listWidth - 22, 14);
         search.setEnableBackgroundDrawing(false);
         search.setTextColor(AccountScreenStyle.TEXT);
         search.setMaxStringLength(32);
@@ -234,7 +234,8 @@ public final class AccountManagerGui extends GuiScreen {
         GlStateManager.enableTexture2D();
         GlStateManager.enableBlend();
         GlStateManager.color(1, 1, 1, 1);
-        drawRect(0, 0, width, height, 0x85000000);
+        dev.vibe.ui.menu.MenuGlass.begin(this, shaders, width, height);
+        try {
         AccountScreenStyle.window(left, top, panelWidth, panelHeight);
         String title = accounts.isBusy() ? accounts.getDeviceCode() != null ? "Sign in" : "Please wait"
                 : view == View.TOOLS ? "More" : view == View.REMOVE ? "Remove" : view == View.COOKIES ? "Cookie folder" : "Accounts";
@@ -251,6 +252,7 @@ public final class AccountManagerGui extends GuiScreen {
         ensureButtons();
         super.drawScreen(mouseX, mouseY, partialTicks);
         drawStatus(mouseX, mouseY);
+        } finally { dev.vibe.ui.menu.MenuGlass.end(); }
     }
 
     private void drawStatus(int mouseX, int mouseY) {
@@ -280,7 +282,7 @@ public final class AccountManagerGui extends GuiScreen {
                 search.isFocused() ? AccountScreenStyle.ACCENT : AccountScreenStyle.BORDER);
         search.drawTextBox();
         if (search.getText().isEmpty() && !search.isFocused())
-            AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("Search accounts..."), innerLeft + 11, searchY + 8, AccountScreenStyle.MUTED);
+            AccountScreenStyle.BODY_FONT.draw(dev.vibe.language.LanguageManager.translate("Search accounts..."), innerLeft + 11, searchY + 6, AccountScreenStyle.MUTED);
         if (entries.isEmpty()) {
             int y = listTop + Math.max(0, (visibleRows * rowHeight - 26) / 2);
             String label = search.getText().isEmpty() ? "Your accounts appear here" : "No matching accounts";
@@ -302,15 +304,18 @@ public final class AccountManagerGui extends GuiScreen {
             boolean auto = accounts.isAutoLogin(account);
             String autoLabel = dev.vibe.language.LanguageManager.translate("Auto Login");
             String activeLabel = dev.vibe.language.LanguageManager.translate("Active");
-            int tagWidth = Math.max(auto ? fontRendererObj.getStringWidth(autoLabel) + 8 : 0, active ? fontRendererObj.getStringWidth(activeLabel) + 8 : 0);
+            int autoWidth=auto?dev.vibe.ui.menu.MenuStatusChip.width(autoLabel):0;
+            int activeWidth=active?dev.vibe.ui.menu.MenuStatusChip.width(activeLabel):0;
+            boolean stack=rowHeight>=32;
+            int tagWidth=stack?Math.max(autoWidth,activeWidth):autoWidth+activeWidth+(auto&&active?4:0);
             int tagLeft = innerLeft + listWidth - tagWidth - 14;
             AccountScreenStyle.rawText(AccountScreenStyle.fitRaw(account.getName(), listWidth - avatarSize - 34 - tagWidth),
                     textLeft, y + (wide ? 8 : 4), AccountScreenStyle.TEXT);
             AccountScreenStyle.text(AccountScreenStyle.fit(kind(account), listWidth - avatarSize - 34 - tagWidth), textLeft, y + (wide ? 23 : 16), AccountScreenStyle.MUTED);
-            if (active) {
-                accountTag(activeLabel, tagLeft, y + 3, tagWidth, rowHeight >= 32 ? 12 : 9, AccountScreenStyle.SUCCESS);
-            }
-            if (auto) accountTag(autoLabel, tagLeft, y + (active ? rowHeight >= 32 ? 17 : 13 : 8), tagWidth, rowHeight >= 32 ? 12 : 9, AccountScreenStyle.ACCENT);
+            int chipHeight=rowHeight>=40?16:14;
+            int chipY=y+(rowHeight-3-(stack&&active&&auto?chipHeight*2+2:chipHeight))/2;
+            if(active)dev.vibe.ui.menu.MenuStatusChip.draw(tagLeft,chipY,stack?tagWidth:activeWidth,chipHeight,activeLabel,AccountScreenStyle.SUCCESS);
+            if(auto)dev.vibe.ui.menu.MenuStatusChip.draw(tagLeft+(!stack&&active?activeWidth+4:0),chipY+(stack&&active?chipHeight+2:0),stack?tagWidth:autoWidth,chipHeight,autoLabel,AccountScreenStyle.ACCENT);
         }
         if (entries.size() > visibleRows) {
             int track = visibleRows * rowHeight - 3;
@@ -345,12 +350,7 @@ public final class AccountManagerGui extends GuiScreen {
 
     private void centered(String value, int centerX, int y, int color) {
         value = dev.vibe.language.LanguageManager.translate(value);
-        AccountScreenStyle.text(value, centerX - fontRendererObj.getStringWidth(value) / 2, y, color);
-    }
-
-    private void accountTag(String label, int x, int y, int width, int height, int color) {
-        MenuRoundedRenderer.rect(x, y, width, height, 3, RenderUtils.blend(AccountScreenStyle.SURFACE, color, .16F));
-        AccountScreenStyle.text(label, x + 4, y + Math.max(0, (height - 8) / 2), color);
+        (color == AccountScreenStyle.MUTED ? AccountScreenStyle.SMALL_FONT : AccountScreenStyle.BODY_FONT).centerX(value, centerX, y, color);
     }
 
     private void drawLogin() {

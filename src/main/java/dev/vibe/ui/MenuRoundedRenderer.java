@@ -43,7 +43,8 @@ public final class MenuRoundedRenderer {
         int r = Math.min(radius, Math.min(width, height) / 2);
         GlStateManager.enableTexture2D();
         GlStateManager.enableBlend();
-        GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1, 0);
+        GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, 1,
+                dev.vibe.ui.menu.MenuGlass.active() ? GL11.GL_ONE_MINUS_SRC_ALPHA : 0);
         boolean alphaTest = GL11.glIsEnabled(GL11.GL_ALPHA_TEST);
         GlStateManager.disableAlpha();
         mc.getTextureManager().bindTexture(mask);

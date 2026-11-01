@@ -44,8 +44,22 @@ public final class MainMenuEvents {
     private Field buttonListField;
     private MainMenuPresentation presentation;
 
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public void onGlassMenuOpen(GuiOpenEvent event) {
+        dev.vibe.ui.menu.MenuTransitions.open(Minecraft.getMinecraft().currentScreen, event.gui);
+    }
+
     @SubscribeEvent
     public void onGuiOpen(GuiOpenEvent event) {
+        if (event.gui != null && event.gui.getClass() == GuiSelectWorld.class) {
+            GuiScreen parent = new GuiMainMenu();
+            for (Field field : GuiSelectWorld.class.getDeclaredFields()) if (field.getType() == GuiScreen.class) {
+                try { field.setAccessible(true); Object value = field.get(event.gui); if (value instanceof GuiScreen) parent = (GuiScreen) value; }
+                catch (ReflectiveOperationException ignored) { }
+            }
+            event.gui = new dev.vibe.ui.menu.WorldBrowserGui(parent, shaders);
+            return;
+        }
         if (event.gui != null && event.gui.getClass() == net.minecraft.client.gui.GuiMultiplayer.class) {
             GuiScreen parent = new GuiMainMenu();
             for (Field field : net.minecraft.client.gui.GuiMultiplayer.class.getDeclaredFields()) {
@@ -134,17 +148,21 @@ public final class MainMenuEvents {
         GlStateManager.enableTexture2D();
         GlStateManager.enableBlend();
         GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+        dev.vibe.ui.menu.MenuGlass.begin(event.gui, shaders, resolution.getScaledWidth(), resolution.getScaledHeight());
+        try {
         if (presentation == null) presentation = new MainMenuPresentation(resolution.getScaledWidth(), resolution.getScaledHeight());
         presentation.draw(resolution.getScaledWidth(), resolution.getScaledHeight(), event.mouseX, event.mouseY);
         String loaded = Vibe.getInstance().getLoadedCountsText();
         Minecraft.getMinecraft().fontRendererObj.drawStringWithShadow(loaded,
-                resolution.getScaledWidth() - Minecraft.getMinecraft().fontRendererObj.getStringWidth(loaded) - 9, 6, 0xFFFFFFFF);
+                resolution.getScaledWidth() - Minecraft.getMinecraft().fontRendererObj.getStringWidth(loaded) - 9, 6,
+                dev.vibe.ui.menu.AccountScreenStyle.MUTED);
         // Re-draw the live shared button list after the shader. Forge and other
         // mods can still add regular GuiButton instances through InitGuiEvent.
         for (GuiButton button : buttons) {
             button.drawButton(Minecraft.getMinecraft(), event.mouseX, event.mouseY);
         }
         presentation.drawOverlay(resolution.getScaledWidth(), resolution.getScaledHeight(), event.mouseX, event.mouseY);
+        } finally { dev.vibe.ui.menu.MenuGlass.end(); }
         event.setCanceled(true);
     }
 

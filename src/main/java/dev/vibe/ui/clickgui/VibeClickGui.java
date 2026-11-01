@@ -69,6 +69,7 @@ public final class VibeClickGui extends GuiScreen {
     private final NeverLoseWorkspace neverLose = new NeverLoseWorkspace();
     private final XanaxWorkspace xanax = new XanaxWorkspace();
     private final DropdownWorkspace dropdown = new DropdownWorkspace();
+    private final BreezeWorkspace breeze = new BreezeWorkspace();
     private String dropdownPanel;
     private int dropdownTop, dropdownBottom;
     private Setting<?> editing;
@@ -136,7 +137,9 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        if (isDropdownTheme()) {
+        if(isBreezeTheme()){
+            breeze.draw(width,height,mouseX,mouseY,partialTicks);
+        } else if (isDropdownTheme()) {
             drawDropdown(mouseX, mouseY, partialTicks);
         } else if (isXanaxTheme()) {
             xanax.draw(width, height, mouseX, mouseY);
@@ -770,6 +773,7 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
+        if(isBreezeTheme()){breeze.click(mouseX,mouseY,mouseButton);return;}
         if (isXanaxTheme()) { xanax.click(mouseX, mouseY, mouseButton); return; }
         if (isNeverLoseTheme()) { neverLose.click(mouseX, mouseY, mouseButton); return; }
         if (isAugustusTheme()) {
@@ -926,6 +930,7 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     protected void mouseReleased(int mouseX, int mouseY, int state) {
+        if(isBreezeTheme()){breeze.release(state);return;}
         neverLose.release(state);
         xanax.release(state);
         if(state==0)dropdown.release();
@@ -952,6 +957,7 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     public void updateScreen() {
+        if(isBreezeTheme()){breeze.tick();return;}
         if (textEditor != null) textEditor.updateCursorCounter();
         if (draggingSkeet) {
             int boardWidth = boardWidth();
@@ -998,6 +1004,7 @@ public final class VibeClickGui extends GuiScreen {
     }
 
     void wheel(int mx,int my,int wheel) {
+        if(isBreezeTheme()){breeze.wheel(mx,my,wheel);return;}
         if(wheel==0)return;
         if(skeetScrollbar!=null)return;
         if(isXanaxTheme()){xanax.wheel(mx,my,wheel);return;}
@@ -1059,6 +1066,7 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
+        if(isBreezeTheme()){if(!breeze.key(typedChar,keyCode)&&(keyCode==Keyboard.KEY_ESCAPE||keyCode==Keyboard.KEY_RSHIFT))mc.displayGuiScreen(null);return;}
         if (isXanaxTheme()) {
             if (!xanax.key(typedChar, keyCode) && (keyCode == Keyboard.KEY_ESCAPE || keyCode == Keyboard.KEY_RSHIFT)) mc.displayGuiScreen(null);
             return;
@@ -1127,6 +1135,7 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     public void onGuiClosed() {
+        breeze.close();
         skeetScrollbar=null;
         Keyboard.enableRepeatEvents(false);
         neverLose.close();
@@ -1361,6 +1370,8 @@ public final class VibeClickGui extends GuiScreen {
         ClickGuiModule clickGui = Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
         return clickGui == null || clickGui.getTheme().is("Skeet");
     }
+
+    private boolean isBreezeTheme(){ClickGuiModule clickGui=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);return clickGui!=null&&clickGui.getTheme().is("Breeze");}
 
     private boolean isNeverLoseTheme() {
         ClickGuiModule clickGui = Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);

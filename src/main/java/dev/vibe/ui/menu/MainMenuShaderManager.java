@@ -36,6 +36,7 @@ import org.lwjgl.opengl.GL30;
 public final class MainMenuShaderManager {
 
     private static final String DEFAULT_PRESET = "prestige.frag";
+    private static final long MOTION_START = System.nanoTime();
     private static final String RESOURCE_PREFIX = "assets/vibe/shader/";
     private static final String PRESET_MANIFEST = "/assets/vibe/shader/presets.txt";
     private static final Pattern OUTPUT = Pattern.compile("(?m)^\\s*out\\s+vec4\\s+(\\w+)\\s*;");
@@ -53,6 +54,10 @@ public final class MainMenuShaderManager {
     private int targetWidth = -1;
     private int targetHeight = -1;
     private long lastShaderFrame;
+    private boolean backgroundAvailable;
+
+    public int getBackgroundTexture() { return backgroundAvailable && renderTarget != null ? renderTarget.framebufferTexture : 0; }
+    public long getBackgroundFrame() { return backgroundAvailable ? lastShaderFrame : 0; }
 
     public void draw(int width, int height) {
         draw(width,height,520000,33);
@@ -60,7 +65,12 @@ public final class MainMenuShaderManager {
 
     /** A covered backdrop can spend less on ambient motion while controls render at full rate. */
     public void draw(int width,int height,int pixelBudget,int intervalMillis) {
+        backgroundAvailable = false;
         ensureInitialized();
+        if ("liquid-lava.frag".equals(selected)) { pixelBudget = Math.min(pixelBudget, 160000); intervalMillis = Math.max(50, Math.min(intervalMillis, 100)); }
+        // Prestige's volumetric clouds are ambient scenery; keep their costly
+        // ray march separate from the full-rate controls and glass animation.
+        if ("prestige.frag".equals(selected)) { pixelBudget = Math.min(pixelBudget, 110000); intervalMillis = Math.max(66, Math.min(intervalMillis, 100)); }
         if (!enabled || width <= 0 || height <= 0 || !ensureProgram()) {
             drawFallback(width, height);
             return;
@@ -99,6 +109,7 @@ public final class MainMenuShaderManager {
         minecraft.getFramebuffer().bindFramebuffer(true);
         GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
         renderTarget.framebufferRenderExt(framebufferWidth, framebufferHeight, false);
+        backgroundAvailable = true;
         // framebufferRenderExt uses physical-pixel orthographic coordinates;
         // restore Minecraft's scaled GUI projection before menu buttons draw.
         minecraft.entityRenderer.setupOverlayRendering();
@@ -131,6 +142,7 @@ public final class MainMenuShaderManager {
             GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
             GL20.glUseProgram(program);
             float time = (System.currentTimeMillis() % 3600000L) / 1000.0F;
+            if ("liquid-lava.frag".equals(selected)) time = (System.nanoTime() - MOTION_START) / 1e9F;
             float mouseX = Mouse.isCreated() ? Mouse.getX() * renderWidth / framebufferWidth : 0.0F;
             float mouseY = Mouse.isCreated() ? (framebufferHeight - Mouse.getY()) * renderHeight / framebufferHeight : 0.0F;
             uniform("time", time);
@@ -140,6 +152,9 @@ public final class MainMenuShaderManager {
             uniform("iResolution", (float) renderWidth, (float) renderHeight);
             uniform3("iResolution", (float) renderWidth, (float) renderHeight, 1.0F);
             uniform4("iMouse", mouseX, mouseY, 0.0F, 0.0F);
+            int accent = AccountScreenStyle.ACCENT, background = AccountScreenStyle.BACKGROUND;
+            uniform3("themeAccent", (accent >> 16 & 255) / 255F, (accent >> 8 & 255) / 255F, (accent & 255) / 255F);
+            uniform3("themeBackground", (background >> 16 & 255) / 255F, (background >> 8 & 255) / 255F, (background & 255) / 255F);
             GL11.glBegin(GL11.GL_QUADS);
             GL11.glVertex2f(-1.0F, -1.0F);
             GL11.glVertex2f(1.0F, -1.0F);
@@ -465,6 +480,7 @@ public final class MainMenuShaderManager {
                 writer.write("\n");
                 writer.write(selected);
                 writer.write("\n");
+                writer.write("liquid-glass-v1\n");
             } finally {
                 writer.close();
             }

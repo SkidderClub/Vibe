@@ -388,6 +388,12 @@ public final class VibeConfig {
                 getString(root, "createdAt", fallback), getString(root, "savedAt", fallback));
     }
 
+    /** Detached profile data for read-only previews; never applies module state. */
+    public JsonObject preview(String name) {
+        if(normalizeName(name)==null)return new JsonObject();
+        return readObject(getFile(name));
+    }
+
     public File getDirectory() {
         return directory;
     }

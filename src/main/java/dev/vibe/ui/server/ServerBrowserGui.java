@@ -24,10 +24,10 @@ import static dev.vibe.ui.menu.AccountScreenStyle.*;
 /** Native servers.dat and connection flow, with a responsive Vibe presentation. */
 public final class ServerBrowserGui extends GuiScreen {
     // The shared atlas has 32px cells. Scale a fitting glyph instead of clipping a larger font.
-    private static final NeverLoseFont TITLE = new NeverLoseFont(Font.BOLD, 24);
-    private static final NeverLoseFont NAME = new NeverLoseFont(Font.BOLD, 22);
-    private static final NeverLoseFont TEXT_FONT = new NeverLoseFont(Font.PLAIN, 20);
-    private static final NeverLoseFont SMALL = new NeverLoseFont(Font.PLAIN, 18);
+    private static final dev.vibe.ui.menu.MenuFont TITLE = dev.vibe.ui.menu.MenuFont.TITLE;
+    private static final dev.vibe.ui.menu.MenuFont NAME = dev.vibe.ui.menu.MenuFont.BOLD;
+    private static final dev.vibe.ui.menu.MenuFont TEXT_FONT = dev.vibe.ui.menu.MenuFont.BODY;
+    private static final dev.vibe.ui.menu.MenuFont SMALL = dev.vibe.ui.menu.MenuFont.SMALL;
     private final GuiScreen parent;
     private final MainMenuShaderManager shaders;
     private final ServerBrowserEvents joins;
@@ -74,7 +74,7 @@ public final class ServerBrowserGui extends GuiScreen {
         stopLan(); lan.clear();
         if (network) try { lanList = new LanServerDetector.LanServerList(); lanThread = new LanServerDetector.ThreadLanServerFind(lanList); lanThread.setDaemon(true); lanThread.start(); }
         catch (IOException ignored) { notice = "LAN discovery is unavailable."; }
-        search = new GuiTextField(20, fontRendererObj, l.listX + 28, l.listY - 24, l.listW - 52, 14);
+        search = new dev.vibe.ui.menu.MenuTextField(20, fontRendererObj, l.listX + 28, l.listY - 25, l.listW - 52, 14);
         search.setEnableBackgroundDrawing(false); search.setTextColor(TEXT); search.setMaxStringLength(128); search.setText(query);
         for(ServerBrowserLayout.FooterButton b:l.footerButtons())button(b.id,b.x,b.y,b.w,20,b.label,b.id==4);
         buttonList.add(new AccountButton(l.x+l.w-(l.compact?128:200)-16,l.y+8,l.compact?128:200));
@@ -144,16 +144,15 @@ public final class ServerBrowserGui extends GuiScreen {
         if (shaders != null) try { shaders.draw(width, height,160000,100); } catch (RuntimeException e) { fallback(); }
         else fallback();
         GuiRenderState.prepare(false);
-        MenuRoundedRenderer.rect(l.x - 4, l.y + 5, l.w + 8, l.h + 3, 20, 0x38000000);
-        MenuRoundedRenderer.rect(l.x, l.y, l.w, l.h, 16, BORDER);
-        MenuRoundedRenderer.rect(l.x + 1, l.y + 1, l.w - 2, l.h - 2, 15, BACKGROUND);
-        GlStateManager.pushMatrix(); GlStateManager.translate(l.x + 18, l.y + 12, 0); GlStateManager.scale(1.2F, 1.2F, 1);
-        TITLE.draw("Multiplayer", 0, 0, TEXT); GlStateManager.popMatrix();
+        dev.vibe.ui.menu.MenuGlass.begin(this, shaders, width, height);
+        try {
+        dev.vibe.ui.menu.AccountScreenStyle.window(l.x, l.y, l.w, l.h);
+        TITLE.draw("Multiplayer", l.x + 18, l.y + 10, TEXT);
         int searchY = l.listY - 30;
         surface(l.listX, searchY, l.listW, 24, SURFACE, search.isFocused() ? ACCENT : BORDER, 7);
         drawSearch(l.listX + 11, searchY + 12);
         search.drawTextBox();
-        if (query.isEmpty() && !search.isFocused()) TEXT_FONT.draw("Search servers", l.listX + 28, searchY + 4, MUTED);
+        if (query.isEmpty() && !search.isFocused()) TEXT_FONT.draw("Search servers", l.listX + 28, searchY + 6, MUTED);
         float entrance = Math.min(1, (now - opened) / 180e6F);
         clip(true);
         ServerData hovered = null;
@@ -194,12 +193,13 @@ public final class ServerBrowserGui extends GuiScreen {
         }
         if (deleting) {
             // Buttons are drawn again above the modal scrim so their input and visual bounds agree.
-            Gui.drawRect(0, 0, width, height, 0xA0000000);
+            MenuRoundedRenderer.rect(0, 0, width, height, 0, 0xA0000000);
             surface(width / 2 - 150, height / 2 - 55, 300, 122, BACKGROUND, BORDER, 14);
             NAME.draw("Delete this server?", width / 2 - 134, height / 2 - 38, TEXT);
             TEXT_FONT.draw(TEXT_FONT.fit(selected == null ? "" : selected.serverName, 268), width / 2 - 134, height / 2 - 13, MUTED);
             for (GuiButton button : buttonList) if (button.visible) button.drawButton(mc, mx, my);
         }
+        } finally { dev.vibe.ui.menu.MenuGlass.end(); }
     }
     private void fallback() { Gui.drawRect(0, 0, width, height, 0xFF111218); }
     private void row(ServerData data, int y, float hover, boolean ghost) {
@@ -217,11 +217,11 @@ public final class ServerBrowserGui extends GuiScreen {
         } else {
             MenuRoundedRenderer.rect(x + 12, iy, iconSize, iconSize, 6, RenderUtils.blend(TINT, ACCENT, .16F));
             String initial = data.serverName.isEmpty() ? "S" : data.serverName.substring(0, 1).toUpperCase(Locale.ROOT);
-            NAME.draw(initial, x + 12 + (iconSize - NAME.width(initial)) / 2, iy + (iconSize - 13) / 2, ACCENT);
+            NAME.centered(initial, x + 12, iy, iconSize, iconSize, ACCENT);
         }
         int textX = x + iconSize + 23;
         NAME.draw(visual.name,textX,y+4,TEXT);
-        fontRendererObj.drawString(visual.motd,textX,y+21,MUTED);
+        TEXT_FONT.draw(visual.motd,textX,y+21,MUTED);
         if(l.row>=50)SMALL.draw(visual.address,textX,y+36,MUTED);
         if(l.listW>=420)SMALL.draw(visual.population,x+w-161,y+6,MUTED);
         SMALL.draw(visual.latency,x+w-84,y+6,MUTED);
@@ -245,6 +245,7 @@ public final class ServerBrowserGui extends GuiScreen {
         GL11.glLineWidth(1); GL11.glDisable(GL11.GL_LINE_SMOOTH); GlStateManager.enableAlpha(); GlStateManager.enableTexture2D(); GlStateManager.color(1, 1, 1, 1);
     }
     private static void surface(int x, int y, int w, int h, int fill, int border, int radius) {
+        if (dev.vibe.ui.menu.MenuGlass.pane(x, y, w, h, radius, fill, border, false)) return;
         MenuRoundedRenderer.rect(x, y, w, h, radius, border); MenuRoundedRenderer.rect(x + 1, y + 1, w - 2, h - 2, radius - 1, fill);
     }
     private void clip(boolean enable) {
@@ -382,11 +383,11 @@ public final class ServerBrowserGui extends GuiScreen {
         @Override public void drawButton(Minecraft mc,int mx,int my){
             if(!visible)return;hovered=mx>=xPosition&&mx<xPosition+width&&my>=yPosition&&my<yPosition+height;
             long now=System.nanoTime();float dt=Math.min(.05F,(now-last)/1e9F);last=now;hover+=((hovered?1:0)-hover)*(1-(float)Math.exp(-18*dt));
-            surface(xPosition,yPosition,width,height,RenderUtils.blend(SURFACE,HOVER,hover),RenderUtils.blend(BORDER,ACCENT,hover*.65F),9);
+            dev.vibe.ui.menu.AccountScreenStyle.buttonPanel(xPosition,yPosition,width,height,RenderUtils.blend(SURFACE,HOVER,hover),RenderUtils.blend(BORDER,ACCENT,hover*.65F),hover,mx,my);
             MenuRoundedRenderer.rect(xPosition+6,yPosition+3,22,22,5,TINT);
             dev.vibe.ui.account.SkinHeads.draw(accountId,accountName,xPosition+7,yPosition+4,20,network);
-            NAME.draw(NAME.fit(accountName,width-50),xPosition+36,yPosition,TEXT);
-            SMALL.draw(width<160?"Accounts":"Switch account",xPosition+36,yPosition+14,MUTED);
+            NAME.draw(NAME.fit(accountName,width-50),xPosition+36,yPosition+4,TEXT);
+            SMALL.draw(width<160?"Accounts":"Switch account",xPosition+36,yPosition+17,MUTED);
             line(new float[]{xPosition+width-14,yPosition+11,xPosition+width-11,yPosition+14,xPosition+width-14,yPosition+17},MUTED);
         }
     }
@@ -401,9 +402,9 @@ public final class ServerBrowserGui extends GuiScreen {
             long now = System.nanoTime(); float dt = Math.min(.05F, (now - last) / 1e9F); last = now;
             hover += ((hovered && enabled ? 1 : 0) - hover) * (1 - (float) Math.exp(-19 * dt));
             int fill = !enabled ? BACKGROUND : RenderUtils.blend(primary ? ACCENT : SURFACE, primary ? TEXT : HOVER, hover * (primary ? .12F : 1));
-            surface(xPosition, yPosition, width, height, fill, primary && enabled ? ACCENT : RenderUtils.blend(BORDER, ACCENT, hover * .7F), 8);
+            dev.vibe.ui.menu.AccountScreenStyle.buttonPanel(xPosition,yPosition,width,height,fill,primary&&enabled?ACCENT:RenderUtils.blend(BORDER,ACCENT,hover*.7F),hover,mx,my);
             String text = TEXT_FONT.fit(displayString, width - 16);
-            TEXT_FONT.draw(text, xPosition + (width - TEXT_FONT.width(text)) / 2, yPosition + (height - 12) / 2, !enabled ? MUTED : primary ? BACKGROUND : TEXT);
+            TEXT_FONT.centered(text, xPosition, yPosition, width, height, !enabled ? MUTED : TEXT);
         }
     }
 }
