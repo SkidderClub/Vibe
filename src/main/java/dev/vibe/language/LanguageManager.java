@@ -36,6 +36,7 @@ public final class LanguageManager {
     static { CANONICAL_LANGUAGES.addAll(LANGUAGES); }
     /** The last other input and its result; text drawing normalizes the same setting value constantly. */
     private static volatile String[] lastNormalized = {null, null};
+    private static final String INTERFACE_GLYPHS;
 
     static {
         add("Chinese", pairs(
@@ -91,6 +92,19 @@ public final class LanguageManager {
         registerExpandedLanguages();
         registerModernModuleLabels();
         loadCompleteCatalog();
+
+        final boolean[] glyphs = new boolean[Character.MAX_VALUE + 1];
+        for (final Map<String, String> language : CATALOG.values())
+            for (final String value : language.values())
+                for (int index = 0; index < value.length(); index++)
+                    glyphs[value.charAt(index)] = true;
+
+        final StringBuilder characters = new StringBuilder();
+        for (int character = 32; character < glyphs.length; character++)
+            if (glyphs[character])
+                characters.append((char) character);
+
+        INTERFACE_GLYPHS = characters.toString();
     }
 
     private LanguageManager() { }
@@ -359,9 +373,7 @@ public final class LanguageManager {
 
     /** Characters needed by the native GUI atlas, including every supported language. */
     public static String interfaceGlyphs() {
-        StringBuilder text = new StringBuilder();
-        for (Map<String, String> language : CATALOG.values()) for (String value : language.values()) text.append(value);
-        return text.toString();
+        return INTERFACE_GLYPHS;
     }
 
     public static String selectedLanguage() {

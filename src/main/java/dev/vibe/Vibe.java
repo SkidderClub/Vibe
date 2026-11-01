@@ -19,10 +19,12 @@ import dev.vibe.module.impl.client.LanguageModule;
 import dev.vibe.script.ScriptRuntime;
 import dev.vibe.statistics.StatisticsService;
 import dev.vibe.target.TargetManager;
+import dev.vibe.ui.clickgui.AugustusImGui;
 import dev.vibe.ui.clickgui.VibeClickGui;
 import dev.vibe.ui.render.AnimationItemRenderer;
 import java.io.File;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.IReloadableResourceManager;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.Mod;
@@ -89,6 +91,7 @@ public final class Vibe {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
+        ((IReloadableResourceManager) minecraft.getResourceManager()).registerReloadListener(AugustusImGui::resourcesReloaded);
         ClientEvents events = new ClientEvents();
         MinecraftForge.EVENT_BUS.register(events);
         MinecraftForge.EVENT_BUS.register(new MainMenuEvents());
@@ -121,6 +124,7 @@ public final class Vibe {
         LanguageModule language = moduleManager.getModule(LanguageModule.class);
         if (language != null) identity.setLanguage(language.getLanguage().getValue());
         AnimationItemRenderer.install(minecraft);
+        AugustusImGui.prepare();
         updateWindowTitle();
     }
 

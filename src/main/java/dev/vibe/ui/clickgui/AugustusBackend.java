@@ -98,10 +98,13 @@ final class AugustusBackend implements AutoCloseable {
     }
 
     void resetInput() {
-        fontDirty = true; // Refresh resource-pack fonts when reopening the GUI.
         mouseEvents.clear(); java.util.Arrays.fill(mouseDown,false); wheel=0; lastFrame=0;
         ImGui.getIO().setMouseDown(mouseDown); ImGui.getIO().setKeysDown(new boolean[512]);
         ImGui.getIO().clearInputCharacters();
+    }
+
+    void invalidateFont() {
+        fontDirty = true;
     }
 
     void render(ImDrawData data) {
