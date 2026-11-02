@@ -1,0 +1,97 @@
+package dev.vibe.hud;
+
+import dev.vibe.module.impl.client.HudModule;
+import dev.vibe.ui.GuiInput;
+import java.awt.image.BufferedImage;
+import java.lang.reflect.*;
+import java.nio.ByteBuffer;
+import java.nio.file.*;
+import javax.imageio.ImageIO;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.ScaledResolution;
+import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL11;
+
+/** Runs inside the native HUD-editor fixture with real fonts, item models and OpenGL. */
+public final class HudOverlaysRenderCheck {
+    private HudOverlaysRenderCheck(){}
+    public static void verify(Minecraft mc,HudManager manager,HudModule hud,Path output)throws Exception{
+        mc.displayWidth=1280;mc.displayHeight=720;mc.gameSettings.guiScale=1;
+        String[] ids={HudManager.CHAT,HudManager.HOTBAR,HudManager.CUSTOM_HEALTH,HudManager.TAB};
+        int[][] positions={{28,130},{430,622},{40,400},{770,105}};
+        for(int i=0;i<ids.length;i++){
+            HudManager.HudElement e=manager.getElement(ids[i]);e.setScale(1);manager.drawPreview(e,mc.fontRendererObj);e.moveTo(positions[i][0],positions[i][1],new ScaledResolution(mc));
+        }
+        for(String theme:new String[]{"Minecraft","Fortnite","Skeet","Vibe","LiquidGlass"}){
+            manager.getElement(HudManager.HOTBAR).setTheme(theme);frame(1280,720);for(String id:ids)manager.drawPreview(manager.getElement(id),mc.fontRendererObj);
+            save(output.resolve("overlays-hotbar-"+theme.toLowerCase(java.util.Locale.ROOT)+".png"),1280,720);
+        }
+        manager.getElement(HudManager.HOTBAR).setTheme("Vibe");
+        for(String mode:hud.customHealth.mode.getModes()){
+            hud.customHealth.mode.setValue(mode);frame(1280,720);for(String id:ids)manager.drawPreview(manager.getElement(id),mc.fontRendererObj);
+            save(output.resolve("overlays-health-"+mode.toLowerCase(java.util.Locale.ROOT)+".png"),1280,720);
+        }
+        mc.gameSettings.guiScale=3;HudManager.HudElement tab=manager.getElement(HudManager.TAB);tab.setScale(.75F);
+        ScaledResolution scaled=new ScaledResolution(mc);frame(1280,720);GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GL11.glOrtho(0,scaled.getScaledWidth(),scaled.getScaledHeight(),0,-1000,1000);GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        manager.drawPreview(tab,mc.fontRendererObj);check(tab.getHeight()==153,"Scaled Tab layout discarded players despite available screen space");save(output.resolve("custom-tab-gui-scale-3.png"),1280,720);
+        tab.setScale(1);mc.gameSettings.guiScale=1;
+        HudManager.HudElement clock=manager.getElement(HudManager.CLOCK);hud.clock.display.setValue("Analog");hud.clock.date.setEnabled(false);hud.clock.digital.setEnabled(false);
+        manager.drawPreview(clock,mc.fontRendererObj);clock.moveTo(440,220,new ScaledResolution(mc));clock.setTheme("Transparent");
+        frame(1280,720);manager.drawPreview(clock,mc.fontRendererObj);check(clock.getHeight()==hud.clock.diameter.getInt(),"Analog clock retained space for a digital readout");
+        save(output.resolve("clock-transparent.png"),1280,720);
+        HudEditorGui editor=new HudEditorGui(manager);editor.setWorldAndResolution(mc,1280,720);
+        Field selected=HudEditorGui.class.getDeclaredField("selected");selected.setAccessible(true);selected.set(editor,manager.getElement(HudManager.CHAT));
+        frame(1280,720);editor.drawScreen(-1,-1,0);save(output.resolve("hud-editor-custom-chat.png"),1280,720);
+        Method bounds=HudEditorGui.class.getDeclaredMethod("bounds",HudManager.HudElement.class);bounds.setAccessible(true);
+        int[] b=(int[])bounds.invoke(editor,manager.getElement(HudManager.CHAT));double oldWidth=hud.chat.width.getDouble(),oldHeight=hud.chat.height.getDouble();
+        GuiInput.mouseClicked(editor,b[2],(b[1]+b[3])/2,0);editor.drawScreen(b[2]+20,(b[1]+b[3])/2,0);release(editor,b[2]+20,(b[1]+b[3])/2);
+        check(hud.chat.width.getDouble()>oldWidth&&hud.chat.height.getDouble()==oldHeight,"Side handle changed height or failed to resize chat width");
+        b=(int[])bounds.invoke(editor,manager.getElement(HudManager.CHAT));oldWidth=hud.chat.width.getDouble();
+        GuiInput.mouseClicked(editor,(b[0]+b[2])/2,b[3],0);editor.drawScreen((b[0]+b[2])/2,b[3]+16,0);release(editor,(b[0]+b[2])/2,b[3]+16);
+        check(hud.chat.height.getDouble()>oldHeight&&hud.chat.width.getDouble()==oldWidth,"Bottom handle changed width or failed to resize chat height");
+        double height=hud.chat.height.getDouble();hud.chat.height.setValue(72D);frame(1280,720);manager.drawPreview(manager.getElement(HudManager.CHAT),mc.fontRendererObj);check(manager.getElement(HudManager.CHAT).getHeight()==72,"Chat height is coupled to its width");hud.chat.height.setValue(height);
+        // Render cost includes all four replacement widgets, real item geometry and readback synchronization.
+        for(int i=0;i<8;i++){frame(1280,720);for(String id:ids)manager.drawPreview(manager.getElement(id),mc.fontRendererObj);}
+        GL11.glFinish();long start=System.nanoTime();for(int i=0;i<30;i++){frame(1280,720);for(String id:ids)manager.drawPreview(manager.getElement(id),mc.fontRendererObj);}GL11.glFinish();
+        System.out.printf(java.util.Locale.ROOT,"Four custom HUD widgets: %.2f ms/frame on %s%n",(System.nanoTime()-start)/30e6,GL11.glGetString(GL11.GL_RENDERER));
+        editor.onGuiClosed();
+        net.minecraft.util.ResourceLocation ascii=new net.minecraft.util.ResourceLocation("textures/font/ascii.png");mc.getTextureManager().bindTexture(ascii);
+        int min=GL11.glGetTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MIN_FILTER),mag=GL11.glGetTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MAG_FILTER);
+        frame(1280,720);
+        try(HudFontFilter filter=HudFontFilter.begin(1.25F)){
+            HudFontFilter.bind(mc.getTextureManager(),ascii);check(GL11.glGetTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MAG_FILTER)==GL11.GL_LINEAR,"Fractional HUD glyphs are unfiltered");
+            net.minecraft.client.renderer.GlStateManager.pushMatrix();net.minecraft.client.renderer.GlStateManager.scale(1.25F,1.25F,1);mc.fontRendererObj.drawStringWithShadow("Scaled Minecraft text 0123456789",24,24,0xFFFFFFFF);net.minecraft.client.renderer.GlStateManager.popMatrix();
+        }
+        mc.getTextureManager().bindTexture(ascii);check(GL11.glGetTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MIN_FILTER)==min&&GL11.glGetTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MAG_FILTER)==mag,"HUD filtering leaked into shared font textures");save(output.resolve("hud-font-fractional.png"),1280,720);
+        liveChat(mc,manager,hud,output);
+        check(GL11.glGetError()==0,"Custom HUD overlays left a GL error");
+        System.out.println("Custom HUD pixels passed: five hotbar themes, three health modes, transparent analog clock, custom Tab, chat side/bottom resizing and native item previews.");
+    }
+    private static void release(HudEditorGui gui,int x,int y)throws Exception{Method method=HudEditorGui.class.getDeclaredMethod("mouseReleased",int.class,int.class,int.class);method.setAccessible(true);method.invoke(gui,x,y,0);}
+    private static void liveChat(Minecraft mc,HudManager manager,HudModule hud,Path output)throws Exception{
+        dev.vibe.path.PathTestFixture.set(dev.vibe.Vibe.class,dev.vibe.Vibe.getInstance(),"hudManager",manager);
+        net.minecraft.client.multiplayer.WorldClient world=mc.theWorld;net.minecraft.client.entity.EntityPlayerSP player=mc.thePlayer;
+        net.minecraft.client.gui.GuiIngame ingame=mc.ingameGUI;net.minecraft.client.gui.GuiScreen screen=mc.currentScreen;
+        boolean selected=hud.getHudElements().isSelectedIgnoreCase(HudManager.CHAT);
+        try{
+            mc.theWorld=dev.vibe.path.PathTestFixture.allocate(net.minecraft.client.multiplayer.WorldClient.class);
+            mc.thePlayer=dev.vibe.path.PathTestFixture.allocate(net.minecraft.client.entity.EntityPlayerSP.class);
+            mc.ingameGUI=dev.vibe.path.PathTestFixture.allocate(net.minecraft.client.gui.GuiIngame.class);
+            net.minecraft.client.gui.GuiNewChat chat=new net.minecraft.client.gui.GuiNewChat(mc);
+            dev.vibe.path.PathTestFixture.set(net.minecraft.client.gui.GuiIngame.class,mc.ingameGUI,"persistantChatGUI",chat);
+            mc.currentScreen=new net.minecraft.client.gui.GuiChat();if(!selected)hud.getHudElements().toggle(HudManager.CHAT);
+            dev.vibe.path.PathTestFixture.set(dev.vibe.module.Module.class,hud,"enabled",true);
+            hud.chat.width.setValue(320D);hud.chat.height.setValue(150D);HudManager.HudElement e=manager.getElement(HudManager.CHAT);e.setScale(1);e.setTheme("Vibe");
+            chat.printChatMessage(new net.minecraft.util.ChatComponentText("First message"));chat.printChatMessage(new net.minecraft.util.ChatComponentText("Second message"));
+            frame(1280,720);manager.drawChat();Thread.sleep(200);frame(1280,720);manager.drawChat();
+            check(e.getHeight()==34,"Open chat reserved empty space instead of fitting two messages");
+            net.minecraft.client.gui.GuiTextField input=new net.minecraft.client.gui.GuiTextField(0,mc.fontRendererObj,0,0,320,14);input.setMaxStringLength(256);input.setFocused(true);input.writeText("Hello world");HudChat.drawInput(input,1280,720);
+            check(input.getText().equals("Hello world")&&input.xPosition>=4&&input.yPosition==700,"Styled input changed editing or escaped its panel");save(output.resolve("custom-chat-live.png"),1280,720);
+            chat.clearChatMessages();frame(1280,720);manager.drawChat();Thread.sleep(200);frame(1280,720);manager.drawChat();
+            Field height=HudChat.class.getDeclaredField("shownHeight");height.setAccessible(true);check(height.getInt(null)==0,"Empty chat kept an expanded panel");
+        }finally{mc.theWorld=world;mc.thePlayer=player;mc.ingameGUI=ingame;mc.currentScreen=screen;if(!selected)hud.getHudElements().toggle(HudManager.CHAT);}
+    }
+    private static void frame(int w,int h){GL11.glViewport(0,0,w,h);GL11.glDisable(GL11.GL_SCISSOR_TEST);GL11.glDisable(GL11.GL_DEPTH_TEST);GL11.glClearColor(.045F,.055F,.075F,1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GL11.glOrtho(0,w,h,0,-1000,1000);GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glLoadIdentity();}
+    private static void save(Path file,int w,int h)throws Exception{ByteBuffer data=BufferUtils.createByteBuffer(w*h*4);GL11.glReadPixels(0,0,w,h,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,data);BufferedImage image=new BufferedImage(w,h,BufferedImage.TYPE_INT_RGB);for(int y=0;y<h;y++)for(int x=0;x<w;x++){int i=((h-1-y)*w+x)*4;image.setRGB(x,y,(data.get(i)&255)<<16|(data.get(i+1)&255)<<8|data.get(i+2)&255);}ImageIO.write(image,"png",file.toFile());}
+    private static void check(boolean okay,String message){if(!okay)throw new AssertionError(message);}
+}

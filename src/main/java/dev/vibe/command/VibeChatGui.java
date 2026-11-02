@@ -58,11 +58,15 @@ public final class VibeChatGui extends GuiChat {
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        super.drawScreen(mouseX, mouseY, partialTicks);
+        if(dev.vibe.hud.HudChat.active()&&inputField!=null){
+            dev.vibe.hud.HudChat.drawInput(inputField,width,height);
+            Object hovered=dev.vibe.hud.HudChat.component(org.lwjgl.input.Mouse.getX(),org.lwjgl.input.Mouse.getY());
+            if(hovered instanceof net.minecraft.util.IChatComponent)handleComponentHover((net.minecraft.util.IChatComponent)hovered,mouseX,mouseY);
+        }else super.drawScreen(mouseX, mouseY, partialTicks);
         if (inputField != null && inputField.getText().startsWith(".")) {
             String suggestion = Vibe.getInstance().getCommandManager().firstSuggestion(inputField.getText());
             if (suggestion != null && !suggestion.equalsIgnoreCase(inputField.getText())) {
-        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.format("Tab  %s", suggestion), 4, height - 25, 0xFF8FA5C4);
+        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.format("Tab  %s", suggestion), inputField.xPosition, height - 41, 0xFF8FA5C4);
             }
         }
     }

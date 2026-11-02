@@ -15,23 +15,33 @@ import org.lwjgl.opengl.*;
 import org.lwjgl.util.glu.GLU;
 
 /** A dark simulation space with contrasting geometry, drawn into the game window only. */
-public final class AuraArenaRenderer {
+public final class AuraArenaRenderer implements AutoCloseable {
+    public static boolean recorderOwnsFrame(){Minecraft mc=Minecraft.getMinecraft();return mc!=null&&mc.currentScreen instanceof dev.vibe.ui.screen.AIAuraRecorderGui;}
+    private int terrain;
+    private java.util.List<RecorderArena.Pillar> terrainMap;
+    private final java.nio.FloatBuffer fog=(java.nio.FloatBuffer)BufferUtils.createFloatBuffer(4).put(new float[]{.025F,.031F,.044F,1}).flip();
     private final ModelPlayer rig=new ModelPlayer(0,false);
     private final ModelPlayer playerRig=new ModelPlayer(0,false),slimRig=new ModelPlayer(0,true);
     private final Entity dummy=new Dummy();
     public void render(RecorderArena arena,float partial){
+        arena.renderPartial=Math.max(0,Math.min(1,partial));
         Minecraft mc=Minecraft.getMinecraft();int skin=skinTexture(mc),matrix=GL11.glGetInteger(GL11.GL_MATRIX_MODE);ModelPlayer ownRig=ownRig(mc);
         try(EffectState state=new EffectState()){
             GL20.glUseProgram(0);for(int unit=1;unit<=2;unit++){GL13.glActiveTexture(GL13.GL_TEXTURE0+unit);GL11.glDisable(GL11.GL_TEXTURE_2D);}GL13.glActiveTexture(GL13.GL_TEXTURE0);GL11.glDisable(GL11.GL_TEXTURE_2D);
             GL11.glViewport(0,0,mc.displayWidth,mc.displayHeight);GL11.glDepthMask(true);GL11.glEnable(GL11.GL_DEPTH_TEST);GL11.glDepthFunc(GL11.GL_LEQUAL);GL11.glClearColor(.025F,.031F,.044F,1);GL11.glClearDepth(1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);
-            GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);GL11.glEnable(GL11.GL_FOG);GL11.glFogi(GL11.GL_FOG_MODE,GL11.GL_LINEAR);GL11.glFogf(GL11.GL_FOG_START,12);GL11.glFogf(GL11.GL_FOG_END,44);GL11.glFog(GL11.GL_FOG_COLOR,(java.nio.FloatBuffer)BufferUtils.createFloatBuffer(4).put(new float[]{.025F,.031F,.044F,1}).flip());
-            GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glPushMatrix();GL11.glLoadIdentity();GLU.gluPerspective(arena.fov,(float)arena.aspect,.05F,100);
+            GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);GL11.glEnable(GL11.GL_FOG);GL11.glFogi(GL11.GL_FOG_MODE,GL11.GL_LINEAR);GL11.glFogf(GL11.GL_FOG_START,12);GL11.glFogf(GL11.GL_FOG_END,44);GL11.glFog(GL11.GL_FOG_COLOR,fog);
+            GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glPushMatrix();GL11.glLoadIdentity();GLU.gluPerspective(arena.viewFov(partial),(float)arena.aspect,.05F,100);
             GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glPushMatrix();GL11.glLoadIdentity();GL11.glTranslated(0,0,-cameraDistance(arena,partial));GL11.glRotatef(viewPitch(arena,partial),1,0,0);GL11.glRotatef(viewYaw(arena,partial)+180,0,1,0);
-            double x=arena.previousX+(arena.x-arena.previousX)*partial,y=arena.previousY+(arena.y-arena.previousY)*partial,z=arena.previousZ+(arena.z-arena.previousZ)*partial;GL11.glTranslated(-x,-y-1.62,-z);
+            double x=arena.previousX+(arena.x-arena.previousX)*partial,y=arena.previousY+(arena.y-arena.previousY)*partial,z=arena.previousZ+(arena.z-arena.previousZ)*partial;GL11.glTranslated(-x,-y-arena.eyeHeight(),-z);
             try{
+                if(terrain==0||terrainMap!=arena.pillars){
+                    close();terrainMap=arena.pillars;terrain=GL11.glGenLists(1);GL11.glNewList(terrain,GL11.GL_COMPILE);
                 GL11.glColor4f(.06F,.08F,.10F,1);quad(-64,0,-64,64,0,-64,64,0,64,-64,0,64);
                 GL11.glEnable(GL11.GL_LINE_SMOOTH);GL11.glLineWidth(1);GL11.glBegin(GL11.GL_LINES);for(int i=-32;i<=32;i++){if(i%4==0)GL11.glColor4f(.3F,.44F,.49F,.65F);else GL11.glColor4f(.17F,.25F,.29F,.45F);GL11.glVertex3d(i*2,.003,-64);GL11.glVertex3d(i*2,.003,64);GL11.glVertex3d(-64,.003,i*2);GL11.glVertex3d(64,.003,i*2);}GL11.glEnd();
                 for(RecorderArena.Pillar pillar:arena.pillars){GL11.glPushMatrix();GL11.glTranslated(pillar.x,0,pillar.z);cube(pillar.width,pillar.height);GL11.glPopMatrix();}
+                    GL11.glEndList();
+                }
+                GL11.glCallList(terrain);
                 for(RecorderArena.Enemy enemy:arena.enemies)enemy(arena,enemy,partial);
                 if(arena.perspective!=0)avatar(arena,ownRig,skin,partial);
                 if(arena.sparkTicks>0){GL11.glLineWidth(2);GL11.glColor4f(.08F,.69F,.78F,arena.sparkTicks/8F);GL11.glBegin(GL11.GL_LINES);for(int i=0;i<10;i++){double a=i*Math.PI*.2,length=(9-arena.sparkTicks)*.025;GL11.glVertex3d(arena.sparkX,arena.sparkY,arena.sparkZ);GL11.glVertex3d(arena.sparkX+Math.cos(a)*length,arena.sparkY+Math.sin(a)*length,arena.sparkZ+Math.sin(a*3)*length*.5);}GL11.glEnd();}
@@ -78,12 +88,13 @@ public final class AuraArenaRenderer {
     public static float viewYaw(RecorderArena arena,float partial){return arena.cameraYaw(partial)+(arena.perspective==2?180:0);}
     public static float viewPitch(RecorderArena arena,float partial){return arena.perspective==2?-arena.cameraPitch(partial):arena.cameraPitch(partial);}
     public static double cameraDistance(RecorderArena a,float partial){
-        if(a.perspective==0)return .1;double yaw=Math.toRadians(viewYaw(a,partial)),pitch=Math.toRadians(viewPitch(a,partial));double x=a.previousX+(a.x-a.previousX)*partial,y=a.previousY+(a.y-a.previousY)*partial+1.62,z=a.previousZ+(a.z-a.previousZ)*partial;
+        if(a.perspective==0)return 0;double yaw=Math.toRadians(viewYaw(a,partial)),pitch=Math.toRadians(viewPitch(a,partial));double x=a.previousX+(a.x-a.previousX)*partial,y=a.previousY+(a.y-a.previousY)*partial+a.eyeHeight(),z=a.previousZ+(a.z-a.previousZ)*partial;
         double dx=Math.sin(yaw)*Math.cos(pitch)*4,dy=Math.sin(pitch)*4,dz=-Math.cos(yaw)*Math.cos(pitch)*4,distance=4;
         for(int i=0;i<8;i++){Vec3 start=new Vec3(x+((i&1)==0?-.1:.1),y+((i&2)==0?-.1:.1),z+((i&4)==0?-.1:.1)),end=start.addVector(dx,dy,dz);for(AxisAlignedBB box:ArenaPhysics.geometry(a.pillars)){MovingObjectPosition hit=box.calculateIntercept(start,end);if(hit!=null)distance=Math.min(distance,Math.max(.1,start.distanceTo(hit.hitVec)-.15));}}
         return distance;
     }
     private static void cube(double w,double h){double a=w*.5;GL11.glColor4f(.25F,.3F,.35F,1);quad(-a,h,-a,a,h,-a,a,h,a,-a,h,a);GL11.glColor4f(.12F,.16F,.20F,1);quad(-a,0,-a,-a,h,-a,a,h,-a,a,0,-a);quad(a,0,a,a,h,a,-a,h,a,-a,0,a);GL11.glColor4f(.18F,.23F,.28F,1);quad(-a,0,a,-a,h,a,-a,h,-a,-a,0,-a);quad(a,0,-a,a,h,-a,a,h,a,a,0,a);GL11.glColor4f(.3F,.53F,.6F,.7F);GL11.glBegin(GL11.GL_LINES);for(double x:new double[]{-a,a})for(double z:new double[]{-a,a}){GL11.glVertex3d(x,0,z);GL11.glVertex3d(x,h,z);}GL11.glEnd();}
     private static void quad(double... xyz){GL11.glBegin(GL11.GL_QUADS);for(int i=0;i<xyz.length;i+=3)GL11.glVertex3d(xyz[i],xyz[i+1],xyz[i+2]);GL11.glEnd();}
+    @Override public void close(){if(terrain!=0){GL11.glDeleteLists(terrain,1);terrain=0;}terrainMap=null;}
     private static final class Dummy extends Entity {Dummy(){super(null);}@Override protected void entityInit(){}@Override protected void readEntityFromNBT(NBTTagCompound tag){}@Override protected void writeEntityToNBT(NBTTagCompound tag){}}
 }

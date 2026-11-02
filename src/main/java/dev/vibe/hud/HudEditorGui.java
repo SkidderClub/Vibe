@@ -65,6 +65,7 @@ public final class HudEditorGui extends GuiScreen {
     private HudManager.HudElement selected;
     private HudManager.HudElement dragged;
     private boolean resizing;
+    private int resizeAxis,resizeAnchorLeft,resizeAnchorTop;
     private int dragOffsetX, dragOffsetY;
     private int resizeMouseX, resizeMouseY, resizeStartWidth, resizeStartHeight;
     private float resizeStartScale;
@@ -147,6 +148,9 @@ public final class HudEditorGui extends GuiScreen {
         hits.clear();
         KawaseBlur.drawBackdrop(width, height, 8, partialTicks);
         drawRect(0, 0, width, height, 0x70000000);
+        boolean glass=OpenGlHelper.isFramebufferEnabled();
+        if(glass)dev.vibe.ui.menu.MenuGlass.begin(this,null,width,height);
+        try {
         AccountScreenStyle.window(left, top, panelWidth, panelHeight);
         AccountScreenStyle.title("HUD Editor", innerLeft, top + (compact ? 10 : 14));
         AccountScreenStyle.rawText(AccountScreenStyle.fit("Arrange your in-game overlay", panelWidth - 110), innerLeft,
@@ -156,6 +160,7 @@ public final class HudEditorGui extends GuiScreen {
         drawInspector(mouseX, mouseY);
         drawStatus();
         super.drawScreen(mouseX, mouseY, partialTicks);
+        } finally {if(glass)dev.vibe.ui.menu.MenuGlass.end();}
     }
 
     private void drawElements(int mouseX, int mouseY) {
@@ -328,6 +333,10 @@ public final class HudEditorGui extends GuiScreen {
         GuiLine.outline(bounds[0] - 1, bounds[1] - 1, bounds[2] + 1, bounds[3] + 1, ACCENT);
         MenuRoundedRenderer.rect(bounds[2] - 5, bounds[3] - 5, 10, 10, 5, BACKGROUND);
         MenuRoundedRenderer.rect(bounds[2] - 4, bounds[3] - 4, 8, 8, 4, ACCENT);
+        if(HudManager.CHAT.equals(selected.getId())){
+            MenuRoundedRenderer.rect(bounds[2]-3,(bounds[1]+bounds[3])/2-7,6,14,3,ACCENT);
+            MenuRoundedRenderer.rect((bounds[0]+bounds[2])/2-7,bounds[3]-3,14,6,3,ACCENT);
+        }
     }
 
     private void drawInspector(int mouseX, int mouseY) {
@@ -404,54 +413,24 @@ public final class HudEditorGui extends GuiScreen {
         addHit(x - 2, y - 2, x + 14, y + 14, (mouseX2, mouseY2) -> { element.setScale(element.getScale() + step); persist(); });
     }
 
-    private void drawTheme(int x, int right, int y, int mouseX, int mouseY) {
-        final HudManager.HudElement element = selected;
-        if (HudManager.GHOSTS.equals(element.getId())) {
-            final ModeSetting mode = Vibe.getInstance().getModuleManager().getModule(HudModule.class).ghosts.mode;
-            AccountScreenStyle.panel(x, y, right - x, CONTROL, SURFACE, BORDER);
-            AccountScreenStyle.rawText("Mode", x + 10, y + 6, TEXT);
-            int start = x + 8, end = right - 8, top = y + 21;
-            MenuRoundedRenderer.rect(start, top, end - start, 16, 4, BACKGROUND);
-            java.util.List<String> modes = mode.getModes();
-            for (int i = 0; i < modes.size(); i++) {
-                final String value = modes.get(i);
-                int a = start + (end - start) * i / modes.size(), b = start + (end - start) * (i + 1) / modes.size();
-                boolean active = mode.is(value), hover = hovered(a, top, b, top + 16, mouseX, mouseY);
-                if (active || hover) AccountScreenStyle.panel(a, top, b - a, 16, active ? TINT : HOVER, active ? ACCENT : BORDER);
-                AccountScreenStyle.rawText(value, (a + b - fontRendererObj.getStringWidth(value)) / 2, top + 4, active ? TEXT : MUTED);
-                addHit(a, top, b, top + 16, (mx, my) -> { mode.setValue(value); persist(); });
-            }
-            return;
-        }
-        if (HudManager.TARGET_HUD.equals(element.getId())) {
-            AccountScreenStyle.panel(x, y, right - x, CONTROL, SURFACE, BORDER);
-            AccountScreenStyle.rawText("Style", x + 10, y + 8, TEXT);
-            AccountScreenStyle.rawText(effectiveTheme(element), x + 10, y + 24, ACCENT);
-            addHit(x, y, right, y + CONTROL, (mx, my) -> {
-                ModeSetting setting = Vibe.getInstance().getModuleManager().getModule(HudModule.class).targetHud.mode;
-                java.util.List<String> modes = setting.getModes();
-                setting.setValue(modes.get((modes.indexOf(setting.getValue()) + 1) % modes.size())); persist();
-            });
-            return;
-        }
-        AccountScreenStyle.panel(x, y, right - x, CONTROL, SURFACE, BORDER);
-        AccountScreenStyle.rawText(AccountScreenStyle.fit("Theme", right - x - 20), x + 10, y + 8, TEXT);
-        int segmentsLeft = x + 8, segmentsRight = right - 8, segmentsTop = y + 21;
-        MenuRoundedRenderer.rect(segmentsLeft, segmentsTop, segmentsRight - segmentsLeft, 14, 7, BACKGROUND);
-        String current = effectiveTheme(element);
-        for (int i = 0; i < THEMES.length; i++) {
-            int segmentLeft = segmentsLeft + (segmentsRight - segmentsLeft) * i / THEMES.length;
-            int segmentRight = segmentsLeft + (segmentsRight - segmentsLeft) * (i + 1) / THEMES.length;
-            final String theme = THEMES[i];
-            boolean active = theme.equalsIgnoreCase(current), hover = hovered(segmentLeft, segmentsTop, segmentRight, segmentsTop + 14, mouseX, mouseY);
-            if (active) AccountScreenStyle.panel(segmentLeft, segmentsTop, segmentRight - segmentLeft, 14, TINT, ACCENT);
-            String name = AccountScreenStyle.fit("LiquidGlass".equals(theme) ? "Glass" : theme, segmentRight - segmentLeft - 6);
-            AccountScreenStyle.rawText(name, (segmentLeft + segmentRight - fontRendererObj.getStringWidth(name)) / 2, segmentsTop + 3,
-                    active || hover ? TEXT : MUTED);
-            addHit(segmentLeft, segmentsTop, segmentRight, segmentsTop + 14, (mouseX2, mouseY2) -> { element.setTheme(theme); persist(); });
+    private void drawTheme(int x,int right,int y,int mouseX,int mouseY){
+        final HudManager.HudElement element=selected;HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        final ModeSetting mode=HudManager.GHOSTS.equals(element.getId())?hud.ghosts.mode:HudManager.TARGET_HUD.equals(element.getId())?hud.targetHud.mode:HudManager.CUSTOM_HEALTH.equals(element.getId())?hud.customHealth.mode:null;
+        String[] themes=mode!=null?mode.getModes().toArray(new String[0]):HudManager.HOTBAR.equals(element.getId())?new String[]{"Minecraft","Fortnite","Skeet","Vibe","LiquidGlass"}:HudManager.CLOCK.equals(element.getId())||HudManager.CHAT.equals(element.getId())?new String[]{"Vibe","Skeet","LiquidGlass","Transparent"}:THEMES;
+        String current=mode==null?effectiveTheme(element):mode.getValue();
+        AccountScreenStyle.panel(x,y,right-x,CONTROL,SURFACE,BORDER);
+        if(themes.length<=3)AccountScreenStyle.rawText(mode==null?"Theme":"Style",x+8,y+6,TEXT);
+        int rows=themes.length>3?2:1,columns=(themes.length+rows-1)/rows,cellHeight=rows==1?16:(CONTROL-8)/rows;
+        for(int i=0;i<themes.length;i++){
+            final String value=themes[i];int a=x+4+(right-x-8)*(i%columns)/columns,b=x+4+(right-x-8)*(i%columns+1)/columns,top=y+(rows==1?21:4)+i/columns*cellHeight;
+            boolean active=value.equalsIgnoreCase(current),hover=hovered(a,top,b,top+cellHeight-1,mouseX,mouseY);
+            if(active||hover)AccountScreenStyle.panel(a,top,b-a-1,cellHeight-1,active?TINT:HOVER,active?ACCENT:BORDER);
+            String label="LiquidGlass".equals(value)?"Glass":value;
+            if(dev.vibe.ui.menu.MenuGlass.active())AccountScreenStyle.BODY_FONT.centered(label,a,top,b-a,cellHeight,active?TEXT:MUTED);
+            else AccountScreenStyle.rawText(label,(a+b-fontRendererObj.getStringWidth(label))/2,top+(cellHeight-8)/2,active?TEXT:MUTED);
+            addHit(a,top,b,top+cellHeight,(mx,my)->{if(mode==null)element.setTheme(value);else mode.setValue(value);persist();});
         }
     }
-
     private void drawSetting(Setting<?> setting, int x, int right, int y, int mouseX, int mouseY) {
         boolean expanded = settingHeight(setting) > headerHeight(setting);
         boolean hover = !expanded && hovered(x, y, right, y + headerHeight(setting), mouseX, mouseY);
@@ -652,8 +631,7 @@ public final class HudEditorGui extends GuiScreen {
         if (max <= 0 || bottom <= top) return;
         int track = bottom - top, thumb = dev.vibe.ui.ScrollbarDrag.thumb(track,max,12);
         int y = top + (track - thumb) * scroll / max;
-        Gui.drawRect(x, top, x + 3, bottom, BORDER);
-        RenderUtils.roundedRect(x, y, x + 3, y + thumb, 1, ACCENT);
+        dev.vibe.ui.menu.MenuScrollbar.draw(x,top,3,track,y,thumb);
         addHit(x-4,top,x+5,bottom,(mx,my)->{
             final dev.vibe.ui.ScrollbarDrag moving=new dev.vibe.ui.ScrollbarDrag(top,bottom,settings?settingsScroll:elementsScroll,max,12,my);
             drag=(ax,ay)->{if(settings)settingsScroll=moving.at(ay);else elementsScroll=moving.at(ay);};
@@ -702,6 +680,13 @@ public final class HudEditorGui extends GuiScreen {
     }
 
     private void pressCanvas(int mouseX, int mouseY) {
+        resizeAxis=0;
+        if(selected!=null&&HudManager.CHAT.equals(selected.getId())&&manager.isEnabled(selected.getId())){
+            int[] b=bounds(selected);if(Math.abs(mouseX-b[2])<=7&&Math.abs(mouseY-(b[1]+b[3])/2)<=10)resizeAxis=1;
+            else if(Math.abs(mouseY-b[3])<=7&&Math.abs(mouseX-(b[0]+b[2])/2)<=10)resizeAxis=2;
+            if(resizeAxis!=0){HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);dragged=selected;resizing=true;resizeMouseX=mouseX;resizeMouseY=mouseY;
+                resizeStartScale=selected.getScale();resizeStartWidth=hud.chat.width.getInt();resizeStartHeight=hud.chat.height.getInt();resizeAnchorLeft=selected.getLeft();resizeAnchorTop=selected.getTop();return;}
+        }
         if (selected != null && manager.isEnabled(selected.getId()) && overResizeHandle(mouseX, mouseY)) {
             dragged = selected;
             resizing = true;
@@ -814,6 +799,11 @@ public final class HudEditorGui extends GuiScreen {
     private void moveSelected(int mouseX, int mouseY) {
         if (dragged == null) return;
         if (resizing) {
+            if(resizeAxis!=0){HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+                if(resizeAxis==1)hud.chat.width.setValue((double)(resizeStartWidth+(mouseX-resizeMouseX)/previewScale/resizeStartScale));
+                else hud.chat.height.setValue((double)(resizeStartHeight+(mouseY-resizeMouseY)/previewScale/resizeStartScale));
+                dragged.setBounds(resizeAnchorLeft,resizeAnchorTop,Math.round(hud.chat.width.getFloat()*resizeStartScale),Math.round(hud.chat.height.getFloat()*resizeStartScale));
+                dragged.moveTo(resizeAnchorLeft,resizeAnchorTop,new ScaledResolution(mc));return;}
             dragged.setScale(HudResizeMath.fromDrag(resizeStartScale, resizeStartWidth, resizeStartHeight,
                     (mouseX - resizeMouseX) / previewScale, (mouseY - resizeMouseY) / previewScale));
             return;
@@ -879,6 +869,7 @@ public final class HudEditorGui extends GuiScreen {
     }
 
     private List<Setting<?>> settingsFor(String element) {
+        if(manager!=null&&!manager.overlaySettings(element).isEmpty())return new ArrayList<>(manager.overlaySettings(element));
         List<Setting<?>> settings = new ArrayList<Setting<?>>(); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); if (hud == null) return settings;
         if (HudManager.MUSIC.equals(element)) { MusicModule music = Vibe.getInstance().getModuleManager().getModule(MusicModule.class); if (music != null) { settings.add(music.hudWidth); settings.add(music.hudScale); settings.add(music.cover); settings.add(music.coverBackground); settings.add(music.progress); settings.add(music.scroll); settings.add(music.hideIdle); } }
         else if (HudManager.WATERMARK.equals(element)) { settings.add(hud.getWatermarkOutline()); settings.add(hud.getWatermarkDetails()); settings.add(hud.getWatermarkText()); }
@@ -911,12 +902,16 @@ public final class HudEditorGui extends GuiScreen {
         return headerHeight(setting);
     }
     private String effectiveTheme(HudManager.HudElement element) { if (HudManager.GHOSTS.equals(element.getId())) return Vibe.getInstance().getModuleManager().getModule(HudModule.class).ghosts.mode.getValue(); if (HudManager.TARGET_HUD.equals(element.getId())) return Vibe.getInstance().getModuleManager().getModule(HudModule.class).targetHud.mode.getValue(); if (element.getTheme() != null) return element.getTheme(); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); return hud == null ? "Vibe" : hud.getMode().getValue(); }
-    private String friendlyName(String id) { String value; if (HudManager.TARGET_HUD.equals(id)) value = "Target HUD"; else if (HudManager.ARRAY_LIST.equals(id)) value = "Array list"; else if (HudManager.SESSION_INFO.equals(id)) value = "Statistics"; else if (HudManager.MOTION_GRAPH.equals(id)) value = "Motion graph"; else if (HudManager.CPS_GRAPH.equals(id)) value = "CPS graph"; else if (HudManager.MUSIC.equals(id)) value = "Music"; else { value = id == null ? "" : id.replace('_', ' '); value = value.isEmpty() ? value : Character.toUpperCase(value.charAt(0)) + value.substring(1); } return LanguageManager.translate(value); }
+    private String friendlyName(String id) { String value; if(HudManager.CHAT.equals(id))return "Custom Chat";if(HudManager.HOTBAR.equals(id))return "Custom Hotbar";if(HudManager.CUSTOM_HEALTH.equals(id))return "Custom Health";if(HudManager.TAB.equals(id))return "Custom Tab"; if (HudManager.TARGET_HUD.equals(id)) value = "Target HUD"; else if (HudManager.ARRAY_LIST.equals(id)) value = "Array list"; else if (HudManager.SESSION_INFO.equals(id)) value = "Statistics"; else if (HudManager.MOTION_GRAPH.equals(id)) value = "Motion graph"; else if (HudManager.CPS_GRAPH.equals(id)) value = "CPS graph"; else if (HudManager.MUSIC.equals(id)) value = "Music"; else { value = id == null ? "" : id.replace('_', ' '); value = value.isEmpty() ? value : Character.toUpperCase(value.charAt(0)) + value.substring(1); } return LanguageManager.translate(value); }
     private String displayName(Setting<?> setting, String element) {
         String value = setting.getRawName();
         if (HudManager.TARGET_HUD.equals(element)) value = value.replaceFirst("(?i)^Target HUD\\s+", "");
         else if (HudManager.CLOCK.equals(element)) value = value.replaceFirst("(?i)^Clock\\s+", "");
         else if (HudManager.GHOSTS.equals(element)) value = value.replaceFirst("(?i)^Ghosts\\s+", "");
+        else if (HudManager.CHAT.equals(element)) value=value.replaceFirst("(?i)^Chat\\s+", "");
+        else if (HudManager.HOTBAR.equals(element)) value=value.replaceFirst("(?i)^Hotbar\\s+", "");
+        else if (HudManager.CUSTOM_HEALTH.equals(element)) value=value.replaceFirst("(?i)^Custom Health\\s+", "");
+        else if (HudManager.TAB.equals(element)) value=value.replaceFirst("(?i)^Tab\\s+", "");
         else if (HudManager.SCOREBOARD.equals(element)) value = value.replaceFirst("(?i)^Scoreboard\\s+", "");
         else if (HudManager.ARRAY_LIST.equals(element)) value = value.replaceFirst("(?i)^ArrayList\\s*", "").replaceFirst("(?i)^Array\\s*", "");
         else if (HudManager.NOTIFICATIONS.equals(element)) value = value.replaceFirst("(?i)^Notifications\\s+", "");

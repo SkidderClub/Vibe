@@ -12,8 +12,8 @@ public final class MenuStatusChip {
         int radius=height/2;
         int border=RenderUtils.blend(AccountScreenStyle.BORDER,color,.38F);
         int fill=RenderUtils.blend(AccountScreenStyle.SURFACE,color,.10F);
-        MenuRoundedRenderer.verticalGradient(x,y,width,height,radius,border,AccountScreenStyle.BORDER);
-        MenuRoundedRenderer.verticalGradient(x+1,y+1,width-2,height-2,radius-1,fill,AccountScreenStyle.SURFACE);
+        AccountScreenStyle.buttonPanel(x,y,width,height,RenderUtils.alpha(fill,155),border,.25F,x+width/2,y+height/2);
+        MenuRoundedRenderer.rect(x+2,y+2,width-4,1,1,RenderUtils.alpha(color,48));
         int dotY=y+(height-4)/2;
         MenuRoundedRenderer.rect(x+4,dotY-2,8,8,4,(color&0xFFFFFF)|0x24000000);
         MenuRoundedRenderer.rect(x+6,dotY,4,4,2,color);

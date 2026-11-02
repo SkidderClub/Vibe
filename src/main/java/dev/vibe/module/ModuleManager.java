@@ -34,6 +34,7 @@ public final class ModuleManager {
         register(new OofArrowsModule());
         register(new PathModule());
         register(new ItemEspModule());
+        register(new TntESPModule());
         register(new HitmarkerModule());
         register(new ChestEspModule());
         register(new BedEspModule());

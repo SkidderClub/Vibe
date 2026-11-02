@@ -1,7 +1,10 @@
 package dev.vibe.core.startup;
 
+import dev.vibe.ui.menu.MenuPalette;
+import java.io.File;
 import java.util.*;
 import net.minecraftforge.fml.common.ProgressManager;
+import net.minecraftforge.fml.relauncher.FMLInjectionData;
 import org.lwjgl.opengl.*;
 
 /** Uses Forge's current GL owner; never acquires, shares or releases the display context. */
@@ -42,7 +45,13 @@ public final class GhostStartup {
         catch (Exception e) { return false; }
     }
     private static void render() {
-        if (renderer == null) renderer = new GhostLoadingRenderer();
+        if (renderer == null) {
+            // Forge has the launcher's real game directory before Minecraft resources exist.
+            Object[] launch = FMLInjectionData.data();
+            MenuPalette palette = launch.length > 6 && launch[6] instanceof File
+                    ? MenuPalette.read(((File)launch[6]).toPath()) : MenuPalette.OCEAN;
+            renderer = new GhostLoadingRenderer(palette);
+        }
         // Vanilla loading may leave its temporary FBO bound; present on the window itself.
         boolean arb = GLContext.getCapabilities().GL_ARB_framebuffer_object;
         boolean ext = !arb && GLContext.getCapabilities().GL_EXT_framebuffer_object;

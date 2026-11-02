@@ -6,6 +6,7 @@ import net.minecraft.util.MathHelper;
 
 /** Minecraft 1.8 dry-land motion, using native AABB clipping against the local arena geometry. */
 public final class ArenaPhysics {
+    private static final Map<List<RecorderArena.Pillar>, List<AxisAlignedBB>> GEOMETRY = new WeakHashMap<>();
     public static class Body {
         public double x,y,z,vx,vy,vz,previousX,previousY,previousZ,fallDistance;
         public float yaw,previousYaw;
@@ -26,10 +27,11 @@ public final class ArenaPhysics {
         move(body,body.vx,body.vy,body.vz,sneak,pillars);
         body.vy=(body.vy-.08D)*.9800000190734863D;body.vx*=friction;body.vz*=friction;
     }
-    public static List<AxisAlignedBB> geometry(List<RecorderArena.Pillar> pillars){
+    public static synchronized List<AxisAlignedBB> geometry(List<RecorderArena.Pillar> pillars){
+        List<AxisAlignedBB> cached=GEOMETRY.get(pillars);if(cached!=null)return cached;
         List<AxisAlignedBB> boxes=new ArrayList<>();boxes.add(new AxisAlignedBB(-64,-2,-64,64,0,64));
         for(RecorderArena.Pillar p:pillars)boxes.add(new AxisAlignedBB(p.x-p.width/2,0,p.z-p.width/2,p.x+p.width/2,p.height,p.z+p.width/2));
-        boxes.add(new AxisAlignedBB(-25,0,-25,-24,16,25));boxes.add(new AxisAlignedBB(24,0,-25,25,16,25));boxes.add(new AxisAlignedBB(-24,0,-25,24,16,-24));boxes.add(new AxisAlignedBB(-24,0,24,24,16,25));return boxes;
+        boxes.add(new AxisAlignedBB(-25,0,-25,-24,16,25));boxes.add(new AxisAlignedBB(24,0,-25,25,16,25));boxes.add(new AxisAlignedBB(-24,0,-25,24,16,-24));boxes.add(new AxisAlignedBB(-24,0,24,24,16,25));cached=Collections.unmodifiableList(boxes);GEOMETRY.put(pillars,cached);return cached;
     }
     public static void move(Body b,double dx,double dy,double dz,boolean sneak,List<RecorderArena.Pillar> pillars){
         List<AxisAlignedBB> boxes=geometry(pillars);AxisAlignedBB start=b.box();

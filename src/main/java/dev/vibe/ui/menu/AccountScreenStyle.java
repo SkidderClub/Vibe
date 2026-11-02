@@ -19,7 +19,7 @@ public final class AccountScreenStyle {
 
     static { applyTheme(MenuThemes.current()); }
 
-    static void applyTheme(MenuThemes.Preset preset) {
+    static void applyTheme(MenuPalette preset) {
         BACKGROUND = preset.background;
         SURFACE = preset.surface;
         ACCENT = preset.accent;
@@ -78,6 +78,13 @@ public final class AccountScreenStyle {
         GlStateManager.scale(1.5F, 1.5F, 1);
         text(value, 0, 0, TEXT);
         GlStateManager.popMatrix();
+    }
+
+    public static void depthTitle(String value,int x,int y){
+        if(!MenuGlass.active()){title(value,x,y);return;}
+        TITLE_FONT.draw(value,x,y+2,0xB0000000);
+        TITLE_FONT.draw(value,x,y+1,RenderUtils.alpha(ACCENT,110));
+        TITLE_FONT.draw(value,x,y,TEXT);
     }
 
     public static class Button extends GuiButton {

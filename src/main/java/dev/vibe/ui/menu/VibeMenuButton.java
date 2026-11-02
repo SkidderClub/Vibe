@@ -10,8 +10,11 @@ public final class VibeMenuButton extends AccountScreenStyle.Button {
     }
 
     public VibeMenuButton(GuiButton original, String subtitle, boolean primary) {
+        this(original,subtitle,primary,original.id==4);
+    }
+    public VibeMenuButton(GuiButton original,String subtitle,boolean primary,boolean danger){
         super(original.id, original.xPosition, original.yPosition, original.width, original.height,
-                original.displayString, subtitle, primary, original.id == 4);
+                original.displayString, subtitle, primary, danger);
         this.enabled = original.enabled;
         this.visible = original.visible;
         this.packedFGColour = original.packedFGColour;

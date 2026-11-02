@@ -97,9 +97,11 @@ public final class MainMenuPresentation {
     public void draw(int width, int height, int mouseX, int mouseY) {
         Minecraft mc = Minecraft.getMinecraft();
         AccountScreenStyle.window(left, top, panelWidth, panelHeight);
-        AccountScreenStyle.title(Vibe.NAME, innerLeft, top + 16);
-        AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("v") + Vibe.VERSION, innerLeft + 52, top + 21, AccountScreenStyle.MUTED);
-        if (details) AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("Minecraft 1.8.9"), innerLeft, top + 38, AccountScreenStyle.MUTED);
+        AccountScreenStyle.depthTitle(Vibe.NAME, innerLeft, top + 16);
+        AccountScreenStyle.rawText("v" + Vibe.VERSION, innerLeft + 52, top + 22, 0xA0000000);
+        AccountScreenStyle.rawText("v" + Vibe.VERSION, innerLeft + 52, top + 21, AccountScreenStyle.TEXT);
+        int extensions=Vibe.getInstance().getExtensions()==null?0:Vibe.getInstance().getExtensions().getLoaded().size();
+        if(extensions>0)AccountScreenStyle.text(extensions+" extension"+(extensions==1?"":"s")+" loaded",innerLeft,details?top+38:top+panelHeight-16,AccountScreenStyle.MUTED);
 
         boolean accountHovered = isAccountHit(mouseX, mouseY);
         long now=System.nanoTime();float dt=Math.min(.05F,(now-lastDraw)/1e9F);lastDraw=now;

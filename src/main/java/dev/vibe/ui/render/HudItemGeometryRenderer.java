@@ -33,6 +33,8 @@ public final class HudItemGeometryRenderer {
         @Override public void close() {if(!closed) {closed=true;depth=Math.max(0,depth-1);}}
     }
     public static boolean draw(Object object,int color,Object stack) {
+        // Animated glint and enchanted bases retain Minecraft's complete native rendering path.
+        if(!(stack instanceof ItemStack)||((ItemStack)stack).hasEffect())return false;
         if(depth==0||!available||object==null||object.getClass()!=SimpleBakedModel.class)return false;
         IBakedModel model=(IBakedModel)object;
         if(UNSUPPORTED.contains(model))return false;

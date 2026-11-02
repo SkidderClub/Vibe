@@ -41,6 +41,15 @@ public final class FontLocalizationTransformer implements IClassTransformer, Opc
             // Forge's ASM 5 exposes ClassNode.methods as a raw List.
             for (Object entry : node.methods) {
                 MethodNode method = (MethodNode) entry;
+                for(org.objectweb.asm.tree.AbstractInsnNode insn=method.instructions.getFirst();insn!=null;insn=insn.getNext()){
+                    if(!(insn instanceof MethodInsnNode))continue;
+                    MethodInsnNode call=(MethodInsnNode)insn;
+                    if(!call.owner.equals(node.name)&&call.getOpcode()==INVOKEVIRTUAL
+                        &&("bindTexture".equals(call.name)||"func_110577_a".equals(call.name)||"a".equals(call.name))
+                        &&("(Lnet/minecraft/util/ResourceLocation;)V".equals(call.desc)||"(Ljy;)V".equals(call.desc))){
+                        call.setOpcode(INVOKESTATIC);call.owner="dev/vibe/hud/HudFontFilter";call.name="bind";call.desc="(Ljava/lang/Object;Ljava/lang/Object;)V";call.itf=false;
+                    }
+                }
                 if ((method.access & ACC_STATIC) != 0 || !method.desc.startsWith("(Ljava/lang/String;")) {
                     continue;
                 }

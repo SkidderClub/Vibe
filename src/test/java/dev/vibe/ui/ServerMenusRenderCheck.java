@@ -61,6 +61,7 @@ public final class ServerMenusRenderCheck {
                 }
                 ClientChangesRenderCheck.frame(960,540);Gui.drawRect(0,0,960,540,0xFFFF00FF);
                 screen.drawScreen(-1,-1,0);
+                menus.finishServerForm(new GuiScreenEvent.DrawScreenEvent.Post(screen,-1,-1,0));
                 ByteBuffer pixels=BufferUtils.createByteBuffer(960*540*4);GL11.glReadPixels(0,0,960,540,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,pixels);
                 BufferedImage image=new BufferedImage(960,540,BufferedImage.TYPE_INT_ARGB);int stale=0;
                 for(int y=0;y<540;y++)for(int x=0;x<960;x++) {

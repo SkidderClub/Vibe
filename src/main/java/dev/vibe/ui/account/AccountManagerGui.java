@@ -63,14 +63,14 @@ public final class AccountManagerGui extends GuiScreen {
         top = (height - panelHeight) / 2;
         innerLeft = left + 14;
         innerWidth = panelWidth - 28;
-        wide = panelWidth >= 500 && panelHeight >= 330;
-        bodyTop = top + (wide ? 64 : 48);
+        wide = panelWidth >= 500 && panelHeight >= 380;
+        bodyTop = top + (wide ? 64 : 44);
         statusTop = top + panelHeight - 37;
         contentBottom = statusTop - 10;
-        loginHeight = contentBottom - bodyTop >= 290 ? 40 : 30;
+        loginHeight = Math.max(22, Math.min(32, (contentBottom - bodyTop - 148) / 5));
         railLeft = innerLeft + innerWidth - 190;
         listWidth = wide ? innerWidth - 208 : innerWidth;
-        searchY = wide ? bodyTop : bodyTop + 38;
+        searchY = wide ? bodyTop : bodyTop + 48;
         listTop = searchY + 28;
         int listBottom = wide ? contentBottom : contentBottom - 30;
         rowHeight = wide ? 42 : Math.min(34, Math.max(26, listBottom - listTop));
@@ -110,7 +110,7 @@ public final class AccountManagerGui extends GuiScreen {
             addButton(7, innerLeft, bodyTop + h + 8, w, h, "Import backup", details ? "Choose a .vibeaccounts file" : "", false);
             addButton(9, innerLeft + w + 10, bodyTop + h + 8, w, h, "Export backup", details ? "Save an encrypted copy" : "", false);
             addButton(8, innerLeft, bodyTop + 2 * (h + 8), w, h, "Backup folder", details ? "Import Vibe backups" : "", false);
-            addButton(11, innerLeft + w + 10, bodyTop + 2 * (h + 8), w, h, "Cookie folder", details ? "Automatic account import" : "", true);
+
         } else if (view == View.COOKIES) {
             int w = (innerWidth - 16) / 3;
             addButton(16, innerLeft, contentBottom - 26, w, 26, "Open folder", "", true);
@@ -123,23 +123,27 @@ public final class AccountManagerGui extends GuiScreen {
         } else {
             addButton(12, left + panelWidth - 123, top + 15, 55, 24, "More", "", false);
             if (wide) {
-                boolean details = loginHeight >= 40;
-                addButton(10, railLeft, bodyTop + 18, 190, loginHeight, "Cookie login", details ? "Choose a .txt file" : "", true);
-                addButton(1, railLeft, bodyTop + 26 + loginHeight, 190, loginHeight, "Microsoft login", details ? "Continue in your browser" : "", false);
-                addButton(20, railLeft, bodyTop + 34 + 2 * loginHeight, 190, loginHeight, "Token login", details ? "Paste an access token" : "", false);
+                int step=loginHeight+4;
+                addButton(10,railLeft,bodyTop+18,190,loginHeight,"Cookie login","",true);
+                addButton(1,railLeft,bodyTop+18+step,190,loginHeight,"Microsoft login","",false);
+                addButton(20,railLeft,bodyTop+18+step*2,190,loginHeight,"Token login","",false);
+                addButton(21,railLeft,bodyTop+18+step*3,190,loginHeight,"Random offline","",false);
+                addButton(11,railLeft,bodyTop+18+step*4,190,loginHeight,"Cookie folder","Drop your cookie files here",false);
                 addButton(3, railLeft, contentBottom - 28, 119, 28, "Use account", "", true);
                 addButton(4, railLeft + 127, contentBottom - 28, 63, 28, "Remove", "", false);
-                addButton(19, railLeft, contentBottom - 62, 190, 28, "Auto Login", "", false);
+                addButton(19, railLeft, contentBottom - 62, 190, 28, "Auto login", "", false);
             } else {
                 int w = (innerWidth - 16) / 3;
                 boolean compact = w < 100;
-                addButton(10, innerLeft, bodyTop, w, 30, compact ? "Cookies" : "Cookie login", "", true);
-                addButton(1, innerLeft + w + 8, bodyTop, w, 30, compact ? "Microsoft" : "Microsoft login", "", false);
-                addButton(20, innerLeft + 2 * (w + 8), bodyTop, innerWidth - 2 * (w + 8), 30, compact ? "Token" : "Token login", "", false);
+                addButton(10, innerLeft, bodyTop, w, 20, compact ? "Cookies" : "Cookie login", "", true);
+                addButton(1, innerLeft + w + 8, bodyTop, w, 20, compact ? "Microsoft" : "Microsoft login", "", false);
+                addButton(20, innerLeft + 2 * (w + 8), bodyTop, innerWidth - 2 * (w + 8), 20, compact ? "Token" : "Token login", "", false);
+                addButton(21,innerLeft,bodyTop+24,(innerWidth-8)/2,20,"Random offline","",false);
+                addButton(11,innerLeft+(innerWidth+8)/2,bodyTop+24,(innerWidth-8)/2,20,"Cookie folder","",false);
                 int useWidth = Math.max(60, (innerWidth - 16) / 3);
                 addButton(3, innerLeft, contentBottom - 24, useWidth, 24, "Use account", "", true);
                 addButton(4, innerLeft + innerWidth - 68, contentBottom - 24, 68, 24, "Remove", "", false);
-                addButton(19, innerLeft + useWidth + 8, contentBottom - 24, innerWidth - useWidth - 84, 24, "Auto Login", "", false);
+                addButton(19, innerLeft + useWidth + 8, contentBottom - 24, innerWidth - useWidth - 84, 24, "Auto login", "", false);
             }
         }
         updateButtons();
@@ -186,7 +190,7 @@ public final class AccountManagerGui extends GuiScreen {
             else if (button.id == 17) button.displayString = accounts.getCookieFolder().isPaused() ? "Resume" : "Pause";
             else if (button.id == 19) {
                 button.enabled &= selectedAccount() != null;
-                button.displayString = accounts.isAutoLogin(selectedAccount()) ? "Disable Auto Login" : "Auto Login";
+                button.displayString = accounts.isAutoLogin(selectedAccount()) ? "Disable auto login" : "Auto login";
             }
         }
     }
@@ -201,6 +205,7 @@ public final class AccountManagerGui extends GuiScreen {
                 } else accounts.addMicrosoft();
                 break;
             case 2: mc.displayGuiScreen(new OfflineAccountGui(this, shaders, accounts)); break;
+            case 21: accounts.addOffline(dev.vibe.account.RandomUsername.generate()); break;
             case 20: mc.displayGuiScreen(new TokenAccountGui(this, shaders, accounts)); break;
             case 3:
                 if (code != null) { setClipboardString(code.userCode); copiedUntil = System.currentTimeMillis() + 4000; }
@@ -302,7 +307,7 @@ public final class AccountManagerGui extends GuiScreen {
             SkinHeads.draw(account.getUuid(), account.getName(), innerLeft + 8, y + (rowHeight - 3 - avatarSize) / 2, avatarSize);
             int textLeft = innerLeft + avatarSize + 17;
             boolean auto = accounts.isAutoLogin(account);
-            String autoLabel = dev.vibe.language.LanguageManager.translate("Auto Login");
+            String autoLabel = dev.vibe.language.LanguageManager.translate("Auto login");
             String activeLabel = dev.vibe.language.LanguageManager.translate("Active");
             int autoWidth=auto?dev.vibe.ui.menu.MenuStatusChip.width(autoLabel):0;
             int activeWidth=active?dev.vibe.ui.menu.MenuStatusChip.width(activeLabel):0;
@@ -321,22 +326,19 @@ public final class AccountManagerGui extends GuiScreen {
             int track = visibleRows * rowHeight - 3;
             int thumb = Math.max(8, track * visibleRows / entries.size());
             int y = listTop + (track - thumb) * scroll / (entries.size() - visibleRows);
-            drawRect(innerLeft + listWidth - 3, listTop, innerLeft + listWidth, listTop + track, AccountScreenStyle.BORDER);
-            RenderUtils.roundedRect(innerLeft + listWidth - 3, y, innerLeft + listWidth, y + thumb, 1, AccountScreenStyle.ACCENT);
+
+            dev.vibe.ui.menu.MenuScrollbar.draw(innerLeft+listWidth-3,listTop,3,track,y,thumb);
         }
         if (wide) {
-            AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("ADD ACCOUNT"), railLeft, bodyTop + 3, AccountScreenStyle.MUTED);
-            int y = bodyTop + 55 + 3 * loginHeight;
-            // Short windows leave no room between the login buttons and Auto Login.
-            if (y + 50 > contentBottom - 66) return;
-            AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("SELECTED ACCOUNT"), railLeft, y, AccountScreenStyle.MUTED);
-            Account account = selectedAccount();
-            if (account != null) {
-                SkinHeads.draw(account.getUuid(), account.getName(), railLeft, y + 18, 32);
-                AccountScreenStyle.rawText(AccountScreenStyle.fitRaw(account.getName(), 147), railLeft + 42, y + 21, AccountScreenStyle.TEXT);
-                AccountScreenStyle.text(isActive(account) ? "Currently playing" : account.isMicrosoft() ? "Minecraft Java" : kind(account),
-                        railLeft + 42, y + 37, isActive(account) ? AccountScreenStyle.SUCCESS : AccountScreenStyle.MUTED);
-            } else AccountScreenStyle.rawText(account == null ? dev.vibe.language.LanguageManager.translate("Select a saved account") : account.getName(), railLeft, y + 17, AccountScreenStyle.MUTED);
+            AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("Add account"), railLeft, bodyTop + 3, AccountScreenStyle.MUTED);
+            int y=contentBottom-110;
+            AccountScreenStyle.panel(railLeft,y,190,42,AccountScreenStyle.SURFACE,AccountScreenStyle.BORDER);
+            Account account=selectedAccount();
+            if(account!=null){
+                SkinHeads.draw(account.getUuid(),account.getName(),railLeft+7,y+7,28);
+                AccountScreenStyle.rawText(AccountScreenStyle.fitRaw(account.getName(),140),railLeft+43,y+7,AccountScreenStyle.TEXT);
+                AccountScreenStyle.text(isActive(account)?"Currently playing":kind(account),railLeft+43,y+24,AccountScreenStyle.MUTED);
+            }else AccountScreenStyle.text("Select a saved account",railLeft+8,y+17,AccountScreenStyle.MUTED);
         }
     }
 
@@ -394,7 +396,7 @@ public final class AccountManagerGui extends GuiScreen {
         int y = bodyTop;
         String[] lines = {
                 "This run: " + folder.getSummary(),
-                "Drop one Netscape .txt export per account into vibe/cookies.",
+                "Drop your cookie files into vibe/cookies, one Netscape .txt export per account.",
                 "valid: verified and saved. invalid: rejected or expired export.",
                 "error: check failed; move the export back to retry.",
                 "Each processed file has a .result note. Existing accounts are updated.",

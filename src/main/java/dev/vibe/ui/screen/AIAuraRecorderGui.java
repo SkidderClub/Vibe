@@ -31,11 +31,11 @@ public final class AIAuraRecorderGui extends GuiScreen {
     private void layout(){scale=Math.max(.2F,Math.min(1,Math.min((width-16)/780F,(height-16)/500F)));left=(Math.round(width/scale)-780)/2;top=(Math.round(height/scale)-500)/2;}
     public void start(boolean modelPreview){
         if(learning.busy||modelPreview&&learning.model()==null)return;
-        try{preview=modelPreview;arena=new RecorderArena(learning,System.nanoTime());configure();arena.begin(preview);arena.perspective=mc.gameSettings.thirdPersonView;arena.input(0,0,mc.gameSettings.invertMouse,Float.floatToIntBits(arena.sensitivity),Float.floatToIntBits(arena.fov),(int)Math.round(arena.reach*1000));arena.input(3,mc.gameSettings.keyBindTogglePerspective.getKeyCode(),true,arena.perspective,0,0);running=true;attackDown=false;lastTick=System.nanoTime();if(Mouse.isCreated())Mouse.setGrabbed(true);}catch(IOException e){learning.status=e.getMessage();}
+        try{preview=modelPreview;arena=new RecorderArena(learning,System.nanoTime());configure();arena.begin(preview);arena.perspective=0;arena.input(0,0,mc.gameSettings.invertMouse,Float.floatToIntBits(arena.sensitivity),Float.floatToIntBits(arena.fov),(int)Math.round(arena.reach*1000));arena.input(3,mc.gameSettings.keyBindTogglePerspective.getKeyCode(),true,arena.perspective,0,0);running=true;attackDown=false;lastTick=System.nanoTime();if(Mouse.isCreated()){Mouse.setGrabbed(true);Mouse.getDX();Mouse.getDY();}}catch(IOException e){learning.status=e.getMessage();}
     }
-    private void configure(){arena.reach=module.reach.getDouble();arena.sensitivity=mc.gameSettings.mouseSensitivity;arena.fov=mc.gameSettings.fovSetting;arena.aspect=mc.displayWidth/(double)Math.max(1,mc.displayHeight);}
+    private void configure(){arena.reach=3.0D;arena.sensitivity=mc.gameSettings.mouseSensitivity;arena.fov=mc.gameSettings.fovSetting;arena.aspect=mc.displayWidth/(double)Math.max(1,mc.displayHeight);}
     public void pause(){if(!running)return;running=false;attackDown=false;if(Mouse.isCreated())Mouse.setGrabbed(false);arena.finish();}
-    @Override public void onGuiClosed(){pause();}
+    @Override public void onGuiClosed(){pause();renderer.close();}
     @Override public void updateScreen(){
         if(!running)return;long now=System.nanoTime();if(Display.isCreated()&&!Display.isActive()||now-lastTick>350000000L){pause();return;}lastTick=now;configure();arena.tick(keys(),module.boosterAiming.getDouble(),module.boosterClicking.getDouble());
     }
@@ -45,9 +45,9 @@ public final class AIAuraRecorderGui extends GuiScreen {
         if(!running){super.handleMouseInput();return;}
         int dx=Mouse.getEventDX(),dy=Mouse.getEventDY(),wheel=Mouse.getEventDWheel(),button=Mouse.getEventButton();boolean state=Mouse.getEventButtonState();
         try{arena.input(1,button-100,state,dx,dy,wheel);}catch(IOException e){learning.status="Input log failed: "+e.getMessage();pause();return;}
-        arena.look(dx,-dy*(mc.gameSettings.invertMouse?-1:1));if(wheel!=0)arena.slot=(arena.slot+(wheel>0?8:1))%9;
+        if(wheel!=0)arena.slot=(arena.slot+(wheel>0?8:1))%9;
         if(button>=0&&state)perspectivePressed(button-100);
-        if(button>=0&&button-100==mc.gameSettings.keyBindAttack.getKeyCode()){if(state&&!attackDown){attackDown=true;arena.attackDown();}else if(!state){attackDown=false;arena.releaseAttack();}}
+        if(button>=0&&button-100==mc.gameSettings.keyBindAttack.getKeyCode()){if(state&&!attackDown){sampleMouse();attackDown=true;arena.attackDown();}else if(!state){attackDown=false;arena.releaseAttack();}}
     }
     @Override public void handleKeyboardInput()throws IOException{
         int code=Keyboard.getEventKey();boolean state=Keyboard.getEventKeyState();
@@ -55,7 +55,7 @@ public final class AIAuraRecorderGui extends GuiScreen {
             if(code==Keyboard.KEY_ESCAPE&&state){pause();return;}
             try{arena.input(2,code,state,0,0,0);}catch(IOException e){learning.status="Input log failed: "+e.getMessage();pause();return;}
             if(state&&!Keyboard.isRepeatEvent())perspectivePressed(code);
-            if(code==mc.gameSettings.keyBindAttack.getKeyCode()&&!Keyboard.isRepeatEvent()){if(state&&!attackDown){attackDown=true;arena.attackDown();}else if(!state){attackDown=false;arena.releaseAttack();}}
+            if(code==mc.gameSettings.keyBindAttack.getKeyCode()&&!Keyboard.isRepeatEvent()){if(state&&!attackDown){sampleMouse();attackDown=true;arena.attackDown();}else if(!state){attackDown=false;arena.releaseAttack();}}
             if(state)for(int i=0;i<9;i++)if(code==mc.gameSettings.keyBindsHotbar[i].getKeyCode())arena.slot=i;
         }else super.handleKeyboardInput();
     }
@@ -64,10 +64,12 @@ public final class AIAuraRecorderGui extends GuiScreen {
     void perspectivePressed(int code)throws IOException{if(running&&code==mc.gameSettings.keyBindTogglePerspective.getKeyCode())changePerspective();}
     @Override protected void mouseClicked(int x,int y,int button){if(button!=0||running)return;int mx=(int)(x/scale),my=(int)(y/scale);for(Action action:actions)if(action.enabled&&mx>=action.x&&mx<=action.x+action.w&&my>=action.y&&my<=action.y+action.h){action.run.run();return;}}
     @Override public void drawScreen(int mouseX,int mouseY,float partial){
-        if(arena!=null)renderer.render(arena,running?partial:1);else{Gui.drawRect(0,0,width,height,0xFF0B0D10);for(int x=0;x<width;x+=32)Gui.drawRect(x,0,x+1,height,0xFF11151A);for(int y=0;y<height;y+=32)Gui.drawRect(0,y,width,y+1,0xFF11151A);}
+        if(running)sampleMouse();
+        if(arena!=null&&running)renderer.render(arena,running?partial:1);else{Gui.drawRect(0,0,width,height,0xFF0B0D10);for(int x=0;x<width;x+=32)Gui.drawRect(x,0,x+1,height,0xFF11151A);for(int y=0;y<height;y+=32)Gui.drawRect(0,y,width,y+1,0xFF11151A);}
         GuiRenderState.prepare(false);if(running){live();return;}
         Gui.drawRect(0,0,width,height,0xCD08090B);layout();GL11.glPushMatrix();GL11.glScalef(scale,scale,1);try{dashboard((int)(mouseX/scale),(int)(mouseY/scale));}finally{GL11.glPopMatrix();}
     }
+    private void sampleMouse(){if(Mouse.isCreated())arena.look(Mouse.getDX(),-Mouse.getDY()*(mc.gameSettings.invertMouse?-1:1));}
     private void dashboard(int mx,int my){
         actions.clear();SkeetEditorStyle.window(left,top,left+780,top+500,"AIAura Recorder","Manual demonstrations and local training");
         card(left+18,top+38,355,207,"Recording library");card(left+389,top+38,373,207,"Personal model");

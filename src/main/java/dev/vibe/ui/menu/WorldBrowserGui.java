@@ -66,8 +66,7 @@ public final class WorldBrowserGui extends GuiSelectWorld {
             if(worlds.isEmpty())AccountScreenStyle.BODY_FONT.centered("Create a world to get started",x,listTop,w,Math.min(90,listBottom-listTop),AccountScreenStyle.MUTED);
             if(maxScroll()>0){
                 int track=listBottom-listTop,thumb=Math.max(18,track*track/(worlds.size()*ROW)),thumbY=listTop+scroll*(track-thumb)/maxScroll();
-                dev.vibe.ui.MenuRoundedRenderer.rect(x+w-4,listTop,3,track,2,AccountScreenStyle.BORDER);
-                dev.vibe.ui.MenuRoundedRenderer.rect(x+w-4,thumbY,3,thumb,2,AccountScreenStyle.MUTED);
+                MenuScrollbar.draw(x+w-4,listTop,3,track,thumbY,thumb);
             }
             for(GuiButton original:buttonList){
                 if(original.getClass()!=GuiButton.class){original.drawButton(mc,mouseX,mouseY);continue;}

@@ -127,6 +127,7 @@ public final class ClientEvents {
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final dev.vibe.ui.render.BreakProgressRenderer breakProgressRenderer = new dev.vibe.ui.render.BreakProgressRenderer();
     private final EspRenderer espRenderer = new EspRenderer();
+    private final dev.vibe.ui.render.esp.TntEspRenderer tntEspRenderer=new dev.vibe.ui.render.esp.TntEspRenderer();
     private final TargetEspRenderer targetEspRenderer = new TargetEspRenderer();
     private final dev.vibe.ui.render.TargetAreaRenderer targetAreaRenderer = new dev.vibe.ui.render.TargetAreaRenderer();
     private final SkeletalRenderer skeletalRenderer = new SkeletalRenderer();
@@ -325,6 +326,7 @@ public final class ClientEvents {
             dev.vibe.module.impl.movement.AntiAFKModule antiAFK = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.AntiAFKModule.class);
             if (antiAFK != null) antiAFK.tickEnd();
             dev.vibe.module.impl.visual.DamageESPModule damageESP = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.DamageESPModule.class);
+            dev.vibe.module.impl.visual.TntESPModule tnt=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.TntESPModule.class);if(tnt!=null)tnt.tick();
             if (damageESP != null) damageESP.tick();
         }
         if (event.phase != TickEvent.Phase.END) {
@@ -540,6 +542,8 @@ public final class ClientEvents {
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+        dev.vibe.hud.HudChat.restoreVanilla();
+        if(dev.vibe.hud.HudChat.active()){Vibe.getInstance().getHudManager().drawChat();event.setCanceled(true);}
     }
 
     @SubscribeEvent
@@ -638,6 +642,16 @@ public final class ClientEvents {
         GlStateManager.enableAlpha();
         GlStateManager.enableTexture2D();
         GlStateManager.disableBlend();
+        if(dev.vibe.hud.HudManager.replacesHotbar())event.setCanceled(true);
+    }
+
+    @SubscribeEvent public void onCustomHudReplacements(RenderGameOverlayEvent.Pre event){
+        if((event.type==RenderGameOverlayEvent.ElementType.EXPERIENCE||event.type==RenderGameOverlayEvent.ElementType.JUMPBAR)&&dev.vibe.hud.HudManager.replacesHotbar())event.setCanceled(true);
+        if(event.type==RenderGameOverlayEvent.ElementType.PLAYER_LIST&&dev.vibe.hud.HudManager.replaces(dev.vibe.hud.HudManager.TAB))event.setCanceled(true);
+        if(dev.vibe.hud.HudManager.replaces(dev.vibe.hud.HudManager.CUSTOM_HEALTH)){
+            HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+            if(event.type==RenderGameOverlayEvent.ElementType.HEALTH||event.type==RenderGameOverlayEvent.ElementType.FOOD||event.type==RenderGameOverlayEvent.ElementType.ARMOR&&hud.customHealth.armor.isEnabled())event.setCanceled(true);
+        }
     }
 
     @SubscribeEvent
@@ -689,6 +703,7 @@ public final class ClientEvents {
     @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.HIGHEST)
     public void onPreAll(RenderGameOverlayEvent.Pre event) {
         if (event.type != RenderGameOverlayEvent.ElementType.ALL) return;
+        if(dev.vibe.ui.render.AuraArenaRenderer.recorderOwnsFrame()){event.setCanceled(true);return;}
         if (FreecamModule.hideHudHook() && minecraft.currentScreen instanceof dev.vibe.hud.HudEditorGui)
             ((dev.vibe.hud.HudEditorGui) minecraft.currentScreen).captureGameView();
         if (FreecamModule.hideHudHook()) {
@@ -747,6 +762,7 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onTabListPre(RenderGameOverlayEvent.Pre event) {
+        if(dev.vibe.hud.HudManager.replaces(dev.vibe.hud.HudManager.TAB))return;
         if (event.type != RenderGameOverlayEvent.ElementType.PLAYER_LIST || minecraft.thePlayer == null || minecraft.getNetHandler() == null) {
             return;
         }
@@ -826,6 +842,7 @@ public final class ClientEvents {
         pathRenderer.render(event);
         hitmarkerRenderer.renderWorld(event);
         damageEspRenderer.render(event);
+        tntEspRenderer.render(event);
         skeletalRenderer.render(event);
         customCosmeticsRenderer.render(event);
         if (hypixel != null) hypixel.renderWorld();
@@ -1006,8 +1023,10 @@ public final class ClientEvents {
             if (chatter != null) chatter.clear();
             fogRenderer.close(); hitmarkerRenderer.close(); phoneRenderer.close();
             damageEspRenderer.close();
+            tntEspRenderer.close();
             dev.vibe.module.impl.visual.DamageESPModule damageESP = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.DamageESPModule.class);
             if (damageESP != null) damageESP.clear();
+            dev.vibe.module.impl.visual.TntESPModule tnt=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.TntESPModule.class);if(tnt!=null)tnt.clear();
             oofArrowsRenderer.clear();
             qolRenderer.clear();
             dev.vibe.module.impl.meme.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class);

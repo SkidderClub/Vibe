@@ -88,6 +88,7 @@ public final class ClientChangesRenderCheck {
             Vibe vibe = new Vibe(); set(Vibe.class,null,"instance",vibe);
             ModuleManager modules = instance(ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<Module>()); set(Vibe.class,vibe,"moduleManager",modules);
+            if(args.length>0&&args[0].equals("tnt")){dev.vibe.ui.render.esp.TntEspRenderCheck.verify(mc,modules,OUTPUT);return;}
             if(args.length>0&&args[0].equals("menu-glass")){dev.vibe.ui.menu.GlassMenusRenderCheck.verify(mc,OUTPUT);return;}
             if(args.length>0&&args[0].equals("breeze")){BreezeRenderCheck.verify(mc,modules,OUTPUT);return;}
             if(args.length>0&&args[0].equals("server-menus")){ServerMenusRenderCheck.verify(mc,modules,OUTPUT);return;}
@@ -142,6 +143,8 @@ public final class ClientChangesRenderCheck {
                 return;
             }
             if (args.length>0 && args[0].equals("hud-editor")) {
+                dev.vibe.camera.DroneCollisionsTest.registerBlocks();
+                dev.vibe.ui.render.esp.EspRenderCheck.installItemRenderer(mc);
                 HudModule hud = new HudModule();
                 set(ModuleManager.class,modules,"modules",new ArrayList<Module>(Collections.<Module>singletonList(hud)));
                 mc.displayWidth=1280; mc.displayHeight=720;
@@ -157,7 +160,7 @@ public final class ClientChangesRenderCheck {
                 editor.drawScreen(320,190,0);
                 save("hud-editor-compact.png");
                 // Every widget is drawn by its in-game renderer; without a world the ones lacking data show samples.
-                // Armor is left out: this fixture has no item renderer.
+                // Optional widgets use their live renderers with sample content outside a world.
                 MusicModule music = new MusicModule();
                 set(Module.class,music,"enabled",true);
                 set(ModuleManager.class,modules,"modules",new ArrayList<Module>(Arrays.asList(hud,music)));
@@ -207,7 +210,8 @@ public final class ClientChangesRenderCheck {
                         || anchored.getTop()+anchored.getHeight()!=resolution.getScaledHeight()-9)
                     throw new AssertionError("Scaled right/bottom anchors moved");
                 if (GL11.glGetError()!=GL11.GL_NO_ERROR) throw new AssertionError("HUD editor GL error");
-                System.out.println("HUD editor screenshots, Ghosts Static/Animated buttons and GL state passed.");
+                dev.vibe.hud.HudOverlaysRenderCheck.verify(mc,manager,hud,OUTPUT);
+                System.out.println("HUD editor screenshots, custom overlays, Ghosts Static/Animated buttons and GL state passed.");
                 return;
             }
             if (args.length>0 && args[0].equals("liquid-glass")) {

@@ -19,6 +19,8 @@ public final class RecorderArena extends ArenaPhysics.Body {
     public double playerHealth=20,damageDealt,damageTaken,lastDamage;
     public float swing;
     public float previousSwing,limbSwing,limbAmount,previousLimbAmount;
+    public float renderPartial = 1;
+    public float previousFovModifier=1,fovModifier=1;
     private int armSwingTick;private boolean swinging;
     public Enemy selected;
     public double sparkX,sparkY,sparkZ;public int sparkTicks;
@@ -32,7 +34,7 @@ public final class RecorderArena extends ArenaPhysics.Body {
     private int pendingYaw,pendingPitch,presses,missCooldown,sprintTap;private boolean previousForward;
     public RecorderArena(AuraLearning learning,long seed){this.learning=learning;random=new Random(seed);}
     public void begin(boolean preview)throws IOException{
-        this.preview=preview;x=y=z=vx=vz=fallDistance=0;vy=-.0784000015258789;previousX=previousY=previousZ=0;yaw=pitch=previousYaw=previousPitch=0;grounded=true;sprint=horizontalCollision=previousForward=swinging=false;jumpCooldown=sprintTap=armSwingTick=0;swing=previousSwing=limbSwing=limbAmount=previousLimbAmount=0;wave=kills=hits=misses=damageHits=receivedHits=ticks=keys=playerHurtTicks=playerImmuneTicks=0;playerHealth=20;damageDealt=damageTaken=lastDamage=0;enemies.clear();selected=pendingEnemy=null;memory.reset();previewBrain.reset();acquisition=heldFrame=pending=null;pendingYaw=pendingPitch=presses=mouseWheel=0;lastPressNanos=heldNanos=0;lastPressTarget=-1;nextWave=20;originNanos=System.nanoTime();session=preview?0:learning.begin();captureNext();
+        renderPartial=previousFovModifier=fovModifier=1;this.preview=preview;x=y=z=vx=vz=fallDistance=0;vy=-.0784000015258789;previousX=previousY=previousZ=0;yaw=pitch=previousYaw=previousPitch=0;grounded=true;sprint=horizontalCollision=previousForward=swinging=false;jumpCooldown=sprintTap=armSwingTick=0;swing=previousSwing=limbSwing=limbAmount=previousLimbAmount=0;wave=kills=hits=misses=damageHits=receivedHits=ticks=keys=playerHurtTicks=playerImmuneTicks=0;playerHealth=20;damageDealt=damageTaken=lastDamage=0;enemies.clear();selected=pendingEnemy=null;memory.reset();previewBrain.reset();acquisition=heldFrame=pending=null;pendingYaw=pendingPitch=presses=mouseWheel=0;lastPressNanos=heldNanos=0;lastPressTarget=-1;nextWave=20;originNanos=System.nanoTime();session=preview?0:learning.begin();captureNext();
     }
     public void finish(){if(!preview){releaseAttack();commit();learning.finish();}memory.reset();previewBrain.reset();}
     public void input(int type,int code,boolean down,int dx,int dy,int wheel)throws IOException{
@@ -41,9 +43,11 @@ public final class RecorderArena extends ArenaPhysics.Body {
     public void look(int dx,int downCounts){
         if(preview)return;pendingYaw+=dx;float beforeYaw=yaw,beforePitch=pitch;
         yaw=MouseMath.angle(yaw,dx,sensitivity);pitch=MouseMath.pitch(pitch,downCounts,sensitivity);
+        // Entity.setAngles shifts the previous angles too: mouse input is immediate, not tick-interpolated.
+        previousYaw += yaw-beforeYaw; previousPitch += pitch-beforePitch;
         pendingPitch+=Math.round((pitch-beforePitch)/MouseMath.step(sensitivity));
         if(acquisition!=null&&acquisition.mask[4]==0&&pendingEnemy!=null){
-            double[] a=AuraFeatures.angles(x,y+1.62,z,pendingEnemy.x,pendingEnemy.y+1.08,pendingEnemy.z);
+            double[] a=AuraFeatures.angles(x,y+eyeHeight(),z,pendingEnemy.x,pendingEnemy.y+1.08,pendingEnemy.z);
             double old=Math.hypot(MouseMath.wrap(a[0]-beforeYaw),a[1]-beforePitch),current=Math.hypot(MouseMath.wrap(a[0]-yaw),a[1]-pitch);
             if(current+.01<old&&(Math.abs(dx)+Math.abs(downCounts)>0)){acquisition.y[4]=(float)(eventTime()-acquisition.time)/1000;acquisition.mask[4]=1;}
         }
@@ -58,7 +62,7 @@ public final class RecorderArena extends ArenaPhysics.Body {
     public void tick(int input,double aimBoost,double clickBoost){
         keys=input;commit();previousX=x;previousY=y;previousZ=z;previousYaw=yaw;previousPitch=pitch;if(playerHurtTicks>0)playerHurtTicks--;if(playerImmuneTicks>0)playerImmuneTicks--;
         if(preview){selected=choose();AuraFeatures.Observation obs=observation(selected);if(obs.visible&&learning.model()!=null){int[] count=previewBrain.advance(learning.model(),obs,ticks*50L,aimBoost,clickBoost);yaw=MouseMath.angle(yaw,count[0],sensitivity);pitch=MouseMath.pitch(pitch,count[1],sensitivity);if(previewBrain.due(ticks*50L))for(int n=previewBrain.poll(ticks*50L);n>0;n--)attack();}else previewBrain.reset();}
-        movePlayer();for(Enemy enemy:enemies)moveEnemy(enemy);for(Enemy enemy:enemies)if(enemy.health>0)ArenaPhysics.push(this,enemy);enemies.removeIf(e->e.health<=0&&e.deadAge>16);
+        movePlayer();previousFovModifier=fovModifier;fovModifier+=((sprint?1.15F:1)-fovModifier)*.5F;for(Enemy enemy:enemies)moveEnemy(enemy);for(Enemy enemy:enemies)if(enemy.health>0)ArenaPhysics.push(this,enemy);enemies.removeIf(e->e.health<=0&&e.deadAge>16);
         if(missCooldown>0)missCooldown--;if(sparkTicks>0)sparkTicks--;previousSwing=swing;if(swinging){if(++armSwingTick>=6){armSwingTick=0;swinging=false;}}else armSwingTick=0;swing=armSwingTick/6F;
         previousLimbAmount=limbAmount;limbAmount+=(Math.min(1,(float)Math.hypot(x-previousX,z-previousZ)*4)-limbAmount)*.4F;limbSwing+=limbAmount;ticks++;
         boolean alive=false;for(Enemy e:enemies)if(e.health>0)alive=true;
@@ -75,20 +79,21 @@ public final class RecorderArena extends ArenaPhysics.Body {
         boolean changed=memory.target!=observation.targetId;pending.x=AuraFeatures.build(observation,memory,pending.time);pendingEnemy=selected;if(changed)acquisition=selected==null?null:pending;
     }
     public AuraFeatures.Observation observation(Enemy enemy){
-        AuraFeatures.Observation o=new AuraFeatures.Observation();o.eyeX=x;o.eyeY=y+1.62;o.eyeZ=z;o.yaw=yaw;o.pitch=pitch;o.vx=vx;o.vy=vy;o.vz=vz;o.grounded=grounded;o.sprint=sprint;o.leftHeld=(keys&ATTACK)!=0;o.jump=(keys&JUMP)!=0;o.sensitivity=sensitivity;o.reach=reach;
+        AuraFeatures.Observation o=new AuraFeatures.Observation();o.eyeX=x;o.eyeY=y+eyeHeight();o.eyeZ=z;o.yaw=yaw;o.pitch=pitch;o.vx=vx;o.vy=vy;o.vz=vz;o.grounded=grounded;o.sprint=sprint;o.leftHeld=(keys&ATTACK)!=0;o.jump=(keys&JUMP)!=0;o.sensitivity=sensitivity;o.reach=reach;
         o.selfHealth=playerHealth/20D;o.selfHurt=playerHurtTicks;if(enemy!=null){o.targetId=enemy.id;o.targetX=enemy.x;o.targetY=enemy.y;o.targetZ=enemy.z;o.targetVx=enemy.x-enemy.previousX;o.targetVy=enemy.y-enemy.previousY;o.targetVz=enemy.z-enemy.previousZ;o.visible=enemy.health>0;o.targetHealth=enemy.health/20D;o.targetHurt=enemy.hurtTicks;o.targetGrounded=enemy.grounded;o.targetYaw=enemy.yaw;}return o;
     }
     private Enemy choose(){
         Enemy best=null;double score=Double.MAX_VALUE;
-        for(Enemy enemy:enemies){if(enemy.health<=0||!visible(enemy))continue;double[] angle=AuraFeatures.angles(x,y+1.62,z,enemy.x,enemy.y+1.08,enemy.z);double next=Math.hypot(MouseMath.wrap(angle[0]-yaw),angle[1]-pitch)+(Math.hypot(enemy.x-x,enemy.z-z)*2);if(enemy==selected)next*=.8;if(next<score){score=next;best=enemy;}}
+        for(Enemy enemy:enemies){if(enemy.health<=0||!visible(enemy))continue;double[] angle=AuraFeatures.angles(x,y+eyeHeight(),z,enemy.x,enemy.y+1.08,enemy.z);double next=Math.hypot(MouseMath.wrap(angle[0]-yaw),angle[1]-pitch)+(Math.hypot(enemy.x-x,enemy.z-z)*2);if(enemy==selected)next*=.8;if(next<score){score=next;best=enemy;}}
         return best;
     }
-    public boolean visible(Enemy enemy){AuraFeatures.Observation o=observation(enemy);if(!AuraFeatures.inView(o,fov,aspect))return false;double distance=Math.sqrt((enemy.x-x)*(enemy.x-x)+(enemy.y+1.08-y-1.62)*(enemy.y+1.08-y-1.62)+(enemy.z-z)*(enemy.z-z));return !occluded(enemy.x,enemy.y+1.08,enemy.z,distance);}
-    private boolean occluded(double ex,double ey,double ez,double distance){return occludedBetween(x,y+1.62,z,ex,ey,ez);}
+    public boolean visible(Enemy enemy){AuraFeatures.Observation o=observation(enemy);if(!AuraFeatures.inView(o,fov,aspect))return false;double distance=Math.sqrt((enemy.x-x)*(enemy.x-x)+(enemy.y+1.08-y-eyeHeight())*(enemy.y+1.08-y-eyeHeight())+(enemy.z-z)*(enemy.z-z));return !occluded(enemy.x,enemy.y+1.08,enemy.z,distance);}
+    private boolean occluded(double ex,double ey,double ez,double distance){return occludedBetween(x,y+eyeHeight(),z,ex,ey,ez);}
     private boolean occludedBetween(double sx,double sy,double sz,double ex,double ey,double ez){for(Pillar p:pillars)if(intersect(sx,sy,sz,ex,ey,ez,p.x-p.width/2,0,p.z-p.width/2,p.x+p.width/2,p.height,p.z+p.width/2)!=null)return true;return false;}
     private void attack(){
         if(missCooldown>0)return;if(!swinging||armSwingTick>=3||armSwingTick<0){armSwingTick=-1;swinging=true;}Enemy hitEnemy=null;double[] point=null;double best=Double.MAX_VALUE;
-        for(Enemy enemy:enemies){if(enemy.health<=0)continue;double[] hit=ray(enemy,reach,.1);if(hit!=null){double d=Math.sqrt((hit[0]-x)*(hit[0]-x)+(hit[1]-y-1.62)*(hit[1]-y-1.62)+(hit[2]-z)*(hit[2]-z));if(d<best&&!occluded(hit[0],hit[1],hit[2],d)){hitEnemy=enemy;best=d;point=hit;}}}
+        double sx=previousX+(x-previousX)*renderPartial,sy=previousY+(y-previousY)*renderPartial+eyeHeight(),sz=previousZ+(z-previousZ)*renderPartial;
+        for(Enemy enemy:enemies){if(enemy.health<=0)continue;double[] hit=ray(enemy,reach,.1);if(hit!=null){double d=Math.sqrt((hit[0]-sx)*(hit[0]-sx)+(hit[1]-sy)*(hit[1]-sy)+(hit[2]-sz)*(hit[2]-sz));if(d<best&&!occludedBetween(sx,sy,sz,hit[0],hit[1],hit[2])){hitEnemy=enemy;best=d;point=hit;}}}
         if(hitEnemy==null){misses++;missCooldown=10;return;}hits++;sparkX=point[0];sparkY=point[1];sparkZ=point[2];sparkTicks=8;
         double damage=fallDistance>0&&!grounded?1.5:1;boolean fresh=hitEnemy.immuneTicks<=10;
         if(!fresh&&damage<=hitEnemy.lastDamage)return;double applied=fresh?damage:damage-hitEnemy.lastDamage;hitEnemy.lastDamage=damage;hitEnemy.health-=applied;damageDealt+=applied;damageHits++;
@@ -97,7 +102,13 @@ public final class RecorderArena extends ArenaPhysics.Body {
         if(hitEnemy.health<=0)kills++;
     }
     private double[] ray(Enemy e,double length){return ray(e,length,0);}
-    private double[] ray(Enemy e,double length,double border){double yawRad=Math.toRadians(yaw),pitchRad=Math.toRadians(pitch);return intersect(x,y+1.62,z,x-Math.sin(yawRad)*Math.cos(pitchRad)*length,y+1.62-Math.sin(pitchRad)*length,z+Math.cos(yawRad)*Math.cos(pitchRad)*length,e.x-.3-border,e.y-border,e.z-.3-border,e.x+.3+border,e.y+1.8+border,e.z+.3+border);}
+    private double[] ray(Enemy e,double length,double border){
+        double t=renderPartial,sx=previousX+(x-previousX)*t,sy=previousY+(y-previousY)*t+eyeHeight(),sz=previousZ+(z-previousZ)*t;
+        double ex=e.previousX+(e.x-e.previousX)*t,ey=e.previousY+(e.y-e.previousY)*t,ez=e.previousZ+(e.z-e.previousZ)*t;
+        double yawRad=Math.toRadians(cameraYaw(renderPartial)),pitchRad=Math.toRadians(cameraPitch(renderPartial));
+        return intersect(sx,sy,sz,sx-Math.sin(yawRad)*Math.cos(pitchRad)*length,sy-Math.sin(pitchRad)*length,sz+Math.cos(yawRad)*Math.cos(pitchRad)*length,
+                ex-.3-border,ey-border,ez-.3-border,ex+.3+border,ey+1.8+border,ez+.3+border);
+    }
     public static double[] intersect(double sx,double sy,double sz,double ex,double ey,double ez,double minX,double minY,double minZ,double maxX,double maxY,double maxZ){
         double[] start={sx,sy,sz},delta={ex-sx,ey-sy,ez-sz},min={minX,minY,minZ},max={maxX,maxY,maxZ};double low=0,high=1;
         for(int axis=0;axis<3;axis++){if(Math.abs(delta[axis])<1e-10){if(start[axis]<min[axis]||start[axis]>max[axis])return null;}else{double a=(min[axis]-start[axis])/delta[axis],b=(max[axis]-start[axis])/delta[axis];if(a>b){double temp=a;a=b;b=temp;}low=Math.max(low,a);high=Math.min(high,b);if(low>high)return null;}}
@@ -131,6 +142,8 @@ public final class RecorderArena extends ArenaPhysics.Body {
     }
     public float cameraYaw(float partial){return preview?previousYaw+(float)MouseMath.wrap(yaw-previousYaw)*partial:yaw;}
     public float cameraPitch(float partial){return preview?previousPitch+(pitch-previousPitch)*partial:pitch;}
+    public float eyeHeight(){return (keys&SNEAK)!=0?1.54F:1.62F;}
+    public float viewFov(float partial){return fov*(previousFovModifier+(fovModifier-previousFovModifier)*partial);}
     public void cyclePerspective(){perspective=(perspective+1)%3;}
     public float swingProgress(float partial){float delta=swing-previousSwing;if(delta<0)delta++;return previousSwing+delta*partial;}
 }

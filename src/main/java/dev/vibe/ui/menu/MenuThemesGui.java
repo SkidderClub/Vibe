@@ -25,7 +25,7 @@ public final class MenuThemesGui extends GuiScreen {
         buttonList.add(new AccountScreenStyle.Button(0, left + panelWidth - 64, top + 14, 48, 24, "Back", "", false, false));
         int rowHeight = (panelHeight - 86) / 3;
         int cellWidth = (panelWidth - 40) / 2;
-        for (MenuThemes.Preset preset : MenuThemes.Preset.values()) {
+        for (MenuPalette preset : MenuPalette.values()) {
             int index = preset.ordinal();
             buttonList.add(new PresetButton(10 + index, left + 16 + index % 2 * (cellWidth + 8),
                     top + 58 + index / 2 * rowHeight, cellWidth, rowHeight - 8, preset));
@@ -47,8 +47,8 @@ public final class MenuThemesGui extends GuiScreen {
 
     @Override protected void actionPerformed(GuiButton button) {
         if (button.id == 0) mc.displayGuiScreen(parent);
-        else if (button.id >= 10 && button.id < 10 + MenuThemes.Preset.values().length)
-            saveFailed = !MenuThemes.select(MenuThemes.Preset.values()[button.id - 10]);
+        else if (button.id >= 10 && button.id < 10 + MenuPalette.values().length)
+            saveFailed = !MenuThemes.select(MenuPalette.values()[button.id - 10]);
     }
 
     @Override protected void keyTyped(char character, int key) throws IOException {
@@ -57,8 +57,8 @@ public final class MenuThemesGui extends GuiScreen {
     }
 
     private static final class PresetButton extends GuiButton {
-        private final MenuThemes.Preset preset;
-        PresetButton(int id, int x, int y, int width, int height, MenuThemes.Preset preset) {
+        private final MenuPalette preset;
+        PresetButton(int id, int x, int y, int width, int height, MenuPalette preset) {
             super(id, x, y, width, height, preset.label); this.preset = preset;
         }
         @Override public void drawButton(Minecraft mc, int mouseX, int mouseY) {

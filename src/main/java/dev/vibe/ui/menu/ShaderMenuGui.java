@@ -15,7 +15,7 @@ public final class ShaderMenuGui extends GuiScreen {
     private final GuiScreen parent;
     private final MainMenuShaderManager shaders;
     private static final int COLUMNS = 2;
-    private static final int ROW_HEIGHT = 28;
+    private static final int ROW_HEIGHT = 96;
     private int left, top, panelWidth, panelHeight, listTop, columnWidth;
     private int scrollRow;
     private int visibleRows;
@@ -29,7 +29,7 @@ public final class ShaderMenuGui extends GuiScreen {
     public void initGui() {
         buttonList.clear();
         List<String> presets = shaders.getPresets();
-        panelWidth = Math.min(480, width - 24);
+        panelWidth = Math.min(560, width - 24);
         panelHeight = Math.min(420, height - 20);
         left = (width - panelWidth) / 2; top = (height - panelHeight) / 2;
         listTop = top + 72;
@@ -44,7 +44,7 @@ public final class ShaderMenuGui extends GuiScreen {
             int row = slot / COLUMNS;
             int buttonLeft = left + 14 + column * (columnWidth + 6);
             String label = preset;
-            buttonList.add(new AccountScreenStyle.Button(PRESET_ID + slot, buttonLeft, listTop + row * ROW_HEIGHT, columnWidth, 24, label, "", preset.equals(shaders.getSelected()), false));
+            buttonList.add(new ShaderCard(PRESET_ID+slot,buttonLeft,listTop+row*ROW_HEIGHT,columnWidth,ROW_HEIGHT-6,preset));
         }
         int buttonWidth = (panelWidth - 40) / 3;
         int footer = top + panelHeight - 38;
@@ -81,6 +81,9 @@ public final class ShaderMenuGui extends GuiScreen {
         GlStateManager.enableBlend();
         GlStateManager.color(1, 1, 1, 1);
         Gui.drawRect(0, 0, width, height, 0x85000000);
+        updatePreview();
+        MenuGlass.begin(this,shaders,width,height);
+        try{
         AccountScreenStyle.window(left, top, panelWidth, panelHeight);
         AccountScreenStyle.title(dev.vibe.language.LanguageManager.translate("Shaders"), left + 14, top + 14);
         AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("Active shader") + ": " + shaders.getSelected(), left + 14, top + 39, AccountScreenStyle.ACCENT);
@@ -90,6 +93,7 @@ public final class ShaderMenuGui extends GuiScreen {
             AccountScreenStyle.text(AccountScreenStyle.fit(dev.vibe.language.LanguageManager.translate("Shader unavailable on this OpenGL profile"), panelWidth - 28), left + 14, top + panelHeight - 51, AccountScreenStyle.ERROR);
         }
         super.drawScreen(mouseX, mouseY, partialTicks);
+        }finally{MenuGlass.end();}
     }
 
     @Override
@@ -132,11 +136,47 @@ public final class ShaderMenuGui extends GuiScreen {
         int travel = trackHeight - thumbHeight;
         int maxScroll = Math.max(1, totalRows - visibleRows);
         int thumbTop = top + Math.round(travel * (scrollRow / (float) maxScroll));
-        Gui.drawRect(left + panelWidth - 10, top, left + panelWidth - 8, bottom, AccountScreenStyle.BORDER);
-        Gui.drawRect(left + panelWidth - 10, thumbTop, left + panelWidth - 8, thumbTop + thumbHeight, AccountScreenStyle.ACCENT);
+        MenuScrollbar.draw(left+panelWidth-10,top,3,trackHeight,thumbTop,thumbHeight);
     }
 
     private String compact(String value, int length) {
         return value.length() <= length ? value : value.substring(0, Math.max(1, length - 1)) + "…";
     }
-}
+    private final java.util.LinkedHashMap<String,net.minecraft.client.shader.Framebuffer> thumbnails=new java.util.LinkedHashMap<String,net.minecraft.client.shader.Framebuffer>(12,.75F,true);
+    private final java.util.Set<String> unavailable=new java.util.HashSet<>();
+    private long nextPreview=System.nanoTime()+300000000L;
+    private void updatePreview(){
+        if(System.nanoTime()<nextPreview||!net.minecraft.client.renderer.OpenGlHelper.isFramebufferEnabled())return;
+        for(GuiButton b:buttonList)if(b instanceof ShaderCard){String name=((ShaderCard)b).preset;
+            if(thumbnails.containsKey(name)||unavailable.contains(name))continue;
+            nextPreview=System.nanoTime()+150000000L;
+            net.minecraft.client.shader.Framebuffer snapshot;
+            try{snapshot=shaders.thumbnail(name);}catch(RuntimeException error){unavailable.add(name);return;}
+            if(snapshot==null)unavailable.add(name);else{
+                thumbnails.put(name,snapshot);
+                while(thumbnails.size()>8){String key=thumbnails.keySet().iterator().next();thumbnails.remove(key).deleteFramebuffer();}
+            }
+            return;
+        }
+    }
+    @Override public void onGuiClosed(){for(net.minecraft.client.shader.Framebuffer f:thumbnails.values())f.deleteFramebuffer();thumbnails.clear();}
+    private final class ShaderCard extends GuiButton {
+        final String preset;
+        ShaderCard(int id,int x,int y,int w,int h,String preset){super(id,x,y,w,h,preset);this.preset=preset;}
+        @Override public void drawButton(net.minecraft.client.Minecraft mc,int mx,int my){
+            hovered=mx>=xPosition&&my>=yPosition&&mx<xPosition+width&&my<yPosition+height;
+            boolean selected=preset.equals(shaders.getSelected());
+            AccountScreenStyle.buttonPanel(xPosition,yPosition,width,height,AccountScreenStyle.SURFACE,selected?AccountScreenStyle.ACCENT:AccountScreenStyle.BORDER,hovered?.6F:0,mx,my);
+            AccountScreenStyle.text(AccountScreenStyle.fit(preset.replace(".frag",""),width-16),xPosition+8,yPosition+8,selected?AccountScreenStyle.ACCENT:AccountScreenStyle.TEXT);
+            net.minecraft.client.shader.Framebuffer f=thumbnails.get(preset);
+            if(f==null){AccountScreenStyle.text(unavailable.contains(preset)?"Preview unavailable":"Preparing preview",xPosition+8,yPosition+42,AccountScreenStyle.MUTED);return;}
+            GlStateManager.enableTexture2D();GlStateManager.enableBlend();GlStateManager.color(1,1,1,1);f.bindFramebufferTexture();
+            float x=xPosition+6,y=yPosition+25,w=width-12,h=height-31;
+            org.lwjgl.opengl.GL11.glBegin(org.lwjgl.opengl.GL11.GL_QUADS);
+            org.lwjgl.opengl.GL11.glTexCoord2f(0,1);org.lwjgl.opengl.GL11.glVertex2f(x,y);
+            org.lwjgl.opengl.GL11.glTexCoord2f(0,0);org.lwjgl.opengl.GL11.glVertex2f(x,y+h);
+            org.lwjgl.opengl.GL11.glTexCoord2f(1,0);org.lwjgl.opengl.GL11.glVertex2f(x+w,y+h);
+            org.lwjgl.opengl.GL11.glTexCoord2f(1,1);org.lwjgl.opengl.GL11.glVertex2f(x+w,y);
+            org.lwjgl.opengl.GL11.glEnd();
+        }
+    }}

@@ -60,12 +60,27 @@ public final class SkinHeads {
         try {
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-            Gui.drawScaledCustomSizeModalRect(x, y, 8, 8, 8, 8, size, size, 64, 64);
-            Gui.drawScaledCustomSizeModalRect(x, y, 40, 8, 8, 8, size, size, 64, 64);
+            face(x,y,size,8);
+            face(x,y,size,40);
         } finally {
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, minFilter);
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, magFilter);
         }
+    }
+
+    private static void face(int x,int y,int size,int u){
+        float radius=Math.max(1,size*.12F);
+        GL11.glBegin(GL11.GL_TRIANGLE_FAN);
+        GL11.glTexCoord2f((u+4)/64F,12/64F);GL11.glVertex2f(x+size/2F,y+size/2F);
+        for(int corner=0;corner<4;corner++)for(int step=0;step<=6;step++){
+            double angle=Math.toRadians(-90+corner*90+step*15);
+            float xx=(corner==0||corner==1?size-radius:radius)+(float)Math.cos(angle)*radius;
+            float yy=(corner<2?corner==0?radius:size-radius:corner==2?size-radius:radius)+(float)Math.sin(angle)*radius;
+            GL11.glTexCoord2f((u+xx/size*8)/64F,(8+yy/size*8)/64F);GL11.glVertex2f(x+xx,y+yy);
+        }
+        // Close at the first perimeter point, preserving the skin's UV scale.
+        GL11.glTexCoord2f((u+(size-radius)/size*8)/64F,8/64F);GL11.glVertex2f(x+size-radius,y);
+        GL11.glEnd();
     }
 
     private static void request(Minecraft mc, UUID id, String name, Head head) {

@@ -1,5 +1,6 @@
 package dev.vibe.core.startup;
 
+import dev.vibe.ui.menu.MenuPalette;
 import java.awt.*;
 import java.awt.font.FontRenderContext;
 import java.awt.font.LineMetrics;
@@ -14,18 +15,22 @@ import org.lwjgl.opengl.*;
 
 /** Early loading UI, independent of Minecraft fonts, resource packs and GL state caches. */
 public final class GhostLoadingRenderer implements AutoCloseable {
-    private static final int BACKGROUND = 0xFF101114, FOREGROUND = 0xFFEDEEF0;
-    private static final int SECONDARY = 0xFF969AA3, MUTED = 0xFF686D77, TRACK = 0xFF2A2D34;
+    private static final int FOREGROUND = 0xFFEDEEF0, MUTED = 0xFF828D9C;
     private static final int TEXT_SCALE = 3, TEXT_CACHE_LIMIT = 24;
     private static final FontRenderContext METRICS = new FontRenderContext(null, true, true);
     private static final Font TITLE = font(44, Font.BOLD), SMALL_TITLE = font(32, Font.BOLD);
     private static final Font LABEL = font(13, Font.PLAIN), DETAIL = font(11, Font.PLAIN), META = font(10, Font.PLAIN);
 
     private final GhostArt ghost = new GhostArt();
+    private final MenuPalette palette;
+    private final StartupGlass glass;
     private final Map<String, Text> textCache = new LinkedHashMap<String, Text>(32, .75F, true);
     private String progressStage = "";
     private float displayedProgress;
     private long lastFrame = -1;
+
+    public GhostLoadingRenderer() { this(MenuPalette.OCEAN); }
+    public GhostLoadingRenderer(MenuPalette palette) { this.palette = palette; glass = new StartupGlass(palette); }
 
     public void draw(int width, int height, List<GhostStartup.Stage> stages, long millis) {
         int active = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
@@ -55,48 +60,61 @@ public final class GhostLoadingRenderer implements AutoCloseable {
             GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadIdentity(); GL11.glOrtho(0, w, h, 0, -1, 1);
             GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glLoadIdentity();
 
-            rect(0, 0, w, h, BACKGROUND);
             boolean compact = h < 360 || w < 480;
-            float margin = compact ? 24 : 40, contentWidth = Math.min(520, w - margin * 2);
-            float left = snap((w - contentWidth) / 2, scale), right = left + contentWidth;
-            float top = snap(compact ? Math.max(18, (h - 160) / 2) : h * .5F - 108, scale);
-            float icon = compact ? 56 : 88, gap = compact ? 14 : 20;
+            float margin = compact ? 16 : 40, padding = compact ? 20 : 48;
+            float cardWidth = Math.min(640, w - margin * 2), cardHeight = Math.min(compact ? 208 : 330, h - margin * 2);
+            float cardLeft = snap((w - cardWidth) / 2, scale), cardTop = snap((h - cardHeight) / 2, scale);
+            glass.draw(width, height, scale, cardLeft, cardTop, cardWidth, cardHeight, millis);
+            float left = cardLeft + padding, contentWidth = cardWidth - padding * 2, right = left + contentWidth;
+            boolean tight = compact && cardHeight < 190;
+            float top = snap(cardTop + (compact ? tight ? 24 : 28 : 60), scale);
+            float icon = compact ? tight ? 44 : 52 : 80, gap = compact ? 14 : 20;
             Font title = compact ? SMALL_TITLE : TITLE;
             ghost.draw(left, top, icon, icon, true, false, false, false, 0, 1, millis, 12);
-            text("Vibe", title, left + icon + gap, snap(top + (icon - lineHeight(title)) / 2, scale), FOREGROUND);
+            float titleY = snap(top + (icon - lineHeight(title)) / 2 - (compact ? 0 : 10), scale);
+            text("Vibe", title, left + icon + gap, titleY, FOREGROUND);
+            if (!compact) text("Loading Minecraft", LABEL, left + icon + gap, titleY + lineHeight(title) + 2, palette.muted);
 
-            float y = snap(top + icon + (compact ? 24 : 38), scale);
+            float y = snap(cardTop + cardHeight - (compact ? 84 : 125), scale);
+            StartupGlass.rounded(left - 14, y - 14, contentWidth + 28, 84, 12, 0xC4000000 | palette.background & 0xFFFFFF);
             GhostStartup.Stage current = stages.isEmpty() ? null : stages.get(stages.size() - 1);
             boolean determinate = current != null && current.steps > 0;
             String titleText = current == null || current.title.isEmpty() ? "Preparing Minecraft" : current.title;
             String percent = determinate ? Math.round(current.ratio() * 100) + "%" : "";
             text(fit(titleText, LABEL, contentWidth - measure(percent, LABEL) - 24), LABEL, left, y, FOREGROUND);
-            text(percent, LABEL, right - measure(percent, LABEL), y, SECONDARY);
+            text(percent, LABEL, right - measure(percent, LABEL), y, palette.muted);
 
-            float barY = snap(y + 28, scale), barHeight = 2;
-            rect(left, barY, contentWidth, barHeight, TRACK);
+            float barY = snap(y + 28, scale), barHeight = 3;
+            StartupGlass.rounded(left, barY, contentWidth, barHeight, 1.5F, 0x42FFFFFF);
             if (determinate) {
                 String identity = stages.get(0).title + '\n' + current.title + '\n' + current.steps;
                 float amount = progress(identity, current.ratio(), millis);
-                rect(left, barY, contentWidth * amount, barHeight, 0xFFDADEE5);
+                progressBar(left, barY, contentWidth * amount, barHeight);
             } else {
                 progressStage = ""; lastFrame = millis;
                 float segment = contentWidth * .16F;
                 float travel = (float)((Math.sin(millis / 650D) + 1) * .5);
-                rect(left + (contentWidth - segment) * travel, barY, segment, barHeight, 0xFFDADEE5);
+                progressBar(left + (contentWidth - segment) * travel, barY, segment, barHeight);
             }
             String message = current == null ? "" : current.message;
             String count = determinate ? current.step + " of " + current.steps : "";
-            text(fit(message, DETAIL, contentWidth - measure(count, DETAIL) - 20), DETAIL, left, barY + 14, SECONDARY);
+            text(fit(message, DETAIL, contentWidth - measure(count, DETAIL) - 20), DETAIL, left, barY + 14, palette.muted);
             text(count, DETAIL, right - measure(count, DETAIL), barY + 14, MUTED);
 
-            text("Minecraft 1.8.9", META, margin, h - (compact ? 22 : 32), MUTED);
+            if (!compact) text("Minecraft 1.8.9", META, margin, h - 32, MUTED);
         } finally {
             GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPopMatrix();
             GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPopMatrix(); GL11.glMatrixMode(matrixMode);
             if (shaders) GL20.glUseProgram(program);
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture); GL13.glActiveTexture(active); GL11.glPopAttrib();
         }
+    }
+
+    private void progressBar(float x, float y, float width, float height) {
+        if (width <= 0) return;
+        StartupGlass.rounded(x - 3, y - 3, width + 6, height + 6, 4.5F, 0x10000000 | palette.accent & 0xFFFFFF);
+        StartupGlass.rounded(x - 1, y - 1, width + 2, height + 2, 2.5F, 0x24000000 | palette.accent & 0xFFFFFF);
+        StartupGlass.rounded(x, y, width, height, 1.5F, palette.light);
     }
 
     /** A brief catch-up to the measured Forge step; never advances beyond that step. */
@@ -174,10 +192,5 @@ public final class GhostLoadingRenderer implements AutoCloseable {
         @Override public void close() { GL11.glDeleteTextures(texture); }
     }
     private static void color(int c) { GL11.glColor4f((c >> 16 & 255) / 255F, (c >> 8 & 255) / 255F, (c & 255) / 255F, (c >>> 24) / 255F); }
-    private static void rect(float x, float y, float w, float h, int c) {
-        if (w <= 0) return;
-        GL11.glDisable(GL11.GL_TEXTURE_2D); color(c); GL11.glBegin(GL11.GL_QUADS);
-        GL11.glVertex2f(x, y); GL11.glVertex2f(x, y + h); GL11.glVertex2f(x + w, y + h); GL11.glVertex2f(x + w, y); GL11.glEnd();
-    }
-    @Override public void close() { ghost.close(); for (Text text : textCache.values()) text.close(); textCache.clear(); }
+    @Override public void close() { glass.close(); ghost.close(); for (Text text : textCache.values()) text.close(); textCache.clear(); }
 }

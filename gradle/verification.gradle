@@ -181,6 +181,8 @@ registerRenderCheck('verifyHudRendering', 'dev.vibe.ui.ClientChangesRenderCheck'
         'Checks target HUD styles, particles, clock, game-view background, scales and editor framebuffers.', false) {
     args 'hud-refresh'
 }
+registerRenderCheck('verifyTntEsp','dev.vibe.ui.ClientChangesRenderCheck','tnt-esp-check',
+        'Checks predicted TNT blast outlines, depth and native GL state restoration.',false){args 'tnt'}
 registerRenderCheck('verifyHudVisuals', 'dev.vibe.ui.ClientChangesRenderCheck', 'hud-visuals-check',
         'Checks uniform ArrayList backgrounds, continuous outlines, OOF arrows, domain animation and native item pixels/performance.', false) {
     args 'hud-visuals'

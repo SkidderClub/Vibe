@@ -11,6 +11,7 @@ public final class ClockSettings {
     public final BooleanSetting seconds, smooth, numbers, digital, date, twelveHour;
     public final NumberSetting diameter;
     public final ColorSetting face, marks, hands, secondHand, text;
+    public final ColorSetting rim, shadow, minuteHand, hub, minorMarks, numerals, dateText;
 
     public ClockSettings(Function<Setting<?>, Setting<?>> register) {
         display=add(register,new ModeSetting("Clock Display","Digital","Digital","Analog"));
@@ -18,7 +19,7 @@ public final class ClockSettings {
         seconds=add(register,new BooleanSetting("Clock Seconds",true));
         smooth=add(register,new BooleanSetting("Clock Smooth Seconds",true,()->display.is("Analog")&&seconds.isEnabled()));
         numbers=add(register,new BooleanSetting("Clock Numbers",true,()->display.is("Analog")));
-        digital=add(register,new BooleanSetting("Clock Digital Readout",true,()->display.is("Analog")));
+        digital=add(register,new BooleanSetting("Clock Show Digital",false,()->display.is("Analog")));
         date=add(register,new BooleanSetting("Clock Date",false));
         twelveHour=add(register,new BooleanSetting("Clock 12 Hour",false));
         face=add(register,new ColorSetting("Clock Face",0xE9151E2C,()->display.is("Analog")));
@@ -26,6 +27,13 @@ public final class ClockSettings {
         hands=add(register,new ColorSetting("Clock Hands",0xFFF3F7FF,()->display.is("Analog")));
         secondHand=add(register,new ColorSetting("Clock Second Hand",0xFF5FE1CD,()->display.is("Analog")&&seconds.isEnabled()));
         text=add(register,new ColorSetting("Clock Text",0xFFF3F7FF));
+        rim=add(register,new ColorSetting("Clock Rim",0x44899DB9,()->display.is("Analog")));
+        shadow=add(register,new ColorSetting("Clock Shadow",0x23000000,()->display.is("Analog")));
+        minuteHand=add(register,new ColorSetting("Clock Minute Hand",0xFFF3F7FF,()->display.is("Analog")));
+        hub=add(register,new ColorSetting("Clock Centre",0xFF5FE1CD,()->display.is("Analog")));
+        minorMarks=add(register,new ColorSetting("Clock Minute Markers",0xFFA7B7CA,()->display.is("Analog")));
+        numerals=add(register,new ColorSetting("Clock Numerals",0xFFF3F7FF,()->display.is("Analog")&&numbers.isEnabled()));
+        dateText=add(register,new ColorSetting("Clock Date Color",0xFFA7B7CA,()->date.isEnabled()));
     }
     private <T extends Setting<?>> T add(Function<Setting<?>,Setting<?>> register,T setting) {
         register.apply(setting);all.add(setting);return setting;

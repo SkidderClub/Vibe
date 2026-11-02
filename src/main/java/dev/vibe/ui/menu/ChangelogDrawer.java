@@ -73,8 +73,8 @@ final class ChangelogDrawer {
                 }
             }
             if (maxScroll() > 0) {
-                MenuRoundedRenderer.rect(x + width - 17, contentTop, 3, contentBottom - contentTop, 1, AccountScreenStyle.BORDER);
-                MenuRoundedRenderer.rect(x + width - 17, thumbTop(), 3, thumbHeight(), 1, AccountScreenStyle.ACCENT);
+
+                MenuScrollbar.draw(x+width-17,contentTop,3,contentBottom-contentTop,thumbTop(),thumbHeight());
             }
             AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("Scroll for more"), x + 16, y + height - 16, AccountScreenStyle.MUTED);
         }

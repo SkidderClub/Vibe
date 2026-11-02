@@ -90,13 +90,13 @@ public final class MenuGlass {
         }
     }
     public static boolean pane(int x,int y,int width,int height,int radius,int fill,int border,boolean mainWindow){return pane(x,y,width,height,radius,fill,border,mainWindow,MenuThemes.current());}
-    static boolean pane(int x,int y,int width,int height,int radius,int fill,int border,boolean mainWindow,MenuThemes.Preset palette){
+    static boolean pane(int x,int y,int width,int height,int radius,int fill,int border,boolean mainWindow,MenuPalette palette){
         return pane(x,y,width,height,radius,fill,border,mainWindow,palette,0,.5F,.5F);
     }
     static boolean button(int x,int y,int width,int height,int fill,int border,float hover,float pointerX,float pointerY){
         return pane(x,y,width,height,10,fill,border,false,MenuThemes.current(),hover,pointerX,pointerY);
     }
-    private static boolean pane(int x,int y,int width,int height,int radius,int fill,int border,boolean mainWindow,MenuThemes.Preset palette,float hover,float pointerX,float pointerY){
+    private static boolean pane(int x,int y,int width,int height,int radius,int fill,int border,boolean mainWindow,MenuPalette palette,float hover,float pointerX,float pointerY){
         if(!active()||failed||scene==0||width<=0||height<=0)return false;
         Minecraft mc=Minecraft.getMinecraft();float sx=mc.displayWidth/(float)guiWidth,sy=mc.displayHeight/(float)guiHeight,scale=Math.min(sx,sy);
         boolean root=mainWindow&&!windowDrawn;
@@ -136,7 +136,7 @@ public final class MenuGlass {
                 int c=Math.max(bottom,(int)Math.floor(cy-ey)),d=Math.min(top,(int)Math.ceil(cy+ey));
                 if(b<=a||d<=c)continue;
                 program.vec4("Drop",dx,dy,r,stretch);program.vec4("Form",forms.get(i*4),forms.get(i*4+1),forms.get(i*4+2),forms.get(i*4+3));
-                program.scalar("Depth",.80F+.20F*(float)random(i+1.7));GL11.glScissor(a,c,b-a,d-c);FogRenderer.quad();
+                program.scalar("Depth",LavaLampMotion.depth(i));GL11.glScissor(a,c,b-a,d-c);FogRenderer.quad();
             }
             GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA,GL11.GL_ONE,GL11.GL_ONE_MINUS_SRC_ALPHA);
             program.scalar("Pass",3);GL11.glScissor(left,bottom,right-left,top-bottom);FogRenderer.quad();
@@ -148,26 +148,7 @@ public final class MenuGlass {
     /** Emitter clocks and randomization are uniform for the whole frame, not per-pixel work. */
     private static void prepareDrops(){
         if(emissionFrame==frameTime)return;
-        float time=(frameTime-EPOCH)/1e9F;drops.clear();forms.clear();
-        for(int i=0;i<8;i++){
-            double seed=random(i+1.7),life=8.5+3*random(i+7.1),period=life+4+4*random(i+12.8);
-            double clock=time+i*2.31,age=clock-Math.floor(clock/period)*period;
-            if(age>=life){drops.put(0).put(0).put(0).put(1);forms.put(1).put(1).put(0).put(0);continue;}
-            double radius=(.038+.033*random(i*3.1+Math.floor(clock/period)*7.3+19))*(.85+.15*seed);
-            double growth=Math.max(0,Math.min(1,age/.85));growth=growth*growth*(3-2*growth);
-            double travel=Math.max(0,(age-.55)/(life-.55));
-            travel=travel*travel*(3-2*travel);
-            double arrival=Math.max(0,Math.min(1,(travel-.76)/.24));arrival=arrival*arrival*(3-2*arrival);
-            double wobble=Math.sin(age*1.15+seed*6.28),angle=.23*Math.sin(age*.71+seed*6.28);
-            drops.put((float)(.09+i*.117+Math.sin(travel*4.4+seed*6.28)*(.018+.018*seed)));
-            // End well inside the upper reservoir: the union absorbs the whole
-            // blob before its emitter sleeps, with no fade or disappearing edge.
-            drops.put((float)(.105-radius*.8+travel*(.82+radius*2.85)));drops.put((float)(radius*(.35+.65*growth)));
-            drops.put((float)(.87+.065*wobble+.26*arrival));
-            forms.put((float)(1.16-.08*wobble-.34*arrival)).put((float)Math.cos(angle)).put((float)Math.sin(angle)).put((float)(.23*Math.sin(age*.62+seed*8)));
-        }
-        drops.flip();forms.flip();emissionFrame=frameTime;
+        LavaLampMotion.sample((frameTime-EPOCH)/1e9F,drops,forms);emissionFrame=frameTime;
     }
-    private static double random(double value){double n=Math.sin(value*12.9898+78.233)*43758.5453;return n-Math.floor(n);}
     private static float colorDistance(int a,int b){return Math.abs((a>>16&255)-(b>>16&255))+Math.abs((a>>8&255)-(b>>8&255))+Math.abs((a&255)-(b&255));}
 }

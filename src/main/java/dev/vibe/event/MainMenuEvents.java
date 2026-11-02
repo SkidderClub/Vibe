@@ -96,14 +96,14 @@ public final class MainMenuEvents {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onMenuInit(GuiScreenEvent.InitGuiEvent.Post event) {
-        if (event.gui instanceof net.minecraft.client.gui.GuiScreenAddServer
+        if (event.gui instanceof GuiIngameMenu || event.gui instanceof net.minecraft.client.gui.GuiScreenAddServer
                 || event.gui instanceof net.minecraft.client.gui.GuiScreenServerList
                 || event.gui instanceof net.minecraft.client.multiplayer.GuiConnecting
                 || event.gui instanceof net.minecraft.client.gui.GuiDisconnected) {
             for (int i = 0; i < event.buttonList.size(); i++) {
                 GuiButton original = event.buttonList.get(i);
                 if (original.getClass() == GuiButton.class) {
-                    GuiButton replacement = new VibeMenuButton(original);
+                    GuiButton replacement = new VibeMenuButton(original,"",false,event.gui instanceof GuiIngameMenu?original.id==1:original.id==4);
                     // The resource-pack selector keeps a direct reference to its button.
                     // Retain that reference so native label/enabled updates reach the styled control.
                     for (Class<?> type = event.gui.getClass(); type != null && type != GuiScreen.class; type = type.getSuperclass()) {
@@ -129,6 +129,17 @@ public final class MainMenuEvents {
 
     @SubscribeEvent
     public void onMenuDraw(GuiScreenEvent.DrawScreenEvent.Pre event) {
+        if(event.gui instanceof GuiIngameMenu){
+            event.setCanceled(true);Minecraft mc=Minecraft.getMinecraft();
+            List<GuiButton> buttons=getButtons(event.gui);int[] panel=pausePanelBounds(event.gui,buttons);
+            Gui.drawRect(0,0,event.gui.width,event.gui.height,0x60070D17);
+            dev.vibe.ui.menu.MenuGlass.begin(event.gui,null,event.gui.width,event.gui.height);
+            try{
+                dev.vibe.ui.menu.AccountScreenStyle.window(panel[0],panel[1],panel[2],panel[3]);
+                dev.vibe.ui.menu.AccountScreenStyle.title("Game menu",panel[0]+14,panel[1]+8);
+                for(GuiButton button:buttons)button.drawButton(mc,event.mouseX,event.mouseY);
+            }finally{dev.vibe.ui.menu.MenuGlass.end();}return;
+        }
         if (!(event.gui instanceof GuiMainMenu)) return;
         Vibe.getInstance().updateWindowTitle();
         List<GuiButton> buttons = getButtons(event.gui);
@@ -155,7 +166,7 @@ public final class MainMenuEvents {
         String loaded = Vibe.getInstance().getLoadedCountsText();
         Minecraft.getMinecraft().fontRendererObj.drawStringWithShadow(loaded,
                 resolution.getScaledWidth() - Minecraft.getMinecraft().fontRendererObj.getStringWidth(loaded) - 9, 6,
-                dev.vibe.ui.menu.AccountScreenStyle.MUTED);
+                0xFFFFFFFF);
         // Re-draw the live shared button list after the shader. Forge and other
         // mods can still add regular GuiButton instances through InitGuiEvent.
         for (GuiButton button : buttons) {
@@ -164,6 +175,19 @@ public final class MainMenuEvents {
         presentation.drawOverlay(resolution.getScaledWidth(), resolution.getScaledHeight(), event.mouseX, event.mouseY);
         } finally { dev.vibe.ui.menu.MenuGlass.end(); }
         event.setCanceled(true);
+    }
+
+    /** Fit the central actions; reconnect and license controls keep their own positions outside this card. */
+    private static int[] pausePanelBounds(GuiScreen screen,List<GuiButton> buttons){
+        int center=screen.width/2,left=center-100,right=center+100,first=Integer.MAX_VALUE,last=0;
+        for(GuiButton button:buttons)if(button.visible&&button.width>0&&button.height>0
+                &&button.xPosition>=center-110&&button.xPosition+button.width<=center+110){
+            left=Math.min(left,button.xPosition);right=Math.max(right,button.xPosition+button.width);
+            first=Math.min(first,button.yPosition);last=Math.max(last,button.yPosition+button.height);
+        }
+        if(first==Integer.MAX_VALUE){first=screen.height/4+8;last=first;}
+        int top=Math.max(8,first-32),bottom=Math.min(screen.height-8,last+12);
+        return new int[]{left-12,top,right-left+24,Math.max(40,bottom-top)};
     }
 
     @SubscribeEvent
@@ -181,6 +205,16 @@ public final class MainMenuEvents {
             Minecraft.getMinecraft().entityRenderer.setupOverlayRendering();
             Gui.drawRect(0,0,event.gui.width,event.gui.height,0xFF111218);
         }
+        dev.vibe.ui.menu.MenuGlass.begin(event.gui,shaders,event.gui.width,event.gui.height);
+        int w=Math.min(480,event.gui.width-24),h=Math.min(260,event.gui.height-24);
+        dev.vibe.ui.menu.AccountScreenStyle.window((event.gui.width-w)/2,(event.gui.height-h)/2,w,h);
+        glassForm=event.gui;
+    }
+
+    private GuiScreen glassForm;
+    @SubscribeEvent(priority=EventPriority.LOWEST)
+    public void finishServerForm(GuiScreenEvent.DrawScreenEvent.Post event){
+        if(glassForm==event.gui){dev.vibe.ui.menu.MenuGlass.end();glassForm=null;}
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)

@@ -47,7 +47,7 @@ public final class GlassMenusRenderCheck {
         ((AutoLoginPreference)get(AccountManager.class,accounts,"autoLogin")).set(entries.get(2));
         MainMenuEvents events=new MainMenuEvents();MainMenuShaderManager shaders=(MainMenuShaderManager)get(MainMenuEvents.class,events,"shaders");
         shaders.getPresets();require(shaders.getSelected().equals("prestige.frag"),"Fresh profiles must default to Prestige");
-        require(MenuThemes.current()==MenuThemes.Preset.OCEAN,"Fresh profiles must default to Ocean");
+        require(MenuThemes.current()==MenuPalette.OCEAN,"Fresh profiles must default to Ocean");
         shaders.select("liquid-lava.frag");MainMenuShaderManager restored=new MainMenuShaderManager();restored.getPresets();require(restored.getSelected().equals("liquid-lava.frag"),"An explicit shader selection was overwritten by the new default");
         shaders.select("prestige.frag");shaders.setEnabled(true);
         frame(960,540);seedHead(mc.getSession().getProfile().getId(),"VibePreview");for(Account account:entries)seedHead(account.getUuid(),account.getName());
@@ -101,7 +101,7 @@ public final class GlassMenusRenderCheck {
             require(!GL11.glIsEnabled(GL11.GL_SCISSOR_TEST),"Menu leaked row clipping");
             require(GL11.glGetError()==GL11.GL_NO_ERROR,"Menu rendering produced an OpenGL error");servers.onGuiClosed();
         }
-        statusChips(shaders);colors(shaders);clippingAndFallback(shaders);fontScales();scaledMenus(events,shaders,accounts);inputsAndThemes(shaders);LavaLampRenderCheck.verify(mc,output);
+        statusChips(shaders);colors(shaders);clippingAndFallback(shaders);fontScales();scaledMenus(events,shaders,accounts);inputsAndThemes(shaders);newMenus(events,shaders);LavaLampRenderCheck.verify(mc,output);
         require(shaders.getLastError().isEmpty(),"Lava shader failed: "+shaders.getLastError());
         System.out.println("Glass menus passed: real screens and controls, GUI scales 1–4 with pixel-measured type centering, six in-panel palettes, local lava motion, clipping, fallback and reversible 220 ms window resizing.");
     }
@@ -158,7 +158,7 @@ public final class GlassMenusRenderCheck {
     }
     private static void colors(MainMenuShaderManager shaders) throws Exception {
         Set<Long> hashes=new HashSet<Long>();
-        for(MenuThemes.Preset preset:MenuThemes.Preset.values()){
+        for(MenuPalette preset:MenuPalette.values()){
             MenuThemes.select(preset);frame(960,540);set(MainMenuShaderManager.class,shaders,"lastShaderFrame",0L);shaders.draw(960,540);
             MenuGlass.begin(new GuiChat(),shaders,960,540);AccountScreenStyle.window(120,70,720,400);
             AccountScreenStyle.TITLE_FONT.draw(preset.label,144,90,AccountScreenStyle.TEXT);
@@ -167,7 +167,7 @@ public final class GlassMenusRenderCheck {
             byte[] pixels=pixels();long hash=1;for(int i=0;i<pixels.length;i+=64)hash=31*hash+(pixels[i]&255);hashes.add(hash);
             require(shaders.getBackgroundTexture()!=0,"No lava backdrop texture");save("glass-lava-"+preset.name().toLowerCase(Locale.ROOT)+".png");
         }
-        require(hashes.size()==6,"Theme selection did not recolor the lava");MenuThemes.select(MenuThemes.Preset.LAVENDER);
+        require(hashes.size()==6,"Theme selection did not recolor the lava");MenuThemes.select(MenuPalette.LAVENDER);
         shaders.setEnabled(false);long time=System.nanoTime();byte[][] motion=new byte[2][];
         for(int i=0;i<2;i++){frame(960,540);Gui.drawRect(0,0,960,540,0xFF101010);MenuGlass.begin(new GuiChat(),null,960,540);set(MenuGlass.class,null,"frameTime",time+i*3000000000L);AccountScreenStyle.window(120,70,720,400);MenuGlass.end();motion[i]=pixels();}
         require(maxDifference(motion[0],motion[1])>15,"Lava does not animate inside the panel without a background shader");shaders.setEnabled(true);
@@ -218,6 +218,30 @@ public final class GlassMenusRenderCheck {
     private static void seedHead(UUID id,String name) throws Exception {
         SkinHeads.draw(id,name,0,0,20,false);Map<?,?> heads=(Map<?,?>)get(SkinHeads.class,null,"HEADS");
         for(Object head:heads.values())set(head.getClass(),head,"retryAt",Long.MAX_VALUE);
+    }
+    private static void newMenus(MainMenuEvents events,MainMenuShaderManager shaders)throws Exception{
+        mc.gameSettings.guiScale=1;String selected=shaders.getSelected();
+        ShaderMenuGui picker=new ShaderMenuGui(new GuiMainMenu(),shaders);setup(picker,960,540);
+        for(int i=0;i<6;i++){set(ShaderMenuGui.class,picker,"nextPreview",0L);frame(960,540);picker.drawScreen(-1,-1,0);}
+        require(selected.equals(shaders.getSelected()),"Thumbnail generation changed the selected shader");
+        Map<?,?> thumbnails=(Map<?,?>)get(ShaderMenuGui.class,picker,"thumbnails");require(!thumbnails.isEmpty()&&thumbnails.size()<=8,"Shader previews are missing or unbounded");
+        save("glass-shaders.png");picker.onGuiClosed();require(thumbnails.isEmpty(),"Shader browser retained GPU thumbnails after closing");
+        dev.vibe.ui.server.MinibloxConnectGui loading=new dev.vibe.ui.server.MinibloxConnectGui(new GuiMainMenu(),new ServerData("Miniblox","miniblox.io",false),null);
+        dev.vibe.miniblox.MinibloxRuntime.Attempt attempt=new dev.vibe.miniblox.MinibloxRuntime.Attempt();attempt.message="Starting the translation layer";
+        set(loading.getClass(),loading,"attempt",attempt);setup(loading,960,540);frame(960,540);loading.drawScreen(-1,-1,0);save("glass-miniblox.png");loading.onGuiClosed();
+        for(int[] size:new int[][]{{960,540},{480,300},{320,240}}){
+            GuiIngameMenu pause=new GuiIngameMenu();setup(pause,size[0],size[1]);
+            new dev.vibe.event.ReconnectEvents().init(new GuiScreenEvent.InitGuiEvent.Post(pause,buttons(pause)));
+            events.onMenuInit(new GuiScreenEvent.InitGuiEvent.Post(pause,buttons(pause)));Map<Integer,String> original=bounds(pause);
+            java.lang.reflect.Method fitted=MainMenuEvents.class.getDeclaredMethod("pausePanelBounds",GuiScreen.class,List.class);fitted.setAccessible(true);
+            int[] card=(int[])fitted.invoke(null,pause,buttons(pause));GuiButton last=button(pause,1),first=button(pause,4);
+            require(card[1]+card[3]==last.yPosition+last.height+12,"Pause card retains empty space below its actions");
+            require(card[1]<=first.yPosition-24&&card[3]<180,"Pause card clips the title or remains oversized");
+            frame(size[0],size[1]);events.onMenuDraw(new GuiScreenEvent.DrawScreenEvent.Pre(pause,-1,-1,0){@Override public boolean isCancelable(){return true;}});
+            Thread.sleep(240);frame(size[0],size[1]);events.onMenuDraw(new GuiScreenEvent.DrawScreenEvent.Pre(pause,-1,-1,0){@Override public boolean isCancelable(){return true;}});
+            require(original.equals(bounds(pause)),"Fitting the pause card moved its buttons");save("glass-pause-"+size[0]+".png");
+        }
+        require(!MenuGlass.active()&&GL11.glGetError()==0,"Additional menus leaked graphics state");
     }
     private static Map<Integer,String> bounds(GuiScreen screen) throws Exception {
         Map<Integer,String> result=new TreeMap<Integer,String>();for(GuiButton b:buttons(screen))result.put(b.id,b.xPosition+","+b.yPosition+","+b.width+","+b.height);return result;

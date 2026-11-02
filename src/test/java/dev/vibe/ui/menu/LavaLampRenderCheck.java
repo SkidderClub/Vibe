@@ -18,7 +18,7 @@ final class LavaLampRenderCheck {
     private static Minecraft mc;
     private static Path output;
     static void verify(Minecraft minecraft,Path directory) throws Exception {
-        mc=minecraft;output=directory;mc.gameSettings.guiScale=1;MenuThemes.select(MenuThemes.Preset.LAVENDER);
+        mc=minecraft;output=directory;mc.gameSettings.guiScale=1;MenuThemes.select(MenuPalette.LAVENDER);
         byte[] first=render(3,0xFF000000,false),later=render(3.6F,0xFF000000,false);
         save(first,"lava-lamp-3s.png");
         int filled=0,total=0;

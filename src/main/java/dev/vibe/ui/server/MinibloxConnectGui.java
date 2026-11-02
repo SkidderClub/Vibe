@@ -2,8 +2,6 @@ package dev.vibe.ui.server;
 
 import dev.vibe.miniblox.*;
 import dev.vibe.server.ServerBrowserEvents;
-import dev.vibe.ui.NeverLoseFont;
-import java.awt.Font;
 import java.io.IOException;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.*;
@@ -13,14 +11,13 @@ import static dev.vibe.ui.menu.AccountScreenStyle.*;
 
 /** Visible, cancellable first-run installation followed by the normal Minecraft connection screen. */
 public final class MinibloxConnectGui extends GuiScreen {
-    private static final NeverLoseFont TITLE = new NeverLoseFont(Font.BOLD, 24);
-    private static final NeverLoseFont BODY = new NeverLoseFont(Font.PLAIN, 20);
     private final GuiScreen parent;
     private final ServerData server;
     private final ServerBrowserEvents events;
     private MinibloxRuntime.Attempt attempt;
     private boolean connecting;
     private int cardX, cardY, cardW;
+    private final dev.vibe.ui.menu.MainMenuShaderManager shaders=new dev.vibe.ui.menu.MainMenuShaderManager();
 
     public MinibloxConnectGui(GuiScreen parent, ServerData server, ServerBrowserEvents events) {
         this.parent = parent; this.server = server; this.events = events;
@@ -34,9 +31,11 @@ public final class MinibloxConnectGui extends GuiScreen {
     @Override public void initGui() {
         cardW = Math.min(480, width - 24); cardX = (width - cardW) / 2; cardY = Math.max(12, (height - 220) / 2);
         buttonList.clear();
-        buttonList.add(new GuiButton(0, width / 2 - 102, cardY + 178, 98, 20, "Cancel"));
-        buttonList.add(new GuiButton(1, width / 2 + 4, cardY + 178, 98, 20, "Retry"));
+        buttonList.add(new Button(0, width / 2 - 102, cardY + 178, 98, 24, "Cancel","",false,false));
+        buttonList.add(new Button(1, width / 2 + 4, cardY + 178, 98, 24, "Retry","",true,false));
         if (attempt == null) start();
+        buttonList.get(1).visible=attempt.error!=null;
+        buttonList.get(0).xPosition=width/2-(attempt.error==null?49:102);
     }
     private void start() {
         connecting = false;
@@ -58,10 +57,12 @@ public final class MinibloxConnectGui extends GuiScreen {
         mc.displayGuiScreen(connection);
     }
     @Override public void drawScreen(int mx, int my, float partial) {
-        drawGradientRect(0, 0, width, height, 0xFF11121D, 0xFF1C2134);
+        shaders.draw(width,height);
+        dev.vibe.ui.menu.MenuGlass.begin(this,shaders,width,height);
+        try{
         window(cardX, cardY, cardW, 216);
-        TITLE.draw("Miniblox", cardX + 20, cardY + 18, TEXT);
-        BODY.draw(BODY.fit(attempt.error == null ? attempt.message : "Unable to start Miniblox", cardW - 40), cardX + 20, cardY + 50, attempt.error == null ? TEXT : ERROR);
+        title("Miniblox",cardX+20,cardY+18);
+        text(fit(attempt.error == null ? attempt.message : "Unable to start Miniblox",cardW-40),cardX+20,cardY+50,attempt.error==null?TEXT:ERROR);
         String description = attempt.error != null ? attempt.error
                 : "Vibe installs the translation layer on the first connection. Later connections reuse the installation.";
         fontRendererObj.drawSplitString(description, cardX + 20, cardY + 78, cardW - 40, MUTED);
@@ -73,6 +74,7 @@ public final class MinibloxConnectGui extends GuiScreen {
         fontRendererObj.drawString("Translation layer by 7GrandDad", cardX + 20, cardY + 137, MUTED);
         fontRendererObj.drawString("Logs: vibe/miniblox", cardX + 20, cardY + 151, MUTED);
         super.drawScreen(mx, my, partial);
+        }finally{dev.vibe.ui.menu.MenuGlass.end();}
     }
     @Override protected void actionPerformed(GuiButton button) {
         if (button.id == 0) mc.displayGuiScreen(parent);
@@ -81,5 +83,5 @@ public final class MinibloxConnectGui extends GuiScreen {
     @Override protected void keyTyped(char typed, int key) throws IOException {
         if (key == Keyboard.KEY_ESCAPE) mc.displayGuiScreen(parent);
     }
-    @Override public void onGuiClosed() { if (!connecting && attempt != null) attempt.cancel(); }
+    @Override public void onGuiClosed() { if (!connecting && attempt != null) attempt.cancel();shaders.close(); }
 }

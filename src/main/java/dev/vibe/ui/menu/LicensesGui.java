@@ -112,8 +112,8 @@ public final class LicensesGui extends GuiScreen {
             }
         }
         if (maxScroll() > 0) {
-            drawRect(left + panelWidth - 19, contentTop, left + panelWidth - 16, contentBottom, AccountScreenStyle.BORDER);
-            drawRect(left + panelWidth - 19, thumbTop(), left + panelWidth - 16, thumbTop() + thumbHeight(), AccountScreenStyle.ACCENT);
+
+            MenuScrollbar.draw(left+panelWidth-19,contentTop,3,contentBottom-contentTop,thumbTop(),thumbHeight());
         }
         String footer = status.isEmpty() ? LanguageManager.translate(selected.label) + "  "
                 + Math.min(lines.size(), scroll / LINE_HEIGHT + 1) + " / " + lines.size() : status;

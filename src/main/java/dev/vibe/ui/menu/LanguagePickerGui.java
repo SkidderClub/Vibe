@@ -75,8 +75,8 @@ public final class LanguagePickerGui extends GuiScreen {
             int thumb = Math.max(22, trackHeight * trackHeight / Math.max(trackHeight, contentHeight()));
             int travel = trackHeight - thumb;
             int y = gridTop + (maxScroll() == 0 ? 0 : scroll * travel / maxScroll());
-            drawRect(left + panelWidth - 12, gridTop, left + panelWidth - 9, gridBottom, 0x55000000);
-            drawRect(left + panelWidth - 12, y, left + panelWidth - 9, y + thumb, AccountScreenStyle.ACCENT);
+
+            MenuScrollbar.draw(left+panelWidth-12,gridTop,3,trackHeight,y,thumb);
         }
         super.drawScreen(mouseX,mouseY,partialTicks);
         } finally { MenuGlass.end(); }

@@ -178,8 +178,8 @@ public final class ServerBrowserGui extends GuiScreen {
         int max = l.maxScroll(rows.size());
         if (max > 0) {
             int thumb = ScrollbarDrag.thumb(l.listH, max, 24), y = l.listY + Math.round((l.listH - thumb) * scroll / max);
-            MenuRoundedRenderer.rect(l.listX + l.listW - 4, l.listY, 3, l.listH, 2, SURFACE);
-            MenuRoundedRenderer.rect(l.listX + l.listW - 4, y, 3, thumb, 2, MUTED);
+
+            dev.vibe.ui.menu.MenuScrollbar.draw(l.listX+l.listW-4,l.listY,3,l.listH,y,thumb);
         }
         super.drawScreen(mx, my, partialTicks);
         if (!deleting && hovered != null && mx > l.listX + l.listW - 95 && joins != null) {

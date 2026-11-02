@@ -88,5 +88,13 @@ public class FontLocalizationTransformerTest implements Opcodes {
         }
         assertTrue("The actual FontRenderer must receive the dedicated script-font draw hook", found);
         assertTrue("The actual FontRenderer must receive the animated local-chat hook", chat);
+        int fontBindings=0;
+        for(Object entry:node.methods){MethodNode method=(MethodNode)entry;
+            new org.objectweb.asm.tree.analysis.Analyzer(new org.objectweb.asm.tree.analysis.BasicVerifier()).analyze(node.name,method);
+            for(AbstractInsnNode insn:method.instructions.toArray())if(insn instanceof MethodInsnNode){MethodInsnNode call=(MethodInsnNode)insn;
+                if(call.owner.equals("dev/vibe/hud/HudFontFilter")){fontBindings++;assertEquals("(Ljava/lang/Object;Ljava/lang/Object;)V",call.desc);}
+            }
+        }
+        assertTrue("Scaled HUD filtering must hook the real glyph texture binding",fontBindings>0);
     }
 }

@@ -40,6 +40,7 @@ public class HudArrayListTest {
     private Field vibeSingleton;
 
     @Before public void setUp() throws Exception {
+        dev.vibe.camera.DroneCollisionsTest.registerBlocks();
         minecraftSingleton = field(Minecraft.class, "theMinecraft");
         vibeSingleton = field(Vibe.class, "instance");
         previousMinecraft = (Minecraft) minecraftSingleton.get(null);

@@ -65,6 +65,7 @@ public final class HudManager {
     public static final String CPS = "cps";
     public static final String CPS_GRAPH = "cpsgraph";
     public static final String NOTIFICATIONS = "notifications";
+    public static final String CHAT="customchat", HOTBAR="customhotbar", CUSTOM_HEALTH="customhealth", TAB="customtab";
 
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final File layoutFile;
@@ -81,6 +82,11 @@ public final class HudManager {
     private net.minecraft.world.World targetWorld;
     private boolean framebufferPreview;
     private final HudElement clock = new HudElement(CLOCK, 9, 70, false, false);
+    private final HudElement chat=new HudElement(CHAT,4,48,false,true);
+    private final HudElement hotbar=new HudElement(HOTBAR,0,5,false,true);
+    private final HudElement customHealth=new HudElement(CUSTOM_HEALTH,0,55,false,true);
+    private final HudElement tab=new HudElement(TAB,0,12,false,false);
+    private final HudOverlayRenderer overlays=new HudOverlayRenderer();
     private final HudElement ghosts = new HudElement(GHOSTS, 12, 142, false, true);
     private final dev.vibe.core.startup.GhostArt ghostArt = new dev.vibe.core.startup.GhostArt();
     private final HudElement sessionInfo = new HudElement(SESSION_INFO, 9, 96, false, false);
@@ -124,6 +130,7 @@ public final class HudManager {
         KawaseBlur.beginHudFrame();
         if (!(minecraft.currentScreen instanceof dev.vibe.ui.game.Gta7Gui) && !(minecraft.currentScreen instanceof dev.vibe.ui.game.Gta8Gui)) drawMusic(false);
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        overlays.updateTabKey(hud);
         if (hud == null || !hud.isEnabled() || minecraft.thePlayer == null) {
             return;
         }
@@ -169,6 +176,9 @@ public final class HudManager {
             if (hud.getHudElements().isSelectedIgnoreCase(CPS)) {
                 renderScaled(cps, resolution, () -> drawCps(resolution, font));
             }
+            if(isEnabled(HOTBAR)&&!minecraft.thePlayer.isSpectator())renderScaled(hotbar,resolution,()->overlays.hotbar(this,hud,hotbar,resolution,previewingHud));
+            if(isEnabled(CUSTOM_HEALTH)&&(minecraft.playerController==null||minecraft.playerController.shouldDrawHUD()))renderScaled(customHealth,resolution,()->overlays.health(this,hud,customHealth,resolution,previewingHud));
+            if(isEnabled(TAB)&&overlays.tabVisible())renderScaled(tab,resolution,()->overlays.tab(this,hud,tab,resolution,false));
             if (hud.getHudElements().isSelectedIgnoreCase(CPS_GRAPH)) {
                 renderScaled(cpsGraph, resolution, () -> drawCpsGraph(hud, resolution, font));
             }
@@ -247,9 +257,14 @@ public final class HudManager {
 
     /** Scale around the element's anchor so right/bottom aligned widgets stay aligned. */
     private void renderScaled(HudElement element, ScaledResolution resolution, Runnable render) {
+        try(HudFontFilter filter=HudFontFilter.begin(element.getScale()*resolution.getScaleFactor())){
+            renderScaledContents(element,resolution,render);
+        }
+    }
+    private void renderScaledContents(HudElement element, ScaledResolution resolution, Runnable render) {
         float scale = element.getScale();
         if (Math.abs(scale - 1.0F) < .0001F) { render.run(); return; }
-        int anchorX = element.centred ? resolution.getScaledWidth() / 2 + element.x
+        int anchorX = element.horizontalCenter() ? resolution.getScaledWidth() / 2 + element.x
                 : element.rightAnchored ? resolution.getScaledWidth() - element.x : element.x;
         int anchorY = element.verticallyCentred || element.centred ? resolution.getScaledHeight() / 2 + element.y
                 : element.bottomAnchored ? resolution.getScaledHeight() - element.y : element.y;
@@ -363,13 +378,13 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         return hud != null && hud.getMode().is("Skeet");
     }
 
-    private String theme(HudElement element, HudModule hud) {
+    String theme(HudElement element, HudModule hud) {
         if (element == targetHud) return hud.targetHud.mode.getValue();
         return element != null && element.getTheme() != null ? element.getTheme() : hud.getMode().getValue();
     }
 
     /** Skeet HUDs deliberately omit Vibe glow, blur and coloured outlines. */
-    private void drawHudSurface(HudModule hud, HudElement element, int left, int top, int right, int bottom) {
+    void drawHudSurface(HudModule hud, HudElement element, int left, int top, int right, int bottom) {
         String theme = theme(element, hud);
         if ("LiquidGlass".equalsIgnoreCase(theme)) {
             float radius = Math.min(element == targetHud ? hud.targetHud.radius.getFloat() : 8, (bottom - top) / 2.0F);
@@ -484,7 +499,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             int left = clock.left(resolution, width), top = clock.top(resolution, height);
             if ("LiquidGlass".equalsIgnoreCase(theme(clock, hud)))
                 drawHudSurface(hud, clock, left, top, left + width, top + height);
-            ClockRenderer.draw(hud.clock, font, left + (width - hud.clock.diameter.getInt()) / 2, top, now);
+            ClockRenderer.draw(hud.clock, font, left + (width - hud.clock.diameter.getInt()) / 2, top, now,"Transparent".equalsIgnoreCase(theme(clock,hud)));
             clock.setBounds(left, top, width, height);
         } else {
             String time = ClockRenderer.time(hud.clock, now), date = ClockRenderer.date(now);
@@ -492,9 +507,9 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             int height = hud.clock.date.isEnabled() ? 39 : 24;
             clock.ensureOnScreen(resolution, width, height);
             int left = clock.left(resolution, width), top = clock.top(resolution, height);
-            drawHudSurface(hud, clock, left, top, left + width, top + height);
+            if(!"Transparent".equalsIgnoreCase(theme(clock,hud)))drawHudSurface(hud, clock, left, top, left + width, top + height);
             font.drawStringWithShadow(time, left + (width - font.getStringWidth(time)) / 2F, top + 8, hud.clock.text.getArgb());
-            if (hud.clock.date.isEnabled()) font.drawStringWithShadow(date, left + (width - font.getStringWidth(date)) / 2F, top + 24, hud.clock.marks.getArgb());
+            if (hud.clock.date.isEnabled()) font.drawStringWithShadow(date, left + (width - font.getStringWidth(date)) / 2F, top + 24, hud.clock.dateText.getArgb());
             clock.setBounds(left, top, width, height);
         }
     }
@@ -1070,6 +1085,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     public HudElement getElement(String id) {
+        if(CHAT.equals(id))return chat;if(HOTBAR.equals(id))return hotbar;if(CUSTOM_HEALTH.equals(id))return customHealth;if(TAB.equals(id))return tab;
         if (GHOSTS.equals(id)) return ghosts;
         if (TARGET_HUD.equals(id)) return targetHud;
         if (NOTIFICATIONS.equals(id)) return notifications;
@@ -1114,7 +1130,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     public String[] getElementIds() {
         return new String[] {WATERMARK, ARRAY_LIST, COORDINATES, SCOREBOARD, CLOCK, SESSION_INFO, MOTION_GRAPH, STALKER,
-                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, TARGET_HUD, NOTIFICATIONS, MUSIC, GHOSTS};
+                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, TARGET_HUD, NOTIFICATIONS, MUSIC, GHOSTS,CHAT,HOTBAR,CUSTOM_HEALTH,TAB};
     }
 
     public boolean isEnabled(String id) {
@@ -1124,6 +1140,31 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         }
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         return hud != null && hud.getHudElements().isSelectedIgnoreCase(id);
+    }
+
+    public static boolean replaces(String id){
+        Vibe vibe=Vibe.getInstance();Minecraft mc=Minecraft.getMinecraft();
+        if(vibe==null||vibe.getModuleManager()==null||mc.thePlayer==null||mc.theWorld==null||mc.gameSettings.hideGUI
+                ||dev.vibe.module.impl.movement.FreecamModule.hideHudHook()||dev.vibe.module.impl.meme.HypixelModule.visualsSuppressed())return false;
+        HudModule hud=vibe.getModuleManager().getModule(HudModule.class);
+        return hud!=null&&hud.isEnabled()&&hud.getHudElements().isSelectedIgnoreCase(id);
+    }
+    public static boolean replacesHotbar(){return replaces(HOTBAR)&&!Minecraft.getMinecraft().thePlayer.isSpectator();}
+    public void drawChat(){HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);ScaledResolution res=new ScaledResolution(minecraft);renderScaled(chat,res,()->HudChat.draw(this,hud,chat,res,false));}
+    void drawOverlayGlass(HudModule hud,OverlaySettings settings,int x,int y,int width,int height,float opacity){
+        int left=x,top=y,right=x+width,bottom=y+height;float radius=settings.radius.getFloat();
+        if(scalingHud){left=Math.round(hudTransformX+(left-hudTransformX)*hudTransformScale);right=Math.round(hudTransformX+(right-hudTransformX)*hudTransformScale);
+            top=Math.round(hudTransformY+(top-hudTransformY)*hudTransformScale);bottom=Math.round(hudTransformY+(bottom-hudTransformY)*hudTransformScale);radius*=hudTransformScale;}
+        int tint=RenderUtils.blend(hud.getLiquidGlassTint().getArgb(),settings.background.getArgb()|0xFF000000,.65F);
+        boolean drawn=(!previewingHud||framebufferPreview)&&liquidGlass.draw(left,top,right,bottom,radius,
+                hud.getLiquidGlassBlur().isEnabled()?hud.getLiquidGlassBlurStrength().getFloat():0,hud.getLiquidGlassRefraction().getFloat(),
+                hud.getLiquidGlassOpacity().getFloat()*(settings.background.getArgb()>>>24)/255F*opacity,tint);
+        if(!drawn)HudShapes.round(x,y,width,height,settings.radius.getFloat(),RenderUtils.alpha(settings.background.getArgb(),Math.round((settings.background.getArgb()>>>24)*opacity)));
+        if(settings.border.isEnabled())RenderUtils.roundedOutline(x,y,x+width,y+height,settings.radius.getFloat(),1,RenderUtils.alpha(settings.accent.getArgb(),Math.round(80*opacity)));
+    }
+    public List<dev.vibe.setting.Setting<?>> overlaySettings(String id){
+        HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);if(hud==null)return Collections.emptyList();
+        if(CHAT.equals(id))return hud.chat.all;if(HOTBAR.equals(id))return hud.hotbar.all;if(CUSTOM_HEALTH.equals(id))return hud.customHealth.all;if(TAB.equals(id))return hud.tab.all;return Collections.emptyList();
     }
 
     /**
@@ -1139,6 +1180,10 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         previewingHud = true;
         try (dev.vibe.ui.render.HudItemGeometryRenderer.Scope items = dev.vibe.ui.render.HudItemGeometryRenderer.begin()) {
             if (element == targetHud) drawTargetHud(hud, resolution, font);
+            else if(element==chat)renderScaled(element,resolution,()->HudChat.draw(this,hud,chat,resolution,true));
+            else if(element==hotbar)renderScaled(element,resolution,()->overlays.hotbar(this,hud,hotbar,resolution,true));
+            else if(element==customHealth)renderScaled(element,resolution,()->overlays.health(this,hud,customHealth,resolution,true));
+            else if(element==tab)renderScaled(element,resolution,()->overlays.tab(this,hud,tab,resolution,true));
             else if (element == notifications) drawNotifications();
             else if (element == arrayList) arrayRenderer.draw(hud, arrayList, resolution, true);
             else if (element == watermark) renderScaled(element, resolution, () -> drawWatermark(hud, resolution, font));
@@ -1206,6 +1251,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         root.add(COORDINATES, coordinates.toJson());
         root.add(SCOREBOARD, scoreboard.toJson());
         root.add(CLOCK, clock.toJson());
+        root.add(CHAT,chat.toJson());root.add(HOTBAR,hotbar.toJson());root.add(CUSTOM_HEALTH,customHealth.toJson());root.add(TAB,tab.toJson());
         root.add(GHOSTS, ghosts.toJson());
         root.add(TARGET_HUD, targetHud.toJson());
         root.add(SESSION_INFO, sessionInfo.toJson());
@@ -1231,6 +1277,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         scoreboard.fromJson(root.has(SCOREBOARD) && root.get(SCOREBOARD).isJsonObject() ? root.getAsJsonObject(SCOREBOARD) : null);
         targetHud.fromJson(root.has(TARGET_HUD) && root.get(TARGET_HUD).isJsonObject() ? root.getAsJsonObject(TARGET_HUD) : null);
         clock.fromJson(root.has(CLOCK) && root.get(CLOCK).isJsonObject() ? root.getAsJsonObject(CLOCK) : null);
+        for(String id:new String[]{CHAT,HOTBAR,CUSTOM_HEALTH,TAB})getElement(id).fromJson(root.has(id)&&root.get(id).isJsonObject()?root.getAsJsonObject(id):null);
         ghosts.fromJson(root.has(GHOSTS) && root.get(GHOSTS).isJsonObject() ? root.getAsJsonObject(GHOSTS) : null);
         sessionInfo.fromJson(root.has(SESSION_INFO) && root.get(SESSION_INFO).isJsonObject() ? root.getAsJsonObject(SESSION_INFO) : null);
         motionGraph.fromJson(root.has(MOTION_GRAPH) && root.get(MOTION_GRAPH).isJsonObject() ? root.getAsJsonObject(MOTION_GRAPH) : null);
@@ -1310,7 +1357,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         }
 
         public int left(ScaledResolution resolution, int width) {
-            if (centred) {
+            if (horizontalCenter()) {
                 return resolution.getScaledWidth() / 2 + x - width / 2;
             }
             return rightAnchored ? resolution.getScaledWidth() - x - width : x;
@@ -1363,7 +1410,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             int safeTop = Math.max(0, Math.min(resolution.getScaledHeight() - Math.max(1, height), desiredTop));
             centred = false;
             verticallyCentred = false;
-            x = rightAnchored ? resolution.getScaledWidth() - safeLeft - width : safeLeft;
+            x = horizontalCenter()?safeLeft-resolution.getScaledWidth()/2+width/2:rightAnchored ? resolution.getScaledWidth() - safeLeft - width : safeLeft;
             y = bottomAnchored ? resolution.getScaledHeight() - safeTop - height : safeTop;
             left = safeLeft;
             top = safeTop;
@@ -1428,6 +1475,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         }
 
         public String getId() { return id; }
+        private boolean horizontalCenter(){return centred||HOTBAR.equals(id)||TAB.equals(id)||CUSTOM_HEALTH.equals(id);}
         public int getLeft() { return left; }
         public int getTop() { return top; }
         public int getWidth() { return width; }
@@ -1441,6 +1489,9 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             else if ("Vibe".equalsIgnoreCase(value)) theme = "Vibe";
             else if ("Skeet".equalsIgnoreCase(value)) theme = "Skeet";
             else if ("LiquidGlass".equalsIgnoreCase(value)) theme = "LiquidGlass";
+            else if ("Transparent".equalsIgnoreCase(value)) theme = "Transparent";
+            else if ("Minecraft".equalsIgnoreCase(value)) theme = "Minecraft";
+            else if ("Fortnite".equalsIgnoreCase(value)) theme = "Fortnite";
         }
     }
 

@@ -210,6 +210,22 @@ public final class MainMenuShaderManager {
     public String getLastError() { return lastError; }
     public File getShaderDirectory() { ensureInitialized(); return shaderDirectory; }
 
+    /** One immutable 128x72 snapshot. Never changes or persists the selected background. */
+    public Framebuffer thumbnail(String preset){
+        ensureInitialized();MainMenuShaderManager preview=new MainMenuShaderManager();preview.initialized=true;preview.selected=preset;
+        int fbo=GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING),texture=GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+        IntBuffer viewport=BufferUtils.createIntBuffer(16);GL11.glGetInteger(GL11.GL_VIEWPORT,viewport);
+        try{
+            if(!preview.ensureProgram())return null;
+            preview.ensureRenderTarget(128,72);preview.renderShaderFrame(128,72,128,72);
+            Framebuffer result=preview.renderTarget;preview.renderTarget=null;return result;
+        }finally{
+            preview.close();OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER,fbo);
+            GL11.glViewport(viewport.get(0),viewport.get(1),viewport.get(2),viewport.get(3));GlStateManager.bindTexture(texture);
+        }
+    }
+    public void close(){deleteProgram();if(renderTarget!=null){renderTarget.deleteFramebuffer();renderTarget=null;}backgroundAvailable=false;}
+
     public boolean openFolder() {
         ensureInitialized();
         try {
@@ -314,7 +330,8 @@ public final class MainMenuShaderManager {
         try {
             String fragment = compatibilitySource(read(source));
             int vertex = compile(GL20.GL_VERTEX_SHADER, "#version 120\nvoid main(){ gl_Position = gl_Vertex; }");
-            int pixel = compile(GL20.GL_FRAGMENT_SHADER, fragment);
+            int pixel;
+            try{pixel=compile(GL20.GL_FRAGMENT_SHADER,fragment);}catch(RuntimeException error){GL20.glDeleteShader(vertex);throw error;}
             int linked = GL20.glCreateProgram();
             GL20.glAttachShader(linked, vertex);
             GL20.glAttachShader(linked, pixel);

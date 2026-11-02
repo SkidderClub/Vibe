@@ -4,6 +4,8 @@ import dev.vibe.core.startup.*;
 import dev.vibe.hud.*;
 import dev.vibe.module.impl.client.HudModule;
 import dev.vibe.path.PathTestFixture;
+import dev.vibe.ui.effect.EffectProgram;
+import dev.vibe.ui.menu.MenuPalette;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 import java.nio.file.*;
@@ -61,6 +63,22 @@ public final class GhostBrandingRenderCheck {
             }
             frame(W, H); loading.draw(W, H, Collections.<GhostStartup.Stage>emptyList(), 500);
             ImageIO.write(read(W, H), "png", out.resolve("startup-preparing.png").toFile());
+            frame(W, H); loading.draw(W, H, stages, 3500); BufferedImage lava = read(W, H);
+            ImageIO.write(lava, "png", out.resolve("startup-lava-3s.png").toFile());
+            frame(W, H); loading.draw(W, H, stages, 4100); BufferedImage moved = read(W, H);
+            int animatedWax = 0;
+            for (int y = 145; y < 185; y++) for (int x = 180; x < 780; x++)
+                if (distance(lava.getRGB(x, y), moved.getRGB(x, y)) > 10) animatedWax++;
+            check(animatedWax > 400, "The startup wax pools are not animated");
+            int ocean = lava.getRGB(480, 450);
+            check((ocean & 255) > (ocean >> 16 & 255) + 35, "Ocean menu colours did not reach the startup wax");
+            try (GhostLoadingRenderer rose = new GhostLoadingRenderer(MenuPalette.ROSE)) {
+                frame(W, H); rose.draw(W, H, stages, 500);
+                BufferedImage screenshot = read(W, H); ImageIO.write(screenshot, "png", out.resolve("startup-rose.png").toFile());
+                int pinkPool = screenshot.getRGB(480, 450);
+                check((pinkPool >> 16 & 255) > (pinkPool >> 8 & 255) + 25, "Saved menu palette was ignored by startup glass");
+            }
+            verifyLoadingState(loading);
             for (int i = 0; i < 80; i++) loading.draw(W, H, Collections.singletonList(
                     new GhostStartup.Stage("Stitching textures", "assets/vibe/textures/resource-" + i + ".png", i, 80)), 600 + i * 16);
             java.lang.reflect.Field cache = GhostLoadingRenderer.class.getDeclaredField("textCache"); cache.setAccessible(true);
@@ -81,8 +99,29 @@ public final class GhostBrandingRenderCheck {
                 ImageIO.write(read(W, H), "png", out.resolve("hud-ghost-scaled.png").toFile());
             }
             check(GL11.glGetError() == 0, "Ghost rendering left a GL error");
-            System.out.println("Ghost pixels passed: still-image mode, animation, flips, selective tint, GL state, scaled HUD preview, startup at 960/427/320 pixels, empty/long stages and bounded text textures.");
+            System.out.println("Ghost pixels passed: still-image mode, animation, flips, selective tint, GL state, scaled HUD preview, startup lava motion/palettes at 960/427/320 pixels, empty/long stages and bounded text textures.");
         } finally { buffer.destroy(); }
+    }
+    private static void verifyLoadingState(GhostLoadingRenderer loading) throws Exception {
+        int texture = GL11.glGenTextures(), mode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        try (EffectProgram caller = new EffectProgram("fullscreen.vert", "MenuGlass.frag")) {
+            caller.bind(); int program = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+            GL13.glActiveTexture(GL13.GL_TEXTURE2); GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture);
+            GL11.glEnable(GL11.GL_DEPTH_TEST); GL11.glDisable(GL11.GL_BLEND);
+            GL11.glEnable(GL11.GL_SCISSOR_TEST); GL11.glScissor(11, 12, 30, 40);
+            GL11.glMatrixMode(GL11.GL_TEXTURE);
+            loading.draw(W, H, Collections.<GhostStartup.Stage>emptyList(), 4300);
+            check(GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM) == program, "Startup shader replaced the caller's program");
+            check(GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE) == GL13.GL_TEXTURE2
+                    && GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D) == texture, "Startup glass leaked texture state");
+            check(GL11.glIsEnabled(GL11.GL_DEPTH_TEST) && !GL11.glIsEnabled(GL11.GL_BLEND), "Startup glass leaked GL enables");
+            check(GL11.glGetInteger(GL11.GL_MATRIX_MODE) == GL11.GL_TEXTURE, "Startup glass changed the caller's matrix mode");
+            java.nio.IntBuffer clip = BufferUtils.createIntBuffer(16); GL11.glGetInteger(GL11.GL_SCISSOR_BOX, clip);
+            check(GL11.glIsEnabled(GL11.GL_SCISSOR_TEST) && clip.get(0) == 11 && clip.get(3) == 40, "Startup glass leaked its clip rectangle");
+        } finally {
+            GL20.glUseProgram(0); GL11.glMatrixMode(mode); GL11.glPopAttrib(); GL11.glDeleteTextures(texture);
+        }
     }
     private static void verifyState(GhostArt art) {
         int texture = GL11.glGenTextures(); GL13.glActiveTexture(GL13.GL_TEXTURE2); GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture); GL11.glEnable(GL11.GL_TEXTURE_2D);

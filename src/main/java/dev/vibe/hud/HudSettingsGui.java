@@ -32,6 +32,7 @@ public final class HudSettingsGui extends GuiScreen {
         this.manager = manager;
         this.element = element;
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        if(manager!=null)settings.addAll(manager.overlaySettings(element));
         if (HudManager.MUSIC.equals(element)) {
             dev.vibe.module.impl.client.MusicModule music = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.MusicModule.class);
             if (music != null) {

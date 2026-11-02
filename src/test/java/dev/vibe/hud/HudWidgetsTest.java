@@ -16,7 +16,8 @@ public class HudWidgetsTest {
         settings.seconds.setEnabled(false);assertEquals("15:07",ClockRenderer.time(settings,now));
         settings.twelveHour.setEnabled(true);assertEquals("3:07 PM",ClockRenderer.time(settings,now));
         settings.display.setValue("Analog");settings.diameter.setValue(104D);
-        settings.date.setEnabled(true);assertEquals(132,ClockRenderer.height(settings));
+        settings.date.setEnabled(true);assertFalse(settings.digital.isEnabled());assertEquals(117,ClockRenderer.height(settings));
+        settings.digital.setEnabled(true);assertEquals(132,ClockRenderer.height(settings));
     }
     @Test public void percentagesAndVerdictsUseTargetMaximumAndOptionalAbsorption() {
         TargetHudData sample=TargetHudData.sample();

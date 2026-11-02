@@ -43,7 +43,7 @@ public final class ReconnectEvents {
         GuiButton reconnect = new GuiButton(RECONNECT, x, y, w, 20, LanguageManager.translate("Reconnect"));
         GuiButton random = new GuiButton(RANDOM, x, y+24, w, 20, LanguageManager.translate("Random username"));
         reconnect.enabled = random.enabled = lastServer != null && (!pause || remoteWorld());
-        if(pause){reconnect=new dev.vibe.ui.menu.VibeMenuButton(reconnect);random=new dev.vibe.ui.menu.VibeMenuButton(random);}
+        reconnect=new dev.vibe.ui.menu.VibeMenuButton(reconnect);random=new dev.vibe.ui.menu.VibeMenuButton(random);
         event.buttonList.add(reconnect); event.buttonList.add(random);
     }
     @SubscribeEvent public void click(GuiScreenEvent.ActionPerformedEvent.Pre event) {

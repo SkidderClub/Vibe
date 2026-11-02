@@ -4,6 +4,7 @@ import dev.vibe.core.startup.*;
 import dev.vibe.hud.*;
 import dev.vibe.module.impl.client.HudModule;
 import dev.vibe.path.PathTestFixture;
+import dev.vibe.ui.menu.MenuPalette;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 import net.minecraftforge.fml.common.ProgressManager;
@@ -12,6 +13,17 @@ import static org.junit.Assert.*;
 
 public class GhostAssetsTest {
     @Rule public org.junit.rules.TemporaryFolder temporary = new org.junit.rules.TemporaryFolder();
+
+    @Test public void earlyStartupReadsTheSavedMenuPaletteAndToleratesInvalidPreferences() throws Exception {
+        java.nio.file.Path game = temporary.newFolder("early-startup").toPath();
+        assertEquals(MenuPalette.OCEAN, MenuPalette.read(game));
+        java.nio.file.Path settings = game.resolve("vibe/menu.properties");
+        java.nio.file.Files.createDirectories(settings.getParent());
+        java.nio.file.Files.write(settings, java.util.Arrays.asList("theme=ROSE"), java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals(MenuPalette.ROSE, MenuPalette.read(game));
+        java.nio.file.Files.write(settings, java.util.Arrays.asList("theme=unknown"), java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals(MenuPalette.OCEAN, MenuPalette.read(game));
+    }
 
     @Test public void packagedArtworkHasTransparentPaddingAndFifteenNonemptyFrames() throws Exception {
         BufferedImage still = GhostArt.image("ghost-static.png"), atlas = GhostArt.image("ghost-animation.png");
