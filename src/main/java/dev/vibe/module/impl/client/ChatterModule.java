@@ -17,6 +17,7 @@ public final class ChatterModule extends Module {
     private String session="";
     private boolean menuRequested;
     private GuiScreen menuParent;
+    private int interactionSlot=-1;private boolean useOwned;private NetHandlerPlayClient interactionConnection;private long interactionQueued;
     public ChatterModule(){super("Chatter","React to chat with delayed messages or leaving the server",Category.CLIENT,Keyboard.KEY_NONE);}
     public ChatterEngine engine() {
         if(engine==null)engine=new ChatterEngine(new ChatterStore(new File(Minecraft.getMinecraft().mcDataDir,"vibe/chatter").toPath()));
@@ -31,9 +32,30 @@ public final class ChatterModule extends Module {
         }
     }
     @Override protected void onDisable(){clear();}
-    public void clear(){if(engine!=null)engine.cancel();session="";}
+    public void clear(){if(engine!=null)engine.cancel();session="";interactionSlot=-1;interactionConnection=null;releaseUse();}
+    private void releaseUse(){if(useOwned){dev.vibe.input.VanillaClicks.discardPresses(Minecraft.getMinecraft().gameSettings.keyBindUseItem);dev.vibe.input.VanillaClicks.restore(Minecraft.getMinecraft().gameSettings.keyBindUseItem);useOwned=false;}}
+    private boolean canInteract(){Minecraft mc=Minecraft.getMinecraft();return isEnabled()&&mc.thePlayer!=null&&mc.theWorld!=null&&mc.currentScreen==null&&mc.inGameHasFocus&&!mc.thePlayer.isUsingItem()
+            &&!dev.vibe.module.impl.world.ScaffoldModule.isActive()&&!dev.vibe.module.impl.world.BedAuraModule.ownsMiningInput()
+            &&!dev.vibe.module.impl.movement.FreecamModule.cameraActiveHook()&&!dev.vibe.module.impl.world.AutoToolModule.hasHotbarAction()&&!dev.vibe.module.impl.combat.AutoBuffModule.ownsUseInput()&&!dev.vibe.module.impl.combat.AntiFireballModule.reserving();}
+    public static void prepareInputHook(){
+        if(dev.vibe.Vibe.getInstance()==null||dev.vibe.Vibe.getInstance().getModuleManager()==null)return;
+        ChatterModule module=dev.vibe.Vibe.getInstance().getModuleManager().getModule(ChatterModule.class);if(module!=null)module.applyInteraction();
+    }
+    private void applyInteraction(){
+        if(interactionSlot<0)return;Minecraft mc=Minecraft.getMinecraft();
+        if(!isEnabled()||mc.getNetHandler()!=interactionConnection||now()-interactionQueued>10000){interactionSlot=-1;interactionConnection=null;return;}
+        if(!canInteract())return;int slot=interactionSlot;interactionSlot=-1;interactionConnection=null;
+        mc.thePlayer.inventory.currentItem=slot;dev.vibe.input.VanillaClicks.pulseUse(mc.gameSettings.keyBindUseItem);useOwned=true;
+    }
+    public static void titleHook(String title,String subtitle){
+        if(dev.vibe.Vibe.getInstance()==null||dev.vibe.Vibe.getInstance().getModuleManager()==null)return;
+        ChatterModule m=dev.vibe.Vibe.getInstance().getModuleManager().getModule(ChatterModule.class);if(m==null||!m.isEnabled())return;
+        if(title!=null&&!title.isEmpty())m.engine().receive(title,dev.vibe.chatter.ChatterData.Source.TITLE,m.context(),now());
+        if(subtitle!=null&&!subtitle.isEmpty())m.engine().receive(subtitle,dev.vibe.chatter.ChatterData.Source.SUBTITLE,m.context(),now());
+    }
     public void receive(String text){if(isEnabled())engine().receive(text,context(),now());}
     public void tick(){
+        releaseUse();
         // Opening after chat key handling also lets the normal setting command
         // open this editor, instead of vanilla Enter immediately closing it.
         if(menuRequested){menuRequested=false;Minecraft.getMinecraft().displayGuiScreen(new ChatterGui(this,menuParent));menuParent=null;}
@@ -51,6 +73,7 @@ public final class ChatterModule extends Module {
         return new ChatterEngine.Connection() {
             public Object identity(){return handler;}public String name(){return name;}public String server(){return host;}
             public void message(String value){if(mc.getNetHandler()==handler&&mc.thePlayer!=null)mc.thePlayer.sendChatMessage(value);}
+            public boolean interact(int slot){if(mc.getNetHandler()!=handler||interactionSlot>=0||!canInteract())return false;interactionSlot=slot;interactionConnection=handler;interactionQueued=now();return true;}
             public void leave(){if(mc.getNetHandler()!=handler)return;mc.theWorld.sendQuittingDisconnectingPacket();mc.loadWorld(null);mc.displayGuiScreen(new GuiMultiplayer(new GuiMainMenu()));}
         };
     }

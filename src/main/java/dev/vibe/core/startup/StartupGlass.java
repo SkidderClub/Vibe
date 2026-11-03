@@ -49,6 +49,7 @@ final class StartupGlass implements AutoCloseable {
     }
 
     private void lamp(int width, int height, float scale, float x, float y, float w, float h, float time) {
+        MenuPalette palette=this.palette.sample(System.currentTimeMillis());
         program.bind(); program.integer("Scene", 0);
         program.vec2("Resolution", width, height); program.vec2("Origin", x, y); program.vec2("Size", w, h);
         program.vec2("LavaOrigin", x, y); program.vec2("LavaSize", w, h);

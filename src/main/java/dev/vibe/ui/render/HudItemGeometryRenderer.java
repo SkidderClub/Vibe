@@ -83,6 +83,16 @@ public final class HudItemGeometryRenderer {
         }
         return true;
     }
+    /** Raw-GL HUD effects can leave driver state different from GlStateManager's cached blend/depth state. */
+    public static void prepareItem(){
+        if(depth==0)return;
+        boolean clipped=GL11.glIsEnabled(GL11.GL_SCISSOR_TEST);
+        GL20.glUseProgram(0);GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        dev.vibe.ui.GuiRenderState.prepare(true);
+        if(clipped)GL11.glEnable(GL11.GL_SCISSOR_TEST);
+        GL13.glClientActiveTexture(OpenGlHelper.defaultTexUnit);
+        GlStateManager.enableRescaleNormal();RenderHelper.enableGUIStandardItemLighting();GlStateManager.color(1,1,1,1);
+    }
     private static void append(WorldRenderer buffer,List<BakedQuad> quads,int color) {
         for(BakedQuad quad:quads)LightUtil.renderQuadColor(buffer,quad,color);
     }

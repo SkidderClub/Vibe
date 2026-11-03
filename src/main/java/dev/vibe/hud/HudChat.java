@@ -79,32 +79,31 @@ public final class HudChat {
         if(maxAlpha<=.01F&&!preview){shownHeight=0;return;}
         maxAlpha*=opening;
         shownHeight=used;
-        if(!preview)e.setBounds(x,top,w,used);
         textOffset=preview?0:3*(1-openMotion.update(open));
-        GlStateManager.pushMatrix();GlStateManager.translate(0,textOffset+6*(1-opening),0);
+        int offset=Math.round(textOffset+6*(1-opening));top+=offset;
+        if(!preview)e.setBounds(x,top,w,used);
         if("LiquidGlass".equals(manager.theme(e,hud)))manager.drawOverlayGlass(hud,s,x,top,w,used,maxAlpha);
         else if(!"Transparent".equals(manager.theme(e,hud))){
             boolean skeet="Skeet".equals(manager.theme(e,hud));float radius=skeet?1:s.radius.getFloat();
             HudShapes.round(x,top,w,used,radius,RenderUtils.alpha(s.background.getArgb(),Math.round((s.background.getArgb()>>>24)*maxAlpha)));
-            if(s.border.isEnabled())RenderUtils.roundedOutline(x,top,x+w,y+h,radius,1,RenderUtils.alpha(s.accent.getArgb(),Math.round(65*maxAlpha)));
+            if(s.border.isEnabled())RenderUtils.roundedOutline(x,top,x+w,top+used,radius,1,RenderUtils.alpha(s.accent.getArgb(),Math.round(65*maxAlpha)));
             if(skeet)Gui.drawRect(x+2,top+2,x+w-2,top+3,RenderUtils.alpha(s.accent.getArgb(),Math.round(255*maxAlpha)));
         }
         try(dev.vibe.ui.GuiClip clip=dev.vibe.ui.GuiClip.local(x+4,top+4,w-8,Math.max(0,used-8))){
         for(int i=0;i<components.size();i++){
             int alpha=Math.round(255*opacity.get(i)*opening);if(alpha<4)continue;
             String text=s.keepColors.isEnabled()?components.get(i).getFormattedText():EnumChatFormatting.getTextWithoutFormattingCodes(components.get(i).getFormattedText());
-            font.drawString(text,x+6,y+h-6-(i+1)*lineHeight+(lineHeight-font.FONT_HEIGHT)/2F,alpha<<24|s.text.getArgb()&0xFFFFFF,s.shadow.isEnabled());
+            font.drawString(text,x+6,y+h+offset-6-(i+1)*lineHeight+(lineHeight-font.FONT_HEIGHT)/2F,alpha<<24|s.text.getArgb()&0xFFFFFF,s.shadow.isEnabled());
         }
         }
         if(s.scrollbar.isEnabled()&&open&&history.size()>capacity){float track=used-12,thumb=Math.max(12,track*capacity/history.size());float yy=top+6+(track-thumb)*(1-scroll/(float)Math.max(1,history.size()-capacity));HudShapes.round(x+w-3,yy,2,thumb,1,s.accent.getArgb());}
-        GlStateManager.popMatrix();
     }
 
     public static Object component(int mouseX,int mouseY){
         if(!active())return null;Minecraft mc=Minecraft.getMinecraft();if(!(mc.currentScreen instanceof GuiChat))return null;
         HudManager.HudElement e=Vibe.getInstance().getHudManager().getElement(HudManager.CHAT);ScaledResolution res=new ScaledResolution(mc);float scale=e.getScale();
         float x=(mouseX/(float)res.getScaleFactor()-e.getLeft())/scale-6;
-        float y=(res.getScaledHeight()-1-mouseY/(float)res.getScaleFactor()-e.getTop())/scale-textOffset;
+        float y=(res.getScaledHeight()-1-mouseY/(float)res.getScaleFactor()-e.getTop())/scale;
         if(x<0||x>hud().chat.width.getInt()-12||y<6||y>shownHeight-6)return null;
         int line=(int)((shownHeight-6-1-y)/hud().chat.lineHeight.getFloat());if(line<0||line>=shown.size())return null;
         float advance=0;for(IChatComponent part:shown.get(line)){

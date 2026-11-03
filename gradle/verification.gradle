@@ -187,6 +187,8 @@ registerRenderCheck('verifyHudVisuals', 'dev.vibe.ui.ClientChangesRenderCheck', 
         'Checks uniform ArrayList backgrounds, continuous outlines, OOF arrows, domain animation and native item pixels/performance.', false) {
     args 'hud-visuals'
 }
+registerRenderCheck('verifyNewModules', 'dev.vibe.ui.ClientChangesRenderCheck', 'new-modules-check',
+        'Checks BlockESP editor input/layout and the transformed Item Physics helper in native OpenGL.', false) { args 'new-modules' }
 registerRenderCheck('verifyServerMenuRendering','dev.vibe.ui.ClientChangesRenderCheck','server-menu-check',
         'Checks native edit-server and direct-connect backgrounds after a cached world/editor frame.',false) {
     args 'server-menus'

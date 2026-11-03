@@ -1372,6 +1372,10 @@ public final class VibeClickGui extends GuiScreen {
     }
 
     private boolean isBreezeTheme(){ClickGuiModule clickGui=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);return clickGui!=null&&clickGui.getTheme().is("Breeze");}
+    public boolean isTypingForMovement(){
+        if(isAugustusTheme())return AugustusImGui.wantsTextInput();
+        return dev.vibe.input.GuiInputFocus.typing(isBreezeTheme()?breeze:isNeverLoseTheme()?neverLose:isXanaxTheme()?xanax:this);
+    }
 
     private boolean isNeverLoseTheme() {
         ClickGuiModule clickGui = Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);

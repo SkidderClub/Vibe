@@ -85,7 +85,7 @@ public final class AccountManagerGui extends GuiScreen {
     }
 
     private void addButton(int id, int x, int y, int w, int h, String label, String subtitle, boolean primary) {
-        buttonList.add(new AccountScreenStyle.Button(id, x, y, w, h, label, subtitle, primary, id == 4 || id == 14));
+        AccountScreenStyle.Button button=new AccountScreenStyle.Button(id, x, y, w, h, label, subtitle, primary, id == 4 || id == 14);if(id==11)button.centeredContent();buttonList.add(button);
     }
 
     private void rebuildButtons() {
@@ -309,18 +309,14 @@ public final class AccountManagerGui extends GuiScreen {
             boolean auto = accounts.isAutoLogin(account);
             String autoLabel = dev.vibe.language.LanguageManager.translate("Auto login");
             String activeLabel = dev.vibe.language.LanguageManager.translate("Active");
-            int autoWidth=auto?dev.vibe.ui.menu.MenuStatusChip.width(autoLabel):0;
-            int activeWidth=active?dev.vibe.ui.menu.MenuStatusChip.width(activeLabel):0;
-            boolean stack=rowHeight>=32;
-            int tagWidth=stack?Math.max(autoWidth,activeWidth):autoWidth+activeWidth+(auto&&active?4:0);
+            String status=active&&auto?activeLabel+" · "+autoLabel:active?activeLabel:auto?autoLabel:"";
+            int tagWidth=status.isEmpty()?0:dev.vibe.ui.menu.MenuStatusChip.width(status);
             int tagLeft = innerLeft + listWidth - tagWidth - 14;
             AccountScreenStyle.rawText(AccountScreenStyle.fitRaw(account.getName(), listWidth - avatarSize - 34 - tagWidth),
                     textLeft, y + (wide ? 8 : 4), AccountScreenStyle.TEXT);
             AccountScreenStyle.text(AccountScreenStyle.fit(kind(account), listWidth - avatarSize - 34 - tagWidth), textLeft, y + (wide ? 23 : 16), AccountScreenStyle.MUTED);
-            int chipHeight=rowHeight>=40?16:14;
-            int chipY=y+(rowHeight-3-(stack&&active&&auto?chipHeight*2+2:chipHeight))/2;
-            if(active)dev.vibe.ui.menu.MenuStatusChip.draw(tagLeft,chipY,stack?tagWidth:activeWidth,chipHeight,activeLabel,AccountScreenStyle.SUCCESS);
-            if(auto)dev.vibe.ui.menu.MenuStatusChip.draw(tagLeft+(!stack&&active?activeWidth+4:0),chipY+(stack&&active?chipHeight+2:0),stack?tagWidth:autoWidth,chipHeight,autoLabel,AccountScreenStyle.ACCENT);
+            int chipHeight=16,chipY=y+(rowHeight-3-chipHeight)/2;
+            if(!status.isEmpty())dev.vibe.ui.menu.MenuStatusChip.draw(tagLeft,chipY,tagWidth,chipHeight,status,active?AccountScreenStyle.SUCCESS:AccountScreenStyle.ACCENT);
         }
         if (entries.size() > visibleRows) {
             int track = visibleRows * rowHeight - 3;
@@ -330,7 +326,6 @@ public final class AccountManagerGui extends GuiScreen {
             dev.vibe.ui.menu.MenuScrollbar.draw(innerLeft+listWidth-3,listTop,3,track,y,thumb);
         }
         if (wide) {
-            AccountScreenStyle.text(dev.vibe.language.LanguageManager.translate("Add account"), railLeft, bodyTop + 3, AccountScreenStyle.MUTED);
             int y=contentBottom-110;
             AccountScreenStyle.panel(railLeft,y,190,42,AccountScreenStyle.SURFACE,AccountScreenStyle.BORDER);
             Account account=selectedAccount();

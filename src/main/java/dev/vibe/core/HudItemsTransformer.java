@@ -12,6 +12,10 @@ public final class HudItemsTransformer implements IClassTransformer,Opcodes {
         ClassNode node=new ClassNode();new ClassReader(bytes).accept(node,0);boolean changed=false;
         for(Object value:node.methods) {
             MethodNode method=(MethodNode)value;
+            if((method.name.equals("renderItemAndEffectIntoGUI")||method.name.equals("func_180450_b")||method.name.equals("b"))
+                    &&(method.desc.equals("(Lnet/minecraft/item/ItemStack;II)V")||method.desc.equals("(Lzx;II)V"))){
+                method.instructions.insert(new MethodInsnNode(INVOKESTATIC,"dev/vibe/ui/render/HudItemGeometryRenderer","prepareItem","()V",false));changed=true;
+            }
             if(method.desc.equals("(Lnet/minecraft/client/resources/IResourceManager;)V")||method.desc.equals("(Lbni;)V")) {
                 method.instructions.insert(new MethodInsnNode(INVOKESTATIC,"dev/vibe/ui/render/HudItemGeometryRenderer","clear","()V",false));
                 changed=true;continue;

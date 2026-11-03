@@ -130,7 +130,7 @@ public final class FreecamModule extends Module {
         FreecamModule module = active();
         if (module != null && entity == module.cameraPlayer) {
             module.flight.look(yaw * 0.15, -pitch * 0.15, module.flightMode.is("Angle"));
-        } else if (!dev.vibe.module.impl.combat.AIAuraModule.lockMouseLookHook(entity)) {
+        } else if (!dev.vibe.module.impl.visual.FreeLookModule.mouse(entity,yaw,pitch)&&!dev.vibe.module.impl.combat.AIAuraModule.lockMouseLookHook(entity)) {
             ((Entity) entity).setAngles(yaw, pitch);
         }
     }
@@ -177,8 +177,8 @@ public final class FreecamModule extends Module {
     }
 
     /** Render-only equivalent of third-person mode, so the real body is drawn. */
-    public static int thirdPersonHook(int vanilla) { return active() == null ? dev.vibe.module.impl.visual.SmoothF5Module.thirdPersonHook(vanilla) : 1; }
-    public static boolean frontViewHook(boolean vanilla) { return active()==null&&dev.vibe.module.impl.visual.SmoothF5Module.frontViewHook(vanilla); }
+    public static int thirdPersonHook(int vanilla) { return active()!=null||dev.vibe.module.impl.visual.FreeLookModule.cameraActive()?1:dev.vibe.module.impl.visual.SmoothF5Module.thirdPersonHook(vanilla); }
+    public static boolean frontViewHook(boolean vanilla) { return active()==null&&!dev.vibe.module.impl.visual.FreeLookModule.cameraActive()&&dev.vibe.module.impl.visual.SmoothF5Module.frontViewHook(vanilla); }
 
     public static float fovHook(float vanilla) {
         FreecamModule module = active();
@@ -187,13 +187,13 @@ public final class FreecamModule extends Module {
 
     public static float yawHook(Object entity, float vanilla) {
         FreecamModule module = active();
-        return module == null || entity != module.cameraPlayer ? dev.vibe.module.impl.visual.SmoothF5Module.yawHook(entity,dev.vibe.module.impl.combat.AIAuraModule.cameraYawHook(entity,vanilla))
+        return module == null || entity != module.cameraPlayer ? dev.vibe.module.impl.visual.FreeLookModule.yaw(entity,dev.vibe.module.impl.visual.SmoothF5Module.yawHook(entity,dev.vibe.module.impl.combat.AIAuraModule.cameraYawHook(entity,vanilla)))
                 : (float) module.flight.cameraYaw(module.cameraTilt.getDouble());
     }
 
     public static float pitchHook(Object entity, float vanilla) {
         FreecamModule module = active();
-        return module == null || entity != module.cameraPlayer ? dev.vibe.module.impl.visual.SmoothF5Module.pitchHook(entity,dev.vibe.module.impl.combat.AIAuraModule.cameraPitchHook(entity,vanilla))
+        return module == null || entity != module.cameraPlayer ? dev.vibe.module.impl.visual.FreeLookModule.pitch(entity,dev.vibe.module.impl.visual.SmoothF5Module.pitchHook(entity,dev.vibe.module.impl.combat.AIAuraModule.cameraPitchHook(entity,vanilla)))
                 : (float) module.flight.cameraPitch(module.cameraTilt.getDouble());
     }
 

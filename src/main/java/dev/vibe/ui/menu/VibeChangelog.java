@@ -3,6 +3,23 @@ package dev.vibe.ui.menu;
 /** Static release notes used by the expandable main-menu changelog. */
 public final class VibeChangelog {
     private static final Entry[] ENTRIES = {
+            new Entry("3.11.2026", new String[] {
+                    "+ Item Physics adds tumbling and settling animations to dropped items",
+                    "+ FreeLook with Hold and Toggle modes, independent of KillAura's silent rotations",
+                    "+ BlockESP with a searchable editor, texture-matched default colours, and per-block fill, outline and line width",
+                    "+ GUI Move lets you use movement keys in selected menus",
+                    "+ Anti Fireball deflects incoming fireballs with MoveFix support",
+                    "+ Bow Aimbot predicts arrow drop and target movement, aims at exposed body parts and has adjustable rotation speeds",
+                    "+ AutoTool durability reserve, set to 0 by default",
+                    "+ Chatter rules can react to titles and subtitles and right-click from a chosen hotbar slot",
+                    "+ Four ThunderHack TargetHUD styles and a compact LiquidBounce Nextgen style",
+                    "~ Merged Themes and Shaders with automatic colour matching, custom themes, shader imports, and solid, rainbow and fade colours",
+                    "~ Cleaner server and account status tags, centred Cookie folder text, and no Add account heading",
+                    "~ Fixed doubled Custom Chat borders and black rendering on enchanted HUD items",
+                    "~ Cleaned up the bottom edges of SuizideX and PacketV3 panels",
+                    "~ Added more grid lines to TNT ESP for a clearer view of the blast zone",
+                    "~ Tightened the LiquidGlass pause menu around its buttons"
+            }),
             new Entry("2 November 2026", new String[] {
                     "+ TNT ESP with predicted explosion positions, fuse timers and customisable outlines and glow",
                     "+ Crab Sprint Reset with WTap, Sneak and NoStop modes",

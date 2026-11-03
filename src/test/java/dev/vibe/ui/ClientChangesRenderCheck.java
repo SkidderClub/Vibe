@@ -89,6 +89,7 @@ public final class ClientChangesRenderCheck {
             ModuleManager modules = instance(ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<Module>()); set(Vibe.class,vibe,"moduleManager",modules);
             if(args.length>0&&args[0].equals("tnt")){dev.vibe.ui.render.esp.TntEspRenderCheck.verify(mc,modules,OUTPUT);return;}
+            if(args.length>0&&args[0].equals("new-modules")){NewModulesRenderCheck.verify(mc,modules,OUTPUT);return;}
             if(args.length>0&&args[0].equals("menu-glass")){dev.vibe.ui.menu.GlassMenusRenderCheck.verify(mc,OUTPUT);return;}
             if(args.length>0&&args[0].equals("breeze")){BreezeRenderCheck.verify(mc,modules,OUTPUT);return;}
             if(args.length>0&&args[0].equals("server-menus")){ServerMenusRenderCheck.verify(mc,modules,OUTPUT);return;}
@@ -682,7 +683,7 @@ public final class ClientChangesRenderCheck {
         }
     }
 
-    static void frame(int width,int height) throws Exception {
+    public static void frame(int width,int height) throws Exception {
         Framebuffer target = mc.getFramebuffer();
         if (target==null || target.framebufferWidth!=width || target.framebufferHeight!=height) {
             if (target!=null) target.deleteFramebuffer(); target=new Framebuffer(width,height,true); set(Minecraft.class,mc,"framebufferMc",target);

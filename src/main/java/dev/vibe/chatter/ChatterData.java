@@ -25,10 +25,13 @@ public final class ChatterData {
         for(Rule rule:rules){if(rule==null)throw new IllegalArgumentException("Invalid rule.");rule.validate();if(!ids.add(rule.id))throw new IllegalArgumentException("Duplicate rule.");}
         for(Password pass:passwords){if(pass==null)throw new IllegalArgumentException("Invalid account.");pass.validate();if(!accounts.add(pass.key()))throw new IllegalArgumentException("Duplicate account.");}
     }
-    public enum Action { MESSAGE, LEAVE }
+    public enum Action { MESSAGE, LEAVE, INTERACT }
+    public enum Source { CHAT, TITLE, SUBTITLE, ANY }
     public static final class Rule {
         public String id=UUID.randomUUID().toString(),trigger="",message="";
         public Action action=Action.MESSAGE;
+        public Source source=Source.CHAT;
+        public int hotbarSlot;
         public boolean enabled=true,oncePerConnection;
         public int minimum=300,maximum=600,cooldown=2000;
         public Rule() { }
@@ -37,10 +40,11 @@ public final class ChatterData {
         }
         public Rule copy() {
             Rule value=new Rule(trigger,action,message,minimum,maximum,oncePerConnection);
-            value.id=id;value.enabled=enabled;value.cooldown=cooldown;return value;
+            value.id=id;value.enabled=enabled;value.cooldown=cooldown;value.source=source;value.hotbarSlot=hotbarSlot;return value;
         }
         public void validate() {
-            if(id==null||id.length()>64||action==null)throw new IllegalArgumentException("Invalid rule.");
+            if(id==null||id.length()>64||action==null||source==null)throw new IllegalArgumentException("Invalid rule.");
+            if(hotbarSlot<0||hotbarSlot>8)throw new IllegalArgumentException("Select a hotbar slot from 1 to 9.");
             if(trigger==null||trigger.trim().replace("*","").isEmpty()||trigger.length()>512||!plain(trigger))
                 throw new IllegalArgumentException("Enter a trigger containing text, not only *.");
             if(message==null||message.length()>512||!plain(message)||action==Action.MESSAGE&&message.trim().isEmpty())

@@ -60,6 +60,11 @@ public final class HudRefreshRenderCheck {
                 }
             }
             verifyCompactGlass(hud,renderer,glass);
+            hud.targetHud.mode.setValue("LiquidBounce");hud.targetHud.width.setValue(154D);
+            net.minecraft.client.entity.EntityPlayerSP unarmoured=PathTestFixture.allocate(net.minecraft.client.entity.EntityPlayerSP.class);unarmoured.inventory=new net.minecraft.entity.player.InventoryPlayer(unarmoured);
+            TargetHudData compact=new TargetHudData(unarmoured,"NormalKnockBack",20,20,0,20,0,0,0,data.id,data.skin);
+            int compactWidth=renderer.width(hud.targetHud,compact,mc.fontRendererObj);if(renderer.height(hud.targetHud)!=39||compactWidth>154)throw new AssertionError("LiquidBounce's unarmoured target is bloated");
+            frame(960,540,2);world();renderer.clear();renderer.draw(hud.targetHud,compact,mc.fontRendererObj,24,52,compactWidth,()->{},false,2600);save("target-liquidbounce-unarmoured.png");
             hud.targetHud.mode.setValue("Novoline");hud.targetHud.smoothing.setEnabled(false);
             for(float hp:new float[]{0,5.7F,16.34F,20,40}) {
                 TargetHudData d=new TargetHudData(null,"Jacobiissupersus",hp,20,0,16,2,354,1,data.id,data.skin);

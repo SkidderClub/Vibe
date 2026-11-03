@@ -92,6 +92,19 @@ public class ChatterTest {
     private static final class Server implements ChatterEngine.Connection {
         final Object id=new Object();final String name,host;final List<String> sent=new ArrayList<>();int leaves;
         Server(String name,String host){this.name=name;this.host=host;}public Object identity(){return id;}public String name(){return name;}public String server(){return host;}
-        public void message(String text){sent.add(text);}public void leave(){leaves++;}
+        int interacted=-1;boolean ready=true;
+        public void message(String text){sent.add(text);}public void leave(){leaves++;}public boolean interact(int slot){if(!ready)return false;interacted=slot;return true;}
+    }
+    @Test public void titlesAndSubtitlesAreScopedAndInteractionsWaitForAvailableInput()throws Exception{
+        engine.data().rules.clear();Rule rule=new Rule("Victory",Action.INTERACT,"",50,50,false);rule.source=Source.TITLE;rule.hotbarSlot=4;engine.data().rules.add(rule);engine.save();
+        engine.receive("Victory",server,0);engine.receive("Victory",Source.SUBTITLE,server,0);assertEquals(0,engine.pending());
+        engine.receive("Victory",Source.TITLE,server,0);assertEquals(1,engine.pending());engine.tick(server,49);assertEquals(-1,server.interacted);
+        server.ready=false;engine.tick(server,50);assertEquals(1,engine.pending());server.ready=true;engine.tick(server,60);assertEquals(4,server.interacted);assertEquals(0,engine.pending());assertTrue(server.sent.isEmpty());
+        ChatterData restored=store.load();assertEquals(Source.TITLE,restored.rules.get(0).source);assertEquals(4,restored.rules.get(0).hotbarSlot);assertEquals(4,rule.copy().hotbarSlot);
+    }
+    @Test public void anySourceMatchesSubtitleAndOldQueuedInteractionsCancelOnConnectionChanges()throws Exception{
+        engine.data().rules.clear();Rule r=new Rule("Game over",Action.INTERACT,"",0,0,true);r.source=Source.ANY;engine.data().rules.add(r);engine.save();
+        engine.receive("Game over",Source.SUBTITLE,server,0);assertEquals(1,engine.pending());Server changed=new Server("Other","other.example");engine.tick(changed,100);assertEquals(-1,changed.interacted);assertEquals(0,engine.pending());
+        r.hotbarSlot=9;try{r.validate();fail("Invalid hotbar slot accepted");}catch(IllegalArgumentException expected){}
     }
 }

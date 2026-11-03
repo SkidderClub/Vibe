@@ -55,14 +55,13 @@ public final class MainMenuPresentation {
         buttons.removeIf(button -> button.id == 14 || button instanceof GuiButtonLanguage
                 || button.id == ACCOUNT_BUTTON_ID || button.id == SHADER_BUTTON_ID || button.id == DISCORD_BUTTON_ID
                 || button.id == CHANGELOG_BUTTON_ID || button.id == THEMES_BUTTON_ID || button.id == LICENSES_BUTTON_ID);
-        buttons.add(new GuiButton(SHADER_BUTTON_ID, 0, 0, "Shaders"));
         buttons.add(new GuiButton(DISCORD_BUTTON_ID, 0, 0, "Discord"));
         buttons.add(new GuiButton(CHANGELOG_BUTTON_ID, 0, 0, "Changelog"));
         buttons.add(new GuiButton(THEMES_BUTTON_ID, 0, 0, "Themes"));
         buttons.add(new GuiButton(LICENSES_BUTTON_ID, 0, 0, "Licenses"));
 
         int half = (menuWidth - gap) / 2;
-        int slotWidth = (menuWidth - gap * 3) / 4;
+        int slotWidth = (menuWidth - gap * 2) / 3;
         for (int index = 0; index < buttons.size(); index++) {
             GuiButton button = buttons.get(index);
             if (button.getClass() != GuiButton.class && !(button instanceof VibeMenuButton)) continue;
@@ -78,8 +77,8 @@ public final class MainMenuPresentation {
                     break;
                 case DISCORD_BUTTON_ID: place(button, innerLeft, footerTop, slotWidth, smallHeight); break;
                 case SHADER_BUTTON_ID: place(button, innerLeft + (slotWidth + gap), footerTop, slotWidth, smallHeight); break;
-                case THEMES_BUTTON_ID: place(button, innerLeft + 2 * (slotWidth + gap), footerTop, slotWidth, smallHeight); break;
-                case 6: place(button, innerLeft + 3 * (slotWidth + gap), footerTop, menuWidth - 3 * (slotWidth + gap), smallHeight); break;
+                case THEMES_BUTTON_ID: place(button, innerLeft + (slotWidth + gap), footerTop, slotWidth, smallHeight); break;
+                case 6: place(button, innerLeft + 2 * (slotWidth + gap), footerTop, menuWidth - 2 * (slotWidth + gap), smallHeight); break;
                 case 0: place(button, innerLeft, optionTop, half, optionHeight); break;
                 case 4: place(button, innerLeft + half + gap, optionTop, menuWidth - half - gap, optionHeight); break;
                 case CHANGELOG_BUTTON_ID: place(button, left + panelWidth - 88, top + 13, 72, 22); break;

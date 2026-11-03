@@ -20,9 +20,11 @@ public final class TargetHudRenderer {
         @Override protected boolean removeEldestEntry(java.util.Map.Entry<UUID,State> entry) {return size()>16;}
     };
     private State state;
+    private final UpstreamTargetHuds upstream=new UpstreamTargetHuds();
 
-    public int height(TargetHudSettings s) { return s.mode.is("Zeroday")?76:(s.mode.is("LiquidGlass")||s.mode.is("Rise"))?46:42; }
+    public int height(TargetHudSettings s) { return UpstreamTargetHuds.supports(s.mode.getValue())?UpstreamTargetHuds.height(s):s.mode.is("Zeroday")?76:(s.mode.is("LiquidGlass")||s.mode.is("Rise"))?46:42; }
     public int width(TargetHudSettings s,TargetHudData d,FontRenderer font) {
+        if(UpstreamTargetHuds.supports(s.mode.getValue()))return upstream.width(s,d);
         return Math.max(s.mode.is("Zeroday")?184:130,s.width.getInt());
     }
     public void draw(TargetHudSettings s,TargetHudData d,FontRenderer font,int x,int y,int w,Runnable glass,boolean preview,long now) {
@@ -43,6 +45,7 @@ public final class TargetHudRenderer {
         state.previousHealth=d.health;state.previousHurt=d.hurtTicks;
         int color=s.health.getArgb(),end=s.gradient.isEnabled()?s.healthEnd.getArgb():color;
         float hurt=s.damageTint.isEnabled()?Math.min(1,d.hurtTicks/10F):0;
+        if(UpstreamTargetHuds.supports(s.mode.getValue())){upstream.draw(s,d,x,y,w,state.displayed,hurt);if(s.mode.is("ThunderHack"))drawParticles(s,x+24,y+24,now);return;}
         if(s.mode.is("LiquidGlass"))glass.run();
         else HudShapes.round(x,y,w,h,s.mode.is("Novoline")||s.mode.is("Zeroday")?0:s.radius.getFloat(),s.background.getArgb());
         if(s.mode.is("Novoline")) {

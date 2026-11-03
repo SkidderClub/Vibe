@@ -129,7 +129,7 @@ public final class HudEditorGui extends GuiScreen {
         stageRight = inspectorLeft - gap;
         // Scale and theme sit under a roomy preview; small windows keep them with the settings.
         controlsInStage = stageRight - stageLeft >= 300;
-        stageBottom = controlsInStage ? contentBottom - CONTROL - GAP * 2 : contentBottom;
+        stageBottom = controlsInStage ? contentBottom - Math.max(CONTROL,themeHeight((stageRight-stageLeft-GAP)/2)) - GAP * 2 : contentBottom;
 
         ScaledResolution source = new ScaledResolution(mc);
         int availableWidth = Math.max(10, stageRight - stageLeft - 16), availableHeight = Math.max(10, stageBottom - areaTop - 16);
@@ -240,7 +240,7 @@ public final class HudEditorGui extends GuiScreen {
             addHit(bounds[2] - 7, bounds[3] - 7, bounds[2] + 8, bounds[3] + 8, this::pressCanvas);
         }
         if (controlsInStage && selected != null) {
-            int controlsTop = contentBottom - CONTROL, middle = stageLeft + (stageRight - stageLeft - GAP) / 2;
+            int controlsTop = contentBottom - Math.max(CONTROL,themeHeight((stageRight-stageLeft-GAP)/2)), middle = stageLeft + (stageRight - stageLeft - GAP) / 2;
             drawScale(stageLeft, middle, controlsTop, mouseX, mouseY);
             drawTheme(middle + GAP, stageRight, controlsTop, mouseX, mouseY);
         }
@@ -358,7 +358,7 @@ public final class HudEditorGui extends GuiScreen {
                 drawScale(inspectorLeft, right, y, mouseX, mouseY);
                 y += CONTROL + GAP;
                 drawTheme(inspectorLeft, right, y, mouseX, mouseY);
-                y += CONTROL + GAP;
+                y += themeHeight(right-inspectorLeft) + GAP;
             }
             List<Setting<?>> settings = visibleSettings();
             if (settings.isEmpty()) AccountScreenStyle.rawText(AccountScreenStyle.fit("No settings", right - inspectorLeft), inspectorLeft + 2, y + 4, MUTED);
@@ -413,16 +413,18 @@ public final class HudEditorGui extends GuiScreen {
         addHit(x - 2, y - 2, x + 14, y + 14, (mouseX2, mouseY2) -> { element.setScale(element.getScale() + step); persist(); });
     }
 
+    private int themeHeight(int width){if(selected==null||!HudManager.TARGET_HUD.equals(selected.getId()))return CONTROL;int count=Vibe.getInstance().getModuleManager().getModule(HudModule.class).targetHud.mode.getModes().size(),cols=Math.max(1,Math.min(3,(width-8)/88));return Math.max(CONTROL,8+((count+cols-1)/cols)*18);}
     private void drawTheme(int x,int right,int y,int mouseX,int mouseY){
         final HudManager.HudElement element=selected;HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         final ModeSetting mode=HudManager.GHOSTS.equals(element.getId())?hud.ghosts.mode:HudManager.TARGET_HUD.equals(element.getId())?hud.targetHud.mode:HudManager.CUSTOM_HEALTH.equals(element.getId())?hud.customHealth.mode:null;
         String[] themes=mode!=null?mode.getModes().toArray(new String[0]):HudManager.HOTBAR.equals(element.getId())?new String[]{"Minecraft","Fortnite","Skeet","Vibe","LiquidGlass"}:HudManager.CLOCK.equals(element.getId())||HudManager.CHAT.equals(element.getId())?new String[]{"Vibe","Skeet","LiquidGlass","Transparent"}:THEMES;
         String current=mode==null?effectiveTheme(element):mode.getValue();
-        AccountScreenStyle.panel(x,y,right-x,CONTROL,SURFACE,BORDER);
+        int controlHeight=themeHeight(right-x);AccountScreenStyle.panel(x,y,right-x,controlHeight,SURFACE,BORDER);
         if(themes.length<=3)AccountScreenStyle.rawText(mode==null?"Theme":"Style",x+8,y+6,TEXT);
-        int rows=themes.length>3?2:1,columns=(themes.length+rows-1)/rows,cellHeight=rows==1?16:(CONTROL-8)/rows;
+        int columns=HudManager.TARGET_HUD.equals(element.getId())?Math.max(1,Math.min(3,(right-x-8)/88)):(themes.length+(themes.length>3?2:1)-1)/(themes.length>3?2:1);
+        int rows=(themes.length+columns-1)/columns,cellHeight=themes.length<=3?16:(controlHeight-8)/rows;
         for(int i=0;i<themes.length;i++){
-            final String value=themes[i];int a=x+4+(right-x-8)*(i%columns)/columns,b=x+4+(right-x-8)*(i%columns+1)/columns,top=y+(rows==1?21:4)+i/columns*cellHeight;
+            final String value=themes[i];int a=x+4+(right-x-8)*(i%columns)/columns,b=x+4+(right-x-8)*(i%columns+1)/columns,top=y+(themes.length<=3?21:4)+i/columns*cellHeight;
             boolean active=value.equalsIgnoreCase(current),hover=hovered(a,top,b,top+cellHeight-1,mouseX,mouseY);
             if(active||hover)AccountScreenStyle.panel(a,top,b-a-1,cellHeight-1,active?TINT:HOVER,active?ACCENT:BORDER);
             String label="LiquidGlass".equals(value)?"Glass":value;
@@ -855,7 +857,7 @@ public final class HudEditorGui extends GuiScreen {
 
     private int maxSettingsScroll() {
         if (selected == null) return 0;
-        int content = controlsInStage ? 0 : 2 * (CONTROL + GAP);
+        int content = controlsInStage ? 0 : CONTROL+themeHeight(inspectorWidth-6)+2*GAP;
         List<Setting<?>> settings = visibleSettings();
         if (settings.isEmpty()) content += 12;
         for (Setting<?> setting : settings) content += settingHeight(setting) + GAP;

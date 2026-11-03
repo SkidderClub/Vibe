@@ -213,6 +213,7 @@ public final class GlassMenusRenderCheck {
         field.setCursorPosition(6);field.setSelectionPos(11);field.drawTextBox();field.writeText("friend");require(field.getText().equals("Hello friend"),"Native text-field selection/replacement broke");
         field.setCursorPosition(6);field.setSelectionPos(12);field.drawTextBox();MenuGlass.end();save("glass-search-selection.png");
         MenuThemesGui themes=new MenuThemesGui(new GuiMainMenu(),shaders);setup(themes,960,540);frame(960,540);themes.drawScreen(-1,-1,0);save("glass-theme-picker.png");
+        ThemeControlsRenderCheck.verify(mc,shaders,output);
         require(!(Boolean)get(MenuGlass.class,null,"failed"),"Theme previews or input layers failed");require(GL11.glGetError()==GL11.GL_NO_ERROR,"Input/theme drawing produced a GL error");
     }
     private static void seedHead(UUID id,String name) throws Exception {
@@ -222,9 +223,9 @@ public final class GlassMenusRenderCheck {
     private static void newMenus(MainMenuEvents events,MainMenuShaderManager shaders)throws Exception{
         mc.gameSettings.guiScale=1;String selected=shaders.getSelected();
         ShaderMenuGui picker=new ShaderMenuGui(new GuiMainMenu(),shaders);setup(picker,960,540);
-        for(int i=0;i<6;i++){set(ShaderMenuGui.class,picker,"nextPreview",0L);frame(960,540);picker.drawScreen(-1,-1,0);}
+        for(int i=0;i<6;i++){set(MenuThemesGui.class,picker,"nextPreview",0L);frame(960,540);picker.drawScreen(-1,-1,0);}
         require(selected.equals(shaders.getSelected()),"Thumbnail generation changed the selected shader");
-        Map<?,?> thumbnails=(Map<?,?>)get(ShaderMenuGui.class,picker,"thumbnails");require(!thumbnails.isEmpty()&&thumbnails.size()<=8,"Shader previews are missing or unbounded");
+        Map<?,?> thumbnails=(Map<?,?>)get(MenuThemesGui.class,picker,"thumbnails");require(!thumbnails.isEmpty()&&thumbnails.size()<=8,"Shader previews are missing or unbounded");
         save("glass-shaders.png");picker.onGuiClosed();require(thumbnails.isEmpty(),"Shader browser retained GPU thumbnails after closing");
         dev.vibe.ui.server.MinibloxConnectGui loading=new dev.vibe.ui.server.MinibloxConnectGui(new GuiMainMenu(),new ServerData("Miniblox","miniblox.io",false),null);
         dev.vibe.miniblox.MinibloxRuntime.Attempt attempt=new dev.vibe.miniblox.MinibloxRuntime.Attempt();attempt.message="Starting the translation layer";

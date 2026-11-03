@@ -231,6 +231,7 @@ public final class HudVisualsRenderCheck {
             if(mode.equals("Static")?different!=0:different==0)throw new AssertionError("Domain color mode did not behave: "+mode);
         }
     }
+    private static boolean poisonItemState;
     private static void verifyItems() throws Exception {
         // The child defines the real native RenderItem with only our model-writer hook.
         // Its time source is fixed in both branches so glint frames can be compared exactly.
@@ -271,9 +272,13 @@ public final class HudVisualsRenderCheck {
         for(float scale:new float[]{1,1.5F,2}) {
             frame();drawItems(renderer,render,overlay,items,scale,false);BufferedImage nativeFrame=read();
             frame();drawItems(renderer,render,overlay,items,scale,true);BufferedImage cachedFrame=read();
-            if(different(nativeFrame,cachedFrame)!=0) {save("item-cache-mismatch.png");throw new AssertionError("Item pixels changed at scale "+scale+": "+different(nativeFrame,cachedFrame));}
+            if(different(nativeFrame,cachedFrame)!=0) {ImageIO.write(nativeFrame,"png",output.resolve("item-native-reference.png").toFile());save("item-cache-mismatch.png");throw new AssertionError("Item pixels changed at scale "+scale+": "+different(nativeFrame,cachedFrame));}
         }
         save("hud-items-native-identical.png");
+        frame();drawItems(renderer,render,overlay,new ItemStack[]{enchanted},1,true);BufferedImage cleanGlint=read();
+        try{poisonItemState=true;frame();drawItems(renderer,render,overlay,new ItemStack[]{enchanted},1,true);
+            if(different(cleanGlint,read())!=0)throw new AssertionError("Enchanted HUD item changed after raw GL/cache blend mismatch");save("hud-enchanted-state-repaired.png");
+        }finally{poisonItemState=false;}
         int uploads=HudItemGeometryRenderer.uploads();
         frame();drawItems(renderer,render,overlay,items,1,true);BufferedImage blue=read();
         atlas(0xFFE8B482);frame();drawItems(renderer,render,overlay,items,1,true);
@@ -317,6 +322,10 @@ public final class HudVisualsRenderCheck {
         try {
             for(int i=0;i<28;i++) {
                 ItemStack item=items[i%items.length];int x=(i%9)*20,y=(i/9)*20;
+                // Reference the native renderer with a clean state per icon. Vanilla's
+                // preceding glint/overlay can otherwise suppress the next glint itself.
+                if(!cache){GuiRenderState.prepare(true);RenderHelper.enableGUIStandardItemLighting();}
+                if(poisonItemState){GlStateManager.blendFunc(GL11.GL_SRC_COLOR,GL11.GL_ONE);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);GL11.glDisable(GL11.GL_LIGHTING);GL11.glColor4f(0,0,0,1);}
                 render.invoke(renderer,item,x,y);overlay.invoke(renderer,mc.fontRendererObj,item,x,y,null);
             }
         } finally {if(scope!=null)scope.close();RenderHelper.disableStandardItemLighting();GlStateManager.disableDepth();GlStateManager.popMatrix();}

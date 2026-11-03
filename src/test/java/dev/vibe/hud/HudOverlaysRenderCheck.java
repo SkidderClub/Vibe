@@ -87,11 +87,21 @@ public final class HudOverlaysRenderCheck {
             check(e.getHeight()==34,"Open chat reserved empty space instead of fitting two messages");
             net.minecraft.client.gui.GuiTextField input=new net.minecraft.client.gui.GuiTextField(0,mc.fontRendererObj,0,0,320,14);input.setMaxStringLength(256);input.setFocused(true);input.writeText("Hello world");HudChat.drawInput(input,1280,720);
             check(input.getText().equals("Hello world")&&input.xPosition>=4&&input.yPosition==700,"Styled input changed editing or escaped its panel");save(output.resolve("custom-chat-live.png"),1280,720);
+            // Hold a half-open animation. The glass shader ignores modelview translations,
+            // so its scissor and the geometry border must both use the animated coordinates.
+            e.setTheme("LiquidGlass");mc.currentScreen=null;
+            freezeMotion("motion",.5F,1);freezeMotion("openMotion",0,0);freezeMotion("heightMotion",34,34);
+            frame(1280,720);int background=pixel(2,2,720);manager.drawChat();
+            int center=e.getLeft()+e.getWidth()/2;
+            for(int delta=2;delta<=8;delta++){check(pixel(center,e.getTop()-delta,720)==background,"Glass chat drew a second top edge outside its animated bounds");check(pixel(center,e.getTop()+e.getHeight()+delta,720)==background,"Glass chat drew a second bottom edge outside its animated bounds");}
+            save(output.resolve("custom-chat-glass-moving.png"),1280,720);mc.currentScreen=new net.minecraft.client.gui.GuiChat();e.setTheme("Vibe");
             chat.clearChatMessages();frame(1280,720);manager.drawChat();Thread.sleep(200);frame(1280,720);manager.drawChat();
             Field height=HudChat.class.getDeclaredField("shownHeight");height.setAccessible(true);check(height.getInt(null)==0,"Empty chat kept an expanded panel");
         }finally{mc.theWorld=world;mc.thePlayer=player;mc.ingameGUI=ingame;mc.currentScreen=screen;if(!selected)hud.getHudElements().toggle(HudManager.CHAT);}
     }
     private static void frame(int w,int h){GL11.glViewport(0,0,w,h);GL11.glDisable(GL11.GL_SCISSOR_TEST);GL11.glDisable(GL11.GL_DEPTH_TEST);GL11.glClearColor(.045F,.055F,.075F,1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GL11.glOrtho(0,w,h,0,-1000,1000);GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glLoadIdentity();}
+    private static void freezeMotion(String name,float from,float target)throws Exception{Field field=HudChat.class.getDeclaredField(name);field.setAccessible(true);Object motion=field.get(null);for(String key:new String[]{"from","value","target"}){Field value=OverlayMotion.class.getDeclaredField(key);value.setAccessible(true);value.setFloat(motion,key.equals("target")?target:from);}Field time=OverlayMotion.class.getDeclaredField("started");time.setAccessible(true);time.setLong(motion,System.nanoTime()+1000000000L);}
+    private static int pixel(int x,int y,int h){ByteBuffer value=BufferUtils.createByteBuffer(4);GL11.glReadPixels(x,h-1-y,1,1,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,value);return (value.get(0)&255)<<16|(value.get(1)&255)<<8|value.get(2)&255;}
     private static void save(Path file,int w,int h)throws Exception{ByteBuffer data=BufferUtils.createByteBuffer(w*h*4);GL11.glReadPixels(0,0,w,h,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,data);BufferedImage image=new BufferedImage(w,h,BufferedImage.TYPE_INT_RGB);for(int y=0;y<h;y++)for(int x=0;x<w;x++){int i=((h-1-y)*w+x)*4;image.setRGB(x,y,(data.get(i)&255)<<16|(data.get(i+1)&255)<<8|data.get(i+2)&255);}ImageIO.write(image,"png",file.toFile());}
     private static void check(boolean okay,String message){if(!okay)throw new AssertionError(message);}
 }

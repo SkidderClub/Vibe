@@ -43,7 +43,7 @@ public final class ChatterGui extends GuiScreen {
     private void layout(){
         fields.clear();reveal=false;confirmation="";
         if(page==Page.RULES){
-            input("trigger",252,94,428,512,false);input("message",252,176,428,512,false);
+            input("trigger",252,94,428,512,false);input("message",252,176,428,512,false);input("slot",252,176,428,1,false);
             input("min",252,222,96,5,false);input("max",362,222,96,5,false);input("cooldown",472,222,208,6,false);input("test",252,325,428,512,false);fillRule();
         }else if(page==Page.PASSWORDS){
             input("search",22,98,196,96,false);input("name",252,105,428,16,false);input("server",252,157,428,255,false);input("password",252,209,310,64,true);fillPassword();
@@ -54,7 +54,9 @@ public final class ChatterGui extends GuiScreen {
         value.setMaxStringLength(limit);value.setEnableBackgroundDrawing(false);value.setTextColor(TEXT);fields.put(id,value);
     }
     private GuiTextField field(String id){return fields.get(id);}private String text(String id){return field(id).getText();}private void put(String id,Object text){field(id).setText(String.valueOf(text));}
-    private void fillRule(){put("trigger",draft.trigger);put("message",draft.message);put("min",draft.minimum);put("max",draft.maximum);put("cooldown",draft.cooldown);}
+    private void fillRule(){put("trigger",draft.trigger);put("message",draft.message);put("slot",draft.hotbarSlot+1);put("min",draft.minimum);put("max",draft.maximum);put("cooldown",draft.cooldown);}
+    private List<GuiTextField> activeFields(){List<GuiTextField> result=new ArrayList<>();for(Map.Entry<String,GuiTextField> e:fields.entrySet())if(page!=Page.RULES||!(e.getKey().equals("message")&&draft.action!=Action.MESSAGE||e.getKey().equals("slot")&&draft.action!=Action.INTERACT))result.add(e.getValue());return result;}
+    private void setAction(Action action){draft.action=action;field("message").setFocused(false);field("slot").setFocused(false);}
     private void fillPassword(){put("name",password==null?"":password.name);put("server",password==null?"":password.server);put("password",password==null?"":password.value);}
     private void fillGeneration(){put("length",generation.length);put("letters",generation.lettersLength);put("digits",generation.digitsLength);}
 
@@ -84,22 +86,22 @@ public final class ChatterGui extends GuiScreen {
         for(int i=scroll;i<values.size()&&y+48<=352;i++,y+=52){Rule value=values.get(i);
             row(left+20,top+y,left+222,top+y+48,value.id.equals(draft.id),hover(mx,my,20,y,202,48));
             check(28,y+8,value.enabled,()->{if(clean()){boolean old=value.enabled;value.enabled=!old;if(!persist())value.enabled=old;draft=value.copy();fillRule();}});
-            label(trim(value.trigger,160),46,y+9,TEXT);label((value.action==Action.MESSAGE?"Message":"Leave server")+"  "+value.minimum+" - "+value.maximum+" ms",28,y+29,MUTED);
+            label(trim(value.trigger,160),46,y+9,TEXT);label(trim(value.source.name().toLowerCase(java.util.Locale.ROOT)+"  "+(value.action==Action.MESSAGE?"Message":value.action==Action.INTERACT?"Interact slot "+(value.hotbarSlot+1):"Leave server")+"  "+value.minimum+" - "+value.maximum+" ms",184),28,y+29,MUTED);
             hit(44,y,178,48,()->{if(clean()){draft=value.copy();fillRule();notice="";}});
         }
         scrollbar(225,86,256,values.size(),5);
         button(22,358,92,22,"Add rule",false,()->{if(clean()&&values.size()<64){draft=new Rule();fillRule();say("New rule: enter a trigger and action.",false);}});
         button(122,358,96,22,"Duplicate",false,()->{if(clean()&&values.size()<64){draft=draft.copy();draft.id=UUID.randomUUID().toString();fillRule();say("Duplicated rule. Save to add it.",false);}});
         label(values.size()+" of 64 rules",24,387,MUTED);
-        label("When chat contains",252,82,TEXT);drawField("trigger",252,94,428);label("* matches any text. The ? character is literal.",252,119,MUTED);
-        label("Action",252,139,MUTED);button(302,134,132,22,"Message",draft.action==Action.MESSAGE,()->draft.action=Action.MESSAGE);button(442,134,132,22,"Leave server",draft.action==Action.LEAVE,()->draft.action=Action.LEAVE);
-        label(draft.action==Action.MESSAGE?"Message to send":"Message is unused for this action",252,164,MUTED);field("message").setEnabled(draft.action==Action.MESSAGE);drawField("message",252,176,428);
+        label("Source",252,82,TEXT);int sx=310;for(Source source:Source.values()){String name=source==Source.CHAT?"Chat":source==Source.TITLE?"Title":source==Source.SUBTITLE?"Subtitle":"Any";button(sx,78,88,14,name,draft.source==source,()->draft.source=source);sx+=94;}drawField("trigger",252,94,428);label("* matches any text. The ? character is literal.",252,119,MUTED);
+        label("Action",252,139,MUTED);button(302,134,115,22,"Message",draft.action==Action.MESSAGE,()->setAction(Action.MESSAGE));button(425,134,115,22,"Leave server",draft.action==Action.LEAVE,()->setAction(Action.LEAVE));button(548,134,132,22,"Interact",draft.action==Action.INTERACT,()->setAction(Action.INTERACT));
+        label(draft.action==Action.MESSAGE?"Message to send":draft.action==Action.INTERACT?"Hotbar slot (1 to 9)":"No additional action settings",252,164,MUTED);field("message").setEnabled(draft.action==Action.MESSAGE);field("slot").setEnabled(draft.action==Action.INTERACT);if(draft.action==Action.INTERACT)drawField("slot",252,176,428);else if(draft.action==Action.MESSAGE)drawField("message",252,176,428);
         label("Min delay (ms)",252,210,MUTED);label("Max delay (ms)",362,210,MUTED);label("Cooldown (ms)",472,210,MUTED);
         drawField("min",252,222,96);drawField("max",362,222,96);drawField("cooldown",472,222,208);
         check(252,255,draft.oncePerConnection,()->draft.oncePerConnection=!draft.oncePerConnection);label("Once per connection",270,256,TEXT);check(514,255,draft.enabled,()->draft.enabled=!draft.enabled);label("Rule enabled",532,256,TEXT);
         label("Insert a placeholder",252,280,MUTED);int x=252;
         for(String token:new String[]{"%name%","%password%","%pass%","%s","%n"}){int w=fontRendererObj.getStringWidth(token)+16;button(x,292,w,20,token,false,()->insert(token));x+=w+6;}
-        label("Try an incoming chat line",252,314,MUTED);drawField("test",252,325,428);
+        label("Try incoming text",252,314,MUTED);drawField("test",252,325,428);
         boolean match=!text("test").isEmpty()&&ChatterEngine.matches(text("trigger"),text("test"),currentName());
         label(text("test").isEmpty()?"Preview only. This never sends a message.":match?"Match: the selected action would run.":"No match: check text and wildcard order.",252,352,match?0xFFB0D581:MUTED);
         button(252,372,96,22,"Save rule",false,this::saveRule);button(356,372,84,22,"Discard",false,this::discard);
@@ -152,9 +154,9 @@ public final class ChatterGui extends GuiScreen {
     private void scrollbar(int x,int y,int height,int size,int visible){if(size<=visible)return;int thumb=Math.max(12,height*visible/size),offset=(height-thumb)*scroll/(size-visible);Gui.drawRect(left+x,top+y+offset,left+x+2,top+y+offset+thumb,accent(.3F));}
     private static void gear(int x,int y){GL11.glPushAttrib(GL11.GL_ENABLE_BIT|GL11.GL_CURRENT_BIT|GL11.GL_LINE_BIT);GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glLineWidth(1);GL11.glColor4f(.75F,.75F,.78F,1);for(int ring=0;ring<2;ring++){GL11.glBegin(GL11.GL_LINE_LOOP);for(int i=0;i<32;i++){double a=i*Math.PI/16,r=ring==0?(i%4<2?6:4.5):2;GL11.glVertex2d(x+Math.cos(a)*r,y+Math.sin(a)*r);}GL11.glEnd();}GL11.glPopAttrib();}
     private void say(String message,boolean failed){notice=message;error=failed;}private int number(String id){try{return Integer.parseInt(text(id));}catch(NumberFormatException failure){throw new IllegalArgumentException("Enter whole numbers in delay and length fields.");}}
-    private Rule editedRule(){Rule v=draft.copy();v.trigger=text("trigger");v.message=text("message");v.minimum=number("min");v.maximum=number("max");v.cooldown=number("cooldown");return v;}
+    private Rule editedRule(){Rule v=draft.copy();v.trigger=text("trigger");v.message=text("message");if(v.action==Action.INTERACT)v.hotbarSlot=number("slot")-1;v.minimum=number("min");v.maximum=number("max");v.cooldown=number("cooldown");return v;}
     private Rule savedRule(){for(Rule value:engine.data().rules)if(value.id.equals(draft.id))return value;return null;}
-    private static boolean same(Rule a,Rule b){return a.trigger.equals(b.trigger)&&a.message.equals(b.message)&&a.action==b.action&&a.enabled==b.enabled&&a.oncePerConnection==b.oncePerConnection&&a.minimum==b.minimum&&a.maximum==b.maximum&&a.cooldown==b.cooldown;}
+    private static boolean same(Rule a,Rule b){return a.trigger.equals(b.trigger)&&a.message.equals(b.message)&&a.action==b.action&&a.source==b.source&&a.hotbarSlot==b.hotbarSlot&&a.enabled==b.enabled&&a.oncePerConnection==b.oncePerConnection&&a.minimum==b.minimum&&a.maximum==b.maximum&&a.cooldown==b.cooldown;}
     private boolean dirty(){if(fields.isEmpty())return false;try{
         if(page==Page.RULES){Rule v=editedRule(),saved=savedRule();return saved==null?!v.trigger.isEmpty()||!v.message.isEmpty():!same(v,saved);}
         if(page==Page.PASSWORDS){if(password==null)return !text("name").isEmpty()||!text("password").isEmpty()||!text("server").isEmpty();return !text("name").equals(password.name)||!text("server").equals(password.server)||!text("password").equals(password.value)||passwordKey==null;}
@@ -180,8 +182,8 @@ public final class ChatterGui extends GuiScreen {
     private void saveGeneration(){if(!engine.available())return;try{Generation value=editedGeneration();value.validate();Generation old=engine.data().generation;boolean scope=engine.data().perServer;engine.data().generation=value;engine.data().perServer=perServer;if(!persist()){engine.data().generation=old;engine.data().perServer=scope;return;}generation=value.copy();}catch(IllegalArgumentException failure){say(failure.getMessage(),true);}}
     private void discard(){if(page==Page.RULES){Rule saved=savedRule();draft=saved==null?(engine.data().rules.isEmpty()?new Rule():engine.data().rules.get(0).copy()):saved.copy();fillRule();}else if(page==Page.PASSWORDS){password=null;if(passwordKey!=null)for(Password p:engine.data().passwords)if(p.key().equals(passwordKey))password=p.copy();fillPassword();}else{generation=engine.data().generation.copy();perServer=engine.data().perServer;fillGeneration();}say("Changes discarded.",false);}
     private void navigate(Page next){if(!clean())return;page=next;scroll=0;notice="";layout();}private String currentName(){return mc.getSession()==null?"Player":mc.getSession().getUsername();}private String currentServer(){return mc.getCurrentServerData()==null?"":ChatterEngine.normalizeServer(mc.getCurrentServerData().serverIP);}private void close(){if(clean())mc.displayGuiScreen(parent);}
-    @Override protected void mouseClicked(int mx,int my,int button)throws IOException{int x=Math.round(mx/scale),y=Math.round(my/scale);for(Map.Entry<String,GuiTextField> entry:fields.entrySet()){entry.getValue().mouseClicked(x,y,button);if(entry.getValue().isFocused()&&(entry.getKey().equals("trigger")||entry.getKey().equals("message")))insertionField=entry.getKey();}if(button==0)for(Hit hit:new ArrayList<>(hits))if(hit.inside(x,y)){hit.action.run();return;}}
-    @Override protected void keyTyped(char c,int key)throws IOException{if(key==Keyboard.KEY_ESCAPE){close();return;}if(key==Keyboard.KEY_TAB){List<GuiTextField> values=new ArrayList<>(fields.values());int index=-1;for(int i=0;i<values.size();i++)if(values.get(i).isFocused())index=i;for(GuiTextField f:values)f.setFocused(false);values.get((index+1)%values.size()).setFocused(true);return;}if(key==Keyboard.KEY_RETURN){if(page==Page.RULES)saveRule();else if(page==Page.PASSWORDS)savePassword();else saveGeneration();return;}for(GuiTextField f:fields.values())if(f.isFocused()){f.textboxKeyTyped(c,key);confirmation="";break;}}
+    @Override protected void mouseClicked(int mx,int my,int button)throws IOException{int x=Math.round(mx/scale),y=Math.round(my/scale);for(Map.Entry<String,GuiTextField> entry:fields.entrySet()){if(page==Page.RULES&&(entry.getKey().equals("slot")&&draft.action!=Action.INTERACT||entry.getKey().equals("message")&&draft.action!=Action.MESSAGE))continue;entry.getValue().mouseClicked(x,y,button);if(entry.getValue().isFocused()&&(entry.getKey().equals("trigger")||entry.getKey().equals("message")))insertionField=entry.getKey();}if(button==0)for(Hit hit:new ArrayList<>(hits))if(hit.inside(x,y)){hit.action.run();return;}}
+    @Override protected void keyTyped(char c,int key)throws IOException{if(key==Keyboard.KEY_ESCAPE){close();return;}if(key==Keyboard.KEY_TAB){List<GuiTextField> values=activeFields();int index=-1;for(int i=0;i<values.size();i++)if(values.get(i).isFocused())index=i;for(GuiTextField f:values)f.setFocused(false);values.get((index+1)%values.size()).setFocused(true);return;}if(key==Keyboard.KEY_RETURN){if(page==Page.RULES)saveRule();else if(page==Page.PASSWORDS)savePassword();else saveGeneration();return;}for(GuiTextField f:fields.values())if(f.isFocused()){f.textboxKeyTyped(c,key);confirmation="";break;}}
     @Override public void handleMouseInput()throws IOException{super.handleMouseInput();int wheel=Mouse.getEventDWheel();if(wheel!=0&&page!=Page.GENERATION)scroll=Math.max(0,scroll+(wheel>0?-1:1));}
     @Override public void updateScreen(){for(GuiTextField f:fields.values())f.updateCursorCounter();}@Override public void onGuiClosed(){Keyboard.enableRepeatEvents(false);reveal=false;}@Override public boolean doesGuiPauseGame(){return false;}
     private static final class Hit{final int x,y,w,h;final Runnable action;Hit(int x,int y,int w,int h,Runnable action){this.x=x;this.y=y;this.w=w;this.h=h;this.action=action;}boolean inside(int px,int py){return px>=x&&py>=y&&px<x+w&&py<y+h;}}

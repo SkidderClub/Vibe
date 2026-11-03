@@ -31,6 +31,7 @@ public final class MenuGlass {
     public static boolean active(){return screen!=null;}
     public static float scale(){return active()?Minecraft.getMinecraft().displayWidth/(float)guiWidth:new ScaledResolution(Minecraft.getMinecraft()).getScaleFactor();}
     public static void begin(GuiScreen owner,MainMenuShaderManager shaders,int width,int height){
+        MenuThemes.frame();
         screen=owner;guiWidth=width;guiHeight=height;frameTime=System.nanoTime();windowDrawn=false;window=null;
         Minecraft mc=Minecraft.getMinecraft();destination=GL11.glGetInteger(0x8CA6);scene=shaders==null?0:shaders.getBackgroundTexture();
         if(failed)return;

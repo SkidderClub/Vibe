@@ -25,7 +25,7 @@ public final class SmoothF5Module extends dev.vibe.module.Module {
     @Override protected void onDisable(){world=null;entity=null;frame=null;transition.reset(Minecraft.getMinecraft().gameSettings.thirdPersonView);}
     public void frameTick(float partial){
         Minecraft mc=Minecraft.getMinecraft();Entity view=mc.getRenderViewEntity();
-        if(!isEnabled()||view==null||mc.theWorld==null||FreecamModule.cameraActiveHook()||mc.gameSettings.debugCamEnable||(view instanceof net.minecraft.entity.player.EntityPlayer&&((net.minecraft.entity.player.EntityPlayer)view).isPlayerSleeping())){
+        if(!isEnabled()||view==null||mc.theWorld==null||FreecamModule.cameraActiveHook()||FreeLookModule.cameraActive()||mc.gameSettings.debugCamEnable||(view instanceof net.minecraft.entity.player.EntityPlayer&&((net.minecraft.entity.player.EntityPlayer)view).isPlayerSleeping())){
             world=null;entity=null;frame=null;transition.reset(mc.gameSettings.thirdPersonView);return;
         }
         if(world!=mc.theWorld||entity!=view){world=mc.theWorld;entity=view;transition.reset(mc.gameSettings.thirdPersonView);}

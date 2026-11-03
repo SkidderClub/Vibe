@@ -8,12 +8,17 @@ import java.util.function.Function;
 public final class TargetHudSettings {
     public final List<Setting<?>> all=new ArrayList<Setting<?>>();
     public final ModeSetting mode;
+    public final ModeSetting upstreamHealth;
+    public final BooleanSetting originalColours,thunderImage;
     public final ColorSetting health, healthEnd, background, text, particleColor;
     public final BooleanSetting gradient, absorption, ping, smoothing, damageTint, particles, animations;
     public final NumberSetting linger, width, radius, particleCount, particleSize, particleLifetime, maxTargets, animationDuration, gap;
 
     public TargetHudSettings(Function<Setting<?>,Setting<?>> register) {
-        mode=add(register,new ModeSetting("Target HUD Mode","Novoline","Novoline","Tenacity","Zeroday","Rise","LiquidGlass"));
+        mode=add(register,new ModeSetting("Target HUD Mode","Novoline","Novoline","Tenacity","Zeroday","Rise","LiquidGlass","ThunderHack","NurikZapen","NurikZapen Mini","CelkaPasta","LiquidBounce"));
+        originalColours=add(register,new BooleanSetting("Target HUD Original Theme Colours",true,()->UpstreamTargetHuds.supports(mode.getValue())));
+        thunderImage=add(register,new BooleanSetting("Target HUD ThunderHack Image",true,()->mode.is("ThunderHack")));
+        upstreamHealth=add(register,new ModeSetting("Target HUD Health Display","HP",()->UpstreamTargetHuds.supports(mode.getValue())&&!mode.is("LiquidBounce"),"HP","Percent"));
         linger=add(register,new NumberSetting("Target HUD Keep Visible",3,0,10,.25));
         maxTargets=add(register,new NumberSetting("Target HUD Max Targets",4,1,8,1));
         gap=add(register,new NumberSetting("Target HUD Card Spacing",6,0,20,1));
@@ -36,7 +41,7 @@ public final class TargetHudSettings {
         particleSize=add(register,new NumberSetting("Target HUD Particle Size",2,1,4,.25,()->supportsParticles()&&particles.isEnabled()));
         particleLifetime=add(register,new NumberSetting("Target HUD Particle Lifetime",750,250,1500,50,()->supportsParticles()&&particles.isEnabled()));
     }
-    public boolean supportsParticles() {return mode.is("Rise")||mode.is("LiquidGlass");}
+    public boolean supportsParticles() {return mode.is("Rise")||mode.is("LiquidGlass")||mode.is("ThunderHack");}
     private <T extends Setting<?>> T add(Function<Setting<?>,Setting<?>> register,T setting) {
         register.apply(setting);all.add(setting);return setting;
     }

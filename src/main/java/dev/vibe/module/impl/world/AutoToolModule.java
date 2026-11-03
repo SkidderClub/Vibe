@@ -32,6 +32,7 @@ public final class AutoToolModule extends Module {
     private final MultiSelectSetting types = addSetting(new MultiSelectSetting("Types",
             Arrays.asList("Weapon", "Tools"), Arrays.asList("Weapon", "Tools")));
     private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Basic", "Basic", "Silent"));
+    public final dev.vibe.setting.NumberSetting durabilityReserve=addSetting(new dev.vibe.setting.NumberSetting("Durability Reserve",0,0,500,1));
     private final RangeSetting startDelay = addSetting(new RangeSetting("Start Delay (ms)", 40.0D, 95.0D,
             0.0D, 1000.0D, 5.0D));
     private final BooleanSetting switchBack = addSetting(new BooleanSetting("Switch Back", true,
@@ -125,13 +126,14 @@ public final class AutoToolModule extends Module {
 
     private int bestTool(Block block) {
         int visible = minecraft.thePlayer.inventory.currentItem;
-        int best = visible;
+        boolean safeCurrent = minecraft.thePlayer.getHeldItem()==null||usable(minecraft.thePlayer.getHeldItem());
+        int best = safeCurrent?visible:-1;
         net.minecraft.util.BlockPos pos = minecraft.objectMouseOver.getBlockPos();
-        float strength = block.getPlayerRelativeBlockHardness(minecraft.thePlayer, minecraft.theWorld, pos);
+        float strength = safeCurrent?block.getPlayerRelativeBlockHardness(minecraft.thePlayer, minecraft.theWorld, pos):-1;
         try {
             for (int slot = 0; slot < 9; slot++) {
                 ItemStack stack = minecraft.thePlayer.inventory.mainInventory[slot];
-                if (stack == null || stack.stackSize <= 0) continue;
+                if (stack == null || stack.stackSize <= 0||!usable(stack)) continue;
                 minecraft.thePlayer.inventory.currentItem = slot;
                 float candidate = block.getPlayerRelativeBlockHardness(minecraft.thePlayer, minecraft.theWorld, pos);
                 if (candidate > strength + .000001F) { strength = candidate; best = slot; }
@@ -141,8 +143,10 @@ public final class AutoToolModule extends Module {
     }
 
     private int bestWeapon() {
-        return bestHotbarWeaponSlot(minecraft.thePlayer.inventory, stack -> true);
+        return bestHotbarWeaponSlot(minecraft.thePlayer.inventory, this::usable);
     }
+    public boolean usable(ItemStack stack){return stack!=null&&(durabilityReserve.getInt()==0||!stack.isItemStackDamageable()||stack.getMaxDamage()-stack.getItemDamage()>durabilityReserve.getInt());}
+    public static boolean hasHotbarAction(){return currentHotbarAction()!=null;}
 
     /** Shared weapon scoring for AutoTool and immediate combat actions. */
     public static int bestHotbarWeaponSlot(InventoryPlayer inventory, Predicate<ItemStack> accepted) {

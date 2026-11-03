@@ -122,12 +122,15 @@ import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 
 public final class ClientEvents {
+    @net.minecraftforge.fml.common.eventhandler.SubscribeEvent
+    public void onBlockAtlas(net.minecraftforge.client.event.TextureStitchEvent.Post event){dev.vibe.ui.render.esp.BlockPaletteColors.clear();}
 
     private final dev.vibe.ui.render.OofArrowsRenderer oofArrowsRenderer = new dev.vibe.ui.render.OofArrowsRenderer();
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final dev.vibe.ui.render.BreakProgressRenderer breakProgressRenderer = new dev.vibe.ui.render.BreakProgressRenderer();
     private final EspRenderer espRenderer = new EspRenderer();
     private final dev.vibe.ui.render.esp.TntEspRenderer tntEspRenderer=new dev.vibe.ui.render.esp.TntEspRenderer();
+    private final dev.vibe.ui.render.esp.BlockEspRenderer blockEspRenderer=new dev.vibe.ui.render.esp.BlockEspRenderer();
     private final TargetEspRenderer targetEspRenderer = new TargetEspRenderer();
     private final dev.vibe.ui.render.TargetAreaRenderer targetAreaRenderer = new dev.vibe.ui.render.TargetAreaRenderer();
     private final SkeletalRenderer skeletalRenderer = new SkeletalRenderer();
@@ -163,6 +166,10 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onKey(InputEvent.KeyInputEvent event) {
+        dev.vibe.module.impl.visual.FreeLookModule freeLook=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.FreeLookModule.class);
+        if(freeLook!=null&&freeLook.hold.isEnabled()&&freeLook.getKey()!=Keyboard.KEY_NONE&&freeLook.getKey()==Keyboard.getEventKey()){
+            freeLook.keyChanged(Keyboard.getEventKeyState(),minecraft.currentScreen==null&&minecraft.thePlayer!=null);
+        }
         dev.vibe.module.impl.movement.AntiAFKModule antiAFK = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.AntiAFKModule.class);
         if (antiAFK != null) antiAFK.keyboardInput(Keyboard.getEventKey());
         if (!Keyboard.getEventKeyState()) {
@@ -197,7 +204,8 @@ public final class ClientEvents {
             return;
         }
         for (Module module : Vibe.getInstance().getModuleManager().getModules()) {
-            if (module.getKey() != Keyboard.KEY_NONE && module.getKey() == key && !(module instanceof ClickGuiModule)) {
+            if (module.getKey() != Keyboard.KEY_NONE && module.getKey() == key && !(module instanceof ClickGuiModule)
+                    &&!(module instanceof dev.vibe.module.impl.visual.FreeLookModule&&((dev.vibe.module.impl.visual.FreeLookModule)module).hold.isEnabled())) {
                 module.toggle();
             }
         }
@@ -213,6 +221,8 @@ public final class ClientEvents {
             if (phone != null) phone.tickCommunications();
         }
         if (event.phase == TickEvent.Phase.START) {
+            dev.vibe.module.impl.movement.GuiMoveModule guiMove=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.GuiMoveModule.class);if(guiMove!=null)guiMove.tick();
+            dev.vibe.module.impl.visual.FreeLookModule freeLook=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.FreeLookModule.class);if(freeLook!=null)freeLook.tick();
             if (Vibe.getInstance().getCommandManager() != null) Vibe.getInstance().getCommandManager().tick();
             dev.vibe.module.impl.client.MusicModule music = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.MusicModule.class);
             if (music != null) music.tick();
@@ -225,6 +235,7 @@ public final class ClientEvents {
             ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
             if (scripts != null) scripts.tickStart();
             // Producers select the fake rotation before vanilla samples input.
+            dev.vibe.module.impl.combat.AntiFireballModule fireball=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AntiFireballModule.class);if(fireball!=null)fireball.prepare();
             if (Vibe.getInstance().getExtensions() != null) Vibe.getInstance().getExtensions().tickStart();
             KillAuraModule killaura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
             if (killaura != null) killaura.tickStart();
@@ -233,6 +244,8 @@ public final class ClientEvents {
             // Scaffold's rotation must win: it keeps the player on the bridge.
             ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
             if (scaffold != null) scaffold.tickStart();
+            dev.vibe.module.impl.combat.BowAimbotModule bow=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.BowAimbotModule.class);if(bow!=null)bow.tick();
+            if(fireball!=null)fireball.apply();
             if (moveFix != null) {
                 moveFix.tick();
                 moveFix.installInputHook();
@@ -311,6 +324,7 @@ public final class ClientEvents {
             return;
         }
         if (event.phase == TickEvent.Phase.END) {
+            dev.vibe.module.impl.combat.AntiFireballModule fireball=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AntiFireballModule.class);if(fireball!=null)fireball.restore();
             dev.vibe.module.impl.visual.SaturationModule saturation = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.SaturationModule.class);
             if (saturation != null) saturation.tick();
             dev.vibe.module.impl.visual.BreakProgressModule breakProgress = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.BreakProgressModule.class);
@@ -327,6 +341,7 @@ public final class ClientEvents {
             if (antiAFK != null) antiAFK.tickEnd();
             dev.vibe.module.impl.visual.DamageESPModule damageESP = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.DamageESPModule.class);
             dev.vibe.module.impl.visual.TntESPModule tnt=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.TntESPModule.class);if(tnt!=null)tnt.tick();
+            dev.vibe.module.impl.visual.BlockESPModule blocks=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.BlockESPModule.class);if(blocks!=null)blocks.tick();
             if (damageESP != null) damageESP.tick();
         }
         if (event.phase != TickEvent.Phase.END) {
@@ -843,6 +858,7 @@ public final class ClientEvents {
         hitmarkerRenderer.renderWorld(event);
         damageEspRenderer.render(event);
         tntEspRenderer.render(event);
+        blockEspRenderer.render(event);
         skeletalRenderer.render(event);
         customCosmeticsRenderer.render(event);
         if (hypixel != null) hypixel.renderWorld();
@@ -1021,6 +1037,8 @@ public final class ClientEvents {
             dev.vibe.easter.EasterEggs.INSTANCE.clear();
             dev.vibe.module.impl.client.ChatterModule chatter = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.ChatterModule.class);
             if (chatter != null) chatter.clear();
+            dev.vibe.module.impl.visual.BlockESPModule blocks=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.BlockESPModule.class);if(blocks!=null)blocks.clear();
+            dev.vibe.module.impl.visual.FreeLookModule look=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.FreeLookModule.class);if(look!=null&&look.isEnabled())look.setEnabled(false);
             fogRenderer.close(); hitmarkerRenderer.close(); phoneRenderer.close();
             damageEspRenderer.close();
             tntEspRenderer.close();

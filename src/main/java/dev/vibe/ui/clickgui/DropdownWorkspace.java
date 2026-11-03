@@ -145,7 +145,6 @@ final class DropdownWorkspace {
             int color=style.accent(0,y);Gui.drawRect(x,y+p.h-3,x+panelWidth,y+p.h-1,color);
             Gui.drawRect(x,y+p.h-1,x+panelWidth,y+p.h,RenderUtils.alpha(color,100));
         }
-        else Gui.drawRect(x+radius,y+p.h-5,x+panelWidth-radius,y+p.h-4,RenderUtils.alpha(style.accent(.5F,y),55));
         if(p.max>0){int track=bottom-top,thumb=ScrollbarDrag.thumb(track,p.max,15),sy=top+Math.round((track-thumb)*p.scroll/p.max);
             rect(x+panelWidth-3,sy,2,thumb,1,RenderUtils.alpha(style.muted,150));}
     }

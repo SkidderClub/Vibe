@@ -88,6 +88,8 @@ public final class AccountScreenStyle {
     }
 
     public static class Button extends GuiButton {
+        private boolean centeredSubtitle;
+        public Button centeredContent(){centeredSubtitle=true;return this;}
         private final String subtitle;
         private final boolean primary;
         private final boolean danger;
@@ -123,16 +125,17 @@ public final class AccountScreenStyle {
                     String detail = SMALL_FONT.fit(dev.vibe.language.LanguageManager.translate(subtitle), width - 24);
                     float first = BODY_FONT.inkHeight(label), second = SMALL_FONT.inkHeight(detail), gap = 6;
                     float y = yPosition + (height - first - gap - second) * .5F;
-                    BODY_FONT.draw(label, xPosition + 12, y, color);
-                    SMALL_FONT.draw(detail, xPosition + 12, y + first + gap, !enabled ? RenderUtils.blend(SURFACE, MUTED, .6F) : MUTED);
+                    if(centeredSubtitle){BODY_FONT.centered(label,xPosition,y,width,first,color);SMALL_FONT.centered(detail,xPosition,y+first+gap,width,second,!enabled?RenderUtils.blend(SURFACE,MUTED,.6F):MUTED);}
+                    else{BODY_FONT.draw(label,xPosition+12,y,color);SMALL_FONT.draw(detail,xPosition+12,y+first+gap,!enabled?RenderUtils.blend(SURFACE,MUTED,.6F):MUTED);}
                 }
                 mouseDragged(mc, mouseX, mouseY);return;
             }
             if (subtitle.isEmpty()) {
                 text(label, xPosition + (width - textWidth(label)) / 2, yPosition + (height - 8) / 2, color);
             } else {
-                text(label, xPosition + 12, yPosition + 9, color);
-                text(fit(subtitle, width - 24), xPosition + 12, yPosition + 23,
+                text(label, centeredSubtitle?xPosition+(width-textWidth(label))/2:xPosition+12, yPosition + 9, color);
+                String detail=fit(subtitle,width-24);
+                text(detail, centeredSubtitle?xPosition+(width-textWidth(detail))/2:xPosition+12, yPosition + 23,
                         !enabled ? RenderUtils.blend(SURFACE, MUTED, 0.6F) : MUTED);
             }
             mouseDragged(mc, mouseX, mouseY);

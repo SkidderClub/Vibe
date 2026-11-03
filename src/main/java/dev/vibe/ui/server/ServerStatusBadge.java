@@ -8,7 +8,7 @@ import dev.vibe.ui.menu.MenuStatusChip;
 /** A failed connection remains distinct from a confirmed ban. */
 final class ServerStatusBadge {
     enum Kind {
-        JOINED("Joined",0xFF7DDDC3),BANNED("Banned",0xFFF28594),FAILED("Failed",0xFFE4BB7E),UNKNOWN("Untried",0xFFA0A7B6),CONNECTING("Joining",0xFFB4A0FF);
+        JOINED("Join OK",0xFF7DDDC3),BANNED("Banned",0xFFF28594),FAILED("Failed",0xFFE4BB7E),UNKNOWN("Untried",0xFFA0A7B6),CONNECTING("Joining",0xFFB4A0FF);
         final String label;final int color;Kind(String label,int color){this.label=label;this.color=color;}
     }
     static Kind kind(ServerJoinHistory.Result result){
@@ -16,6 +16,6 @@ final class ServerStatusBadge {
     }
     static void draw(int x,int y,Kind kind){
         int color=kind==Kind.CONNECTING?AccountScreenStyle.ACCENT:kind==Kind.UNKNOWN?AccountScreenStyle.MUTED:kind.color;
-        MenuStatusChip.draw(x,y,76,18,dev.vibe.language.LanguageManager.translate(kind.label),color);
+        String label=dev.vibe.language.LanguageManager.translate(kind.label);int width=Math.min(76,MenuStatusChip.width(label));MenuStatusChip.draw(x+76-width,y,width,18,label,color);
     }
 }

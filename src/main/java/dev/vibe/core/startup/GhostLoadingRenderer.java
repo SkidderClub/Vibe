@@ -33,6 +33,7 @@ public final class GhostLoadingRenderer implements AutoCloseable {
     public GhostLoadingRenderer(MenuPalette palette) { this.palette = palette; glass = new StartupGlass(palette); }
 
     public void draw(int width, int height, List<GhostStartup.Stage> stages, long millis) {
+        MenuPalette palette=this.palette.sample(System.currentTimeMillis());
         int active = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
         boolean shaders = GLContext.getCapabilities().OpenGL20;
         int program = shaders ? GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM) : 0;
@@ -111,6 +112,7 @@ public final class GhostLoadingRenderer implements AutoCloseable {
     }
 
     private void progressBar(float x, float y, float width, float height) {
+        MenuPalette palette=this.palette.sample(System.currentTimeMillis());
         if (width <= 0) return;
         StartupGlass.rounded(x - 3, y - 3, width + 6, height + 6, 4.5F, 0x10000000 | palette.accent & 0xFFFFFF);
         StartupGlass.rounded(x - 1, y - 1, width + 2, height + 2, 2.5F, 0x24000000 | palette.accent & 0xFFFFFF);

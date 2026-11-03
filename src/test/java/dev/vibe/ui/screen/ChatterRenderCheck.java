@@ -2,6 +2,9 @@ package dev.vibe.ui.screen;
 
 import dev.vibe.chatter.*;
 import dev.vibe.chatter.ChatterData.Password;
+import dev.vibe.chatter.ChatterData.Rule;
+import dev.vibe.chatter.ChatterData.Source;
+import dev.vibe.chatter.ChatterData.Action;
 import dev.vibe.module.impl.client.ChatterModule;
 import dev.vibe.path.PathTestFixture;
 import dev.vibe.ui.GuiRenderState;
@@ -37,6 +40,10 @@ public final class ChatterRenderCheck {
             ChatterModule module=new ChatterModule();PathTestFixture.set(ChatterModule.class,module,"engine",engine);fixture.modules.registerDynamic(module);
             gui=new ChatterGui(module,null);gui.setWorldAndResolution(mc,W,H);render("rules-960.png",W,H);
             fields().get("trigger").setText("/reg*please");click(292,383);assertion(engine.data().rules.get(0).trigger.equals("/reg*please"),"Save rule was not connected");
+            render(null,W,H);click(442,85);render(null,W,H);click(610,145);render(null,W,H);fields().get("trigger").setText("Victory");fields().get("slot").setText("9");click(292,383);
+            Rule interaction=engine.data().rules.get(0);assertion(interaction.source==Source.TITLE&&interaction.action==Action.INTERACT&&interaction.hotbarSlot==8,"Title/Interact controls were not saved");
+            render("title-interact-960.png",W,H);ChatterEngine interactionReload=new ChatterEngine(new ChatterStore(vault));assertion(interactionReload.data().rules.get(0).source==Source.TITLE&&interactionReload.data().rules.get(0).hotbarSlot==8,"Title interaction did not persist");
+            click(342,85);render(null,W,H);click(350,145);render(null,W,H);fields().get("trigger").setText("/reg*please");click(292,383);render(null,W,H);
             fields().get("trigger").setText("");click(260,103);click(274,302);assertion(fields().get("trigger").getText().equals("%name%"),"Placeholder insertion lost the focused trigger");
             click(397,383);render(null,W,H);click(100,211);fields().get("test").setText("<Alex> Player are you using cheats?");render("leave-preview-960.png",W,H);
             click(640,9);render("passwords-960.png",W,H);click(110,148);render("password-selected-960.png",W,H);

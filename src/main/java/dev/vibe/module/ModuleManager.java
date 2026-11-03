@@ -39,6 +39,7 @@ public final class ModuleManager {
         register(new ChestEspModule());
         register(new BedEspModule());
         register(new BlockChangeEspModule());
+        register(new BlockESPModule());
         register(new BlockOverlayModule());
         register(new CuteVisualsModule());
         register(new TrajectoriesModule());
@@ -48,7 +49,9 @@ public final class ModuleManager {
         register(new FovChangerModule());
         register(new NoHurtCamModule());
         register(new SmoothF5Module());
+        register(new FreeLookModule());
         register(new ItemGlowModule());
+        register(new ItemPhysicsModule());
         register(new DamageESPModule());
         register(new CustomCrosshairModule());
         register(new CustomCosmeticsModule());
@@ -60,6 +63,8 @@ public final class ModuleManager {
         register(new AmbienceModule());
         register(new TargetsModule());
         register(new AimAssistModule());
+        register(new AntiFireballModule());
+        register(new BowAimbotModule());
         register(new BacktrackModule());
         register(new LagRangeModule());
         register(new TickBaseModule());
@@ -71,6 +76,7 @@ public final class ModuleManager {
         register(new AutoClickerModule());
         register(new SprintModule());
         register(new AutoWalkModule());
+        register(new GuiMoveModule());
         register(new AntiAFKModule());
         register(new NoSlowModule());
         register(new MoveFixModule());

@@ -53,7 +53,7 @@ public class HudWidgetsTest {
             assertEquals(1.5F,restored.getElement(HudManager.TARGET_HUD).getScale(),0);
             assertNotNull(restored.getElement(HudManager.CLOCK));
             assertEquals("Digital",hud.clock.display.getValue());
-            assertEquals(5,hud.targetHud.mode.getModes().size());
+            assertTrue(hud.targetHud.mode.getModes().containsAll(java.util.Arrays.asList("Novoline","Tenacity","Zeroday","Rise","LiquidGlass","ThunderHack","NurikZapen","NurikZapen Mini","CelkaPasta","LiquidBounce")));
         }
     }
 }

@@ -1,5 +1,9 @@
 # Third-party notices
 
+TargetHUD layout and artwork ports from ThunderHack Recode and LiquidBounce,
+and the NightX Item Physics transform reference, are documented in
+[TARGET-HUD-PORTS.md](TARGET-HUD-PORTS.md).
+
 This file records third-party libraries, assets and implementation references used
 by Vibe. Each component retains its own license and attribution; Vibe's
 [GPLv3 license](GPL-3.0.txt) does not replace those terms.

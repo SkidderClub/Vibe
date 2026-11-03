@@ -136,7 +136,7 @@ public final class DropdownThemesRenderCheck {
         Object workspace=get(gui,"dropdown"),panel=((Map<?,?>)get(workspace,"categories")).get(Category.SCRIPTS);
         PathTestFixture.set(workspace.getClass(),workspace,"opened",System.nanoTime()-1000000000L);
         PathTestFixture.set(Module.class,module,"enabled",false);render(gui,null);
-        int x=num(panel,"x"),bottom=num(panel,"y")+num(panel,"h"),w=num(workspace,"panelWidth"),footer=theme.equals("Novoline")?4:theme.equals("PacketV3")?12:11;
+        int x=num(panel,"x"),bottom=num(panel,"y")+num(panel,"h"),w=num(workspace,"panelWidth"),footer=theme.equals("Novoline")?4:5;
         int[] baseline=region(x,bottom-footer,w,footer);
         PathTestFixture.set(Module.class,module,"enabled",true);render(gui,null);
         check(Arrays.equals(baseline,region(x,bottom-footer,w,footer)),"Module background painted over the "+theme+" footer/corners");

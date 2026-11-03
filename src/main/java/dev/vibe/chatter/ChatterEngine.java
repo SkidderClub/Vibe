@@ -10,6 +10,7 @@ public final class ChatterEngine {
     public interface Connection {
         Object identity(); String name(); String server();
         void message(String value); void leave();
+        default boolean interact(int hotbarSlot){return false;}
     }
     private final ChatterStore store;
     private final SecureRandom random=new SecureRandom();
@@ -40,11 +41,14 @@ public final class ChatterEngine {
         return true;
     }
     public void receive(String text,Connection context,long now) {
+        receive(text,Source.CHAT,context,now);
+    }
+    public void receive(String text,Source source,Connection context,long now) {
         if(!available||text==null||text.length()>16384||!bind(context))return;
         text=text.replaceAll("(?i)\u00a7[0-9A-FK-OR]","");
         if(!lastSent.isEmpty()&&now-lastSentAt<5000&&text.contains(lastSent))return;
         for(Rule rule:data.rules) {
-            if(!rule.enabled||rule.oncePerConnection&&completed.contains(rule.id)||pending.stream().anyMatch(p->p.rule.id.equals(rule.id)))continue;
+            if(!rule.enabled||rule.source!=Source.ANY&&rule.source!=source||rule.oncePerConnection&&completed.contains(rule.id)||pending.stream().anyMatch(p->p.rule.id.equals(rule.id)))continue;
             Long previous=lastMatch.get(rule.id);if(previous!=null&&now-previous<rule.cooldown)continue;
             if(matches(rule.trigger,text,name)&&pending.size()<32) {
                 pending.add(new Pending(rule.copy(),now+rule.minimum+random.nextInt(rule.maximum-rule.minimum+1)));
@@ -55,7 +59,13 @@ public final class ChatterEngine {
     public void tick(Connection context,long now) {
         if(!available||!bind(context))return;
         for(Iterator<Pending> iterator=pending.iterator();iterator.hasNext();) {
-            Pending next=iterator.next();if(now<next.due)continue;iterator.remove();
+            Pending next=iterator.next();if(now<next.due)continue;
+            if(next.rule.action==Action.INTERACT){
+                if(context.interact(next.rule.hotbarSlot)){iterator.remove();completed.add(next.rule.id);status="Hotbar interaction queued";}
+                else if(now-next.due>10000){iterator.remove();status="Interaction skipped: game input remained busy";}
+                return;
+            }
+            iterator.remove();
             try {
                 if(next.rule.action==Action.LEAVE){context.leave();status="Left server";cancel();return;}
                 String output=expand(next.rule.message,name,server);

@@ -407,6 +407,7 @@ public final class VibeConfig {
     }
 
     private JsonElement writeSetting(Setting<?> setting) {
+        if(setting instanceof dev.vibe.setting.JsonSetting)return ((dev.vibe.setting.JsonSetting)setting).getValue();
         if (setting instanceof ColorSetting) {
             return new JsonPrimitive(((ColorSetting) setting).getHex());
         }
@@ -429,7 +430,9 @@ public final class VibeConfig {
 
     private void readSetting(Setting<?> setting, JsonElement element) {
         try {
-            if (setting instanceof BooleanSetting) {
+            if(setting instanceof dev.vibe.setting.JsonSetting&&element.isJsonObject()){
+                ((dev.vibe.setting.JsonSetting)setting).setValue(element.getAsJsonObject());
+            }else if (setting instanceof BooleanSetting) {
                 ((BooleanSetting) setting).setEnabled(element.getAsBoolean());
             } else if (setting instanceof NumberSetting) {
                 ((NumberSetting) setting).setValue(element.getAsDouble());

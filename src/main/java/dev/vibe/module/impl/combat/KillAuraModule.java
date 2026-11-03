@@ -138,7 +138,7 @@ public class KillAuraModule extends Module {
             sessionPlayer = minecraft.thePlayer;
         }
         // Scaffold owns the server rotation and the held slot while enabled.
-        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()) { clear(); return; }
+        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()||AntiFireballModule.reserving()||BowAimbotModule.drawing()) { clear(); return; }
         EntityLivingBase selected = chooseTarget();
         if (selected == null) {
             // RavenBS permits the physical right mouse button to maintain its
@@ -184,7 +184,7 @@ public class KillAuraModule extends Module {
     private void prepareInput() {
         if (inputPrepared) return;
         inputPrepared = true;
-        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()) {
+        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()||AntiFireballModule.reserving()||BowAimbotModule.drawing()) {
             clear();
             releaseOwnedBlock();
             return;
@@ -562,6 +562,8 @@ public class KillAuraModule extends Module {
         KillAuraModule aura = module();
         if (aura != null) aura.prepareInput();
         AutoBuffModule.prepareInputHook();
+        AntiFireballModule.prepareInputHook();
+        dev.vibe.module.impl.client.ChatterModule.prepareInputHook();
     }
 
     public static boolean allowInputHook(boolean vanilla) {

@@ -43,6 +43,7 @@ import net.minecraft.client.resources.IResourceManager;
  * native Vibe ClickGUI so the other themes keep their exact interaction model.
  */
 public final class AugustusImGui {
+    public static boolean wantsTextInput(){if(context==null)return false;ImGui.setCurrentContext(context);return ImGui.getIO().getWantTextInput();}
 
     // ImGui colors are packed ABGR.
     private static final int TEXT=0xFFF0F0F0, BLUE=0xFFFF9D00, GREEN=0xFF00FF00, RED=0xFF0000FF;

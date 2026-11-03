@@ -161,6 +161,11 @@ public final class MainMenuShaderManager {
             GL11.glVertex2f(1.0F, 1.0F);
             GL11.glVertex2f(-1.0F, 1.0F);
             GL11.glEnd();
+            if(MenuThemes.needsSample(selected)){
+                int sampleWidth=Math.min(128,renderWidth),sampleHeight=Math.min(72,renderHeight);java.nio.ByteBuffer pixels=BufferUtils.createByteBuffer(sampleWidth*sampleHeight*4);
+                GL11.glReadPixels((renderWidth-sampleWidth)/2,(renderHeight-sampleHeight)/2,sampleWidth,sampleHeight,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,pixels);
+                MenuThemes.sampled(selected,ShaderThemeColors.sample(pixels));
+            }
         } finally {
             GL20.glUseProgram(previousProgram);
             GL11.glMatrixMode(GL11.GL_MODELVIEW);
@@ -192,23 +197,34 @@ public final class MainMenuShaderManager {
     }
 
     public void select(String preset) {
-        if (preset == null || !new File(shaderDirectory, preset).isFile()) {
+        ensureInitialized();
+        if (preset == null || !new File(preset).getName().equals(preset)||preset.contains("\\")||preset.contains("/")||!new File(shaderDirectory, preset).isFile()) {
             return;
         }
         selected = preset;
         deleteProgram();
         saveSettings();
+        MenuThemes.shaderSelected(this,preset);
     }
 
     public void setEnabled(boolean enabled) {
+        ensureInitialized();
         this.enabled = enabled;
         saveSettings();
+        MenuThemes.backgroundChanged(enabled);
     }
 
     public boolean isEnabled() { return enabled; }
     public String getSelected() { return selected; }
     public String getLastError() { return lastError; }
     public File getShaderDirectory() { ensureInitialized(); return shaderDirectory; }
+    public String importShader(java.nio.file.Path source)throws java.io.IOException{
+        ensureInitialized();if(!java.nio.file.Files.isRegularFile(source)||java.nio.file.Files.size(source)>1048576)throw new java.io.IOException("Choose a shader smaller than 1 MB.");
+        String original=source.getFileName().toString(),stem=original.replaceFirst("\\.[^.]+$","").replaceAll("[^a-zA-Z0-9 _-]","_");if(stem.isEmpty())stem="custom";if(stem.length()>100)stem=stem.substring(0,100);
+        String extension=original.substring(Math.max(0,original.lastIndexOf('.')+1)).toLowerCase(java.util.Locale.ROOT);if(!extension.equals("frag")&&!extension.equals("fsh")&&!extension.equals("glsl"))throw new java.io.IOException("Choose a .frag, .fsh or .glsl shader.");
+        java.nio.file.Path target=shaderDirectory.toPath().resolve(stem+".frag");for(int n=2;java.nio.file.Files.exists(target);n++)target=shaderDirectory.toPath().resolve(stem+"-"+n+".frag");
+        java.nio.file.Files.copy(source,target);return target.getFileName().toString();
+    }
 
     /** One immutable 128x72 snapshot. Never changes or persists the selected background. */
     public Framebuffer thumbnail(String preset){
@@ -252,6 +268,7 @@ public final class MainMenuShaderManager {
             selected = DEFAULT_PRESET;
         }
         if (!settingsFile.isFile()) saveSettings();
+        MenuThemes.bind(this);
     }
 
     private void extractBundledPresets() {

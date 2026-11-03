@@ -55,7 +55,7 @@ public final class GamertagSetupGui extends GuiScreen {
         gamertag.setText(value);
         int buttonWidth = (innerWidth - 8) / 2;
         buttonList.add(new AccountScreenStyle.Button(1, left + 16, top + actionsTop, buttonWidth, buttonHeight, "Continue", "", true, false));
-        buttonList.add(new AccountScreenStyle.Button(2, left + 24 + buttonWidth, top + actionsTop, innerWidth - buttonWidth - 8, buttonHeight, "Shader settings", "", false, false));
+        buttonList.add(new AccountScreenStyle.Button(2, left + 24 + buttonWidth, top + actionsTop, innerWidth - buttonWidth - 8, buttonHeight, "Themes", "", false, false));
         buttonList.add(new LanguageFlagButton(10, left + 16, top + flagsTop, innerWidth, 28));
     }
 
