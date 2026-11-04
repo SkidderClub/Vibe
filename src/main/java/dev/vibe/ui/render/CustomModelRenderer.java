@@ -7,6 +7,7 @@ import dev.vibe.model.SwordFitter;
 import dev.vibe.module.impl.meme.HypixelModule;
 import dev.vibe.module.impl.visual.CustomModelRendererModule;
 import dev.vibe.extension.PlayerModelProvider;
+import dev.vibe.extension.PlayerCapeProvider;
 import java.nio.FloatBuffer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.ModelBase;
@@ -312,9 +313,22 @@ public final class CustomModelRenderer {
     }
 
     public static boolean hidesCape(Object entity) {
+        if (!(entity instanceof EntityPlayer) || HypixelModule.visualsSuppressed()) return false;
         CustomModelRendererModule settings = module();
-        return entity instanceof EntityPlayer && settings != null && settings.isEnabled() && settings.getHideCape().isEnabled()
-                && !HypixelModule.visualsSuppressed() && (entity == Minecraft.getMinecraft().thePlayer || settings.appliesToPlayer((EntityPlayer) entity));
+        if (hidesPlayerCape((EntityPlayer) entity, settings)) return true;
+        Vibe vibe = Vibe.getInstance();
+        PlayerCapeProvider provider = vibe == null || vibe.getExtensions() == null ? null
+                : vibe.getExtensions().getService(PlayerCapeProvider.class);
+        return provider != null && provider.replacesVanillaCape((EntityPlayer) entity);
+    }
+
+    public static boolean hidesPlayerCape(EntityPlayer player) {
+        return hidesPlayerCape(player, module());
+    }
+
+    private static boolean hidesPlayerCape(EntityPlayer player, CustomModelRendererModule settings) {
+        return settings != null && settings.isEnabled() && settings.getHideCape().isEnabled()
+                && (player == Minecraft.getMinecraft().thePlayer || settings.appliesToPlayer(player));
     }
 
     public static void renderGuiItem(Object renderer, Object stack, Object model) {

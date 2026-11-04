@@ -127,9 +127,11 @@ final class DropdownWorkspace {
                     } else if(hover>.01F)Gui.drawRect(rx,rowY,rx+rw,rowY+style.rowHeight,RenderUtils.alpha(0xFFFFFFFF,Math.round(hover*9)));
                     int color=style.novo?RenderUtils.blend(style.text,style.accent(0,rowY),on):module.isEnabled()?0xFFFFFFFF:style.text;
                     String name=host.dropdownBinding(module)?"Press a key...":module.getName();
+                    int arrowSpace=!style.packet&&host.dropdownHasSettings(module)?13:0;
+                    int leftReserve=style.novo?arrowSpace:0;
                     // One text pass: the optional glow belongs behind the panel, never offset glyphs.
-                    center(name,rx,rowY+(style.rowHeight-14)/2,rw-(!style.packet&&host.dropdownHasSettings(module)?13:0),color);
-                    if(!style.packet&&host.dropdownHasSettings(module))NeverLoseStyle.chevron(rx+rw-11,rowY+style.rowHeight/2-1,expanded,color);
+                    center(name,rx+leftReserve,rowY+(style.rowHeight-14)/2,rw-arrowSpace-leftReserve,color);
+                    if(arrowSpace>0)NeverLoseStyle.chevron(rx+rw-11,rowY+style.rowHeight/2-1,expanded,color);
                     host.dropdownModuleTarget(module,x,rowY,x+panelWidth,rowY+style.rowHeight,p.name);
                     if(over)hovered=module;
                 }

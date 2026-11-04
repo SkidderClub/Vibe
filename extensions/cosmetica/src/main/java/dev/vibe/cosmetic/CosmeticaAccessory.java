@@ -44,8 +44,18 @@ public final class CosmeticaAccessory {
 
     public static CosmeticaAccessory fromApi(JsonObject object) {
         if (object == null) return null;
-        JsonObject value = object.has("accessory") && object.get("accessory").isJsonObject() ? object.getAsJsonObject("accessory") : object;
+        JsonObject value = object;
+        if (object.has("accessory")) value = object.getAsJsonObject("accessory");
+        else if (object.has("animatedTextureCosmetic")) value = object.getAsJsonObject("animatedTextureCosmetic");
+        if (value == null) return null;
         String id = string(value, "id"); if (id.isEmpty()) return null;
+        if ("cape".equals(string(value, "type"))) {
+            // Bit 1 indicates the vanilla cloak texture. Bit 2 alone is elytra-only.
+            if ((integer(value, "flags", 0) & 1) == 0 || string(value, "texture").isEmpty()) return null;
+            return new CosmeticaAccessory(id, string(value, "name"), string(value, "description"), "cape",
+                    "", string(value, "texture"), string(value, "thumbnail"), 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, integer(value, "frames", 1), integer(value, "ticksPerFrame", 5));
+        }
         JsonArray range = value.has("offset") && value.get("offset").isJsonArray() ? value.getAsJsonArray("offset") : null;
         float minX = number(range, 0), minY = number(range, 1), minZ = number(range, 2);
         float maxX = range != null && range.size() >= 6 ? number(range, 3) : minX;
@@ -89,6 +99,7 @@ public final class CosmeticaAccessory {
 
     public String getId() { return id; } public String getName() { return name; } public String getDescription() { return description; }
     public String getAttachment() { return attachment; } public String getModelUrl() { return modelUrl; } public String getTextureUrl() { return textureUrl; } public String getThumbnailUrl() { return thumbnailUrl; }
+    public boolean isCape() { return "cape".equals(attachment) && modelUrl.isEmpty(); }
     public float getOffsetX() { return offsetX; } public float getOffsetY() { return offsetY; } public float getOffsetZ() { return offsetZ; }
     public float getMinOffsetX() { return minOffsetX; } public float getMinOffsetY() { return minOffsetY; } public float getMinOffsetZ() { return minOffsetZ; }
     public float getMaxOffsetX() { return maxOffsetX; } public float getMaxOffsetY() { return maxOffsetY; } public float getMaxOffsetZ() { return maxOffsetZ; }

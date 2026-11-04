@@ -3,6 +3,7 @@ package dev.vibe.command;
 import dev.vibe.Vibe;
 import dev.vibe.config.VibeConfig;
 import dev.vibe.module.Module;
+import dev.vibe.module.impl.world.NoteBotModule;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.util.ArrayList;
@@ -16,7 +17,8 @@ import org.lwjgl.input.Keyboard;
 /** Local dot-prefixed commands. They never leave the client as chat messages. */
 public final class CommandManager {
 
-    private static final List<String> ROOTS = Arrays.asList(".toggle", ".t", ".bind", ".b", ".binds", ".config", ".c", ".onlineconfig", ".ign", ".waifu", ".friend", ".f", ".target", ".pos1", ".pos2", ".vomit", ".clear", ".clearinv", ".clearinventory", ".script", ".scripts", ".models", ".model", ".extensions", ".source", ".help");
+    private static final List<String> ROOTS = Arrays.asList(".toggle", ".t", ".bind", ".b", ".binds", ".config", ".c", ".onlineconfig", ".ign", ".waifu", ".friend", ".f", ".target", ".pos1", ".pos2", ".vomit", ".clear", ".clearinv", ".clearinventory", ".notebot", ".script", ".scripts", ".models", ".model", ".extensions", ".source", ".help");
+    private static final List<String> NOTEBOT_ACTIONS = Arrays.asList("play", "preview", "stop", "list", "openFolder");
     private final dev.vibe.inventory.InventoryDropper inventoryDropper = new dev.vibe.inventory.InventoryDropper(this::say);
 
     public void tick() { inventoryDropper.tick(); }
@@ -61,6 +63,8 @@ public final class CommandManager {
             friend(parts);
         } else if (".target".equals(command)) {
             target(parts);
+        } else if (".notebot".equals(command)) {
+            noteBotCommand(message.trim().split("\\s+", 3), parts);
         } else if (".script".equals(command) || ".scripts".equals(command)) {
             script(parts);
         } else if (".models".equals(command) || ".model".equals(command)) {
@@ -159,6 +163,19 @@ public final class CommandManager {
             if (parts.length == 2) addMatchingTokens(results, input, Arrays.asList("add", "remove", "list"), needle);
             else if (parts.length >= 3 && "remove".equalsIgnoreCase(parts[1])) for (String target : Vibe.getInstance().getTargetManager().getTargets()) {
                 if (target.toLowerCase().startsWith(needle)) results.add(replaceLastToken(input, target));
+            }
+        } else if (".notebot".equals(root)) {
+            NoteBotModule noteBot = Vibe.getInstance().getModuleManager().getModule(NoteBotModule.class);
+            if (noteBot == null) return results;
+            if (parts.length == 2) addMatchingTokens(results, input, NOTEBOT_ACTIONS, needle);
+            if (parts.length >= 3 && ("play".equalsIgnoreCase(parts[1]) || "preview".equalsIgnoreCase(parts[1]))) {
+                String[] words = input.split("\\s+", 3);
+                String prefix = words[2].toLowerCase(java.util.Locale.ROOT);
+                for (String song : noteBot.songs()) {
+                    if (song.toLowerCase(java.util.Locale.ROOT).startsWith(prefix)) results.add(root + " " + parts[1] + " " + song);
+                }
+            } else {
+                results.addAll(ModuleSettingCommands.suggestions(noteBot, input, input.substring(root.length() + 1)));
             }
         } else if (".script".equals(root) || ".scripts".equals(root)) {
             if (parts.length == 2) addMatchingTokens(results, input, Arrays.asList("list", "create", "reload", "load", "errors", "delete", "rename", "enable", "disable", "openFolder"), needle);
@@ -320,12 +337,46 @@ public final class CommandManager {
         say("§b.ign§7 — copy your in-game name to the clipboard");
         say("§b.f <add|remove|rename|list>§7 — manage friends and aliases");
         say("§b.target <add|remove|list>§7 — manage priority targets");
+        say("§b.notebot <play|preview|stop|list|openFolder>§7 — play and preview local .nbs songs");
         say("§b.script <create|reload|load|list|errors|enable|disable|rename|delete|openFolder>§7 — manage local Raven scripts");
         say("§b.models <info|list|token|import|download|downloadAll|select|reload|openFolder>§7 — CustomModelRenderer models and Sketchfab downloads");
         say("§b.<module> <setting> <value>§7 — change a module setting (names may contain spaces)");
         say("§b.<module> <min|max> <value>§7 — set the only range, or name the range first");
         say("§b.<module> <multi-select option>§7 — toggle an option; name its setting if ambiguous");
         say("§8Press Tab in chat for completion.");
+    }
+
+    private void noteBotCommand(String[] command, String[] parts) {
+        NoteBotModule noteBot = Vibe.getInstance().getModuleManager().getModule(NoteBotModule.class);
+        if (noteBot == null) return;
+        if (command.length == 1) {
+            say("§b.notebot play <song>§7 or §b.notebot preview <song>§7. Put .nbs files in vibe/notebot.");
+            return;
+        }
+        switch (command[1].toLowerCase(java.util.Locale.ROOT)) {
+            case "play":
+            case "preview":
+                if (command.length < 3) say("Usage: §b.notebot " + command[1] + " <song>");
+                else noteBot.start(command[2], command[1].equalsIgnoreCase("preview"));
+                return;
+            case "stop":
+                noteBot.stop();
+                return;
+            case "list":
+                List<String> songs = noteBot.songs();
+                say(songs.isEmpty() ? "No .nbs songs in vibe/notebot." : String.join(", ", songs));
+                return;
+            case "openfolder":
+                try {
+                    java.nio.file.Files.createDirectories(noteBot.folder().toPath());
+                    java.awt.Desktop.getDesktop().open(noteBot.folder());
+                } catch (Exception error) {
+                    say("Song folder: " + noteBot.folder().getAbsolutePath());
+                }
+                return;
+            default:
+                moduleSetting(noteBot, parts, 1);
+        }
     }
 
     private void moduleSetting(Module module, String[] parts, int from) {

@@ -35,10 +35,18 @@ public final class CosmeticPreset {
         return Collections.unmodifiableList(new ArrayList<CosmeticaAccessory>(accessories));
     }
 
+    public synchronized CosmeticaAccessory getCape() {
+        for (CosmeticaAccessory accessory : accessories) {
+            if (accessory.isCape() && accessory.isEnabled()) return accessory;
+        }
+        return null;
+    }
+
     /** Add or replace an authored catalog entry by its stable Cosmetica id. */
     public synchronized void equip(CosmeticaAccessory accessory) {
         if (accessory == null || accessory.getId().isEmpty()) return;
         remove(accessory.getId());
+        if (accessory.isCape()) accessories.removeIf(CosmeticaAccessory::isCape);
         accessories.add(accessory.copy());
     }
 

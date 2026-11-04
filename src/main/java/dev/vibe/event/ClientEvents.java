@@ -42,6 +42,7 @@ import dev.vibe.module.impl.world.ChestStealerModule;
 import dev.vibe.module.impl.client.InventoryEditorModule;
 import dev.vibe.module.impl.world.AutoToolModule;
 import dev.vibe.module.impl.world.BedAuraModule;
+import dev.vibe.module.impl.world.NoteBotModule;
 import dev.vibe.module.impl.world.FastBreakModule;
 import dev.vibe.module.impl.visual.AmbienceModule;
 import dev.vibe.module.impl.meme.NesEmulatorModule;
@@ -228,6 +229,8 @@ public final class ClientEvents {
             if (music != null) music.tick();
             MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
             if (moveFix != null) moveFix.beginRotationTick();
+            NoteBotModule noteBot = Vibe.getInstance().getModuleManager().getModule(NoteBotModule.class);
+            if (noteBot != null) noteBot.tickStart();
             dev.vibe.module.impl.world.AutoRespawnModule respawn = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.world.AutoRespawnModule.class);
             if (respawn != null) respawn.tick();
             dev.vibe.module.impl.combat.AutoBuffModule autoBuff = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AutoBuffModule.class);
@@ -418,6 +421,13 @@ public final class ClientEvents {
         }
         ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
         if (scripts != null) scripts.tickEnd();
+    }
+
+    @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.LOWEST)
+    public void onNotePlayed(net.minecraftforge.event.world.NoteBlockEvent.Play event) {
+        if (event.world != minecraft.theWorld || !event.world.isRemote || event.instrument == null) return;
+        NoteBotModule noteBot = Vibe.getInstance().getModuleManager().getModule(NoteBotModule.class);
+        if (noteBot != null) noteBot.observe(minecraft.theWorld, event.pos, event.instrument.ordinal(), event.getVanillaNoteId());
     }
 
     @SubscribeEvent

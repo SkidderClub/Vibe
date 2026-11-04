@@ -119,6 +119,7 @@ public final class ModuleManager {
         register(new PickenSwitchModule());
         register(new BedAuraModule());
         register(new FastBreakModule());
+        register(new NoteBotModule());
         register(new FriendsModule());
         register(new HudModule());
         register(new ToggleSoundModule());

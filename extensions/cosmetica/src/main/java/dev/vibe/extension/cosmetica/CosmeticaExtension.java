@@ -7,6 +7,7 @@ import dev.vibe.cosmetic.CosmeticaCatalogService;
 import dev.vibe.extension.ExtensionContext;
 import dev.vibe.extension.FriendProfileProvider;
 import dev.vibe.extension.PlayerSkinProvider;
+import dev.vibe.extension.PlayerCapeProvider;
 import dev.vibe.extension.VibeExtension;
 import dev.vibe.friend.FriendManager;
 import dev.vibe.module.impl.client.CosmeticsEditorModule;
@@ -29,6 +30,7 @@ public final class CosmeticaExtension implements VibeExtension {
         CosmeticsRenderer renderer = new CosmeticsRenderer();
         context.onTickStart(renderer::installLayers);
         context.registerService(PlayerSkinProvider.class, renderer::skin);
+        context.registerService(PlayerCapeProvider.class, renderer::replacesVanillaCape);
         context.registerService(FriendProfileProvider.class, new FriendProfileProvider() {
             public String name(FriendManager.Friend friend) {
                 CosmeticPreset preset = friend == null ? null : presets.findById(friend.getCosmeticPreset());

@@ -235,6 +235,7 @@ clear third-party shaders obtained through that project.
 | [In-Game Account Switcher](https://github.com/The-Fireplace-Minecraft-Mods/In-Game-Account-Switcher) | The_Fireplace, VidTu and contributors | LGPL-3.0-or-later | Account switching and Microsoft device authorization reference; public OAuth application used for device login. |
 | [MinecraftAuth](https://github.com/RaphiMC/MinecraftAuth) | RK_01/RaphiMC and contributors | LGPL-3.0-or-later | Minecraft Java application settings and Xbox authentication protocol reference. |
 | [LiquidBounce](https://github.com/CCBlueX/LiquidBounce) | CCBlueX and contributors | GPL-3.0-or-later | Minecraft Java application configuration reference for cookie login. |
+| [Meteor Client NoteBot](https://github.com/MeteorDevelopment/meteor-client/blob/master/src/main/java/meteordevelopment/meteorclient/systems/modules/misc/Notebot.java) | Meteor Development and contributors | GPL-3.0 | Reference for NoteBot's scan, tune, playback and preview workflow. Vibe adapts it to the Forge 1.8.9 controller and rotation service. |
 
 The Gradle dependencies contain none of these three projects. Vibe's
 authentication implementation is in `dev.vibe.account`. The historical reference

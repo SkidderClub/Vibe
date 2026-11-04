@@ -47,18 +47,22 @@ public final class CosmeticAccessoryOptionsGui extends GuiScreen {
         preview.draw(preset, left + 131, top + 286, 82, previewYaw);
         fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Drag preview to rotate"), left + 59, top + 310, SkeetEditorStyle.MUTED);
         drawSwitch(left + 28, top + 340, "Enabled", accessory.isEnabled());
-        drawSwitch(left + 28, top + 366, "Mirrored", accessory.isMirrored());
+        if (!accessory.isCape()) drawSwitch(left + 28, top + 366, "Mirrored", accessory.isMirrored());
 
         int controlX = left + 278;
-        slider(controlX, top + 60, "X offset", accessory.getOffsetX(), accessory.getMinOffsetX(), accessory.getMaxOffsetX(), 0);
-        slider(controlX, top + 106, "Y offset", accessory.getOffsetY(), accessory.getMinOffsetY(), accessory.getMaxOffsetY(), 1);
-        slider(controlX, top + 152, "Z offset", accessory.getOffsetZ(), accessory.getMinOffsetZ(), accessory.getMaxOffsetZ(), 2);
-        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Visibility overrides"), controlX, top + 207, SkeetEditorStyle.MUTED);
-        drawSwitch(controlX, top + 224, "Hide with helmet", accessory.hasVisibilityFlag(CosmeticaAccessory.HIDE_WITH_HELMET));
-        drawSwitch(controlX, top + 248, "Hide with chestplate", accessory.hasVisibilityFlag(CosmeticaAccessory.HIDE_WITH_CHESTPLATE));
-        drawSwitch(controlX, top + 272, "Hide with leggings", accessory.hasVisibilityFlag(CosmeticaAccessory.HIDE_WITH_LEGGINGS));
-        drawSwitch(controlX, top + 296, "Hide with boots", accessory.hasVisibilityFlag(CosmeticaAccessory.HIDE_WITH_BOOTS));
-        fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Cloak, elytra and parrot flags are unavailable in 1.8.9."), controlX, top + 328, SkeetEditorStyle.MUTED);
+        if (accessory.isCape()) {
+            fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Uses Minecraft's cape movement and skin settings."), controlX, top + 60, SkeetEditorStyle.MUTED);
+        } else {
+            slider(controlX, top + 60, "X offset", accessory.getOffsetX(), accessory.getMinOffsetX(), accessory.getMaxOffsetX(), 0);
+            slider(controlX, top + 106, "Y offset", accessory.getOffsetY(), accessory.getMinOffsetY(), accessory.getMaxOffsetY(), 1);
+            slider(controlX, top + 152, "Z offset", accessory.getOffsetZ(), accessory.getMinOffsetZ(), accessory.getMaxOffsetZ(), 2);
+            fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.translate("Visibility overrides"), controlX, top + 207, SkeetEditorStyle.MUTED);
+            drawSwitch(controlX, top + 224, "Hide with helmet", accessory.hasVisibilityFlag(CosmeticaAccessory.HIDE_WITH_HELMET));
+            drawSwitch(controlX, top + 248, "Hide with chestplate", accessory.hasVisibilityFlag(CosmeticaAccessory.HIDE_WITH_CHESTPLATE));
+            drawSwitch(controlX, top + 272, "Hide with leggings", accessory.hasVisibilityFlag(CosmeticaAccessory.HIDE_WITH_LEGGINGS));
+            drawSwitch(controlX, top + 296, "Hide with boots", accessory.hasVisibilityFlag(CosmeticaAccessory.HIDE_WITH_BOOTS));
+            drawSwitch(controlX, top + 320, "Hide with cape", accessory.hasVisibilityFlag(CosmeticaAccessory.HIDE_WITH_CLOAK));
+        }
         SkeetEditorStyle.button(controlX, bottom - 42, right - 28, bottom - 20, "SAVE & BACK", true);
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
@@ -86,8 +90,10 @@ public final class CosmeticAccessoryOptionsGui extends GuiScreen {
         int previewLeft = left + 26, previewTop = top + 48;
         if (button == 0 && hit(previewLeft, previewTop, 210, 250, mouseX, mouseY)) { lastMouseX = mouseX; draggingAxis = -2; return; }
         if (button == 0 && hit(left + 28, top + 340, 208, 20, mouseX, mouseY)) { accessory.setEnabled(!accessory.isEnabled()); save(); return; }
-        if (button == 0 && hit(left + 28, top + 366, 208, 20, mouseX, mouseY)) { accessory.setMirrored(!accessory.isMirrored()); save(); return; }
         int controls = left + 278;
+        if (button == 0 && hit(controls, bottom - 42, right - controls - 28, 22, mouseX, mouseY)) { save(); mc.displayGuiScreen(parent); return; }
+        if (accessory.isCape()) { super.mouseClicked(mouseX, mouseY, button); return; }
+        if (button == 0 && hit(left + 28, top + 366, 208, 20, mouseX, mouseY)) { accessory.setMirrored(!accessory.isMirrored()); save(); return; }
         if (button == 0 && clickSlider(controls, top + 60, 0, mouseX, mouseY)) return;
         if (button == 0 && clickSlider(controls, top + 106, 1, mouseX, mouseY)) return;
         if (button == 0 && clickSlider(controls, top + 152, 2, mouseX, mouseY)) return;
@@ -95,7 +101,7 @@ public final class CosmeticAccessoryOptionsGui extends GuiScreen {
         if (button == 0 && hit(controls, top + 248, 208, 20, mouseX, mouseY)) { flag(CosmeticaAccessory.HIDE_WITH_CHESTPLATE); return; }
         if (button == 0 && hit(controls, top + 272, 208, 20, mouseX, mouseY)) { flag(CosmeticaAccessory.HIDE_WITH_LEGGINGS); return; }
         if (button == 0 && hit(controls, top + 296, 208, 20, mouseX, mouseY)) { flag(CosmeticaAccessory.HIDE_WITH_BOOTS); return; }
-        if (button == 0 && hit(controls, bottom - 42, right - controls - 28, 22, mouseX, mouseY)) { save(); mc.displayGuiScreen(parent); return; }
+        if (button == 0 && hit(controls, top + 320, 208, 20, mouseX, mouseY)) { flag(CosmeticaAccessory.HIDE_WITH_CLOAK); return; }
         super.mouseClicked(mouseX, mouseY, button);
     }
 

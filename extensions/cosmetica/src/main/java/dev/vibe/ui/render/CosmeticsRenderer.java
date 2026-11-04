@@ -9,6 +9,7 @@ import dev.vibe.module.impl.visual.CosmeticsModule;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -22,7 +23,9 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.ThreadDownloadImageData;
 import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EnumPlayerModelParts;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.MathHelper;
 import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 
@@ -59,80 +62,139 @@ public final class CosmeticsRenderer {
         }
     }
 
-    /** Called while the vanilla player-model matrix and limb pose are live. */
-    private void renderLayer(AbstractClientPlayer player, ModelPlayer playerModel) {
-        if (dev.vibe.module.impl.meme.HypixelModule.visualsSuppressed()) return;
-        if (Boolean.TRUE.equals(RENDERING.get())) return;
-        if (player == null || playerModel == null) return;
-        CosmeticsModule module = Vibe.getInstance().getModuleManager().getModule(CosmeticsModule.class);
+    private CosmeticPreset visiblePreset(EntityPlayer player) {
+        if (player == null || player.isInvisible() || dev.vibe.module.impl.meme.HypixelModule.visualsSuppressed()) return null;
         CosmeticPreset previewPreset = PREVIEW_PRESET.get();
-        if (previewPreset == null && (module == null || !module.isEnabled())) return;
-        CosmeticPreset preset = previewPreset == null ? dev.vibe.extension.cosmetica.CosmeticaExtension.presets().resolve(player, Vibe.getInstance().getFriendManager()) : previewPreset;
-        if (preset == null || preset.getAccessories().isEmpty()) return;
-        if (player == minecraft.thePlayer && preset.isOnlyThirdPerson() && minecraft.gameSettings.thirdPersonView == 0) return;
-        boolean cull = GL11.glIsEnabled(GL11.GL_CULL_FACE);
-        boolean blend = GL11.glIsEnabled(GL11.GL_BLEND);
-        boolean texture = GL11.glIsEnabled(GL11.GL_TEXTURE_2D);
-        boolean depth = GL11.glIsEnabled(GL11.GL_DEPTH_TEST);
-        boolean lighting = GL11.glIsEnabled(GL11.GL_LIGHTING);
-        boolean depthMask = GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK);
+        if (previewPreset != null) return previewPreset;
+        CosmeticsModule module = Vibe.getInstance().getModuleManager().getModule(CosmeticsModule.class);
+        if (module == null || !module.isEnabled()) return null;
+        CosmeticPreset preset = dev.vibe.extension.cosmetica.CosmeticaExtension.presets().resolve(player, Vibe.getInstance().getFriendManager());
+        return preset != null && player == minecraft.thePlayer && preset.isOnlyThirdPerson()
+                && minecraft.gameSettings.thirdPersonView == 0 ? null : preset;
+    }
+
+    public boolean replacesVanillaCape(EntityPlayer player) {
+        if (!player.isWearing(EnumPlayerModelParts.CAPE)) return false;
+        CosmeticPreset preset = visiblePreset(player);
+        return preset != null && preset.getCape() != null;
+    }
+
+    /** Called while the vanilla player-model matrix and limb pose are live. */
+    private void renderLayer(AbstractClientPlayer player, ModelPlayer playerModel, float partialTicks, float scale) {
+        if (Boolean.TRUE.equals(RENDERING.get())) return;
+        CosmeticPreset preset = visiblePreset(player);
+        if (preset == null) return;
+        List<CosmeticaAccessory> accessories = preset.getAccessories();
+        if (accessories.isEmpty()) return;
+        CosmeticaAccessory cape = preset.getCape();
+        boolean capeVisible = player.isWearing(EnumPlayerModelParts.CAPE) && !CustomModelRenderer.hidesPlayerCape(player);
+        boolean hasCloak = capeVisible && (cape != null || minecraft.getNetHandler() != null && player.getLocationCape() != null);
+        int matrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
         RENDERING.set(Boolean.TRUE);
+        // Keep direct GL changes scoped so Minecraft's cached state still
+        // matches the driver on return. Texture binds go through its manager.
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT | GL11.GL_CURRENT_BIT);
         try {
-            GL11.glDisable(GL11.GL_CULL_FACE); GlStateManager.enableBlend(); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            // Cosmetica's model layer uses the texture's own full colour.
-            // The immediate-mode 1.8 renderer has no baked per-vertex normal
-            // or packed light, so leaving vanilla lighting enabled makes the
-            // same source texture appear gray depending on the last model
-            // normal. Render the authored PNG at its original colour.
-            GlStateManager.enableTexture2D(); GlStateManager.enableDepth(); GlStateManager.disableLighting();
-            GlStateManager.depthMask(true); GlStateManager.color(1, 1, 1, 1); GL11.glColor4f(1, 1, 1, 1);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            GL11.glEnable(GL11.GL_ALPHA_TEST);
+            GL11.glAlphaFunc(GL11.GL_GREATER, 0.1F);
+            GL11.glDisable(GL11.GL_LIGHTING);
+            GL11.glColor4f(1, 1, 1, 1);
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);
             CosmeticaCatalogService catalog = dev.vibe.extension.cosmetica.CosmeticaExtension.catalog();
-            for (CosmeticaAccessory accessory : preset.getAccessories()) renderAccessory(player, playerModel, catalog, accessory);
+            if (cape != null && capeVisible) renderCape(player, playerModel, catalog, cape, partialTicks, scale);
+            GL11.glDisable(GL11.GL_CULL_FACE);
+            for (CosmeticaAccessory accessory : accessories) {
+                if (accessory.isCape() || !accessory.isEnabled() || hiddenByEquipment(player, accessory, hasCloak)) continue;
+                renderAccessory(player, playerModel, catalog, accessory, scale);
+            }
         } finally {
-            restore(GL11.GL_CULL_FACE, cull);
-            restore(GL11.GL_BLEND, blend);
-            restore(GL11.GL_TEXTURE_2D, texture);
-            restore(GL11.GL_DEPTH_TEST, depth);
-            restore(GL11.GL_LIGHTING, lighting);
-            GlStateManager.depthMask(depthMask);
-            GlStateManager.color(1, 1, 1, 1);
+            GL11.glMatrixMode(matrixMode);
+            GL11.glPopAttrib();
             RENDERING.remove();
         }
     }
 
-    private void renderAccessory(EntityPlayer entity, ModelPlayer player, CosmeticaCatalogService catalog, CosmeticaAccessory accessory) {
-        if (!accessory.isEnabled() || hiddenByEquipment(entity, accessory)) return;
-        ModelRenderer part = part(player, accessory); if (part == null || !part.showModel) return;
+    private void renderAccessory(AbstractClientPlayer entity, ModelPlayer player, CosmeticaCatalogService catalog,
+                                 CosmeticaAccessory accessory, float scale) {
+        ModelRenderer part = part(player, accessory); if (part == null || !part.showModel || part.isHidden) return;
         CosmeticaModel model = catalog.getModel(accessory); if (model == null) return;
-        int previousMatrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
-        GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        minecraft.getTextureManager().bindTexture(catalog.getTexture(accessory, false));
         GL11.glPushMatrix();
         try {
-            // Direct 1.8.9 equivalent of Cosmetica Core's renderOnPart:
-            // ModelPart#translateAndRotate -> scale(1,-1,-1) -> mirrored
-            // scale -> rotate Y 180 -> authored, attachment-relative offset.
-            part.postRender(0.0625F);
+            // 1.8.9 applies this inside ModelBiped.render, outside the
+            // individual part pivots. Modern Minecraft bakes it into the pose.
+            if (entity.isSneaking()) GL11.glTranslatef(0.0F, 0.2F, 0.0F);
+            GL11.glTranslatef(part.offsetX, part.offsetY, part.offsetZ);
+            part.postRender(scale);
             GL11.glScalef(1.0F, -1.0F, -1.0F);
             if (accessory.isMirrored()) GL11.glScalef(-1.0F, 1.0F, 1.0F);
             GL11.glRotatef(180.0F, 0.0F, 1.0F, 0.0F);
-            float[] transform = attachmentTransform(accessory);
-            GL11.glTranslatef(transform[0] + slimArmOffset(player, accessory), transform[1], transform[2]);
-            minecraft.getTextureManager().bindTexture(catalog.getTexture(accessory, false));
-            int frame = (int) ((System.currentTimeMillis() / 50L) / Math.max(1, accessory.getTicksPerFrame()));
-            model.render(frame, accessory.getFrames());
-        } catch (Throwable ignored) {
-            // A malformed community asset must not break player rendering; other catalog entries still render.
+            applyAttachmentOffset(player, accessory);
+            model.render(animationFrame(accessory), accessory.getFrames());
         } finally {
             GL11.glPopMatrix();
-            GL11.glMatrixMode(previousMatrixMode);
         }
     }
 
-    private boolean hiddenByEquipment(EntityPlayer player, CosmeticaAccessory accessory) {
+    private void renderCape(AbstractClientPlayer player, ModelPlayer model, CosmeticaCatalogService catalog,
+                            CosmeticaAccessory cape, float partialTicks, float scale) {
+        minecraft.getTextureManager().bindTexture(catalog.getTexture(cape, false));
+        int frames = cape.getFrames();
+        if (frames > 1) {
+            GL11.glMatrixMode(GL11.GL_TEXTURE);
+            GL11.glPushMatrix();
+            GL11.glTranslatef(0, animationFrame(cape) / (float) frames, 0);
+            GL11.glScalef(1, 1.0F / frames, 1);
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        }
+        GL11.glPushMatrix();
+        try {
+            // Match 1.8.9 LayerCape motion and let ModelPlayer supply the
+            // cape geometry and its own sneaking pivot.
+            double dx = lerp(player.prevChasingPosX - player.prevPosX, player.chasingPosX - player.posX, partialTicks);
+            double dy = lerp(player.prevChasingPosY - player.prevPosY, player.chasingPosY - player.posY, partialTicks);
+            double dz = lerp(player.prevChasingPosZ - player.prevPosZ, player.chasingPosZ - player.posZ, partialTicks);
+            float yaw = (float) Math.toRadians(lerp(player.prevRenderYawOffset, player.renderYawOffset, partialTicks));
+            float sin = MathHelper.sin(yaw), cos = -MathHelper.cos(yaw);
+            float vertical = MathHelper.clamp_float((float) dy * 10, -6, 32);
+            float forward = Math.max(0, (float) (dx * sin + dz * cos) * 100);
+            float side = (float) (dx * cos - dz * sin) * 50;
+            float walk = (float) lerp(player.prevDistanceWalkedModified, player.distanceWalkedModified, partialTicks);
+            vertical += MathHelper.sin(walk * 6) * 32 * lerp(player.prevCameraYaw, player.cameraYaw, partialTicks);
+            if (player.isSneaking()) vertical += 25;
+            GL11.glTranslatef(0, 0, 0.125F);
+            GL11.glRotatef(6 + forward * 0.5F + vertical, 1, 0, 0);
+            GL11.glRotatef(side, 0, 0, 1);
+            GL11.glRotatef(-side, 0, 1, 0);
+            GL11.glRotatef(180, 0, 1, 0);
+            model.renderCape(scale);
+        } finally {
+            GL11.glPopMatrix();
+            if (frames > 1) {
+                GL11.glMatrixMode(GL11.GL_TEXTURE);
+                GL11.glPopMatrix();
+                GL11.glMatrixMode(GL11.GL_MODELVIEW);
+            }
+        }
+    }
+
+    private static double lerp(double start, double end, float delta) {
+        return start + (end - start) * delta;
+    }
+
+    private static int animationFrame(CosmeticaAccessory accessory) {
+        return (int) Math.floorMod(System.nanoTime() / (50_000_000L * accessory.getTicksPerFrame()), (long) accessory.getFrames());
+    }
+
+    private boolean hiddenByEquipment(EntityPlayer player, CosmeticaAccessory accessory, boolean hasCloak) {
         return hidden(accessory, CosmeticaAccessory.HIDE_WITH_HELMET, player.getCurrentArmor(3))
                 || hidden(accessory, CosmeticaAccessory.HIDE_WITH_CHESTPLATE, player.getCurrentArmor(2))
                 || hidden(accessory, CosmeticaAccessory.HIDE_WITH_LEGGINGS, player.getCurrentArmor(1))
-                || hidden(accessory, CosmeticaAccessory.HIDE_WITH_BOOTS, player.getCurrentArmor(0));
+                || hidden(accessory, CosmeticaAccessory.HIDE_WITH_BOOTS, player.getCurrentArmor(0))
+                || hasCloak && accessory.hasVisibilityFlag(CosmeticaAccessory.HIDE_WITH_CLOAK);
     }
 
     private static boolean hidden(CosmeticaAccessory accessory, int flag, ItemStack stack) {
@@ -150,33 +212,14 @@ public final class CosmeticsRenderer {
         return null;
     }
 
-    /** Cosmetica Core's attachment Y origins, retained verbatim. */
-    private float[] attachmentTransform(CosmeticaAccessory accessory) {
-        String point = accessory.getAttachment(); float xBase = 0.0F, yBase = -8.0F;
-        // The prior 1.8 adapter used the model pivots as y origins, placing
-        // every accessory below its Cosmetica position.  Cosmetica's own
-        // attachmentTransform uses head=8, arms=0 and body/legs=-2 pixels.
-        if ("head".equals(point)) yBase = 8.0F;
-        else if ("right_arm".equals(point) || "rightarm".equals(point)) { xBase = 1.0F; yBase = 0.0F; }
-        else if ("left_arm".equals(point) || "leftarm".equals(point)) { xBase = -1.0F; yBase = 0.0F; }
-        else yBase = -2.0F;
-        return new float[]{(accessory.getOffsetX() + xBase) / 16.0F,
-                (accessory.getOffsetY() + yBase) / 16.0F, accessory.getOffsetZ() / 16.0F};
-    }
-
-    /**
-     * Cosmetica applies a half-pixel X correction for the 3px-wide Alex arms.
-     * ModelPlayer exposes the slim model through its 2.5px arm pivot, whereas
-     * the standard (Steve) pivot is 2px. This is read from the posed model so
-     * no fragile reflection or skin-name guess is required.
-     */
-    private static float slimArmOffset(ModelPlayer player, CosmeticaAccessory accessory) {
-        boolean slim = player.bipedLeftArm.rotationPointY > 2.25F;
-        if (!slim) return 0.0F;
+    private static void applyAttachmentOffset(ModelPlayer player, CosmeticaAccessory accessory) {
         String point = accessory.getAttachment();
-        if ("left_arm".equals(point) || "leftarm".equals(point)) return 0.5F / 16.0F;
-        if ("right_arm".equals(point) || "rightarm".equals(point)) return -0.5F / 16.0F;
-        return 0.0F;
+        float x = 0, y = -8;
+        float armInset = player.bipedLeftArm.rotationPointY > 2.25F ? 0.5F : 1;
+        if ("head".equals(point)) y = 4;
+        else if ("right_arm".equals(point) || "rightarm".equals(point)) { x = armInset; y = -6; }
+        else if ("left_arm".equals(point) || "leftarm".equals(point)) { x = -armInset; y = -6; }
+        GL11.glTranslatef((accessory.getOffsetX() + x) / 16, (accessory.getOffsetY() + y) / 16, accessory.getOffsetZ() / 16);
     }
 
     private static final class AccessoriesLayer implements LayerRenderer<AbstractClientPlayer> {
@@ -192,7 +235,7 @@ public final class CosmeticsRenderer {
         public void doRenderLayer(AbstractClientPlayer player, float limbSwing, float limbSwingAmount,
                                   float partialTicks, float ageInTicks, float netHeadYaw,
                                   float headPitch, float scale) {
-            parent.renderLayer(player, playerModel);
+            parent.renderLayer(player, playerModel, partialTicks, scale);
         }
 
         @Override
@@ -221,5 +264,4 @@ public final class CosmeticsRenderer {
         customSkins.put(uuid, result); return result;
     }
     private boolean hasResource(ResourceLocation location) { try { minecraft.getResourceManager().getResource(location); return true; } catch (Exception ignored) { return false; } }
-    private static void restore(int capability, boolean enabled) { if (enabled) GL11.glEnable(capability); else GL11.glDisable(capability); }
 }

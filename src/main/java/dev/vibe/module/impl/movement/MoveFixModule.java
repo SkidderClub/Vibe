@@ -186,6 +186,14 @@ public final class MoveFixModule extends Module {
         }
     }
 
+    public boolean ownsRotation(String owner) {
+        return owner.equals(rotationOwner) && activeRotation() != null;
+    }
+
+    public boolean hasOtherRotationOwner(String owner) {
+        return rotationOwner != null && !owner.equals(rotationOwner) && activeRotation() != null;
+    }
+
     /** Explicitly disabling a producer leaves no rotate-back or input correction behind. */
     public void discardOwnedState(String owner) {
         if (owner != null && owner.equals(rotationSource)) {
@@ -557,6 +565,9 @@ public final class MoveFixModule extends Module {
             VelocityModule velocity = Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
             if (velocity != null) velocity.afterWalkingUpdate(entity);
             module.endPacketRotation(entity);
+            dev.vibe.module.impl.world.NoteBotModule noteBot =
+                    Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.world.NoteBotModule.class);
+            if (noteBot != null) noteBot.afterWalking(entity, module);
         }
     }
 

@@ -5,135 +5,183 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import org.lwjgl.opengl.GL11;
 
-/**
- * Small 1.8.9 renderer for the standard Minecraft JSON block-model format
- * served by Cosmetica.  It supports element rotation and rotated face UVs;
- * those are the two model features used by the public accessory catalog.
- */
+/** Bakes Cosmetica block models into attachment-local quads for the 1.8.9 renderer. */
 public final class CosmeticaModel {
-    private final List<Element> elements;
-    private final float textureWidth, textureHeight;
+    // Authored face UVs use Minecraft's 0..16 space, regardless of PNG resolution
+    // or the Blockbench texture_size recorded in the model.
+    private static final float UNIT = 1.0F / 16.0F;
 
-    private CosmeticaModel(List<Element> elements, float textureWidth, float textureHeight) {
-        this.elements = elements; this.textureWidth = textureWidth; this.textureHeight = textureHeight;
+    private final float[] vertices;
+
+    private CosmeticaModel(float[] vertices) {
+        this.vertices = vertices;
     }
 
     public static CosmeticaModel parse(String source) {
         JsonObject root = new JsonParser().parse(source).getAsJsonObject();
-        float width = 64.0F, height = 64.0F;
-        if (root.has("texture_size") && root.get("texture_size").isJsonArray()) {
-            JsonArray size = root.getAsJsonArray("texture_size"); width = value(size, 0, width); height = value(size, 1, height);
+        JsonArray elements = root.getAsJsonArray("elements");
+        if (elements == null) throw new IllegalArgumentException("Missing Cosmetica model elements");
+
+        List<float[]> quads = new ArrayList<>();
+        for (JsonElement raw : elements) {
+            JsonObject element = raw.getAsJsonObject();
+            float[] from = vector(element.getAsJsonArray("from"), 3);
+            float[] to = vector(element.getAsJsonArray("to"), 3);
+            Rotation rotation = Rotation.parse(element.getAsJsonObject("rotation"));
+            JsonObject faces = element.getAsJsonObject("faces");
+            for (Map.Entry<String, JsonElement> face : faces.entrySet()) {
+                Direction direction = Direction.valueOf(face.getKey().toUpperCase(Locale.ROOT));
+                quads.add(direction.bake(from, to, rotation, face.getValue().getAsJsonObject()));
+            }
         }
-        List<Element> elements = new ArrayList<Element>();
-        if (root.has("elements") && root.get("elements").isJsonArray()) for (JsonElement raw : root.getAsJsonArray("elements")) {
-            if (!raw.isJsonObject()) continue;
-            Element element = Element.parse(raw.getAsJsonObject()); if (element != null) elements.add(element);
-        }
-        return new CosmeticaModel(Collections.unmodifiableList(elements), Math.max(1.0F, width), Math.max(1.0F, height));
+        if (quads.isEmpty()) throw new IllegalArgumentException("Cosmetica model has no renderable faces");
+
+        float[] vertices = new float[quads.size() * 20];
+        for (int i = 0; i < quads.size(); i++) System.arraycopy(quads.get(i), 0, vertices, i * 20, 20);
+        return new CosmeticaModel(vertices);
     }
 
     public void render(int frame, int frames) {
         int count = Math.max(1, frames);
         float frameHeight = 1.0F / count;
         float frameOffset = Math.floorMod(frame, count) * frameHeight;
-        // Cosmetica's baked block-model renderer centres its 0..16 model
-        // around the attachment by translating (-0.5,-0.5,-0.5). The vertex
-        // conversion below already includes that centring, so there is no
-        // extra universal vertical offset.
-        GL11.glPushMatrix();
+        GL11.glBegin(GL11.GL_QUADS);
         try {
-            for (Element element : elements) element.render(textureWidth, textureHeight, frameHeight, frameOffset);
+            for (int i = 0; i < vertices.length; i += 5) {
+                GL11.glTexCoord2f(vertices[i + 3], frameOffset + vertices[i + 4] * frameHeight);
+                GL11.glVertex3f(vertices[i], vertices[i + 1], vertices[i + 2]);
+            }
         } finally {
-            GL11.glPopMatrix();
-        }
-    }
-
-    private static final class Element {
-        private final float[] from, to, origin;
-        private final String axis;
-        private final float angle;
-        private final List<Face> faces;
-        private Element(float[] from, float[] to, float[] origin, String axis, float angle, List<Face> faces) { this.from=from; this.to=to; this.origin=origin; this.axis=axis; this.angle=angle; this.faces=faces; }
-        private static Element parse(JsonObject raw) {
-            float[] from = vector(raw, "from"), to = vector(raw, "to"); if (from == null || to == null) return null;
-            float[] origin = new float[]{8,8,8}; String axis = ""; float angle = 0.0F;
-            if (raw.has("rotation") && raw.get("rotation").isJsonObject()) { JsonObject rotation=raw.getAsJsonObject("rotation"); float[] parsed=vector(rotation,"origin"); if(parsed!=null)origin=parsed; axis=string(rotation,"axis"); angle=decimal(rotation,"angle"); }
-            List<Face> faces = new ArrayList<Face>();
-            if (raw.has("faces") && raw.get("faces").isJsonObject()) for (java.util.Map.Entry<String,JsonElement> entry : raw.getAsJsonObject("faces").entrySet()) {
-                if (entry.getValue().isJsonObject()) { Face face=Face.parse(entry.getKey(),entry.getValue().getAsJsonObject()); if(face!=null)faces.add(face); }
-            }
-            return new Element(from,to,origin,axis,angle,faces);
-        }
-        private void render(float width, float height, float frameHeight, float frameOffset) {
-            GL11.glPushMatrix();
-            try {
-                if (angle != 0.0F && !axis.isEmpty()) {
-                    GL11.glTranslatef((origin[0]-8.0F)/16.0F, (origin[1]-8.0F)/16.0F, (origin[2]-8.0F)/16.0F);
-                    // These coordinates are still in Cosmetica's authored
-                    // model space at this point. The outer renderOnPart
-                    // basis conversion happens later in the matrix chain, so
-                    // every JSON rotation axis uses its authored angle.
-                    GL11.glRotatef(angle, "x".equals(axis)?1:0, "y".equals(axis)?1:0, "z".equals(axis)?1:0);
-                    GL11.glTranslatef(-(origin[0]-8.0F)/16.0F, -(origin[1]-8.0F)/16.0F, -(origin[2]-8.0F)/16.0F);
-                }
-                for (Face face : faces) face.render(from,to,width,height,frameHeight,frameOffset);
-            } finally {
-                // Every asset is third-party content. Never allow an invalid
-                // element to leave a model-view matrix on the stack: that
-                // corrupts later tile entities and eventually overflows GL.
-                GL11.glPopMatrix();
-            }
-        }
-    }
-
-    private static final class Face {
-        private final String direction; private final float[] uv; private final int rotation;
-        private Face(String direction, float[] uv, int rotation) { this.direction=direction; this.uv=uv; this.rotation=rotation; }
-        private static Face parse(String direction, JsonObject raw) {
-            float[] uv = vector(raw, "uv");
-            // A quad requires all four coordinates. Skipping malformed faces
-            // is safer than throwing while an element matrix is active.
-            return uv == null || uv.length < 4 ? null : new Face(direction, uv, (int) decimal(raw, "rotation"));
-        }
-        private void render(float[] from, float[] to, float width, float height, float frameHeight, float frameOffset) {
-            float x1=(from[0]-8.0F)/16.0F, y1=(from[1]-8.0F)/16.0F, z1=(from[2]-8.0F)/16.0F;
-            float x2=(to[0]-8.0F)/16.0F, y2=(to[1]-8.0F)/16.0F, z2=(to[2]-8.0F)/16.0F;
-            float[][] points;
-            // Keep the same vertex order as Cosmetica Core's FaceInfo. It is
-            // deliberately not the generic quad order: it pairs with the
-            // block-model UV order below and preserves authored textures.
-            if ("north".equals(direction)) points=new float[][]{{x2,y2,z1},{x2,y1,z1},{x1,y1,z1},{x1,y2,z1}};
-            else if ("south".equals(direction)) points=new float[][]{{x1,y2,z2},{x1,y1,z2},{x2,y1,z2},{x2,y2,z2}};
-            else if ("east".equals(direction)) points=new float[][]{{x2,y2,z2},{x2,y1,z2},{x2,y1,z1},{x2,y2,z1}};
-            else if ("west".equals(direction)) points=new float[][]{{x1,y2,z1},{x1,y1,z1},{x1,y1,z2},{x1,y2,z2}};
-            else if ("up".equals(direction)) points=new float[][]{{x1,y2,z1},{x1,y2,z2},{x2,y2,z2},{x2,y2,z1}};
-            else if ("down".equals(direction)) points=new float[][]{{x1,y1,z2},{x1,y1,z1},{x2,y1,z1},{x2,y1,z2}};
-            else return;
-            int turns=((rotation%360)+360)%360/90;
-            GL11.glBegin(GL11.GL_QUADS);
-            for(int index=0;index<4;index++) {
-                int corner = (index + turns) & 3;
-                float u = (corner < 2 ? uv[0] : uv[2]) / width;
-                float v = frameOffset + ((corner == 1 || corner == 2 ? uv[3] : uv[1]) / height) * frameHeight;
-                GL11.glTexCoord2f(u, v);
-                GL11.glVertex3f(points[index][0],points[index][1],points[index][2]);
-            }
             GL11.glEnd();
         }
     }
 
-    private static float[] vector(JsonObject object,String key) { try { return vector(object.getAsJsonArray(key)); } catch(Exception ignored) { return null; } }
-    private static float[] vector(JsonArray array) {
-        if(array==null||array.size()<3)return null;
-        float[] value = new float[array.size()];
-        for (int index = 0; index < value.length; index++) value[index] = CosmeticaModel.value(array, index, 0.0F);
-        return value;
+    float[] bakedVertices() {
+        return vertices.clone();
     }
-    private static float value(JsonArray array,int index,float fallback) { try{return array.size()>index?array.get(index).getAsFloat():fallback;}catch(Exception ignored){return fallback;} }
-    private static String string(JsonObject object,String key){try{return object.has(key)?object.get(key).getAsString():"";}catch(Exception ignored){return "";}}
-    private static float decimal(JsonObject object,String key){try{return object.has(key)?object.get(key).getAsFloat():0.0F;}catch(Exception ignored){return 0.0F;}}
+
+    private enum Direction {
+        NORTH(6, 4, 0, 2),
+        SOUTH(3, 1, 5, 7),
+        EAST(7, 5, 4, 6),
+        WEST(2, 0, 1, 3),
+        UP(2, 3, 7, 6),
+        DOWN(1, 0, 4, 5);
+
+        // Vertex order matches Cosmetica Core's FaceInfo. Bits choose the
+        // maximum coordinate for x (4), y (2) and z (1).
+        private final int[] corners;
+
+        Direction(int... corners) {
+            this.corners = corners;
+        }
+
+        private float[] bake(float[] from, float[] to, Rotation rotation, JsonObject face) {
+            JsonArray uvArray = face.getAsJsonArray("uv");
+            float[] uv = uvArray == null ? defaultUv(from, to) : vector(uvArray, 4);
+            int degrees = face.has("rotation") ? face.get("rotation").getAsInt() : 0;
+            int turns = Math.floorMod(degrees / 90, 4);
+            float[] quad = new float[20];
+            for (int i = 0; i < 4; i++) {
+                int corner = corners[i];
+                float[] point = {(corner & 4) == 0 ? from[0] : to[0],
+                        (corner & 2) == 0 ? from[1] : to[1],
+                        (corner & 1) == 0 ? from[2] : to[2]};
+                if (rotation != null) rotation.apply(point);
+                int offset = i * 5;
+                quad[offset] = (point[0] - 8.0F) * UNIT;
+                quad[offset + 1] = (point[1] - 4.0F) * UNIT;
+                quad[offset + 2] = (point[2] - 8.0F) * UNIT;
+                int uvCorner = (i + turns) & 3;
+                quad[offset + 3] = uv[uvCorner < 2 ? 0 : 2] * UNIT;
+                quad[offset + 4] = uv[uvCorner == 1 || uvCorner == 2 ? 3 : 1] * UNIT;
+            }
+            return quad;
+        }
+
+        private float[] defaultUv(float[] from, float[] to) {
+            switch (this) {
+                case DOWN: return new float[]{from[0], 16 - to[2], to[0], 16 - from[2]};
+                case UP: return new float[]{from[0], from[2], to[0], to[2]};
+                case NORTH: return new float[]{16 - to[0], 16 - to[1], 16 - from[0], 16 - from[1]};
+                case SOUTH: return new float[]{from[0], 16 - to[1], to[0], 16 - from[1]};
+                case WEST: return new float[]{from[2], 16 - to[1], to[2], 16 - from[1]};
+                case EAST: return new float[]{16 - to[2], 16 - to[1], 16 - from[2], 16 - from[1]};
+                default: throw new AssertionError(this);
+            }
+        }
+    }
+
+    private static final class Rotation {
+        private final float[] origin;
+        private final float[] sine = new float[3];
+        private final float[] cosine = new float[3];
+        private final float[] rescale = {1, 1, 1};
+
+        private Rotation(float[] origin, float[] angles, int rescaleAxis) {
+            this.origin = origin;
+            for (int axis = 0; axis < 3; axis++) {
+                double radians = Math.toRadians(angles[axis]);
+                sine[axis] = (float) Math.sin(radians);
+                cosine[axis] = (float) Math.cos(radians);
+            }
+            if (rescaleAxis >= 0 && cosine[rescaleAxis] > 0.001F) {
+                for (int axis = 0; axis < 3; axis++) {
+                    if (axis != rescaleAxis) rescale[axis] = 1.0F / cosine[rescaleAxis];
+                }
+            }
+        }
+
+        private static Rotation parse(JsonObject raw) {
+            if (raw == null) return null;
+            float[] origin = vector(raw.getAsJsonArray("origin"), 3);
+            float[] angles = new float[3];
+            int rescaleAxis = -1;
+            if (raw.has("angle")) {
+                String axisName = raw.get("axis").getAsString().toLowerCase(Locale.ROOT);
+                int axis = axisName.length() == 1 ? "xyz".indexOf(axisName) : -1;
+                if (axis < 0) throw new IllegalArgumentException("Unknown rotation axis " + axisName);
+                angles[axis] = number(raw.get("angle"));
+                if (raw.has("rescale") && raw.get("rescale").getAsBoolean()) rescaleAxis = axis;
+            } else {
+                angles[0] = number(raw.get("x"));
+                angles[1] = number(raw.get("y"));
+                angles[2] = number(raw.get("z"));
+            }
+            return new Rotation(origin, angles, rescaleAxis);
+        }
+
+        private void apply(float[] point) {
+            for (int i = 0; i < 3; i++) point[i] -= origin[i];
+            // Cosmetica 26.3 applies authored X, then Y, then Z.
+            rotate(point, 1, 2, 0);
+            rotate(point, 2, 0, 1);
+            rotate(point, 0, 1, 2);
+            for (int i = 0; i < 3; i++) point[i] = point[i] * rescale[i] + origin[i];
+        }
+
+        private void rotate(float[] point, int a, int b, int axis) {
+            float first = point[a];
+            point[a] = first * cosine[axis] - point[b] * sine[axis];
+            point[b] = first * sine[axis] + point[b] * cosine[axis];
+        }
+    }
+
+    private static float[] vector(JsonArray values, int size) {
+        if (values == null || values.size() != size) throw new IllegalArgumentException("Invalid model vector");
+        float[] result = new float[size];
+        for (int i = 0; i < size; i++) result[i] = number(values.get(i));
+        return result;
+    }
+
+    private static float number(JsonElement value) {
+        float result = value.getAsFloat();
+        if (!Float.isFinite(result)) throw new IllegalArgumentException("Non-finite model coordinate");
+        return result;
+    }
 }

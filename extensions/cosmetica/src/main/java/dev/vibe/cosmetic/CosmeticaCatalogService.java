@@ -8,6 +8,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
@@ -80,7 +81,7 @@ public final class CosmeticaCatalogService {
                 String payload="{\"query\":"+quote(clean)+",\"pageSize\":24,\"page\":"+Math.max(1,wantedPage)+"}";
                 JsonObject root=new JsonParser().parse(post(API,payload)).getAsJsonObject(); List<CosmeticaAccessory> listed=new ArrayList<CosmeticaAccessory>();
                 JsonArray list=root.has("results")&&root.get("results").isJsonArray()?root.getAsJsonArray("results"):new JsonArray();
-                for(JsonElement element:list) if(element.isJsonObject()) { CosmeticaAccessory accessory=CosmeticaAccessory.fromApi(element.getAsJsonObject()); if(accessory!=null&&!accessory.getModelUrl().isEmpty()&&!accessory.getTextureUrl().isEmpty())listed.add(accessory); }
+                for(JsonElement element:list) if(element.isJsonObject()) { CosmeticaAccessory accessory=CosmeticaAccessory.fromApi(element.getAsJsonObject()); if(accessory!=null&&(accessory.isCape()||!accessory.getModelUrl().isEmpty())&&!accessory.getTextureUrl().isEmpty())listed.add(accessory); }
                 results=Collections.unmodifiableList(listed); page=root.has("page")?root.get("page").getAsInt():Math.max(1,wantedPage); pages=root.has("estimatedPages")?Math.max(1,root.get("estimatedPages").getAsInt()):1; status=listed.isEmpty()?"No published accessories found.":listed.size()+" authored accessories";
             } catch(Exception error) { results=Collections.emptyList(); status="Catalog unavailable: "+shortMessage(error); }
             finally { loading=false; }
@@ -101,15 +102,19 @@ public final class CosmeticaCatalogService {
     }
 
     public ResourceLocation getTexture(CosmeticaAccessory accessory, boolean thumbnail) {
-        if(accessory==null)return DefaultPlayerSkin.getDefaultSkinLegacy(); String url=thumbnail&&!accessory.getThumbnailUrl().isEmpty()?accessory.getThumbnailUrl():accessory.getTextureUrl(); if(url.isEmpty()||!safeUrl(url))return DefaultPlayerSkin.getDefaultSkinLegacy();
+        if(accessory==null)return DefaultPlayerSkin.getDefaultSkinLegacy(); String url=thumbnail&&!accessory.getThumbnailUrl().isEmpty()?accessory.getThumbnailUrl():accessory.getTextureUrl();
         String key=accessory.getId()+(thumbnail?"_thumb":""); ResourceLocation existing=loadedTextures.get(key); if(existing!=null)return existing;
+        if (!thumbnail) {
+            ResourceLocation optimized = new ResourceLocation("vibe", "cosmetica/render-textures/" + safe(accessory.getId()) + ".png");
+            if (hasBundled(optimized)) { loadedTextures.put(key, optimized); return optimized; }
+        }
         String group = thumbnail ? "thumbnails/" : "textures/";
         // Minecraft 1.8.9's texture loader does not decode WebP.  The
         // build-time catalogue dumper therefore retains the original WebP
         // thumbnail for provenance and creates a PNG sibling for Vibe's GUI.
-        String bundledExtension = thumbnail ? ".png" : extension(url);
-        ResourceLocation bundled = new ResourceLocation("vibe", "cosmetica/" + group + safe(accessory.getId()) + bundledExtension);
+        ResourceLocation bundled = new ResourceLocation("vibe", "cosmetica/" + group + safe(accessory.getId()) + ".png");
         if (hasBundled(bundled)) { loadedTextures.put(key, bundled); return bundled; }
+        if(url.isEmpty()||!safeUrl(url))return DefaultPlayerSkin.getDefaultSkinLegacy();
         ResourceLocation location=new ResourceLocation("vibe","cosmetica/"+safe(key));
         try { minecraft.getTextureManager().loadTexture(location,new ThreadDownloadImageData(new File(textures,safe(key)+extension(url)),url,DefaultPlayerSkin.getDefaultSkinLegacy(),null)); } catch(Throwable ignored) { }
         loadedTextures.put(key,location); return location;
@@ -149,7 +154,9 @@ public final class CosmeticaCatalogService {
     }
 
     private boolean hasBundled(ResourceLocation location) {
-        try { minecraft.getResourceManager().getResource(location); return true; } catch (Exception ignored) { return false; }
+        try (InputStream stream = minecraft.getResourceManager().getResource(location).getInputStream()) {
+            return stream != null;
+        } catch (Exception ignored) { return false; }
     }
 
     private static String post(String address,String body)throws Exception { HttpURLConnection connection=(HttpURLConnection)new URL(address).openConnection(); connection.setConnectTimeout(7000); connection.setReadTimeout(15000); connection.setRequestMethod("POST"); connection.setDoOutput(true); connection.setRequestProperty("Content-Type","application/json; charset=utf-8"); OutputStreamWriter writer=new OutputStreamWriter(connection.getOutputStream(),StandardCharsets.UTF_8); try{writer.write(body);}finally{writer.close();} if(connection.getResponseCode()<200||connection.getResponseCode()>=300)throw new IllegalStateException("HTTP "+connection.getResponseCode()); return read(connection); }
@@ -159,6 +166,6 @@ public final class CosmeticaCatalogService {
     private static void write(File file,String content)throws Exception { File parent=file.getParentFile();if(!parent.isDirectory())parent.mkdirs();OutputStreamWriter writer=new OutputStreamWriter(new FileOutputStream(file),StandardCharsets.UTF_8);try{writer.write(content);}finally{writer.close();} }
     private static String quote(String value){return "\""+value.replace("\\","\\\\").replace("\"","\\\"")+"\"";}
     private static String safe(String value){return value.replaceAll("[^A-Za-z0-9_.-]","_");} private static String extension(String url){int index=url.lastIndexOf('.');return index<0||index<url.lastIndexOf('/')?".png":url.substring(index).replaceAll("[^A-Za-z0-9.]","");}
-    private static boolean safeUrl(String value){try{URL url=new URL(value);return "https".equalsIgnoreCase(url.getProtocol())&&url.getHost().toLowerCase(java.util.Locale.ROOT).endsWith("cosmetica.cc");}catch(Exception ignored){return false;}}
+    private static boolean safeUrl(String value){try{URL url=new URL(value);String host=url.getHost().toLowerCase(java.util.Locale.ROOT);return "https".equalsIgnoreCase(url.getProtocol())&&(host.equals("cosmetica.cc")||host.endsWith(".cosmetica.cc"));}catch(Exception ignored){return false;}}
     private static String shortMessage(Exception error){String value=error.getMessage();return value==null?"connection error":value.length()>48?value.substring(0,48):value;}
 }

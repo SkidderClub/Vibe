@@ -78,7 +78,9 @@ public final class ExtensionIntegrationCheck {
             mc.thePlayer = allocate(EntityPlayerSP.class);
             net.minecraft.entity.DataWatcher watcher = new net.minecraft.entity.DataWatcher(mc.thePlayer);
             watcher.addObject(0, Byte.valueOf((byte) 0));
+            watcher.addObject(10, Byte.valueOf((byte) 0x7f));
             set(net.minecraft.entity.Entity.class, mc.thePlayer, "dataWatcher", watcher);
+            mc.thePlayer.movementInput = new net.minecraft.util.MovementInput();
             IMetadataSerializer metadata = new IMetadataSerializer();
             metadata.registerMetadataSectionType(new TextureMetadataSectionSerializer(), TextureMetadataSection.class);
             List<IResourcePack> packs = new ArrayList<IResourcePack>();
@@ -90,6 +92,7 @@ public final class ExtensionIntegrationCheck {
             Vibe vibe = new Vibe(); set(Vibe.class, null, "instance", vibe);
             dev.vibe.friend.FriendManager friends = new dev.vibe.friend.FriendManager(profile.resolve("config").toFile());
             set(Vibe.class, vibe, "friendManager", friends);
+            dev.vibe.camera.DroneCollisionsTest.registerBlocks();
             ModuleManager modules = new ModuleManager(); set(Vibe.class, vibe, "moduleManager", modules);
             require(modules.getModule("lego") == null && modules.getModule("test") == null, "Core registered an extension module");
             require(ExtensionIntegrationCheck.class.getResource("/assets/vibe/lego/catalog.json") == null, "Core contains LEGO assets");
@@ -114,7 +117,7 @@ public final class ExtensionIntegrationCheck {
                 Object catalog = extensions.getService(Class.forName("dev.vibe.cosmetic.CosmeticaCatalogService"));
                 require(catalog != null, "Missing catalog service");
                 List<?> entries = (List<?>) catalog.getClass().getMethod("getResults").invoke(catalog);
-                require(entries.size() == 629, "Bundled Cosmetica catalog incomplete");
+                require(entries.size() >= 1737, "Bundled Cosmetica catalog incomplete");
                 require(!(Boolean) catalog.getClass().getMethod("isLoading").invoke(catalog), "Offline catalog started a download");
                 ResourceLocation icon = new ResourceLocation("vibe", "cosmetica/thumbnails/EisxE.png");
                 texture(resources, icon); resources.reloadResources(new ArrayList<IResourcePack>(packs)); texture(resources, icon);
@@ -142,19 +145,36 @@ public final class ExtensionIntegrationCheck {
                 require(((List<?>) layers.get(skins.get("slim"))).size() == before + 1, "Slim accessory layer missing");
                 Object presets = extensions.getService(Class.forName("dev.vibe.cosmetic.CosmeticPresetManager"));
                 Object selected = presets.getClass().getMethod("getSelected").invoke(presets);
-                selected.getClass().getMethod("equip", entries.get(0).getClass()).invoke(selected, entries.get(0));
-                Object model = catalog.getClass().getMethod("getModel", entries.get(0).getClass()).invoke(catalog, entries.get(0));
-                require(model != null, "Bundled accessory model unavailable");
+                Object accessory = cosmeticById(entries, "EisxE");
+                selected.getClass().getMethod("equip", accessory.getClass()).invoke(selected, accessory);
+                Object bakedModel = catalog.getClass().getMethod("getModel", accessory.getClass()).invoke(catalog, accessory);
+                require(bakedModel != null, "Bundled accessory model unavailable");
                 mc.thePlayer.inventory = new net.minecraft.entity.player.InventoryPlayer(mc.thePlayer);
-                List<?> attached = (List<?>) layers.get(skins.get("default"));
-                @SuppressWarnings("unchecked") net.minecraft.client.renderer.entity.layers.LayerRenderer<net.minecraft.client.entity.AbstractClientPlayer> accessoryLayer =
+                for (net.minecraft.client.renderer.entity.RenderPlayer renderer : skins.values()) {
+                    List<?> attached = (List<?>) layers.get(renderer);
+                    @SuppressWarnings("unchecked") net.minecraft.client.renderer.entity.layers.LayerRenderer<net.minecraft.client.entity.AbstractClientPlayer> layer =
+                            (net.minecraft.client.renderer.entity.layers.LayerRenderer<net.minecraft.client.entity.AbstractClientPlayer>) attached.get(attached.size() - 1);
+                    double standing = cosmeticCenterY(mc.thePlayer, renderer.getMainModel(), layer, false);
+                    double sneaking = cosmeticCenterY(mc.thePlayer, renderer.getMainModel(), layer, true);
+                    require(Math.abs(sneaking - standing - 5.6) < 1.0, "Accessory missed the 1.8.9 sneaking transform");
+                }
+                Object cape = cosmeticById(entries, "Q4ngK");
+                selected.getClass().getMethod("remove", String.class).invoke(selected, "EisxE");
+                selected.getClass().getMethod("equip", cape.getClass()).invoke(selected, cape);
+                require(dev.vibe.ui.render.CustomModelRenderer.hidesCape(mc.thePlayer), "Equipped cape did not replace the vanilla cape");
+                net.minecraft.client.renderer.entity.RenderPlayer renderer = skins.get("default");
+                List<?> attached = (List<?>) layers.get(renderer);
+                @SuppressWarnings("unchecked") net.minecraft.client.renderer.entity.layers.LayerRenderer<net.minecraft.client.entity.AbstractClientPlayer> layer =
                         (net.minecraft.client.renderer.entity.layers.LayerRenderer<net.minecraft.client.entity.AbstractClientPlayer>) attached.get(attached.size() - 1);
-                accessoryLayer.doRenderLayer(mc.thePlayer, 0, 0, 0, 0, 0, 0, .0625F);
+                cosmeticCenterY(mc.thePlayer, renderer.getMainModel(), layer, false);
+                watcher.updateObject(10, Byte.valueOf((byte) 0));
+                require(!dev.vibe.ui.render.CustomModelRenderer.hidesCape(mc.thePlayer), "Cape ignored the vanilla skin setting");
                 cosmetics.setEnabled(false);
                 require(Files.isRegularFile(profile.resolve("config/vibe/cosmetics.json")), "Preset save path changed");
             } else {
                 require(extensions.getService(FriendProfileProvider.class) == null, "Friend profile service leaked into core");
                 require(extensions.getService(PlayerSkinProvider.class) == null, "Skin service leaked into core");
+                require(extensions.getService(PlayerCapeProvider.class) == null, "Cape service leaked into core");
             }
             if (examplePresent) {
                 Module test = modules.getModule("test"); require(test != null, "Missing Test module");
@@ -199,6 +219,39 @@ public final class ExtensionIntegrationCheck {
     }
     private static void texture(SimpleReloadableResourceManager resources, ResourceLocation location) throws Exception {
         try (InputStream in = resources.getResource(location).getInputStream()) { require(ImageIO.read(in) != null, "Invalid extension texture"); }
+    }
+    private static Object cosmeticById(List<?> entries, String id) throws Exception {
+        java.lang.reflect.Method getId = entries.get(0).getClass().getMethod("getId");
+        for (Object entry : entries) if (id.equals(getId.invoke(entry))) return entry;
+        throw new AssertionError("Missing bundled cosmetic " + id);
+    }
+
+    private static double cosmeticCenterY(EntityPlayerSP player, net.minecraft.client.model.ModelPlayer model,
+            net.minecraft.client.renderer.entity.layers.LayerRenderer<net.minecraft.client.entity.AbstractClientPlayer> layer, boolean sneak) {
+        player.movementInput.sneak = sneak;
+        model.isSneak = sneak;
+        model.setRotationAngles(0, 0, 0, 0, 0, .0625F, player);
+        GL11.glViewport(0, 0, 64, 64);
+        GL11.glClearColor(0, 0, 0, 0);
+        GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        GL11.glMatrixMode(GL11.GL_PROJECTION);
+        GL11.glLoadIdentity();
+        GL11.glOrtho(-1.5, 1.5, -1.5, 1.5, -3, 3);
+        GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        GL11.glLoadIdentity();
+        boolean blend = GL11.glIsEnabled(GL11.GL_BLEND);
+        layer.doRenderLayer(player, 0, 0, 0, 0, 0, 0, .0625F);
+        require(GL11.glIsEnabled(GL11.GL_BLEND) == blend, "Cosmetics layer leaked blend state");
+        java.nio.ByteBuffer pixels = org.lwjgl.BufferUtils.createByteBuffer(64 * 64 * 4);
+        GL11.glReadPixels(0, 0, 64, 64, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
+        int sum = 0, count = 0;
+        for (int pixel = 0; pixel < 64 * 64; pixel++) {
+            if ((pixels.get(pixel * 4 + 3) & 255) == 0) continue;
+            sum += pixel / 64;
+            count++;
+        }
+        require(count > 5, "Cosmetic drew no visible pixels");
+        return (double) sum / count;
     }
     private static void require(boolean condition, String message) { if (!condition) throw new AssertionError(message); }
     private static String source(Object object) throws Exception {

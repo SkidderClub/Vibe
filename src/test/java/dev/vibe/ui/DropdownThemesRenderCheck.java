@@ -51,6 +51,7 @@ public final class DropdownThemesRenderCheck {
                 if(name.equals("SuizideX")&&(Integer)get(panel,"max")==0)check((Integer)get(panel,"h")<=(Integer)get(panel,"content")+36,"An empty SuizideX panel did not shrink");
             }
             check(mapped.size()==manager.getModules().size(),"A module was omitted from "+name);
+            if(name.equals("Novoline")) verifyNovolineLabelCenter(hit(gui,"MODULE",main));
             verifyFooter(gui,longModule,name);
             Object row=hit(gui,"MODULE",main);click(gui,row,0);check(main.isEnabled(),name+" did not toggle a module");
             click(gui,row,1);render(gui,name.toLowerCase(Locale.ROOT)+"-settings.png");check(main.isEnabled(),"Right click toggled module");
@@ -132,6 +133,19 @@ public final class DropdownThemesRenderCheck {
         check(GL11.glGetError()==0,"The gradient/glow check leaked GL errors");save("theme-glow-gradient-pixels.png");
     }
     private static int pixel(int x,int y){ByteBuffer b=BufferUtils.createByteBuffer(4);GL11.glReadPixels(x,mc.displayHeight-y-1,1,1,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,b);return (b.get(0)&255)<<16|(b.get(1)&255)<<8|b.get(2)&255;}
+    private static void verifyNovolineLabelCenter(Object row)throws Exception {
+        int left=num(row,"left"),top=num(row,"top"),width=num(row,"right")-left;
+        int textArea=width-16; // Exclude the chevron from the glyph bounds.
+        int[] pixels=region(left,top,textArea,num(row,"bottom")-top);
+        int first=width,last=-1;
+        for(int i=0;i<pixels.length;i++) {
+            if((pixels[i]&255)<128)continue;
+            int x=i%textArea;
+            first=Math.min(first,x);
+            last=Math.max(last,x);
+        }
+        check(last>first&&Math.abs((first+last+1)/2.0-width/2.0)<=2,"Novoline label was not centered across the full row");
+    }
     private static void verifyFooter(VibeClickGui gui,Module module,String theme)throws Exception {
         Object workspace=get(gui,"dropdown"),panel=((Map<?,?>)get(workspace,"categories")).get(Category.SCRIPTS);
         PathTestFixture.set(workspace.getClass(),workspace,"opened",System.nanoTime()-1000000000L);
