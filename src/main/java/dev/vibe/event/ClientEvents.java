@@ -844,6 +844,7 @@ public final class ClientEvents {
         dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
         if (hypixel != null && hypixel.suppressVisuals()) return;
         fogRenderer.renderMinecraft();
+        dev.vibe.ambience.AmbienceRenderer.INSTANCE.fireflies(event.partialTicks);
         ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
         if (scripts != null) scripts.renderWorld(event.partialTicks);
         EspModule esp = Vibe.getInstance().getModuleManager().getModule(EspModule.class);

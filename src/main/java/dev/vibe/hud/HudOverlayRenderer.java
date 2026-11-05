@@ -49,7 +49,7 @@ final class HudOverlayRenderer {
 
     static void panel(HudManager manager,HudModule hud,HudManager.HudElement e,OverlaySettings settings,int x,int y,int w,int h){
         String theme=manager.theme(e,hud);if("Transparent".equals(theme))return;
-        if("LiquidGlass".equals(theme)){manager.drawOverlayGlass(hud,settings,x,y,w,h,1);return;}
+        if("LiquidGlass".equals(theme)||"Lavalamp".equals(theme)){manager.drawOverlayGlass(hud,e,settings,x,y,w,h,1);return;}
         HudShapes.round(x,y,w,h,"Skeet".equals(theme)?1:settings.radius.getFloat(),settings.background.getArgb());
         if(settings.border.isEnabled())RenderUtils.roundedOutline(x,y,x+w,y+h,"Skeet".equals(theme)?1:settings.radius.getFloat(),1,RenderUtils.alpha(settings.accent.getArgb(),90));
         if("Skeet".equals(theme))Gui.drawRect(x+2,y+2,x+w-2,y+3,settings.accent.getArgb());

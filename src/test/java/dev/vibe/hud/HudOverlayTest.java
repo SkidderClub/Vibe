@@ -26,6 +26,23 @@ public class HudOverlayTest {
         assertFalse(state.update(false,true,false,world));assertFalse(state.update(false,true,true,new Object()));
         assertTrue(state.update(true,false,true,world));assertFalse(state.update(false,false,true,world));
     }
+    @Test public void lavaThemesSurviveLayoutsAndRemainAvailableInTheInspector()throws Exception{
+        try(PathTestFixture f=new PathTestFixture()){
+            language(f.mc);HudModule hud=new HudModule();f.modules.registerDynamic(hud);
+            HudManager source=new HudManager(temporary.newFolder()),restored=new HudManager(temporary.newFolder());
+            for(String id:source.getElementIds())source.getElement(id).setTheme("Lavalamp");
+            restored.fromJson(source.toJson());
+            for(String id:source.getElementIds())assertEquals(id,"Lavalamp",restored.getElement(id).getTheme());
+            hud.targetHud.mode.setValue("Lavalamp");assertTrue(hud.targetHud.mode.is("Lavalamp"));
+            HudEditorGui gui=new HudEditorGui(source);
+            java.lang.reflect.Method options=HudEditorGui.class.getDeclaredMethod("themeOptions",HudManager.HudElement.class);
+            options.setAccessible(true);
+            for(String id:source.getElementIds()){
+                if(id.equals(HudManager.GHOSTS)||id.equals(HudManager.CUSTOM_HEALTH))continue;
+                assertTrue(id,Arrays.asList((String[])options.invoke(gui,source.getElement(id))).contains("Lavalamp"));
+            }
+        }
+    }
     @Test public void newWidgetsAreOptionalAndTheirDistinctThemesScalesAndPositionsSurviveLayouts()throws Exception{
         try(PathTestFixture f=new PathTestFixture()){
             language(f.mc);

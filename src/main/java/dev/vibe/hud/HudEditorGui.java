@@ -46,7 +46,7 @@ import org.lwjgl.opengl.GL11;
 
 /** The HUD workspace in the menu and account screen style: elements, a live preview and the selected element's settings. */
 public final class HudEditorGui extends GuiScreen {
-    private static final String[] THEMES = {"Vibe", "Skeet", "LiquidGlass"};
+    private static final String[] THEMES = {"Vibe", "Skeet", "LiquidGlass", "Lavalamp"};
     private static final int GAP = 4;
     private static final int LABEL = 15;
     private static final int ROW = 24;
@@ -64,6 +64,8 @@ public final class HudEditorGui extends GuiScreen {
     private final List<Hit> hits = new ArrayList<Hit>();
     private HudManager.HudElement selected;
     private HudManager.HudElement dragged;
+    private int dragStartMouseX,dragStartMouseY;
+    private boolean dragStarted;
     private boolean resizing;
     private int resizeAxis,resizeAnchorLeft,resizeAnchorTop;
     private int dragOffsetX, dragOffsetY;
@@ -76,7 +78,9 @@ public final class HudEditorGui extends GuiScreen {
     private int canvasX, canvasY, canvasWidth, canvasHeight;
     private boolean compact, controlsInStage;
     private float previewScale = 1.0F;
-    private int settingsScroll, elementsScroll;
+    private int settingsScroll, elementsScroll, themeScroll;
+    private int themeLeft, themeTop, themeRight, themeBottom, themeMaxScroll;
+    private String themeElement, themeChoice;
     private int hitTop = Integer.MIN_VALUE, hitBottom = Integer.MAX_VALUE;
     private ModeSetting openMode;
     private StringSetting editingText;
@@ -413,24 +417,58 @@ public final class HudEditorGui extends GuiScreen {
         addHit(x - 2, y - 2, x + 14, y + 14, (mouseX2, mouseY2) -> { element.setScale(element.getScale() + step); persist(); });
     }
 
-    private int themeHeight(int width){if(selected==null||!HudManager.TARGET_HUD.equals(selected.getId()))return CONTROL;int count=Vibe.getInstance().getModuleManager().getModule(HudModule.class).targetHud.mode.getModes().size(),cols=Math.max(1,Math.min(3,(width-8)/88));return Math.max(CONTROL,8+((count+cols-1)/cols)*18);}
+    private String[] themeOptions(HudManager.HudElement element) {
+        HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        if(HudManager.GHOSTS.equals(element.getId()))return hud.ghosts.mode.getModes().toArray(new String[0]);
+        if(HudManager.TARGET_HUD.equals(element.getId()))return hud.targetHud.mode.getModes().toArray(new String[0]);
+        if(HudManager.CUSTOM_HEALTH.equals(element.getId()))return hud.customHealth.mode.getModes().toArray(new String[0]);
+        if(HudManager.HOTBAR.equals(element.getId()))return new String[]{"Minecraft","Fortnite","Skeet","Vibe","LiquidGlass","Lavalamp"};
+        if(HudManager.CLOCK.equals(element.getId())||HudManager.CHAT.equals(element.getId()))return new String[]{"Vibe","Skeet","LiquidGlass","Lavalamp","Transparent"};
+        return THEMES;
+    }
+    private int themeHeight(int width){
+        return CONTROL;
+    }
     private void drawTheme(int x,int right,int y,int mouseX,int mouseY){
         final HudManager.HudElement element=selected;HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         final ModeSetting mode=HudManager.GHOSTS.equals(element.getId())?hud.ghosts.mode:HudManager.TARGET_HUD.equals(element.getId())?hud.targetHud.mode:HudManager.CUSTOM_HEALTH.equals(element.getId())?hud.customHealth.mode:null;
-        String[] themes=mode!=null?mode.getModes().toArray(new String[0]):HudManager.HOTBAR.equals(element.getId())?new String[]{"Minecraft","Fortnite","Skeet","Vibe","LiquidGlass"}:HudManager.CLOCK.equals(element.getId())||HudManager.CHAT.equals(element.getId())?new String[]{"Vibe","Skeet","LiquidGlass","Transparent"}:THEMES;
+        String[] themes=themeOptions(element);
         String current=mode==null?effectiveTheme(element):mode.getValue();
         int controlHeight=themeHeight(right-x);AccountScreenStyle.panel(x,y,right-x,controlHeight,SURFACE,BORDER);
         if(themes.length<=3)AccountScreenStyle.rawText(mode==null?"Theme":"Style",x+8,y+6,TEXT);
         int columns=HudManager.TARGET_HUD.equals(element.getId())?Math.max(1,Math.min(3,(right-x-8)/88)):(themes.length+(themes.length>3?2:1)-1)/(themes.length>3?2:1);
-        int rows=(themes.length+columns-1)/columns,cellHeight=themes.length<=3?16:(controlHeight-8)/rows;
+        int rows=(themes.length+columns-1)/columns,cellHeight=themes.length<=3?16:17;
+        int viewportTop=y+(themes.length<=3?21:4),viewportBottom=y+controlHeight-4;
+        themeMaxScroll=Math.max(0,rows*cellHeight-(viewportBottom-viewportTop));
+        if(!element.getId().equals(themeElement)||!current.equals(themeChoice)){
+            int index=java.util.Arrays.asList(themes).indexOf(current),row=Math.max(0,index)/columns;
+            themeScroll=Math.max(0,Math.min(themeMaxScroll,row*cellHeight-(viewportBottom-viewportTop)+cellHeight));
+            themeElement=element.getId();themeChoice=current;
+        }
+        themeScroll=Math.max(0,Math.min(themeMaxScroll,themeScroll));
+        themeLeft=x;themeRight=right;themeTop=Math.max(viewportTop,hitTop);themeBottom=Math.min(viewportBottom,hitBottom);
+        int oldHitTop=hitTop,oldHitBottom=hitBottom;
+        hitTop=Math.max(hitTop,viewportTop);hitBottom=Math.min(hitBottom,viewportBottom);
+        try(GuiClip clip=new GuiClip(x+3,viewportTop,right-x-6,viewportBottom-viewportTop)){
         for(int i=0;i<themes.length;i++){
-            final String value=themes[i];int a=x+4+(right-x-8)*(i%columns)/columns,b=x+4+(right-x-8)*(i%columns+1)/columns,top=y+(themes.length<=3?21:4)+i/columns*cellHeight;
+            final String value=themes[i];int area=right-x-8-(themeMaxScroll>0?5:0);
+            int a=x+4+area*(i%columns)/columns,b=x+4+area*(i%columns+1)/columns,top=viewportTop+i/columns*cellHeight-themeScroll;
+            if(top+cellHeight<=viewportTop||top>=viewportBottom)continue;
             boolean active=value.equalsIgnoreCase(current),hover=hovered(a,top,b,top+cellHeight-1,mouseX,mouseY);
             if(active||hover)AccountScreenStyle.panel(a,top,b-a-1,cellHeight-1,active?TINT:HOVER,active?ACCENT:BORDER);
             String label="LiquidGlass".equals(value)?"Glass":value;
             if(dev.vibe.ui.menu.MenuGlass.active())AccountScreenStyle.BODY_FONT.centered(label,a,top,b-a,cellHeight,active?TEXT:MUTED);
             else AccountScreenStyle.rawText(label,(a+b-fontRendererObj.getStringWidth(label))/2,top+(cellHeight-8)/2,active?TEXT:MUTED);
             addHit(a,top,b,top+cellHeight,(mx,my)->{if(mode==null)element.setTheme(value);else mode.setValue(value);persist();});
+        }
+        }finally{hitTop=oldHitTop;hitBottom=oldHitBottom;}
+        if(themeMaxScroll>0){
+            int length=viewportBottom-viewportTop,thumb=dev.vibe.ui.ScrollbarDrag.thumb(length,themeMaxScroll,8);
+            dev.vibe.ui.menu.MenuScrollbar.draw(right-4,viewportTop,2,length,viewportTop+(length-thumb)*themeScroll/themeMaxScroll,thumb);
+            addHit(right-8,viewportTop,right,viewportBottom,(mx,my)->{
+                final dev.vibe.ui.ScrollbarDrag scrolling=new dev.vibe.ui.ScrollbarDrag(viewportTop,viewportBottom,themeScroll,themeMaxScroll,8,my);
+                drag=(ax,ay)->themeScroll=scrolling.at(ay);drag.at(mx,my);
+            });
         }
     }
     private void drawSetting(Setting<?> setting, int x, int right, int y, int mouseX, int mouseY) {
@@ -706,6 +744,7 @@ public final class HudEditorGui extends GuiScreen {
         select(target);
         dragged = target;
         resizing = false;
+        dragStartMouseX=mouseX;dragStartMouseY=mouseY;dragStarted=false;
         dragOffsetX = x - target.getLeft();
         dragOffsetY = y - target.getTop();
     }
@@ -728,7 +767,13 @@ public final class HudEditorGui extends GuiScreen {
         int mouseX = Mouse.getEventX() * width / Math.max(1, mc.displayWidth);
         int mouseY = height - Mouse.getEventY() * height / Math.max(1, mc.displayHeight) - 1;
         int step = wheel > 0 ? -1 : 1;
-        if (selected != null && insideCanvas(mouseX, mouseY)) {
+        scrollAt(mouseX,mouseY,step);
+    }
+
+    private void scrollAt(int mouseX,int mouseY,int step){
+        if (mouseX>=themeLeft&&mouseX<themeRight&&mouseY>=themeTop&&mouseY<themeBottom) {
+            themeScroll=Math.max(0,Math.min(themeMaxScroll,themeScroll+step*17));
+        } else if (selected != null && insideCanvas(mouseX, mouseY)) {
             selected.setScale(selected.getScale() - step * .05F);
             persist();
         } else if (mouseX >= inspectorLeft && mouseX < inspectorLeft + inspectorWidth) {
@@ -779,6 +824,7 @@ public final class HudEditorGui extends GuiScreen {
         if (element == selected) return;
         selected = element;
         settingsScroll = 0;
+        themeScroll = 0;
         openMode = null;
         editingColor = null;
         openMulti.clear();
@@ -811,6 +857,10 @@ public final class HudEditorGui extends GuiScreen {
             return;
         }
         ScaledResolution resolution = new ScaledResolution(mc);
+        if(!dragStarted){
+            if(Math.abs(mouseX-dragStartMouseX)+Math.abs(mouseY-dragStartMouseY)<2)return;
+            dragStarted=true;
+        }
         int[] snapped = snap(dragged, previewX(mouseX) - dragOffsetX, previewY(mouseY) - dragOffsetY, resolution);
         dragged.moveTo(snapped[0], snapped[1], resolution);
     }
@@ -871,9 +921,9 @@ public final class HudEditorGui extends GuiScreen {
     }
 
     private List<Setting<?>> settingsFor(String element) {
-        if(manager!=null&&!manager.overlaySettings(element).isEmpty())return new ArrayList<>(manager.overlaySettings(element));
         List<Setting<?>> settings = new ArrayList<Setting<?>>(); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); if (hud == null) return settings;
-        if (HudManager.MUSIC.equals(element)) { MusicModule music = Vibe.getInstance().getModuleManager().getModule(MusicModule.class); if (music != null) { settings.add(music.hudWidth); settings.add(music.hudScale); settings.add(music.cover); settings.add(music.coverBackground); settings.add(music.progress); settings.add(music.scroll); settings.add(music.hideIdle); } }
+        if(manager!=null&&!manager.overlaySettings(element).isEmpty())settings.addAll(manager.overlaySettings(element));
+        else if (HudManager.MUSIC.equals(element)) { MusicModule music = Vibe.getInstance().getModuleManager().getModule(MusicModule.class); if (music != null) { settings.add(music.hudWidth); settings.add(music.hudScale); settings.add(music.cover); settings.add(music.coverBackground); settings.add(music.progress); settings.add(music.scroll); settings.add(music.hideIdle); } }
         else if (HudManager.WATERMARK.equals(element)) { settings.add(hud.getWatermarkOutline()); settings.add(hud.getWatermarkDetails()); settings.add(hud.getWatermarkText()); }
         else if (HudManager.ARRAY_LIST.equals(element)) { settings.add(hud.getArrayOutline()); settings.add(hud.getArrayListModules()); settings.add(hud.getArrayPrimaryColor()); settings.add(hud.getArraySecondaryColor()); settings.add(hud.getBackground()); settings.addAll(hud.array.all); }
         else if (HudManager.COORDINATES.equals(element)) settings.add(hud.getCoordinatesOutline());
@@ -887,7 +937,7 @@ public final class HudEditorGui extends GuiScreen {
             settings.addAll(hud.notifications.all);
             if (selected != null && "Skeet".equalsIgnoreCase(effectiveTheme(selected))) settings.remove(hud.notifications.radius);
         }
-        if (selected != null && "LiquidGlass".equalsIgnoreCase(effectiveTheme(selected))) {
+        if (selected != null && ("LiquidGlass".equalsIgnoreCase(effectiveTheme(selected)) || "Lavalamp".equalsIgnoreCase(effectiveTheme(selected)))) {
             if (HudManager.NOTIFICATIONS.equals(element)) settings.remove(hud.notifications.background);
             settings.add(hud.getLiquidGlassBlur()); settings.add(hud.getLiquidGlassBlurStrength());
             settings.add(hud.getLiquidGlassRefraction()); settings.add(hud.getLiquidGlassOpacity()); settings.add(hud.getLiquidGlassTint());

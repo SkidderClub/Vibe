@@ -1143,6 +1143,9 @@ public final class VibeClickGui extends GuiScreen {
         dropdown.close();
         AugustusImGui.closed();
         commitEditing();
+        dragging=null;draggingSlider=null;rangeDrag=null;colorPopup=null;draggingColor=null;bindingModule=null;
+        draggingSkeet=false;resizingSkeet=false;editing=null;textEditor=null;
+        targets.clear();
         SAVED_PANELS.clear();
         for (Panel panel : panels.values()) {
             SAVED_PANELS.put(panel.category, new int[] {panel.x, panel.y});

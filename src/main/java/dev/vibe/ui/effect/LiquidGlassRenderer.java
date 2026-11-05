@@ -7,6 +7,7 @@ import org.lwjgl.opengl.GL11;
 /** Clear HUD glass with a curved, refractive rim in physical framebuffer pixels. */
 public final class LiquidGlassRenderer implements AutoCloseable {
     private final SceneTexture scene = new SceneTexture();
+    private final java.nio.IntBuffer clip = org.lwjgl.BufferUtils.createIntBuffer(16);
     private EffectProgram program;
     private boolean failed;
 
@@ -19,27 +20,40 @@ public final class LiquidGlassRenderer implements AutoCloseable {
     }
 
     public boolean draw(int left, int top, int right, int bottom, float radius, float blur, float refraction, float opacity, int tint) {
+        int scale = new ScaledResolution(Minecraft.getMinecraft()).getScaleFactor();
+        return drawPixels(left * scale, top * scale, right * scale, bottom * scale, radius * scale, scale,
+                blur, refraction, opacity, tint);
+    }
+
+    /** Physical screen bounds allow surfaces to follow animated and nested HUD transforms. */
+    public boolean drawPixels(float left, float top, float right, float bottom, float radius, float scale,
+                              float blur, float refraction, float opacity, int tint) {
         if (failed || right <= left || bottom <= top) return false;
         Minecraft minecraft = Minecraft.getMinecraft();
-        ScaledResolution scaled = new ScaledResolution(minecraft);
-        int scale = scaled.getScaleFactor();
+        boolean clipped = GL11.glIsEnabled(GL11.GL_SCISSOR_TEST);
+        if (clipped) GL11.glGetInteger(GL11.GL_SCISSOR_BOX, clip);
         try (EffectState state = new EffectState()) {
             int width = minecraft.displayWidth, height = minecraft.displayHeight;
             float blurStrength = Math.max(0.0F, Math.min(8.0F, blur));
             float refractionStrength = Math.max(0.0F, Math.min(10.0F, refraction));
             // The vertex shader already uses clip coordinates. Restrict shading
             // to this pane instead of running the glass shader over the screen.
-            int x = Math.max(0, left * scale), y = Math.max(0, height - bottom * scale);
-            int scissorWidth = Math.max(0, Math.min(width, right * scale) - x);
-            int scissorHeight = Math.max(0, Math.min(height, height - top * scale) - y);
+            int x = Math.max(0, (int) Math.floor(left)), y = Math.max(0, (int) Math.floor(height - bottom));
+            int edgeX = Math.min(width, (int) Math.ceil(right)), edgeY = Math.min(height, (int) Math.ceil(height - top));
+            if (clipped) {
+                x = Math.max(x, clip.get(0)); y = Math.max(y, clip.get(1));
+                edgeX = Math.min(edgeX, clip.get(0) + clip.get(2)); edgeY = Math.min(edgeY, clip.get(1) + clip.get(3));
+            }
+            int scissorWidth = Math.max(0, edgeX - x), scissorHeight = Math.max(0, edgeY - y);
+            if (scissorWidth == 0 || scissorHeight == 0) return true;
             captureSampledRegion(width, height, x, y, scissorWidth, scissorHeight, scale, blurStrength, refractionStrength);
             if (program == null) program = new EffectProgram("fullscreen.vert", "LiquidGlass.frag");
             program.bind();
             FogRenderer.texture(0, scene.color);
             program.integer("Tex0", 0);
-            program.vec2("Origin", left * scale, height - bottom * scale);
-            program.vec2("Size", (right - left) * scale, (bottom - top) * scale);
-            program.scalar("Radius", Math.max(0, Math.min(radius, Math.min(right - left, bottom - top) * .5F)) * scale);
+            program.vec2("Origin", left, height - bottom);
+            program.vec2("Size", right - left, bottom - top);
+            program.scalar("Radius", Math.max(0, Math.min(radius, Math.min(right - left, bottom - top) * .5F)));
             program.scalar("Scale", scale);
             program.vec2("Texel", 1.0F / width, 1.0F / height);
             program.scalar("Blur", blurStrength);
@@ -70,7 +84,7 @@ public final class LiquidGlassRenderer implements AutoCloseable {
      * while each pane no longer copies the whole framebuffer.
      */
     private void captureSampledRegion(int width, int height, int x, int y, int scissorWidth, int scissorHeight,
-                                      int scale, float blur, float refraction) {
+                                      float scale, float blur, float refraction) {
         float reach = refraction * scale * 2.8F + blur * scale;
         if (!(reach >= 0.0F && reach < width + height)) {
             scene.capture(0, 0, width, height, false);

@@ -42,6 +42,7 @@ public final class MusicHudRenderer {
     private ResourceLocation surface;
     private int cachedWidth, cachedBackground, cachedAccent;
     private boolean cachedCover, cachedBackdrop, cachedThumbnail;
+    private boolean cachedCustomSurface;
     private String trackKey = "";
     private long changedAt;
 
@@ -52,11 +53,16 @@ public final class MusicHudRenderer {
     }
 
     public void draw(MusicModule module, MediaTrack track, int left, int top, boolean preview, float scale) {
+        draw(module, track, left, top, preview, scale, null);
+    }
+
+    public void draw(MusicModule module, MediaTrack track, int left, int top, boolean preview, float scale, Runnable backdrop) {
         if (preview && track.durationMs == 0 && track.artwork == null)
             track = new MediaTrack("Your music, in Vibe", "Artist / Album", "Media preview", "Playing",
                     true, false, 42000, 180000, null);
         String key = track.title + "\n" + track.artist;
         if (!key.equals(trackKey)) { trackKey = key; changedAt = System.currentTimeMillis(); }
+        if (backdrop != null) backdrop.run();
 
         boolean depth = GL11.glIsEnabled(GL11.GL_DEPTH_TEST), mask = GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK);
         boolean alpha = GL11.glIsEnabled(GL11.GL_ALPHA_TEST), blend = GL11.glIsEnabled(GL11.GL_BLEND);
@@ -69,7 +75,7 @@ public final class MusicHudRenderer {
             GlStateManager.disableDepth(); GlStateManager.depthMask(false);
             GlStateManager.disableAlpha(); GlStateManager.enableBlend();
             GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
-            updateSurface(module, track.artwork);
+            updateSurface(module, track.artwork, backdrop != null);
             mc.getTextureManager().bindTexture(surface);
             GlStateManager.enableTexture2D(); GlStateManager.color(1, 1, 1, 1);
             int width = module.hudWidth.getInt();
@@ -150,7 +156,7 @@ public final class MusicHudRenderer {
     }
 
     /** Bake only on artwork/style changes. The 2x mask avoids polygonal corners at HUD scale. */
-    private void updateSurface(MusicModule module, BufferedImage next) {
+    private void updateSurface(MusicModule module, BufferedImage next, boolean customSurface) {
         int width = module.hudWidth.getInt(), background = module.background.getArgb(), accent = module.accent.getArgb();
         // Windows exposes the active video's thumbnail as the session artwork.
         // Make that artwork automatic for system media: it becomes both the
@@ -158,16 +164,17 @@ public final class MusicHudRenderer {
         // album-art switches first. Radio keeps its chosen visual settings.
         boolean thumbnail = next != null && !module.radio.isEnabled();
         boolean cover = module.cover.isEnabled() || thumbnail;
-        boolean backdrop = module.coverBackground.isEnabled() || thumbnail;
+        boolean backdrop = !customSurface && (module.coverBackground.isEnabled() || thumbnail);
         if (surface != null && image == next && width == cachedWidth && background == cachedBackground
-                && accent == cachedAccent && cover == cachedCover && backdrop == cachedBackdrop && thumbnail == cachedThumbnail) return;
+                && accent == cachedAccent && cover == cachedCover && backdrop == cachedBackdrop && thumbnail == cachedThumbnail
+                && customSurface == cachedCustomSurface) return;
         BufferedImage tile = next == null ? vinyl(accent) : next;
         BufferedImage canvas = new BufferedImage(width * 2, HEIGHT * 2, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = canvas.createGraphics();
         try {
             quality(g); g.scale(2, 2);
             RoundRectangle2D body = new RoundRectangle2D.Float(0, 4, width, HEIGHT - 8, 16, 16);
-            g.setColor(new Color(background, true)); g.fill(body); g.setClip(body);
+            g.setColor(new Color(customSurface ? 0 : background, true)); g.fill(body); g.setClip(body);
             if (backdrop) {
                 g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_ATOP, thumbnail ? .85f : .48f));
                 if (thumbnail) {
@@ -204,7 +211,7 @@ public final class MusicHudRenderer {
         if (surface != null) mc.getTextureManager().deleteTexture(surface);
         surface = mc.getTextureManager().getDynamicTextureLocation("vibe-media-surface", texture);
         image = next; cachedWidth = width; cachedBackground = background; cachedAccent = accent;
-        cachedCover = cover; cachedBackdrop = backdrop; cachedThumbnail = thumbnail;
+        cachedCover = cover; cachedBackdrop = backdrop; cachedThumbnail = thumbnail; cachedCustomSurface = customSurface;
     }
 
     /** Original code-drawn fallback; no upstream vinyl artwork or font files are bundled. */

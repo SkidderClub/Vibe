@@ -62,6 +62,11 @@ final class BreezeWorkspace {
     private void select(Page next){commit();generation++;fetching=false;page=next;selected=null;friend=null;chosenConfig=null;preview=null;input=null;alias=null;targetScroll=scroll=0;search.setText("");search.setFocused(false);status="";if(next==Page.CONFIGS)refreshConfigs();}
     void draw(int screenW,int screenH,int mx,int my,float partialTicks){
         pointerX=mx;pointerY=my;
+        if(closed&&fetching&&page==Page.CONFIGS){
+            fetching=false;float previousScroll=scroll;
+            if(chosenConfig!=null&&preview==null)chooseConfig(chosenConfig);else if(online)refreshOnline();else refreshConfigs();
+            scroll=targetScroll=previousScroll;
+        }
         closed=false;palette=BreezePalette.from(settings().getBreezePalette().getValue());
         w=expanded?screenW-20:Math.min(720,screenW-20);h=expanded?screenH-20:Math.min(440,screenH-20);side=Math.max(94,Math.min(164,w*22/100));
         if(x==Integer.MIN_VALUE){x=(screenW-w)/2;y=(screenH-h)/2;}
@@ -324,7 +329,7 @@ final class BreezeWorkspace {
         if((page==Page.SOCIAL||page==Page.CONFIGS)&&input!=null&&input.textboxKeyTyped(character,key))return true;
         return page==Page.SOCIAL&&alias!=null&&alias.textboxKeyTyped(character,key);
     }
-    void close(){closed=true;generation++;commit();release(0);binding=null;}
+    void close(){closed=true;generation++;commit();release(0);binding=null;targetScroll=scroll;}
     void tick(){if(search!=null)search.updateCursorCounter();if(input!=null)input.updateCursorCounter();if(alias!=null)alias.updateCursorCounter();if(editor!=null)editor.updateCursorCounter();}
     private Set<String> stars(){return new LinkedHashSet<String>(Arrays.asList(settings().getBreezeFavorites().getValue().split(",")));}
     private void toggleStar(Module module){Set<String> set=stars();set.remove("");if(!set.remove(module.getId()))set.add(module.getId());settings().getBreezeFavorites().setValue(String.join(",",set));}

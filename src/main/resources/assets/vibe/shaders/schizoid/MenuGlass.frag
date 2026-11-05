@@ -4,7 +4,7 @@ uniform vec2 Resolution,Origin,Size,LavaOrigin,LavaSize;
 uniform float Radius,Scale,Emphasis,Window,Time,Pass,Depth;
 uniform vec3 Tint,Accent,Wax,Light;
 uniform vec4 Drop,Form;
-uniform float Hover;
+uniform float Hover,Fade;
 uniform vec2 Pointer;
 vec4 unite(vec4 a,vec4 b,float amount){float h=clamp(.5+.5*(b.x-a.x)/amount,0.,1.);vec4 result=mix(b,a,h);result.x-=amount*h*(1.-h);return result;}
 vec3 radiance(float distance){
@@ -32,7 +32,7 @@ void main(){
         vec3 scene=texture2D(Scene,refracted).rgb;
         vec3 color=mix(scene*(Window>.5?.96:.79),Tint,Window>.5?.18:.44)+Accent*Emphasis*.045;
         float outside=exp(-max(paneDistance,0.)/max(1.,Scale*3.1))*(.045+Emphasis*.025);
-        gl_FragColor=vec4(mix(Accent*.55,color,pane),pane+(1.-pane)*outside);return;
+        gl_FragColor=vec4(mix(Accent*.55,color,pane),(pane+(1.-pane)*outside)*(1.-Fade));return;
     }
     if(Pass>2.5){
         // The glass surface sits above the luminous liquid, including its rims.
@@ -54,7 +54,7 @@ void main(){
             alpha+=Hover*glow;
             reflectionColor=mix(reflectionColor,mix(Accent,Light,.45),Hover*.82);
         }
-        gl_FragColor=vec4(reflectionColor,clamp(alpha,0.,.85));return;
+        gl_FragColor=vec4(reflectionColor,clamp(alpha,0.,.85)*(1.-Fade));return;
     }
     if(pane<=0.)discard;
     vec2 p=(gl_FragCoord.xy-LavaOrigin)/LavaSize.y;
@@ -109,5 +109,5 @@ void main(){
     // Premultiplied surface plus additive emission: the halo illuminates glass
     // without painting an opaque colored disk over the transmitted background.
     vec3 emission=glow*(Window>.5?1.:.38)*(1.-solid)*pane;
-    gl_FragColor=vec4(color*alpha+emission,alpha);
+    gl_FragColor=vec4(color*alpha+emission,alpha)*(1.-Fade);
 }

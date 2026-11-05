@@ -12,7 +12,8 @@ import static org.junit.Assert.*;
 public class FogPaletteTest {
     @Rule public TemporaryFolder temporary=new TemporaryFolder();
     @Test public void fogSharesCuteVisualsPresetsAndCustomEndpoints() {
-        FogModule fog=new FogModule();CuteVisualsModule cute=new CuteVisualsModule();
+        AmbienceModule ambience=new AmbienceModule();ambience.effects.toggle(AmbienceModule.FOG);
+        dev.vibe.ambience.FogSettings fog=ambience.fog;CuteVisualsModule cute=new CuteVisualsModule();
         fog.color.setValue(0xFF123456);fog.secondaryColor.setValue(0xFFABCDEF);
         cute.getPrimaryColor().setValue(0xFF123456);cute.getSecondaryColor().setValue(0xFFABCDEF);
         for(String preset:cute.getColorPreset().getModes()){
@@ -27,7 +28,8 @@ public class FogPaletteTest {
         try(PathTestFixture fixture=new PathTestFixture()){
             PathTestFixture.set(dev.vibe.Vibe.class,fixture.vibe,"minecraft",fixture.mc);
             PathTestFixture.set(net.minecraft.client.Minecraft.class,fixture.mc,"session",new net.minecraft.util.Session("Alex","11111111111111111111111111111111","","legacy"));
-            FogModule fog=new FogModule();fixture.modules.registerDynamic(fog);
+            AmbienceModule ambience=new AmbienceModule();fixture.modules.registerDynamic(ambience);
+            dev.vibe.ambience.FogSettings fog=ambience.fog;
             VibeConfig config=new VibeConfig(temporary.newFolder());Files.createDirectories(config.getDirectory().toPath());
             Path profile=config.getDirectory().toPath().resolve("legacy.json");
             for(String mode:new String[]{"Rainbow","Custom"}){

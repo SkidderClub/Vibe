@@ -16,6 +16,7 @@ import static dev.vibe.ui.clickgui.DropdownStyle.*;
 final class DropdownWorkspace {
     private static final Map<String,Map<String,int[]>> SAVED = new HashMap<>();
     private static final Map<String,int[]> SAVED_SIZES = new HashMap<>();
+    private static final Map<String,Float> SAVED_HORIZONTAL = new HashMap<>();
     private final List<Panel> panels = new ArrayList<>();
     private final Map<Category,Panel> categories=new EnumMap<>(Category.class);
     private final Map<Module,Float> enabled = new IdentityHashMap<>();
@@ -45,6 +46,7 @@ final class DropdownWorkspace {
         int gap=12;
         if(panels.isEmpty()) {
             Map<String,int[]> saved=SAVED.get(theme);
+            horizontal=targetHorizontal=SAVED_HORIZONTAL.getOrDefault(theme,0F);
             int[] savedSize=SAVED_SIZES.get(theme);
             boolean reflow=savedSize!=null&&(savedSize[0]!=width||savedSize[1]!=height);
             for(int i=0;i<count;i++) {
@@ -52,6 +54,7 @@ final class DropdownWorkspace {
                 int x=12+i*(panelWidth+gap),y=style.packet?36:style.suizide?20:8;
                 int[] old=saved==null?null:saved.get(category.name());Panel panel=new Panel(category,i,old==null||reflow?x:old[0],clamp(old==null||reflow?y:old[1],4,height-54));
                 panel.collapsed=old!=null&&old[2]!=0;panels.add(panel);categories.put(category,panel);
+                if(old!=null&&old.length>3)panel.scroll=panel.target=Math.max(0,old[3]);
             }
         }
         if(resized) {for(Panel p:panels){p.x=12+p.order*(panelWidth+gap);p.y=clamp(p.y,4,Math.max(4,height-70));}}
@@ -216,8 +219,8 @@ final class DropdownWorkspace {
     private void drawNavigation(int mx,int my){int tab=Math.max(1,width/panels.size());for(Panel p:panels){int x=p.order*tab;boolean selected=screenX(p)>=0&&screenX(p)+panelWidth<=width;
         rect(x+2,height-26,tab-4,22,4,style.light?0xEBF0F4F3:0xED17171E);label(p.category.getLabel(),x+7,height-22,tab-13,selected?style.accent(.5F,0):style.muted);}}
     void release(){dragging=scrolling=null;scrollbar=null;}
-    void close(){save();release();mode=null;}
-    private void save(){if(theme.isEmpty())return;Map<String,int[]> values=new HashMap<>();for(Panel p:panels)values.put(p.category.name(),new int[]{p.x,p.y,p.collapsed?1:0});SAVED.put(theme,values);SAVED_SIZES.put(theme,new int[]{width,height});}
+    void close(){for(Panel p:panels)p.target=p.scroll;targetHorizontal=horizontal;save();release();if(!inlineMode())mode=null;}
+    private void save(){if(theme.isEmpty())return;Map<String,int[]> values=new HashMap<>();for(Panel p:panels)values.put(p.category.name(),new int[]{p.x,p.y,p.collapsed?1:0,Math.round(p.scroll)});SAVED.put(theme,values);SAVED_SIZES.put(theme,new int[]{width,height});SAVED_HORIZONTAL.put(theme,horizontal);}
     private static int clamp(int n,int min,int max){return Math.max(min,Math.min(Math.max(min,max),n));}
     private static final class Panel {
         final Category category;final String name;final int order;int x,y,h,max,content;boolean collapsed;float scroll,target;final List<Module> modules=new ArrayList<>();

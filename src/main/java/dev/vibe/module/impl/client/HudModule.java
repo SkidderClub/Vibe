@@ -35,8 +35,8 @@ public final class HudModule extends Module {
 
     // Retained only as the migration fallback for layouts that predate
     // per-element themes. New choices are made in the HUD editor inspector.
-    private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Vibe", () -> false, "Vibe", "Skeet", "LiquidGlass"));
-    // These tune any HUD element that selects LiquidGlass in the HUD editor.
+    private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Vibe", () -> false, "Vibe", "Skeet", "LiquidGlass", "Lavalamp"));
+    // Shared backdrop controls for LiquidGlass and Lavalamp HUD elements.
     // The legacy global Mode remains a fallback for older layouts only.
     private final BooleanSetting liquidGlassBlur = addSetting(new BooleanSetting("Glass Blur", true, () -> true));
     private final NumberSetting liquidGlassBlurStrength = addSetting(new NumberSetting("Glass Blur Strength", 2.0D, 0.0D, 8.0D, 0.25D,

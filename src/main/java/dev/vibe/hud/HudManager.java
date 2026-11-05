@@ -108,6 +108,7 @@ public final class HudManager {
     private final dev.vibe.hud.MusicVisualizer musicVisualizer = new dev.vibe.hud.MusicVisualizer();
     private final long sessionStarted = System.currentTimeMillis();
     private final LiquidGlassRenderer liquidGlass = new LiquidGlassRenderer();
+    private final dev.vibe.ui.effect.LavaLampRenderer lavaLamp = new dev.vibe.ui.effect.LavaLampRenderer(liquidGlass);
     private ItemStack[] sampleArmor;
     private final float[] motionSamples = new float[96];
     private int motionSampleIndex;
@@ -174,7 +175,7 @@ public final class HudManager {
                 renderScaled(health, resolution, () -> drawHealth(hud, resolution, font));
             }
             if (hud.getHudElements().isSelectedIgnoreCase(CPS)) {
-                renderScaled(cps, resolution, () -> drawCps(resolution, font));
+                renderScaled(cps, resolution, () -> drawCps(hud, resolution, font));
             }
             if(isEnabled(HOTBAR)&&!minecraft.thePlayer.isSpectator())renderScaled(hotbar,resolution,()->overlays.hotbar(this,hud,hotbar,resolution,previewingHud));
             if(isEnabled(CUSTOM_HEALTH)&&(minecraft.playerController==null||minecraft.playerController.shouldDrawHUD()))renderScaled(customHealth,resolution,()->overlays.health(this,hud,customHealth,resolution,previewingHud));
@@ -228,7 +229,8 @@ public final class HudManager {
             int x = left + Math.round((1 - opacity) * 12);
             int y = top + height - settings.height.getInt() - Math.round(slot * settings.stride());
             notificationRenderer.draw(entry, x, y, width, opacity, now, style, settings,
-                    "LiquidGlass".equalsIgnoreCase(style) ? () -> drawNotificationGlass(hud, x, y, width, opacity) : null);
+                    ("LiquidGlass".equalsIgnoreCase(style) || "Lavalamp".equalsIgnoreCase(style))
+                            ? () -> drawNotificationGlass(hud, x, y, width, opacity) : null);
         }
         GlStateManager.color(1, 1, 1, 1); GlStateManager.enableAlpha();
         GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
@@ -237,6 +239,10 @@ public final class HudManager {
     private void drawNotificationGlass(HudModule hud, int x, int y, int width, float opacity) {
         NotificationSettings settings = hud.notifications;
         int height = settings.height.getInt();
+        if ("Lavalamp".equalsIgnoreCase(theme(notifications, hud))) {
+            drawLavaLamp(hud, x, y, width, height, settings.radius.getFloat(), settings.opacity.getFloat() * opacity);
+            return;
+        }
         int left = x, top = y, right = x + width, bottom = y + height;
         float radius = Math.min(settings.radius.getFloat(), height / 2F);
         if (scalingHud && (!previewingHud || framebufferPreview)) {
@@ -311,7 +317,10 @@ public final class HudManager {
         int left = Math.max(0, music.left(resolution, width)), top = Math.max(0, music.top(resolution, height));
         music.setBounds(left, top, width, height);
         if (!preview && DebugOverlay.overlaps(left, top, left + width, top + height)) return;
-        musicRenderer.draw(m, track, left, top, preview, scale);
+        HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        boolean lava = hud != null && "Lavalamp".equalsIgnoreCase(theme(music, hud));
+        musicRenderer.draw(m, track, left, top, preview, scale,
+                lava ? () -> drawLavaLamp(hud, left, top + 4 * scale, width, height - 8 * scale, 8 * scale, 1) : null);
         if (preview && m.visualizer.isEnabled() && service != null)
             minecraft.fontRendererObj.drawStringWithShadow(service.audioStatus(), left, top+height+3, 0xFFD6DFEB);
     }
@@ -365,7 +374,7 @@ public final class HudManager {
         String activeTheme = theme(getElement(element), hud);
         // A widget's own theme decides its backdrop.  The old global setting
         // remains the fallback for layouts created before per-widget themes.
-        if ("Skeet".equalsIgnoreCase(activeTheme)) return false;
+        if ("Skeet".equalsIgnoreCase(activeTheme) || "Lavalamp".equalsIgnoreCase(activeTheme)) return false;
         // Glass surfaces composite their own rounded blur so the blur stays
         // inside their curved silhouette.
 if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgnoreCase(activeTheme)) return false;
@@ -386,6 +395,10 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     /** Skeet HUDs deliberately omit Vibe glow, blur and coloured outlines. */
     void drawHudSurface(HudModule hud, HudElement element, int left, int top, int right, int bottom) {
         String theme = theme(element, hud);
+        if ("Lavalamp".equalsIgnoreCase(theme)) {
+            drawLavaLamp(hud, left, top, right - left, bottom - top, 8, 1);
+            return;
+        }
         if ("LiquidGlass".equalsIgnoreCase(theme)) {
             float radius = Math.min(element == targetHud ? hud.targetHud.radius.getFloat() : 8, (bottom - top) / 2.0F);
             // The shader addresses framebuffer pixels directly. Supply the
@@ -433,7 +446,8 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     private void drawHudOutline(HudElement element, HudModule hud, int left, int top, int right, int bottom, int color) {
-        if ("Skeet".equalsIgnoreCase(theme(element, hud)) || "LiquidGlass".equalsIgnoreCase(theme(element, hud))) return;
+        if ("Skeet".equalsIgnoreCase(theme(element, hud)) || "LiquidGlass".equalsIgnoreCase(theme(element, hud))
+                || "Lavalamp".equalsIgnoreCase(theme(element, hud))) return;
         Gui.drawRect(left - 1, top - 1, right + 1, top, color);
         Gui.drawRect(left - 1, bottom, right + 1, bottom + 1, color);
         Gui.drawRect(left - 1, top, left, bottom, color);
@@ -497,9 +511,10 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             int height = ClockRenderer.height(hud.clock);
             clock.ensureOnScreen(resolution, width, height);
             int left = clock.left(resolution, width), top = clock.top(resolution, height);
-            if ("LiquidGlass".equalsIgnoreCase(theme(clock, hud)))
+            boolean lava = "Lavalamp".equalsIgnoreCase(theme(clock, hud));
+            if (lava || "LiquidGlass".equalsIgnoreCase(theme(clock, hud)))
                 drawHudSurface(hud, clock, left, top, left + width, top + height);
-            ClockRenderer.draw(hud.clock, font, left + (width - hud.clock.diameter.getInt()) / 2, top, now,"Transparent".equalsIgnoreCase(theme(clock,hud)));
+            ClockRenderer.draw(hud.clock, font, left + (width - hud.clock.diameter.getInt()) / 2, top, now,lava||"Transparent".equalsIgnoreCase(theme(clock,hud)));
             clock.setBounds(left, top, width, height);
         } else {
             String time = ClockRenderer.time(hud.clock, now), date = ClockRenderer.date(now);
@@ -586,6 +601,10 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     /** Glass addresses screen pixels, so include both the widget scale and this card's pop. */
     private void drawTargetGlass(HudModule hud, int x, int y, int width, int height, float pop) {
         float radius = Math.min(hud.targetHud.radius.getFloat(), height / 2F);
+        if (hud.targetHud.mode.is("Lavalamp")) {
+            drawLavaLamp(hud, x, y, width, height, radius, 1);
+            return;
+        }
         if (previewingHud && !framebufferPreview) {
             HudShapes.round(x, y, width, height, radius,
                     RenderUtils.alpha(hud.getLiquidGlassTint().getArgb(), Math.round(82 * hud.getLiquidGlassOpacity().getFloat())));
@@ -722,7 +741,8 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     /** One tracked player; without a player it draws the default skin and no equipment. */
     private void drawStalkerRow(HudModule hud, FontRenderer font, EntityPlayer player, String label, int accent,
             float healthValue, float maximumHealth, int distance, int left, int rowTop, int width) {
-        if ("LiquidGlass".equalsIgnoreCase(theme(stalker, hud))) drawHudSurface(hud, stalker, left, rowTop, left + width, rowTop + 48);
+        if ("LiquidGlass".equalsIgnoreCase(theme(stalker, hud)) || "Lavalamp".equalsIgnoreCase(theme(stalker, hud)))
+            drawHudSurface(hud, stalker, left, rowTop, left + width, rowTop + 48);
         else Gui.drawRect(left, rowTop, left + width, rowTop + 48, RenderUtils.alpha(hud.getBackground().getArgb(), 188));
         drawHudOutline(stalker, hud, left, rowTop, left + width, rowTop + 48, accent);
         if (player != null) drawPlayerFace(player, left + 4, rowTop + 4);
@@ -893,6 +913,8 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         int textLeft = left + (widgetWidth - textWidth) / 2;
         health.setBounds(left, top, widgetWidth, widgetHeight);
         if (DebugOverlay.overlaps(textLeft, top + 5, textLeft + textWidth + 1, top + 5 + font.FONT_HEIGHT)) return;
+        if ("Lavalamp".equalsIgnoreCase(theme(health, hud)))
+            drawHudSurface(hud, health, left, top, left + widgetWidth, top + widgetHeight);
         font.drawStringWithShadow(healthText, textLeft, top + 5, healthColor);
         if (!absorptionText.isEmpty()) {
             font.drawStringWithShadow(absorptionText, textLeft + font.getStringWidth(healthText), top + 5,
@@ -901,18 +923,21 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         health.setBounds(left, top, widgetWidth, widgetHeight);
     }
 
-    /** Minimal click readout: deliberately no panel, outline, or blur. */
-    private void drawCps(ScaledResolution resolution, FontRenderer font) {
+    /** Minimal click readout, with an optional Lavalamp backdrop. */
+    private void drawCps(HudModule hud, ScaledResolution resolution, FontRenderer font) {
         int leftCps = ClickStats.leftCps();
         int rightCps = ClickStats.rightCps();
         String text = "[" + leftCps + " | " + rightCps + "]";
-        int width = font.getStringWidth(text);
-        int height = font.FONT_HEIGHT;
+        boolean lava = "Lavalamp".equalsIgnoreCase(theme(cps, hud));
+        int padding = lava ? 6 : 0;
+        int width = font.getStringWidth(text) + padding * 2;
+        int height = font.FONT_HEIGHT + padding * 2;
         cps.ensureOnScreen(resolution, width, height + 2);
         int left = cps.left(resolution, width);
         int top = cps.top(resolution, height + 2);
         if (hideForDebug(cps, left, top, width, height + 2, 0)) return;
-        font.drawStringWithShadow(text, left, top, RenderUtils.TEXT);
+        if (lava) drawHudSurface(hud, cps, left, top, left + width, top + height + 2);
+        font.drawStringWithShadow(text, left + padding, top + padding, RenderUtils.TEXT);
         cps.setBounds(left, top, width, height + 2);
     }
 
@@ -1151,7 +1176,12 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
     public static boolean replacesHotbar(){return replaces(HOTBAR)&&!Minecraft.getMinecraft().thePlayer.isSpectator();}
     public void drawChat(){HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);ScaledResolution res=new ScaledResolution(minecraft);renderScaled(chat,res,()->HudChat.draw(this,hud,chat,res,false));}
-    void drawOverlayGlass(HudModule hud,OverlaySettings settings,int x,int y,int width,int height,float opacity){
+    void drawOverlayGlass(HudModule hud,HudElement element,OverlaySettings settings,int x,int y,int width,int height,float opacity){
+        if ("Lavalamp".equalsIgnoreCase(theme(element, hud))) {
+            drawLavaLamp(hud, x, y, width, height, settings.radius.getFloat(),
+                    (settings.background.getArgb() >>> 24) / 255F * opacity);
+            return;
+        }
         int left=x,top=y,right=x+width,bottom=y+height;float radius=settings.radius.getFloat();
         if(scalingHud){left=Math.round(hudTransformX+(left-hudTransformX)*hudTransformScale);right=Math.round(hudTransformX+(right-hudTransformX)*hudTransformScale);
             top=Math.round(hudTransformY+(top-hudTransformY)*hudTransformScale);bottom=Math.round(hudTransformY+(bottom-hudTransformY)*hudTransformScale);radius*=hudTransformScale;}
@@ -1161,6 +1191,15 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
                 hud.getLiquidGlassOpacity().getFloat()*(settings.background.getArgb()>>>24)/255F*opacity,tint);
         if(!drawn)HudShapes.round(x,y,width,height,settings.radius.getFloat(),RenderUtils.alpha(settings.background.getArgb(),Math.round((settings.background.getArgb()>>>24)*opacity)));
         if(settings.border.isEnabled())RenderUtils.roundedOutline(x,y,x+width,y+height,settings.radius.getFloat(),1,RenderUtils.alpha(settings.accent.getArgb(),Math.round(80*opacity)));
+    }
+
+    void drawLavaLamp(HudModule hud, float x, float y, float width, float height, float radius, float opacity) {
+        if (lavaLamp.draw(x, y, width, height, radius,
+                hud.getLiquidGlassBlur().isEnabled() ? hud.getLiquidGlassBlurStrength().getFloat() : 0,
+                hud.getLiquidGlassRefraction().getFloat(), hud.getLiquidGlassOpacity().getFloat() * opacity,
+                hud.getLiquidGlassTint().getArgb())) return;
+        HudShapes.round(x, y, width, height, radius,
+                RenderUtils.alpha(dev.vibe.ui.menu.MenuGlass.currentPalette().surface, Math.round(170 * opacity)));
     }
     public List<dev.vibe.setting.Setting<?>> overlaySettings(String id){
         HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);if(hud==null)return Collections.emptyList();
@@ -1196,7 +1235,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             else if (element == armor) renderScaled(element, resolution, () -> drawArmor(hud, resolution, font));
             else if (element == inventory) renderScaled(element, resolution, () -> drawInventory(hud, resolution, font));
             else if (element == health) renderScaled(element, resolution, () -> drawHealth(hud, resolution, font));
-            else if (element == cps) renderScaled(element, resolution, () -> drawCps(resolution, font));
+            else if (element == cps) renderScaled(element, resolution, () -> drawCps(hud, resolution, font));
             else if (element == cpsGraph) renderScaled(element, resolution, () -> drawCpsGraph(hud, resolution, font));
             else if (element == scoreboard) renderScaled(element, resolution, () -> drawScoreboardContents(0.0F, hud));
         } finally {
@@ -1392,7 +1431,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         }
 
         /** Keep a dynamically sized stack visible without discarding its saved alignment or scale. */
-        private void ensureScaledOnScreen(ScaledResolution resolution, int expectedWidth, int expectedHeight) {
+        void ensureScaledOnScreen(ScaledResolution resolution, int expectedWidth, int expectedHeight) {
             int anchorX = centred ? resolution.getScaledWidth() / 2 + x : rightAnchored ? resolution.getScaledWidth() - x : x;
             int anchorY = verticallyCentred || centred ? resolution.getScaledHeight() / 2 + y
                     : bottomAnchored ? resolution.getScaledHeight() - y : y;
@@ -1489,6 +1528,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             else if ("Vibe".equalsIgnoreCase(value)) theme = "Vibe";
             else if ("Skeet".equalsIgnoreCase(value)) theme = "Skeet";
             else if ("LiquidGlass".equalsIgnoreCase(value)) theme = "LiquidGlass";
+            else if ("Lavalamp".equalsIgnoreCase(value)) theme = "Lavalamp";
             else if ("Transparent".equalsIgnoreCase(value)) theme = "Transparent";
             else if ("Minecraft".equalsIgnoreCase(value)) theme = "Minecraft";
             else if ("Fortnite".equalsIgnoreCase(value)) theme = "Fortnite";

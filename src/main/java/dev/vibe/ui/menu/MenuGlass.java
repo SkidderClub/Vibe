@@ -29,6 +29,7 @@ public final class MenuGlass {
     private static boolean failed,windowDrawn;
     private MenuGlass(){}
     public static boolean active(){return screen!=null;}
+    public static MenuPalette currentPalette(){MenuThemes.frame();return MenuThemes.current();}
     public static float scale(){return active()?Minecraft.getMinecraft().displayWidth/(float)guiWidth:new ScaledResolution(Minecraft.getMinecraft()).getScaleFactor();}
     public static void begin(GuiScreen owner,MainMenuShaderManager shaders,int width,int height){
         MenuThemes.frame();

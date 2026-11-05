@@ -22,7 +22,7 @@ public final class HudOverlaysRenderCheck {
         for(int i=0;i<ids.length;i++){
             HudManager.HudElement e=manager.getElement(ids[i]);e.setScale(1);manager.drawPreview(e,mc.fontRendererObj);e.moveTo(positions[i][0],positions[i][1],new ScaledResolution(mc));
         }
-        for(String theme:new String[]{"Minecraft","Fortnite","Skeet","Vibe","LiquidGlass"}){
+        for(String theme:new String[]{"Minecraft","Fortnite","Skeet","Vibe","LiquidGlass","Lavalamp"}){
             manager.getElement(HudManager.HOTBAR).setTheme(theme);frame(1280,720);for(String id:ids)manager.drawPreview(manager.getElement(id),mc.fontRendererObj);
             save(output.resolve("overlays-hotbar-"+theme.toLowerCase(java.util.Locale.ROOT)+".png"),1280,720);
         }
@@ -64,10 +64,74 @@ public final class HudOverlaysRenderCheck {
         }
         mc.getTextureManager().bindTexture(ascii);check(GL11.glGetTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MIN_FILTER)==min&&GL11.glGetTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MAG_FILTER)==mag,"HUD filtering leaked into shared font textures");save(output.resolve("hud-font-fractional.png"),1280,720);
         liveChat(mc,manager,hud,output);
+        editorMovementAndThemes(mc,manager,hud,output);
+        dev.vibe.ui.effect.LavaLampRenderCheck.verify(mc,output);
+        lavaWidgets(mc,manager,hud,output);
         check(GL11.glGetError()==0,"Custom HUD overlays left a GL error");
-        System.out.println("Custom HUD pixels passed: five hotbar themes, three health modes, transparent analog clock, custom Tab, chat side/bottom resizing and native item previews.");
+        System.out.println("Custom HUD pixels passed: six hotbar themes, three health modes, transparent analog clock, custom Tab, chat side/bottom resizing, native item previews and Lavalamp widgets.");
+    }
+    private static void lavaWidgets(Minecraft mc,HudManager manager,HudModule hud,Path output)throws Exception{
+        dev.vibe.path.PathTestFixture.set(dev.vibe.Vibe.class,dev.vibe.Vibe.getInstance(),"hudManager",manager);
+        hud.targetHud.mode.setValue("Lavalamp");
+        hud.chat.width.setValue(280D);hud.chat.height.setValue(110D);
+        hud.tab.columns.setValue(1D);hud.tab.rows.setValue(5D);hud.tab.width.setValue(200D);
+        hud.clock.display.setValue("Analog");hud.clock.date.setEnabled(false);
+        String[] ids={HudManager.WATERMARK,HudManager.COORDINATES,HudManager.TARGET_HUD,HudManager.CLOCK,
+                HudManager.SESSION_INFO,HudManager.MOTION_GRAPH,HudManager.STALKER,HudManager.ARMOR,
+                HudManager.INVENTORY,HudManager.HEALTH,HudManager.CPS,HudManager.CPS_GRAPH,
+                HudManager.SCOREBOARD,HudManager.NOTIFICATIONS,HudManager.ARRAY_LIST,HudManager.MUSIC,
+                HudManager.CHAT,HudManager.HOTBAR,HudManager.TAB};
+        frame(1280,720);
+        for(int i=0;i<ids.length;i++){
+            HudManager.HudElement e=manager.getElement(ids[i]);e.setTheme("Lavalamp");e.setScale(.9F);
+            manager.drawPreview(e,mc.fontRendererObj);
+            e.moveTo(15+(i%4)*315,12+(i/4)*140,new ScaledResolution(mc));
+        }
+        frame(1280,720);
+        for(String id:ids)manager.drawPreview(manager.getElement(id),mc.fontRendererObj);
+        save(output.resolve("lavalamp-all-hud-elements.png"),1280,720);
+        HudEditorGui editor=new HudEditorGui(manager);editor.setWorldAndResolution(mc,1280,720);
+        Field selected=HudEditorGui.class.getDeclaredField("selected");selected.setAccessible(true);
+        selected.set(editor,manager.getElement(HudManager.SCOREBOARD));
+        frame(1280,720);editor.drawScreen(-1,-1,0);save(output.resolve("hud-editor-lavalamp.png"),1280,720);
+        editor.onGuiClosed();
+        check(GL11.glGetError()==0,"Lavalamp HUD widgets left an OpenGL error");
     }
     private static void release(HudEditorGui gui,int x,int y)throws Exception{Method method=HudEditorGui.class.getDeclaredMethod("mouseReleased",int.class,int.class,int.class);method.setAccessible(true);method.invoke(gui,x,y,0);}
+    private static void editorMovementAndThemes(Minecraft mc,HudManager manager,HudModule hud,Path output)throws Exception{
+        HudManager.HudElement chat=manager.getElement(HudManager.CHAT);hud.chat.width.setValue(320D);hud.chat.height.setValue(150D);chat.setScale(.65F);
+        frame(1280,720);manager.drawPreview(chat,mc.fontRendererObj);chat.moveTo(260,20,new ScaledResolution(mc));
+        frame(1280,720);manager.drawPreview(chat,mc.fontRendererObj);
+        check(Math.abs(chat.getTop()-20)<=1,"Fractional-scale chat reset its position near the top of the screen");
+        HudEditorGui gui=new HudEditorGui(manager);gui.setWorldAndResolution(mc,1280,720);
+        Field selected=HudEditorGui.class.getDeclaredField("selected");selected.setAccessible(true);selected.set(gui,manager.getElement(HudManager.TARGET_HUD));
+        hud.targetHud.mode.setValue("Novoline");frame(1280,720);gui.drawScreen(-1,-1,0);
+        Field canvas=HudEditorGui.class.getDeclaredField("canvasY");canvas.setAccessible(true);int before=canvas.getInt(gui);
+        Method bounds=HudEditorGui.class.getDeclaredMethod("bounds",HudManager.HudElement.class);bounds.setAccessible(true);int[] box=(int[])bounds.invoke(gui,chat);
+        int x=(box[0]+box[2])/2,y=(box[1]+box[3])/2,oldX=chat.getLeft(),oldY=chat.getTop();
+        GuiInput.mouseClicked(gui,x,y,0);frame(1280,720);gui.drawScreen(x,y,0);release(gui,x,y);
+        check(selected.get(gui)==chat,"Chat could not be selected in the preview");check(Math.abs(chat.getLeft()-oldX)<=1&&Math.abs(chat.getTop()-oldY)<=1,"Clicking chat moved it without a drag");
+        check(canvas.getInt(gui)==before,"Selecting a differently sized theme list moved the preview canvas");
+        selected.set(gui,manager.getElement(HudManager.TARGET_HUD));frame(1280,720);gui.drawScreen(-1,-1,0);
+        Field left=HudEditorGui.class.getDeclaredField("themeLeft"),top=HudEditorGui.class.getDeclaredField("themeTop"),scroll=HudEditorGui.class.getDeclaredField("themeScroll");
+        left.setAccessible(true);top.setAccessible(true);scroll.setAccessible(true);
+        Method wheel=HudEditorGui.class.getDeclaredMethod("scrollAt",int.class,int.class,int.class);wheel.setAccessible(true);
+        for(int i=0;i<10;i++)wheel.invoke(gui,left.getInt(gui)+20,top.getInt(gui)+5,1);
+        check(scroll.getInt(gui)>0,"Theme panel did not scroll independently");
+        frame(1280,720);gui.drawScreen(-1,-1,0);save(output.resolve("hud-editor-scrolled-themes.png"),1280,720);
+        Field hits=HudEditorGui.class.getDeclaredField("hits");hits.setAccessible(true);boolean selectedLast=false;
+        // The last theme must remain a real clickable control after scrolling.
+        for(Object hit:(java.util.List<?>)hits.get(gui)){
+            Class<?> type=hit.getClass();Field l=type.getDeclaredField("left"),t=type.getDeclaredField("top"),r=type.getDeclaredField("right"),b=type.getDeclaredField("bottom");
+            l.setAccessible(true);t.setAccessible(true);r.setAccessible(true);b.setAccessible(true);
+            if(l.getInt(hit)>=left.getInt(gui)&&t.getInt(hit)>=top.getInt(gui)){
+                GuiInput.mouseClicked(gui,(l.getInt(hit)+r.getInt(hit))/2,(t.getInt(hit)+b.getInt(hit))/2,0);
+                if(hud.targetHud.mode.is("LiquidBounce")){selectedLast=true;break;}
+            }
+        }
+        check(selectedLast,"Scrolled Target HUD themes could not select the final mode");
+        gui.onGuiClosed();chat.setScale(1);
+    }
     private static void liveChat(Minecraft mc,HudManager manager,HudModule hud,Path output)throws Exception{
         dev.vibe.path.PathTestFixture.set(dev.vibe.Vibe.class,dev.vibe.Vibe.getInstance(),"hudManager",manager);
         net.minecraft.client.multiplayer.WorldClient world=mc.theWorld;net.minecraft.client.entity.EntityPlayerSP player=mc.thePlayer;

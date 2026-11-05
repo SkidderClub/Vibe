@@ -535,6 +535,7 @@ public final class VibeConfig {
             EspConfigMigration.migrate(modules);
             ScaffoldConfigMigration.migrate(modules);
             OofArrowsConfigMigration.migrate(modules);
+            AmbienceConfigMigration.migrate(modules);
             for (JsonElement element : modules) {
                 if (!element.isJsonObject()) continue;
                 JsonObject data = element.getAsJsonObject();
@@ -549,8 +550,8 @@ public final class VibeConfig {
                         ? data.getAsJsonObject("settings") : new JsonObject();
                 for (Setting<?> setting : module.getSettings()) {
                     JsonElement savedSetting = settings.get(setting.getRawName());
-                    if (module instanceof dev.vibe.module.impl.visual.FogModule) {
-                        dev.vibe.module.impl.visual.FogModule fog = (dev.vibe.module.impl.visual.FogModule) module;
+                    if (module instanceof dev.vibe.module.impl.visual.AmbienceModule) {
+                        dev.vibe.ambience.FogSettings fog = ((dev.vibe.module.impl.visual.AmbienceModule) module).fog;
                         if (setting == fog.color && savedSetting == null) savedSetting = settings.get("Fog Color");
                         if (setting == fog.tint && savedSetting != null && savedSetting.isJsonPrimitive()
                                 && "Rainbow".equalsIgnoreCase(savedSetting.getAsString())) savedSetting = new JsonPrimitive("Love");
@@ -577,8 +578,8 @@ public final class VibeConfig {
                         }
                     } else readSetting(setting, savedSetting);
                 }
-                if (module instanceof dev.vibe.module.impl.visual.FogModule && settings.has("Fog Color") && !settings.has("Secondary Color")) {
-                    dev.vibe.module.impl.visual.FogModule fog = (dev.vibe.module.impl.visual.FogModule) module;
+                if (module instanceof dev.vibe.module.impl.visual.AmbienceModule && settings.has("Fog Color") && !settings.has("Secondary Color")) {
+                    dev.vibe.ambience.FogSettings fog = ((dev.vibe.module.impl.visual.AmbienceModule) module).fog;
                     fog.secondaryColor.setValue(fog.color.getArgb());
                 }
                 if (module instanceof HudModule) {

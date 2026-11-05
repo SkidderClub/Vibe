@@ -144,6 +144,8 @@ tasks.register('verifyFreecamProduction', JavaExec) {
 }
 registerRenderCheck('verifyPathRendering', 'dev.vibe.path.PathRenderCheck', 'path-render-check',
         'Checks Path routing, cached world lines, depth modes, colors, styles and camera/render state.', true)
+registerRenderCheck('verifyAmbienceRendering','dev.vibe.ui.ClientChangesRenderCheck','ambience-check',
+        'Checks custom sun/moon, polar curtains, shooting stars, firefly glow/trails and native depth.',false){args 'ambience'}
 registerRenderCheck('verifyVisualEffects', 'dev.vibe.ui.VisualEffectsRenderCheck', 'visual-effects-check',
         'Checks Fog, Torus and the other shader effects.')
 registerRenderCheck('verifyChunkAnimations', 'dev.vibe.ui.render.ChunkAnimationRenderCheck', 'chunk-animation-check',
@@ -238,6 +240,8 @@ registerRenderCheck('verifyNeverLoseRendering', 'dev.vibe.ui.clickgui.NeverLoseR
         'neverlose-render-check', 'Checks NeverLose controls and clipping.')
 registerRenderCheck('verifyXanaxRendering', 'dev.vibe.ui.clickgui.XanaxRenderCheck', 'xanax-render-check',
         'Checks Xanax rendering, controls, profiles and small-screen layouts.')
+registerRenderCheck('verifyClickGuiReopen','dev.vibe.ui.ClientChangesRenderCheck','clickgui-reopen-check',
+        'Checks real ClickGUI close/reopen entry points and retained scrolling in every layout.',false){args 'clickgui-reopen'}
 registerRenderCheck('verifyDropdownThemes', 'dev.vibe.ui.ClientChangesRenderCheck', 'dropdown-themes-check',
         'Checks PacketV3, Novoline and SuizideX controls, native pixels, scrolling, dragging and scaled layouts.', false) {
     args 'dropdown-themes'

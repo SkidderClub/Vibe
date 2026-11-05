@@ -35,7 +35,7 @@ public final class NotificationRenderer {
         try {
             int height = settings.height.getInt();
             boolean square = "Skeet".equalsIgnoreCase(theme);
-            boolean glass = "LiquidGlass".equalsIgnoreCase(theme);
+            boolean glass = "LiquidGlass".equalsIgnoreCase(theme) || "Lavalamp".equalsIgnoreCase(theme);
             int radius = square ? 0 : Math.min(settings.radius.getInt(), height / 2);
             float surfaceOpacity = settings.opacity.getFloat() * opacity;
             int accent = entry.enabled ? settings.enabledColor.getArgb() : settings.disabledColor.getArgb();

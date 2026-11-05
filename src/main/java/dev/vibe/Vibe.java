@@ -48,6 +48,7 @@ public final class Vibe {
     private final dev.vibe.config.OnlineConfigService onlineConfigs = new dev.vibe.config.OnlineConfigService();
     private CommandManager commandManager;
     private HudManager hudManager;
+    private VibeClickGui clickGuiScreen;
     private ClientIdentity identity;
     private FriendManager friendManager;
     private TargetManager targetManager;
@@ -132,7 +133,9 @@ public final class Vibe {
         ClickGuiModule clickGui = moduleManager == null ? null
                 : moduleManager.getModule(ClickGuiModule.class);
         if (clickGui != null) clickGui.setEnabled(true);
-        minecraft.displayGuiScreen(new VibeClickGui());
+        // Keep each workspace's category, expanded settings and scroll positions for this session.
+        if(clickGuiScreen==null)clickGuiScreen=new VibeClickGui();
+        minecraft.displayGuiScreen(clickGuiScreen);
     }
 
     public boolean isClickGuiPressed() {

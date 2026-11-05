@@ -5,7 +5,8 @@
 package dev.vibe.ui.effect;
 
 import dev.vibe.Vibe;
-import dev.vibe.module.impl.visual.FogModule;
+import dev.vibe.module.impl.visual.AmbienceModule;
+import dev.vibe.ambience.FogSettings;
 import java.nio.IntBuffer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.OpenGlHelper;
@@ -22,13 +23,13 @@ public final class FogRenderer implements AutoCloseable {
     private int width, height;
     private boolean failed;
     private final long started = System.nanoTime();
-    public static FogModule module() {
+    public static AmbienceModule module() {
         if (dev.vibe.module.impl.meme.HypixelModule.visualsSuppressed()) return null;
         return Vibe.getInstance() == null || Vibe.getInstance().getModuleManager() == null ? null
-                : Vibe.getInstance().getModuleManager().getModule(FogModule.class);
+                : Vibe.getInstance().getModuleManager().getModule(AmbienceModule.class);
     }
     public static boolean replacesVanillaFog() {
-        FogModule m = module(); return m != null && m.isEnabled() && !m.vanilla.isEnabled() && supported();
+        AmbienceModule m = module(); return m != null && m.isEnabled() && m.effect(AmbienceModule.FOG) && !m.fog.vanilla.isEnabled() && supported();
     }
     public static boolean supported() { return OpenGlHelper.framebufferSupported && GLContext.getCapabilities().OpenGL20; }
     public boolean hasFailed() { return failed; }
@@ -38,8 +39,9 @@ public final class FogRenderer implements AutoCloseable {
         render(module(), .05f, mc.gameSettings.renderDistanceChunks * 16 * 2,
                 mc.getRenderViewEntity().rotationYaw, mc.getRenderViewEntity().rotationPitch);
     }
-    public void render(FogModule module, float near, float far, float yaw, float pitch) {
-        if (module == null || !module.isEnabled() || failed || !supported()) return;
+    public void render(AmbienceModule ambience, float near, float far, float yaw, float pitch) {
+        if (ambience == null || !ambience.isEnabled() || !ambience.effect(AmbienceModule.FOG) || failed || !supported()) return;
+        FogSettings module=ambience.fog;
         viewport.clear(); GL11.glGetInteger(GL11.GL_VIEWPORT, viewport);
         int x = viewport.get(0), y = viewport.get(1), w = viewport.get(2), h = viewport.get(3);
         if (w < 1 || h < 1) return;

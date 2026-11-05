@@ -50,7 +50,7 @@ public final class HudChat {
     @SuppressWarnings("unchecked") static void draw(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){
         Minecraft mc=Minecraft.getMinecraft();OverlaySettings.Chat s=hud.chat;FontRenderer font=mc.fontRendererObj;
         int w=s.width.getInt(),h=s.height.getInt(),lineHeight=s.lineHeight.getInt(),capacity=Math.max(1,(h-12)/lineHeight);
-        e.ensureOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
+        e.ensureScaledOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
         GuiNewChat chat=mc.ingameGUI==null?null:mc.ingameGUI.getChatGUI();List<ChatLine> history=Collections.emptyList();int scroll=0;
         if(chat!=null&&!preview){
             int width=w-12;if(chat!=wrappedChat||wrappedWidth!=width){wrappedChat=chat;wrappedWidth=width;chat.refreshChat();}
@@ -82,7 +82,8 @@ public final class HudChat {
         textOffset=preview?0:3*(1-openMotion.update(open));
         int offset=Math.round(textOffset+6*(1-opening));top+=offset;
         if(!preview)e.setBounds(x,top,w,used);
-        if("LiquidGlass".equals(manager.theme(e,hud)))manager.drawOverlayGlass(hud,s,x,top,w,used,maxAlpha);
+        if("LiquidGlass".equals(manager.theme(e,hud))||"Lavalamp".equals(manager.theme(e,hud)))
+            manager.drawOverlayGlass(hud,e,s,x,top,w,used,maxAlpha);
         else if(!"Transparent".equals(manager.theme(e,hud))){
             boolean skeet="Skeet".equals(manager.theme(e,hud));float radius=skeet?1:s.radius.getFloat();
             HudShapes.round(x,top,w,used,radius,RenderUtils.alpha(s.background.getArgb(),Math.round((s.background.getArgb()>>>24)*maxAlpha)));

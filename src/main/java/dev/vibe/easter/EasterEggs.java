@@ -69,8 +69,9 @@ public final class EasterEggs {
     public void clear(){fireworks.clear();timeline.clear();world=null;renderer.close();}
 
     public static float rainStrength(Object world,float partial){return INSTANCE.christmas()?1F:((World)world).getRainStrength(partial);}
-    public static boolean canRain(Object biome){return INSTANCE.christmas()||((BiomeGenBase)biome).canRain();}
-    public static boolean snowBiome(Object biome){return INSTANCE.christmas()||((BiomeGenBase)biome).getEnableSnow();}
-    public static float temperature(Object biome,Object pos){return INSTANCE.christmas()?-.5F:((BiomeGenBase)biome).getFloatTemperature((BlockPos)pos);}
-    public static boolean rainOff(boolean original){return !INSTANCE.christmas()&&original;}
+    private static boolean snowWeather(){return INSTANCE.christmas()||dev.vibe.module.impl.visual.AmbienceModule.snowActive();}
+    public static boolean canRain(Object biome){return snowWeather()||((BiomeGenBase)biome).canRain();}
+    public static boolean snowBiome(Object biome){return snowWeather()||((BiomeGenBase)biome).getEnableSnow();}
+    public static float temperature(Object biome,Object pos){return snowWeather()?-.5F:((BiomeGenBase)biome).getFloatTemperature((BlockPos)pos);}
+    public static boolean rainOff(boolean original){return !snowWeather()&&original;}
 }

@@ -15,7 +15,7 @@ public final class TargetHudSettings {
     public final NumberSetting linger, width, radius, particleCount, particleSize, particleLifetime, maxTargets, animationDuration, gap;
 
     public TargetHudSettings(Function<Setting<?>,Setting<?>> register) {
-        mode=add(register,new ModeSetting("Target HUD Mode","Novoline","Novoline","Tenacity","Zeroday","Rise","LiquidGlass","ThunderHack","NurikZapen","NurikZapen Mini","CelkaPasta","LiquidBounce"));
+        mode=add(register,new ModeSetting("Target HUD Mode","Novoline","Novoline","Tenacity","Zeroday","Rise","LiquidGlass","Lavalamp","ThunderHack","NurikZapen","NurikZapen Mini","CelkaPasta","LiquidBounce"));
         originalColours=add(register,new BooleanSetting("Target HUD Original Theme Colours",true,()->UpstreamTargetHuds.supports(mode.getValue())));
         thunderImage=add(register,new BooleanSetting("Target HUD ThunderHack Image",true,()->mode.is("ThunderHack")));
         upstreamHealth=add(register,new ModeSetting("Target HUD Health Display","HP",()->UpstreamTargetHuds.supports(mode.getValue())&&!mode.is("LiquidBounce"),"HP","Percent"));
@@ -28,11 +28,11 @@ public final class TargetHudSettings {
         health=add(register,new ColorSetting("Target HUD Health Color",0xFFEC78DD));
         gradient=add(register,new BooleanSetting("Target HUD Gradient",true,()->!mode.is("Novoline")&&!mode.is("Zeroday")));
         healthEnd=add(register,new ColorSetting("Target HUD Gradient End",0xFF678FFF,()->gradient.isEnabled()&&!mode.is("Novoline")&&!mode.is("Zeroday")));
-        background=add(register,new ColorSetting("Target HUD Background",0xB51A1C23,()->!mode.is("LiquidGlass")));
+        background=add(register,new ColorSetting("Target HUD Background",0xB51A1C23,()->!mode.is("LiquidGlass")&&!mode.is("Lavalamp")));
         text=add(register,new ColorSetting("Target HUD Text",0xFFF4F5FA));
         radius=add(register,new NumberSetting("Target HUD Corners",10,0,22,1,()->!mode.is("Novoline")&&!mode.is("Zeroday")));
         absorption=add(register,new BooleanSetting("Target HUD Absorption",true));
-        ping=add(register,new BooleanSetting("Target HUD Ping",true,()->mode.is("Zeroday")||mode.is("LiquidGlass")));
+        ping=add(register,new BooleanSetting("Target HUD Ping",true,()->mode.is("Zeroday")||mode.is("LiquidGlass")||mode.is("Lavalamp")));
         smoothing=add(register,new BooleanSetting("Target HUD Smooth Health",true));
         damageTint=add(register,new BooleanSetting("Target HUD Damage Tint",true));
         particles=add(register,new BooleanSetting("Target HUD Particles",true,this::supportsParticles));
@@ -41,7 +41,7 @@ public final class TargetHudSettings {
         particleSize=add(register,new NumberSetting("Target HUD Particle Size",2,1,4,.25,()->supportsParticles()&&particles.isEnabled()));
         particleLifetime=add(register,new NumberSetting("Target HUD Particle Lifetime",750,250,1500,50,()->supportsParticles()&&particles.isEnabled()));
     }
-    public boolean supportsParticles() {return mode.is("Rise")||mode.is("LiquidGlass")||mode.is("ThunderHack");}
+    public boolean supportsParticles() {return mode.is("Rise")||mode.is("LiquidGlass")||mode.is("Lavalamp")||mode.is("ThunderHack");}
     private <T extends Setting<?>> T add(Function<Setting<?>,Setting<?>> register,T setting) {
         register.apply(setting);all.add(setting);return setting;
     }
