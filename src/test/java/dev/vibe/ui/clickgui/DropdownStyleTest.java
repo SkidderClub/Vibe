@@ -9,6 +9,26 @@ import static org.junit.Assert.*;
 
 public class DropdownStyleTest {
     @Rule public TemporaryFolder temp=new TemporaryFolder();
+    @Test public void moduleSortingKeepsRegistrationOrderAndPersistsThroughProfiles() throws Exception {
+        try(PathTestFixture f=new PathTestFixture()){
+            PathTestFixture.set(dev.vibe.Vibe.class,f.vibe,"minecraft",f.mc);
+            ClickGuiModule gui=new ClickGuiModule();f.modules.registerDynamic(gui);
+            dev.vibe.module.Module zeta=new NamedModule("zeta"),alpha=new NamedModule("Alpha"),beta=new NamedModule("beta");
+            java.util.List<dev.vibe.module.Module> original=java.util.Arrays.asList(zeta,alpha,beta);
+            for(dev.vibe.module.Module module:original)f.modules.registerDynamic(module);
+            assertTrue(gui.getModuleSorting().is("Normal"));assertSame(original,ClickGuiModule.sortedModules(original));
+            java.util.List<dev.vibe.module.Module> registered=new java.util.ArrayList<>(f.modules.getModules());
+            gui.getModuleSorting().setValue("Alphabetic");
+            assertEquals(java.util.Arrays.asList(alpha,beta,zeta),ClickGuiModule.sortedModules(original));
+            assertEquals(registered,f.modules.getModules());assertEquals(java.util.Arrays.asList(zeta,alpha,beta),original);
+            VibeConfig config=new VibeConfig(temp.getRoot());assertTrue(config.save("sorting",f.modules));
+            gui.getModuleSorting().setValue("Normal");assertSame(original,ClickGuiModule.sortedModules(original));
+            assertTrue(config.load("sorting",f.modules));assertTrue(gui.getModuleSorting().is("Alphabetic"));
+        }
+    }
+    private static final class NamedModule extends dev.vibe.module.Module {
+        NamedModule(String name){super(name,"Sorting fixture",dev.vibe.module.Category.COMBAT,0);}
+    }
     @Test public void packetStaticAndFadeUseTheSelectedColors(){
         ClickGuiModule m=new ClickGuiModule();m.getTheme().setValue("PacketV3");m.getPacketColor().setValue(0xFFFF3000);m.getPacketFadeColor().setValue(0xFF0055FF);
         m.getPacketAccent().setValue("Static");assertEquals(0xFFFF3000,DropdownStyle.accent(m,1,400,9000));

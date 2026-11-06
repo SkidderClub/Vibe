@@ -19,7 +19,7 @@ public class PickenSwitchTest {
         Field f=net.minecraft.init.Bootstrap.class.getDeclaredField("alreadyRegistered");f.setAccessible(true);
         if(!f.getBoolean(null)){f.setBoolean(null,true);net.minecraft.block.Block.registerBlocks();Item.registerItems();}
     }
-    private ItemStack sword(){return new ItemStack(new ItemSword(Item.ToolMaterial.EMERALD));}
+    private ItemStack sword(){return new ItemStack(net.minecraft.init.Items.diamond_sword);}
     private ItemStack enchanted(int knock,int fire){ItemStack s=new ItemStack(new ItemSword(Item.ToolMaterial.EMERALD));if(knock>0)s.addEnchantment(Enchantment.knockback,knock);if(fire>0)s.addEnchantment(Enchantment.fireAspect,fire);return s;}
     @Test public void picksImprovedEnchantmentsEvenWhenTheUtilityStackHasLowerDamage(){
         PickenSwitchModule m=new PickenSwitchModule();ItemStack[] bar=new ItemStack[9];bar[0]=sword();bar[2]=enchanted(1,0);bar[5]=enchanted(2,2);
@@ -29,10 +29,25 @@ public class PickenSwitchTest {
         bar[0].addEnchantment(Enchantment.knockback,2);bar[0].addEnchantment(Enchantment.fireAspect,2);
         assertEquals(-1,m.chooseSlot(bar,0,false));
         ItemStack[] inferiorOnly=new ItemStack[9];inferiorOnly[0]=sword();inferiorOnly[4]=new ItemStack(new Item());inferiorOnly[4].addEnchantment(Enchantment.knockback,3);
-        // The vanilla hit method calculates base damage from the equipped
-        // attributes before it reads held-item enchantments. Picken's hook
-        // therefore deliberately permits this utility item at that point.
+        // C09 changes the selected item without refreshing the server's cached
+        // equipment attributes. The enchanted utility can have only fist damage.
         assertEquals(4,m.chooseSlot(inferiorOnly,0,false));
+    }
+    @Test public void choosesTheDamageWeaponForAnEnchantedUtilityStack(){
+        ItemStack[] bar=new ItemStack[9];bar[4]=new ItemStack(new Item());bar[4].addEnchantment(Enchantment.knockback,2);
+        bar[2]=new ItemStack(new ItemSword(Item.ToolMaterial.WOOD));bar[7]=sword();
+        assertEquals(7,PickenSwitchModule.damageWeapon(bar,4));assertEquals(7,PickenSwitchModule.damageWeapon(bar,7));
+    }
+    @Test public void sharpnessComesFromTheAttackItemRatherThanTheCachedWeapon(){
+        TestWorld world=new TestWorld();Player attacker=new Player(world),victim=new Player(world);
+        ItemStack weapon=sword(),utility=new ItemStack(new Item());
+        weapon.addEnchantment(Enchantment.sharpness,5);utility.addEnchantment(Enchantment.sharpness,2);utility.addEnchantment(Enchantment.knockback,2);
+        attacker.inventory.mainInventory[0]=weapon;attacker.inventory.mainInventory[1]=utility;
+        attacker.getAttributeMap().applyAttributeModifiers(weapon.getAttributeModifiers());attacker.inventory.currentItem=1;
+        attacker.attackTargetEntityWithCurrentItem(victim);
+        assertEquals(10.5F,victim.damage,0);assertEquals(1,victim.motionZ,.00001);
+        attacker.inventory.currentItem=0;victim.damage=0;attacker.attackTargetEntityWithCurrentItem(victim);
+        assertEquals(14.25F,victim.damage,0);
     }
     @Test public void vanillaAttackUsesCachedDamageAndCurrentHeldEnchantments(){
         TestWorld world=new TestWorld();Player attacker=new Player(world),victim=new Player(world);

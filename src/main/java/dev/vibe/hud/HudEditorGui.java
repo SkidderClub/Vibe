@@ -156,7 +156,7 @@ public final class HudEditorGui extends GuiScreen {
         if(glass)dev.vibe.ui.menu.MenuGlass.begin(this,null,width,height);
         try {
         AccountScreenStyle.window(left, top, panelWidth, panelHeight);
-        AccountScreenStyle.title("HUD Editor", innerLeft, top + (compact ? 10 : 14));
+        AccountScreenStyle.title("HUD editor", innerLeft, top + (compact ? 10 : 14));
         AccountScreenStyle.rawText(AccountScreenStyle.fit("Arrange your in-game overlay", panelWidth - 110), innerLeft,
                 top + (compact ? 27 : 33), MUTED);
         drawElements(mouseX, mouseY);
@@ -173,7 +173,7 @@ public final class HudEditorGui extends GuiScreen {
         for (String id : ids) if (manager.isEnabled(id)) shown++;
         String count = shown + "/" + ids.length;
         int countWidth = fontRendererObj.getStringWidth(count);
-        label("HUD ELEMENTS", innerLeft, listWidth - countWidth - 6);
+        label("HUD elements", innerLeft, listWidth - countWidth - 6);
         AccountScreenStyle.rawText(count, innerLeft + listWidth - countWidth, bodyTop + 2, MUTED);
         int max = maxElementScroll();
         elementsScroll = Math.max(0, Math.min(elementsScroll, max));
@@ -208,7 +208,7 @@ public final class HudEditorGui extends GuiScreen {
     private void drawStage(int mouseX, int mouseY) {
         ScaledResolution screen = new ScaledResolution(mc);
         String size = screen.getScaledWidth() + " × " + screen.getScaledHeight();
-        String title = LanguageManager.translate("LIVE PREVIEW");
+        String title = LanguageManager.translate("Live preview");
         int sizeWidth = fontRendererObj.getStringWidth(size);
         if (fontRendererObj.getStringWidth(title) + sizeWidth + 16 > stageRight - stageLeft) sizeWidth = 0;
         else AccountScreenStyle.rawText(size, stageRight - sizeWidth, bodyTop + 2, MUTED);
@@ -344,7 +344,7 @@ public final class HudEditorGui extends GuiScreen {
     }
 
     private void drawInspector(int mouseX, int mouseY) {
-        label("INSPECTOR", inspectorLeft, inspectorWidth);
+        label("Inspector", inspectorLeft, inspectorWidth);
         if (selected == null) {
             AccountScreenStyle.rawText(AccountScreenStyle.fit("Choose an element", inspectorWidth), inspectorLeft, areaTop + 4, MUTED);
             return;
@@ -395,12 +395,12 @@ public final class HudEditorGui extends GuiScreen {
         final HudManager.HudElement element = selected;
         AccountScreenStyle.panel(x, y, right - x, CONTROL, SURFACE, BORDER);
         String percent = Math.round(element.getScale() * 100.0F) + "%";
-        int percentWidth = fontRendererObj.getStringWidth(percent);
+        int percentWidth = AccountScreenStyle.textWidth(percent);
         AccountScreenStyle.rawText(AccountScreenStyle.fit("Scale", right - x - percentWidth - 26), x + 10, y + 8, TEXT);
         AccountScreenStyle.rawText(percent, right - 10 - percentWidth, y + 8, ACCENT);
         int trackY = y + 28;
-        stepButton(x + 8, trackY - 6, "-", element, -.05F, mouseX, mouseY);
-        stepButton(right - 20, trackY - 6, "+", element, .05F, mouseX, mouseY);
+        stepButton(x + 8, trackY - 6, element, -.05F, mouseX, mouseY);
+        stepButton(right - 20, trackY - 6, element, .05F, mouseX, mouseY);
         final int trackLeft = x + 30, trackRight = right - 30;
         int knob = trackLeft + Math.round((trackRight - trackLeft) * (element.getScale() - .5F) / 1.5F);
         track(trackLeft, trackRight, trackY);
@@ -410,10 +410,12 @@ public final class HudEditorGui extends GuiScreen {
                 dragging((mx, my) -> element.setScale(.5F + 1.5F * position(mx, trackLeft, trackRight))));
     }
 
-    private void stepButton(int x, int y, String label, final HudManager.HudElement element, final float step, int mouseX, int mouseY) {
+    private void stepButton(int x, int y, final HudManager.HudElement element, final float step, int mouseX, int mouseY) {
         boolean hover = hovered(x, y, x + 12, y + 12, mouseX, mouseY);
         MenuRoundedRenderer.rect(x, y, 12, 12, 4, hover ? HOVER : TINT);
-        AccountScreenStyle.rawText(label, x + (13 - fontRendererObj.getStringWidth(label)) / 2, y + 2, hover ? TEXT : MUTED);
+        int color = hover ? TEXT : MUTED;
+        MenuRoundedRenderer.rect(x + 3, y + 5, 6, 2, 1, color);
+        if (step > 0) MenuRoundedRenderer.rect(x + 5, y + 3, 2, 6, 1, color);
         addHit(x - 2, y - 2, x + 14, y + 14, (mouseX2, mouseY2) -> { element.setScale(element.getScale() + step); persist(); });
     }
 

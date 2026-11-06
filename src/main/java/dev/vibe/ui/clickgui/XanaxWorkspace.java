@@ -85,7 +85,7 @@ final class XanaxWorkspace {
         if (dragging == 2) { configX = mx - dragX; configY = my - dragY; }
         configX = clamp(configX, 0, width - configWidth); configY = clamp(configY, 0, height - configHeight);
         if (profiles == null) refreshProfiles();
-        List<Module> modules = Vibe.getInstance().getModuleManager().getModules(category);
+        List<Module> modules = dev.vibe.module.impl.client.ClickGuiModule.sortedModules(Vibe.getInstance().getModuleManager().getModules(category));
         if (selected == null || !modules.contains(selected)) {
             selected = null;
             for (Module module : modules) if (module.getId().equals(savedModule)) { selected = module; break; }

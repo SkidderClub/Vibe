@@ -64,6 +64,7 @@ public final class ModuleManager {
         register(new AimAssistModule());
         register(new AntiFireballModule());
         register(new BowAimbotModule());
+        register(new ProjectileAuraModule());
         register(new BacktrackModule());
         register(new LagRangeModule());
         register(new TickBaseModule());

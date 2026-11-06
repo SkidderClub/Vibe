@@ -51,7 +51,7 @@ public final class AIAuraModule extends KillAuraModule {
     @Override public void tickStart(){
         boolean wasTracking=target!=null||returning;float lastYaw=rotation.getYaw(),lastPitch=rotation.getPitch();super.tickStart();
         if(target!=null){returning=false;cameraFrame(rotation.getYaw(),rotation.getPitch());if(lockFov.isEnabled()){minecraft.thePlayer.rotationYaw=rotation.getYaw();minecraft.thePlayer.rotationPitch=rotation.getPitch();}return;}
-        if(wasTracking&&canOperate()&&!dev.vibe.module.impl.world.ScaffoldModule.isActive()&&!BedAuraModule.ownsMiningInput()){
+        if(wasTracking&&canOperate()&&!dev.vibe.module.impl.world.ScaffoldModule.isActive()&&!BedAuraModule.ownsMiningInput()&&!ProjectileAuraModule.reserving()){
             double step=MouseMath.step(minecraft.gameSettings.mouseSensitivity),dy=MouseMath.wrap(minecraft.thePlayer.rotationYaw-lastYaw),dp=minecraft.thePlayer.rotationPitch-lastPitch;
             dev.vibe.module.impl.movement.MoveFixModule fix=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.MoveFixModule.class);
             if(fix!=null&&(Math.abs(dy)>step||Math.abs(dp)>step)){

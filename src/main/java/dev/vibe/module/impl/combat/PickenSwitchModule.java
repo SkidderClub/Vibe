@@ -13,21 +13,21 @@ import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.*;
+import net.minecraft.world.World;
 import org.lwjgl.input.Keyboard;
 
 /**
- * Changes selection only at vanilla's attack sync point. The module keeps
- * the previous Basic/Silent contract: Basic restores on a later game tick;
- * Silent restores immediately after the attack packet has been built.
+ * Cache the damage weapon between hits, select utility enchantments for C02,
+ * and return through vanilla's C09 writer before leaving the controller call.
  */
 public final class PickenSwitchModule extends Module {
     private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Basic", "Basic", "Silent"));
     private final ModeSetting priority = addSetting(new ModeSetting("Enchantment Priority", "Both", "Both", "Knockback", "Fire Aspect"));
     private final ModeSetting selection = addSetting(new ModeSetting("Enchanted Item", "Automatic", "Automatic", "Hotbar Slot"));
     private final NumberSetting itemSlot = addSetting(new NumberSetting("Item Slot", 9, 1, 9, 1, () -> selection.is("Hotbar Slot")));
-    private final NumberSetting warmup = addSetting(new NumberSetting("Weapon Warmup (ticks)", 0, 0, 10, 1));
-    private final NumberSetting cooldown = addSetting(new NumberSetting("Cooldown (ticks)", 4, 2, 20, 1));
-    private final NumberSetting restoreDelay = addSetting(new NumberSetting("Restore Delay (ticks)", 1, 1, 4, 1));
+    private final BooleanSetting autoWeapon = addSetting(new BooleanSetting("Auto Equip Damage Weapon", true));
+    private final NumberSetting warmup = addSetting(new NumberSetting("Weapon Warmup (ticks)", 2, 1, 10, 1));
+    private final NumberSetting cooldown = addSetting(new NumberSetting("Cooldown (ticks)", 0, 0, 20, 1));
     private final BooleanSetting playersOnly = addSetting(new BooleanSetting("Players Only", true));
     private final BooleanSetting respectTargets = addSetting(new BooleanSetting("Respect Targets", true));
     private final BooleanSetting skipBurning = addSetting(new BooleanSetting("Skip Fire On Burning Targets", true));
@@ -35,64 +35,75 @@ public final class PickenSwitchModule extends Module {
     private final ColorSetting silentColor = addSetting(new ColorSetting("Silent Slot Color", 0xFFFFAA55, () -> mode.is("Silent")));
     private final Minecraft mc = Minecraft.getMinecraft();
     private EntityPlayer owner;
+    private World ownerWorld;
     private ItemStack stableStack;
-    private int stableSlot = -1, stableTicks, tick, lastSwitch = -1000, restoreAt;
+    private int stableSlot = -1, stableTicks, tick, lastSwitch = -1000;
     private int originalSlot = -1, enchantedSlot = -1;
-    private boolean silent;
-    /** The attack has completed and the visual slot was returned to the weapon. */
-    private boolean returnedAfterAttack;
 
     public PickenSwitchModule() {
-        super("Picken Switch", "Swap to hotbar enchantments at the vanilla attack point", Category.COMBAT, Keyboard.KEY_NONE);
+        super("Picken Switch", "Combine cached weapon damage with an enchanted hotbar item's effects", Category.COMBAT, Keyboard.KEY_NONE);
     }
 
-    /** The pending Basic selection is restored only after the vanilla attack turn. */
+    /** Keep the damage weapon equipped long enough for the server's equipment update. */
     public void tick() {
         tick++;
-        if (owner != mc.thePlayer || mc.theWorld == null) {
-            clear(); owner = mc.thePlayer; stableSlot = -1; stableStack = null; stableTicks = 0;
+        if (owner != mc.thePlayer || ownerWorld != mc.theWorld) {
+            clear(); owner = mc.thePlayer; ownerWorld=mc.theWorld; stableSlot = -1; stableStack = null; stableTicks = 0;
         }
-        if (mc.thePlayer == null || mc.playerController == null) return;
-        if (enchantedSlot >= 0) {
-            int expected = (silent || returnedAfterAttack) ? originalSlot : enchantedSlot;
-            boolean manual = mc.thePlayer.inventory.currentItem != expected;
-            if (manual || !isEnabled() || mc.currentScreen != null || tick >= restoreAt) {
-                int previous = originalSlot;
-                boolean restoreVisible = !manual;
-                clear(); stableTicks = 0;
-                if (restoreVisible) mc.thePlayer.inventory.currentItem = previous;
-                mc.playerController.updateController();
-            }
-        }
+        if (mc.thePlayer == null || mc.theWorld == null || mc.playerController == null) return;
+        if (enchantedSlot >= 0) finishAttack();
+        if(isEnabled()&&autoWeapon.isEnabled()&&canUseSlots())prepareDamageWeapon();
         ItemStack stack = mc.thePlayer.getHeldItem();
         int slot = mc.thePlayer.inventory.currentItem;
-        if (enchantedSlot < 0 && stableSlot == slot && sameWeapon(stableStack, stack)) stableTicks++;
-        else { stableTicks = 0; stableSlot = slot; stableStack = stack; }
+        if (stableSlot == slot && sameWeapon(stableStack, stack)) stableTicks++;
+        else { stableTicks = 0; stableSlot = slot; stableStack = stack==null?null:stack.copy(); }
+    }
+
+    private boolean canUseSlots(){
+        if(mc.currentScreen!=null||mc.thePlayer.isUsingItem()||mc.playerController.getIsHittingBlock()
+                ||AutoBuffModule.ownsUseInput()||AutoToolModule.hasHotbarAction()||dev.vibe.module.impl.meme.HypixelModule.ownsSilentSlot())return false;
+        int visible=mc.thePlayer.inventory.currentItem;
+        return AutoToolModule.serverSlotHook(visible)==visible;
+    }
+
+    private void prepareDamageWeapon(){
+        ItemStack held=mc.thePlayer.getHeldItem();
+        if(held==null||(level(held,Enchantment.knockback)==0&&level(held,Enchantment.fireAspect)==0))return;
+        int best=damageWeapon(mc.thePlayer.inventory.mainInventory,mc.thePlayer.inventory.currentItem);
+        if(best!=mc.thePlayer.inventory.currentItem){mc.thePlayer.inventory.currentItem=best;mc.playerController.updateController();}
+    }
+
+    static int damageWeapon(ItemStack[] hotbar,int held){
+        if(hotbar==null||held<0||held>=Math.min(9,hotbar.length))return held;
+        int best=held;double damage=baseDamage(hotbar[held]);
+        for(int i=0;i<Math.min(9,hotbar.length);i++){
+            ItemStack stack=hotbar[i];if(stack==null||stack.stackSize<=0||!(stack.getItem() instanceof ItemSword||stack.getItem() instanceof ItemTool))continue;
+            double next=baseDamage(stack);if(next>damage){damage=next;best=i;}
+        }
+        return best;
     }
 
     /** Called by the bytecode hook directly before vanilla syncCurrentPlayItem. */
     private int beforeAttack(Object target) {
-        if (!isEnabled() || enchantedSlot >= 0 || owner != mc.thePlayer || mc.thePlayer == null || mc.theWorld == null || mc.playerController == null
-                || mc.currentScreen != null || mc.thePlayer.isUsingItem() || mc.playerController.getIsHittingBlock()
+        if (!isEnabled() || enchantedSlot >= 0 || owner != mc.thePlayer || ownerWorld != mc.theWorld || mc.thePlayer == null || mc.theWorld == null || mc.playerController == null
+                || !canUseSlots()
                 || stableTicks < warmup.getInt() || tick - lastSwitch < cooldown.getInt() || !(target instanceof EntityLivingBase)) return -1;
         EntityLivingBase victim = (EntityLivingBase) target;
         if (victim == mc.thePlayer || victim.isDead || !victim.isEntityAlive() || victim.worldObj != mc.theWorld
                 || playersOnly.isEnabled() && !(victim instanceof EntityPlayer) || requireGround.isEnabled() && !mc.thePlayer.onGround) return -1;
         TargetsModule filters = Vibe.getInstance().getModuleManager().getModule(TargetsModule.class);
         if (respectTargets.isEnabled() && filters != null && !filters.canTarget(victim)) return -1;
-        AutoToolModule auto = Vibe.getInstance().getModuleManager().getModule(AutoToolModule.class);
-        if (auto != null && auto.hasSilentSlot()) return -1;
         int visible = mc.thePlayer.inventory.currentItem;
         ItemStack weapon = mc.thePlayer.getHeldItem();
         if (visible != stableSlot || !sameWeapon(weapon, stableStack) || weapon == null
                 || !(weapon.getItem() instanceof ItemSword || weapon.getItem() instanceof ItemTool)) return -1;
         int candidate = chooseSlot(mc.thePlayer.inventory.mainInventory, visible, victim.isBurning());
         if (candidate < 0) return -1;
-        originalSlot = visible; enchantedSlot = candidate; silent = mode.is("Silent"); returnedAfterAttack = false;
-        lastSwitch = tick; restoreAt = tick + restoreDelay.getInt(); stableTicks = 0;
+        originalSlot = visible; enchantedSlot = candidate;
+        lastSwitch = tick;
         // This is intentionally immediately before syncCurrentPlayItem, not at click time.
-        mc.thePlayer.inventory.currentItem = candidate;
-        return silent ? visible : -1;
+        if(!mode.is("Silent"))mc.thePlayer.inventory.currentItem = candidate;
+        return visible;
     }
 
     int chooseSlot(ItemStack[] hotbar, int held, boolean burning) {
@@ -116,7 +127,7 @@ public final class PickenSwitchModule extends Module {
         return best;
     }
 
-    private static boolean sameWeapon(ItemStack first, ItemStack second) { return first == second || first != null && second != null && first.getItem() == second.getItem(); }
+    private static boolean sameWeapon(ItemStack first, ItemStack second) { return ItemStack.areItemStacksEqual(first,second); }
     private static int level(ItemStack stack, Enchantment enchantment) { return stack == null ? 0 : EnchantmentHelper.getEnchantmentLevel(enchantment.effectId, stack); }
     static double baseDamage(ItemStack stack) {
         double base = 1, additive = 0, multiplier = 1;
@@ -128,25 +139,30 @@ public final class PickenSwitchModule extends Module {
         }
         return base * (1 + additive) * multiplier;
     }
-    private void clear() { originalSlot = enchantedSlot = -1; silent = false; returnedAfterAttack = false; }
+    private void clear() { originalSlot = enchantedSlot = -1; }
     @Override protected void onEnable() { stableTicks = 0; }
+    @Override protected void onDisable() { finishAttack();stableTicks=0; }
+
+    private void finishAttack(){
+        if(originalSlot<0)return;
+        int weapon=originalSlot,utility=enchantedSlot;
+        boolean sameContext=owner==mc.thePlayer&&ownerWorld==mc.theWorld&&mc.thePlayer!=null&&mc.theWorld!=null;
+        clear(); // Release the resolver before syncing, otherwise it sends the utility slot again.
+        if(!sameContext)return;
+        int current=mc.thePlayer.inventory.currentItem;
+        if(current==utility||current==weapon)mc.thePlayer.inventory.currentItem=weapon;
+        if(mc.playerController!=null)mc.playerController.updateController();
+    }
     private static PickenSwitchModule active() { Vibe vibe = Vibe.getInstance(); return vibe == null || vibe.getModuleManager() == null ? null : vibe.getModuleManager().getModule(PickenSwitchModule.class); }
     public static int beginAttackHook(Object target) { PickenSwitchModule module = active(); return module == null || dev.vibe.module.impl.meme.HypixelModule.ownsSilentSlot() ? -1 : module.beforeAttack(target); }
     /** The wrapper invokes this only after vanilla has sent and processed its attack path. */
     public static void endAttackHook(int ignored) {
         PickenSwitchModule module = active();
-        if (module != null && module.originalSlot >= 0 && module.mc.thePlayer != null) {
-            module.mc.thePlayer.inventory.currentItem = module.originalSlot;
-            module.returnedAfterAttack = true;
-        }
+        if (module != null) module.finishAttack();
     }
     public static void abortAttackHook() {
         PickenSwitchModule module = active();
-        if (module != null && module.originalSlot >= 0 && module.mc.thePlayer != null) {
-            module.mc.thePlayer.inventory.currentItem = module.originalSlot;
-            module.clear();
-            if (module.mc.playerController != null) module.mc.playerController.updateController();
-        }
+        if (module != null) module.finishAttack();
     }
     public static int serverSlotHook(int vanilla) { PickenSwitchModule module = active(); return module != null && module.hasSilentSlot() ? module.enchantedSlot : vanilla; }
     public static int beginActionHook() {
@@ -157,9 +173,8 @@ public final class PickenSwitchModule extends Module {
         return old;
     }
     public static boolean ownsSlot() { PickenSwitchModule module = active(); return module != null && module.enchantedSlot >= 0; }
-    /** AutoTool must retain the same server-side selection during the short
-     * post-attack restore window in both Basic and Silent modes. */
-    public boolean hasSilentSlot() { return enchantedSlot >= 0 && owner == mc.thePlayer; }
+    /** The override exists only inside this controller attack, never between ticks. */
+    public boolean hasSilentSlot() { return enchantedSlot >= 0 && owner == mc.thePlayer && ownerWorld==mc.theWorld; }
     public int getSpoofedSlot() { return enchantedSlot; }
     public ColorSetting getSilentColor() { return silentColor; }
 }

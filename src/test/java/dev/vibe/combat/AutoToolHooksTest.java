@@ -18,6 +18,7 @@ import org.objectweb.asm.*;
 import static org.junit.Assert.*;
 
 public class AutoToolHooksTest implements Opcodes {
+    @BeforeClass public static void bootstrap()throws Exception{dev.vibe.camera.DroneCollisionsTest.registerBlocks();}
     private Minecraft previousMinecraft;
     private Vibe previousVibe;
     private static Minecraft minecraft;

@@ -305,11 +305,18 @@ public final class AutoToolModule extends Module {
         }
         public void reselect() { if (matchesContext()) player.inventory.currentItem = slot; }
         @Override public void close() {
+            finish(true);
+        }
+        /** Release ownership after a manual slot change without undoing that selection. */
+        public void closePreservingSelection() {
+            finish(false);
+        }
+        private void finish(boolean restoreSelection) {
             if (closed) return;
             boolean restore = matchesContext(); closed = true;
             if (instantAction == this) instantAction = null;
             if (restore) {
-                player.inventory.currentItem = visible;
+                if (restoreSelection) player.inventory.currentItem = visible;
                 if (minecraft.playerController != null) minecraft.playerController.updateController();
             }
         }

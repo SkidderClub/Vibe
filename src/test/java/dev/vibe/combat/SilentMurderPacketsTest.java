@@ -104,7 +104,7 @@ public class SilentMurderPacketsTest implements Opcodes {
         assertSame(Items.stick,connection.attackItem.getItem());assertNull(player.getHeldItem());
     }
 
-    private static PlayerControllerMP nativeController(Minecraft mc,Connection connection) throws Exception {
+    static PlayerControllerMP nativeController(Minecraft mc,NetHandlerPlayClient connection) throws Exception {
         String parent="net/minecraft/client/multiplayer/PlayerControllerMP",name="dev/vibe/combat/NativeMurderController";
         ByteArrayOutputStream output=new ByteArrayOutputStream();
         try(InputStream input=PlayerControllerMP.class.getResourceAsStream("PlayerControllerMP.class")) {
@@ -117,7 +117,8 @@ public class SilentMurderPacketsTest implements Opcodes {
         for(Iterator<?> methods=node.methods.iterator();methods.hasNext();) {
             MethodNode method=(MethodNode)methods.next();
             if(!(method.name.equals("<init>")||method.name.equals("syncCurrentPlayItem")||method.name.equals("isSpectator")
-                    ||method.name.equals("updateController")||method.name.equals("attackEntity")||method.name.equals("vibe$tool$attackEntity")))methods.remove();
+                    ||method.name.equals("updateController")||method.name.equals("attackEntity")||method.name.equals("vibe$tool$attackEntity")
+                    ||method.name.equals("sendUseItem")||method.name.equals("vibe$tool$sendUseItem")))methods.remove();
         }
         for(Object value:node.methods) {
             MethodNode method=(MethodNode)value;

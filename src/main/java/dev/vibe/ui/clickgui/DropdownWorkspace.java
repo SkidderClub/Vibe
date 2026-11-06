@@ -64,7 +64,7 @@ final class DropdownWorkspace {
         if(scrolling!=null&&scrollbar!=null)scrolling.target=scrolling.scroll=scrollbar.at(my);
         hovered=null;
         for(Panel p:panels)p.modules.clear();
-        for(Module module:Vibe.getInstance().getModuleManager().getModules())categories.get(module.getCategory()).modules.add(module);
+        for(Module module:ClickGuiModule.sortedModules(Vibe.getInstance().getModuleManager().getModules()))categories.get(module.getCategory()).modules.add(module);
         for(Panel p:panels) {
             p.content=2;for(Module module:p.modules)p.content+=style.rowHeight+(host.dropdownExpanded(module)?host.dropdownSettingsHeight(module):0);
             int margin=horizontalMax>0?37:22;

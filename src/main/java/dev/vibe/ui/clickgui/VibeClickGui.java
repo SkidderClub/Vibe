@@ -398,7 +398,7 @@ public final class VibeClickGui extends GuiScreen {
         int index = 0;
         enableScissor(contentLeft, contentTop, contentRight, contentBottom);
         try {
-            for (Module module : Vibe.getInstance().getModuleManager().getModules(skeetCategory)) {
+            for (Module module : ClickGuiModule.sortedModules(Vibe.getInstance().getModuleManager().getModules(skeetCategory))) {
                 int column = index++ & 1;
                 int cardLeft = column == 0 ? firstX : secondX;
                 cardY[column] = drawSkeetModule(module, cardLeft, cardY[column], cardWidth, mouseX, mouseY,
@@ -582,7 +582,7 @@ public final class VibeClickGui extends GuiScreen {
         }
         fontRendererObj.drawStringWithShadow(panel.category.getLabel().toUpperCase(), panel.x + 10, panel.y + 9, RenderUtils.TEXT);
         int y = panel.y + 25;
-        for (Module module : Vibe.getInstance().getModuleManager().getModules(panel.category)) {
+        for (Module module : ClickGuiModule.sortedModules(Vibe.getInstance().getModuleManager().getModules(panel.category))) {
             y = drawModule(panel, module, y, mouseX, mouseY, accent, futuristic);
         }
     }

@@ -565,6 +565,9 @@ public final class MoveFixModule extends Module {
             VelocityModule velocity = Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
             if (velocity != null) velocity.afterWalkingUpdate(entity);
             module.endPacketRotation(entity);
+            dev.vibe.module.impl.combat.ProjectileAuraModule projectile =
+                    Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.ProjectileAuraModule.class);
+            if (projectile != null) projectile.afterWalking(entity, module);
             dev.vibe.module.impl.world.NoteBotModule noteBot =
                     Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.world.NoteBotModule.class);
             if (noteBot != null) noteBot.afterWalking(entity, module);

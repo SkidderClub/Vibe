@@ -142,7 +142,7 @@ final class BreezeWorkspace {
     List<Module> visibleModules(){
         List<Module> result=new ArrayList<Module>();Set<String> starred=stars();String query=search==null?"":search.getText().toLowerCase(Locale.ROOT);
         for(Module m:Vibe.getInstance().getModuleManager().getModules())if((category==null||m.getCategory()==category)&&(!favorites||starred.contains(m.getId()))&&(m.getName()+" "+m.getDescription()).toLowerCase(Locale.ROOT).contains(query))result.add(m);
-        result.sort(Comparator.comparing(Module::getName,String.CASE_INSENSITIVE_ORDER));return result;
+        result.sort(Comparator.comparing(Module::getName,String.CASE_INSENSITIVE_ORDER));return ClickGuiModule.sortedModules(result);
     }
     private int modules(int mx,int my){
         int row=contentY-Math.round(scroll),height=contentW<280?46:50;

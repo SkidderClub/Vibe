@@ -7,6 +7,9 @@ import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ColorSetting;
 import dev.vibe.setting.ModeSetting;
 import dev.vibe.setting.NumberSetting;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import org.lwjgl.input.Keyboard;
 
 public final class ClickGuiModule extends Module {
@@ -14,6 +17,7 @@ public final class ClickGuiModule extends Module {
     // Each style renders through VibeClickGui's shared Module/Setting model,
     // so switching the look never changes bindings, values, or config data.
     private final ModeSetting theme = addSetting(new ModeSetting("Theme", "Skeet", "Skeet", "Futuristic", "NeverLose", "Augustus", "Xanax", "PacketV3", "Novoline", "SuizideX", "Breeze"));
+    private final ModeSetting moduleSorting = addSetting(new ModeSetting("Module Sorting", "Normal", "Normal", "Alphabetic"));
     private final ModeSetting breezePalette = addSetting(new ModeSetting("Breeze Theme", "Default", () -> theme.is("Breeze"), "Default", "Fancy", "Silence", "Flarial", "Leaf", "Pink", "Quantum", "Hello Kitty"));
     private final dev.vibe.setting.StringSetting breezeFavorites = addSetting(new dev.vibe.setting.StringSetting("Breeze Favorites", "", 8192, () -> false));
     private final ColorSetting primaryColor = addSetting(new ColorSetting("Primary Color", 0xFF2DE2C2, () -> !isDropdownTheme()&&!theme.is("Breeze")));
@@ -40,6 +44,17 @@ public final class ClickGuiModule extends Module {
     }
 
     public ModeSetting getTheme() { return theme; }
+    public ModeSetting getModuleSorting() { return moduleSorting; }
+    /** Sort a display copy; module registration and update order must stay intact. */
+    public static List<Module> sortedModules(List<Module> modules) {
+        Vibe vibe = Vibe.getInstance();
+        ClickGuiModule gui = vibe == null || vibe.getModuleManager() == null ? null
+                : vibe.getModuleManager().getModule(ClickGuiModule.class);
+        if (gui == null || !gui.moduleSorting.is("Alphabetic")) return modules;
+        List<Module> sorted = new ArrayList<>(modules);
+        sorted.sort(Comparator.comparing(Module::getName, String.CASE_INSENSITIVE_ORDER).thenComparing(Module::getId));
+        return sorted;
+    }
     public ModeSetting getBreezePalette() { return breezePalette; }
     public dev.vibe.setting.StringSetting getBreezeFavorites() { return breezeFavorites; }
     private boolean isDropdownTheme(){return theme.is("PacketV3")||theme.is("Novoline")||theme.is("SuizideX");}

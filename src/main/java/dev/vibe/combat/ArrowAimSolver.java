@@ -27,7 +27,10 @@ public final class ArrowAimSolver {
     private static Vec3 required(Vec3 origin,Vec3 point,Vec3[] movement,double t){double sum=(1-Math.pow(DRAG,t))/(1-DRAG),fall=GRAVITY/(1-DRAG)*(t-sum);Vec3 offset=at(movement,t);return new Vec3((point.xCoord+offset.xCoord-origin.xCoord)/sum,(point.yCoord+offset.yCoord-origin.yCoord+fall)/sum,(point.zCoord+offset.zCoord-origin.zCoord)/sum);}
     public static Vec3 at(Vec3[] movement,double t){int i=Math.min(movement.length-1,Math.max(0,(int)t)),j=Math.min(movement.length-1,i+1);double f=Math.max(0,Math.min(1,t-i));return movement[i].addVector((movement[j].xCoord-movement[i].xCoord)*f,(movement[j].yCoord-movement[i].yCoord)*f,(movement[j].zCoord-movement[i].zCoord)*f);}
     public static Vec3[] forecast(World world,EntityLivingBase entity,boolean predict){
-        Vec3[] result=new Vec3[HORIZON+1];result[0]=new Vec3(0,0,0);AxisAlignedBB box=entity.getEntityBoundingBox();
+        return forecast(world,entity,predict,HORIZON);
+    }
+    public static Vec3[] forecast(World world,EntityLivingBase entity,boolean predict,int horizon){
+        Vec3[] result=new Vec3[Math.max(1,Math.min(HORIZON,horizon))+1];result[0]=new Vec3(0,0,0);AxisAlignedBB box=entity.getEntityBoundingBox();
         double startX=(box.minX+box.maxX)*.5,startY=box.minY,startZ=(box.minZ+box.maxZ)*.5;
         double vx=predict?MathHelper.clamp_double(entity.posX-entity.lastTickPosX,-1.5,1.5):0,vz=predict?MathHelper.clamp_double(entity.posZ-entity.lastTickPosZ,-1.5,1.5):0,vy=predict?MathHelper.clamp_double(entity.posY-entity.lastTickPosY,-1.5,1.5):0;
         for(int i=1;i<result.length;i++){

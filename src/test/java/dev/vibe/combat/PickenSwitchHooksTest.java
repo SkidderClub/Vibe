@@ -9,6 +9,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Arrays;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -100,9 +101,9 @@ public class PickenSwitchHooksTest implements Opcodes {
     @Test public void sendsUtilitySlotImmediatelyBeforeC02WhileKeepingMainWeaponVisible() throws Exception {
         warm();
         hit();
-        assertEquals(Arrays.asList("slot:4", "attack:4"), calls);
+        assertEquals(Arrays.asList("slot:4", "attack:4", "slot:0"), calls);
         assertEquals(0, mc.thePlayer.inventory.currentItem);
-        assertTrue(module.hasSilentSlot());
+        assertFalse(module.hasSilentSlot());
         module.tick();
         assertEquals(Arrays.asList("slot:4", "attack:4", "slot:0"), calls);
         assertFalse(module.hasSilentSlot());
@@ -117,7 +118,25 @@ public class PickenSwitchHooksTest implements Opcodes {
         assertEquals(0, mc.thePlayer.inventory.currentItem);
     }
 
-    public static void networkAttack() { sync(); calls.add("attack:" + mc.thePlayer.inventory.currentItem); if (failLocal) throw new IllegalStateException("Fixture"); }
+    public static void networkAttack() { sync(); calls.add("attack:" + server); if (failLocal) throw new IllegalStateException("Fixture"); }
+    @Test public void everyHitCanSwitchAndBothModesRestoreBeforeTheControllerReturns()throws Exception{
+        warm();
+        for(String mode:new String[]{"Basic","Silent"}){
+            for(dev.vibe.setting.Setting<?> setting:module.getSettings())if(setting.getRawName().equals("Mode"))((dev.vibe.setting.ModeSetting)setting).setValue(mode);
+            calls.clear();hit();hit();
+            assertEquals(Arrays.asList("slot:4","attack:4","slot:0","slot:4","attack:4","slot:0"),calls);
+            assertEquals(0,server);assertEquals(0,mc.thePlayer.inventory.currentItem);assertFalse(PickenSwitchModule.ownsSlot());
+        }
+    }
+    @Test public void holdingTheUtilityItemPreparesTheDamageWeaponBeforeTheWarmup()throws Exception{
+        mc.thePlayer.inventory.currentItem=4;server=4;warm();
+        assertEquals(0,mc.thePlayer.inventory.currentItem);assertEquals(0,server);
+        calls.clear();hit();assertEquals(Arrays.asList("slot:4","attack:4","slot:0"),calls);
+    }
+    @Test public void insufficientWarmupLeavesTheOrdinaryAttackAlone()throws Exception{
+        module.tick();calls.clear();hit();assertEquals(Collections.singletonList("attack:0"),calls);
+        assertFalse(PickenSwitchModule.ownsSlot());
+    }
     @Test public void silentMurderUsesTheSameSlotResolverAndRestoresImmediately() throws Exception {
         for(boolean autoEnabled:new boolean[]{false,true}) {
             installSilentMurder(autoEnabled);calls.clear();server=autoEnabled?4:0;

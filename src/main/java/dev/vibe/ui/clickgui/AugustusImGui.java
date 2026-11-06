@@ -183,7 +183,7 @@ public final class AugustusImGui {
             textInputs.clear();
         }
 
-        final List<Module> modules = sortedModules;
+        final List<Module> modules = ClickGuiModule.sortedModules(sortedModules);
         if (selected == null || selected.getCategory() != category || !modules.contains(selected)) selectFirst(modules);
         float sidebar = Math.min(200, Math.max(160, width * .2F)), contentWidth = Math.max(1, width - sidebar);
         float tabsHeight = tabRows(contentWidth - 28) * 30 + 30;

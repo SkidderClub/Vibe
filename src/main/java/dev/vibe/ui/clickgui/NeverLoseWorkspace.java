@@ -163,7 +163,7 @@ final class NeverLoseWorkspace {
         for (Module module : Vibe.getInstance().getModuleManager().getModules()) {
             if (filter.isEmpty() ? module.getCategory() == category : matches(module, filter)) result.add(module);
         }
-        return result;
+        return dev.vibe.module.impl.client.ClickGuiModule.sortedModules(result);
     }
 
     private boolean matches(Module module, String filter) {

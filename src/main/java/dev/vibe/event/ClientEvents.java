@@ -239,6 +239,8 @@ public final class ClientEvents {
             if (scripts != null) scripts.tickStart();
             // Producers select the fake rotation before vanilla samples input.
             dev.vibe.module.impl.combat.AntiFireballModule fireball=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AntiFireballModule.class);if(fireball!=null)fireball.prepare();
+            dev.vibe.module.impl.combat.ProjectileAuraModule projectile=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.ProjectileAuraModule.class);
+            if(projectile!=null)projectile.prepare();
             if (Vibe.getInstance().getExtensions() != null) Vibe.getInstance().getExtensions().tickStart();
             KillAuraModule killaura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
             if (killaura != null) killaura.tickStart();
@@ -248,6 +250,7 @@ public final class ClientEvents {
             ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
             if (scaffold != null) scaffold.tickStart();
             dev.vibe.module.impl.combat.BowAimbotModule bow=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.BowAimbotModule.class);if(bow!=null)bow.tick();
+            if(projectile!=null)projectile.apply();
             if(fireball!=null)fireball.apply();
             if (moveFix != null) {
                 moveFix.tick();
