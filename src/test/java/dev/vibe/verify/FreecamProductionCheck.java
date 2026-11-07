@@ -48,6 +48,19 @@ public final class FreecamProductionCheck {
                     if(!found)throw new AssertionError("Production Silent Murder scope missing from "+name);
                 }
                 OUTPUT.println("Silent Murder click and controller scopes linked through production Forge/OptiFine.");
+                for(String name:new String[]{"net.minecraft.client.Minecraft","net.minecraft.client.entity.EntityPlayerSP"}) {
+                    boolean scoped=false;
+                    for(java.lang.reflect.Method method:Class.forName(name,false,loader).getDeclaredMethods())
+                        if(method.getName().startsWith("vibe$hotbar$"))scoped=true;
+                    if(!scoped)throw new AssertionError("Production hotbar logic scope missing from "+name);
+                }
+                for(String name:new String[]{"dev.vibe.inventory.HotbarSwitches","dev.vibe.inventory.ItemSwitching"})
+                    Class.forName(name,false,loader).getDeclaredMethods();
+                OUTPUT.println("Shared hotbar input, player and controller scopes linked through production Forge/OptiFine.");
+                for(String name:new String[]{"dev.vibe.hud.HudManager","dev.vibe.hud.DynamicIslandRenderer","dev.vibe.hud.BlockCounterRenderer",
+                        "dev.vibe.hud.NameProtectRenderer","dev.vibe.hud.TextGlowScope","net.minecraft.client.gui.FontRenderer"})
+                    Class.forName(name,false,loader).getDeclaredMethods();
+                OUTPUT.println("Block Counter, Dynamic Island and protected-name font hooks linked through production Forge/OptiFine.");
                 for(String name:new String[]{"net.minecraft.client.renderer.ActiveRenderInfo","net.minecraft.client.renderer.EntityRenderer",
                         "dev.vibe.module.impl.visual.SmoothF5Module","dev.vibe.ui.render.HologramRenderer","dev.vibe.ui.render.HologramPose"})Class.forName(name,false,loader).getDeclaredMethods();
                 Class.forName("dev.vibe.module.impl.movement.FreecamModule",false,loader).getMethod("frontViewHook",boolean.class);

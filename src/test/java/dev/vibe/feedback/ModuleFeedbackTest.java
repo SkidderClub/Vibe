@@ -66,6 +66,10 @@ public class ModuleFeedbackTest {
         assertEquals("Blame Lucky. I'm buying groceries.", message.detail);
         vibe.getFeedback().notifications().clear(); hud.getHudElements().toggle("notifications");
         ModuleFeedback.message("phone.message", "ESound", "Missed your call."); assertTrue(active().isEmpty());
+        hud.setEnabled(true);hud.getHudElements().toggle("dynamicisland");vibe.getFeedback().notifications().clear();
+        ModuleFeedback.message("phone.message","ESound","An Island-only message");assertEquals(1,active().size());
+        vibe.getFeedback().notifications().clear();hud.island.transforms.toggle("Notification");
+        ModuleFeedback.message("phone.message","ESound","Hidden again");assertTrue(active().isEmpty());
     }
     @Test public void profilesAndExtensionRegistrationStaySilent() throws Exception {
         Module module = new Module("Example", "", Category.CLIENT, 0) { };

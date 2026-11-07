@@ -138,7 +138,7 @@ public class KillAuraModule extends Module {
             sessionPlayer = minecraft.thePlayer;
         }
         // Scaffold owns the server rotation and the held slot while enabled.
-        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()||AntiFireballModule.reserving()||ProjectileAuraModule.reserving()||BowAimbotModule.drawing()) { clear(); return; }
+        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()||AntiFireballModule.reserving()||ProjectileAuraModule.blocksRotations(this)||BowAimbotModule.drawing()) { clear(); return; }
         EntityLivingBase selected = chooseTarget();
         if (selected == null) {
             // RavenBS permits the physical right mouse button to maintain its
@@ -168,10 +168,11 @@ public class KillAuraModule extends Module {
             rotation.reset(fix.getRotationYaw(), fix.getRotationPitch());
             rotationInitialized = true;
         }
+        ProjectileAuraModule.prepareForAura(this, target);
         advanceRotation(target);
         fix.setFakeRotation(getId(), rotation.getYaw(), rotation.getPitch());
     }
-    protected void advanceRotation(EntityLivingBase entity){float[] desired=rotationsTo(entity);boolean acceleration=rotationMode.is("Acceleration");rotation.advance(desired[0],desired[1],(float)sample(acceleration?rotationAcceleration:rotationSpeed),acceleration,minecraft.gameSettings.mouseSensitivity);}
+    protected void advanceRotation(EntityLivingBase entity){Vec3 point=ProjectileAuraModule.rotationAimPoint(this,entity);float[] desired=point==null?rotationsTo(entity):rotationsTo(point);boolean acceleration=rotationMode.is("Acceleration");rotation.advance(desired[0],desired[1],(float)sample(acceleration?rotationAcceleration:rotationSpeed),acceleration,minecraft.gameSettings.mouseSensitivity);}
     protected void targetChanged(EntityLivingBase previous,EntityLivingBase next){}
     protected void resetPolicy(){}
     protected double selectionRange(){double range=Math.max(reach.getMax(),clickingRange.getDouble());return !autoblock.is("None")&&!autoblock.is("Hypixel")?Math.max(range,blockingRange.getDouble()):range;}
@@ -184,8 +185,15 @@ public class KillAuraModule extends Module {
     private void prepareInput() {
         if (inputPrepared) return;
         inputPrepared = true;
-        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()||AntiFireballModule.reserving()||ProjectileAuraModule.reserving()||BowAimbotModule.drawing()) {
+        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()||AntiFireballModule.reserving()||ProjectileAuraModule.blocksRotations(this)||BowAimbotModule.drawing()) {
             clear();
+            releaseOwnedBlock();
+            return;
+        }
+        if (ProjectileAuraModule.reserving()) {
+            // The linked aura keeps its target and rotation policy, but must not
+            // swing or sword-block while the projectile transaction owns use.
+            restoreInput();
             releaseOwnedBlock();
             return;
         }
@@ -377,7 +385,7 @@ public class KillAuraModule extends Module {
         TargetsModule targets = Vibe.getInstance().getModuleManager().getModule(TargetsModule.class);
         if (targets == null || !targets.canTarget(entity)) return false;
         double range = selectionRange();
-        if (distanceTo(entity) > range) return false;
+        if (distanceTo(entity) > range && !ProjectileAuraModule.extendsTargetRange(this, entity)) return false;
         float[] desired = rotationsTo(entity);
         if (!RotationMath.withinAngle(desired[0], desired[1], minecraft.thePlayer.rotationYaw,
                 minecraft.thePlayer.rotationPitch, maxAngle.getFloat())) return false;
@@ -397,7 +405,10 @@ public class KillAuraModule extends Module {
     }
 
     protected float[] rotationsTo(EntityLivingBase entity) {
-        Vec3 point = aimPoint(entity).subtract(eyes());
+        return rotationsTo(aimPoint(entity));
+    }
+    private float[] rotationsTo(Vec3 aim) {
+        Vec3 point = aim.subtract(eyes());
         double horizontal = Math.sqrt(point.xCoord * point.xCoord + point.zCoord * point.zCoord);
         float yaw = horizontal < 1.0E-7D ? (rotationInitialized ? rotation.getYaw() : minecraft.thePlayer.rotationYaw)
                 : (float) (Math.toDegrees(Math.atan2(point.zCoord, point.xCoord)) - 90.0D);

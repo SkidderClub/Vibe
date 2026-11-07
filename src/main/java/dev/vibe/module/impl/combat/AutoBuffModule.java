@@ -17,6 +17,8 @@ import org.lwjgl.input.Keyboard;
 
 /** Delayed item selection and native right-button use; inventory transfers use the shared controller dispatcher. */
 public final class AutoBuffModule extends dev.vibe.module.Module {
+    public final ItemSwitching switching = new ItemSwitching(this::addSetting,"Basic");
+    private HotbarSwitches.Lease slotLease;
     public enum Kind {
         POT("Auto Pot", Type.HEALING_POTION, 14), SOUP("Auto Soup", Type.SOUP, 14),
         HEAD("Auto Head", Type.HEAD, 12), EAT("Auto Eat", Type.FOOD, 20), GAPPLE("Auto Gapple", Type.GOLDEN_APPLE, 14);
@@ -88,18 +90,18 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
             if (ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()
                     || dev.vibe.module.impl.movement.FreecamModule.cameraActiveHook()) { cancel(true); return; }
             if (mc.currentScreen != null || VanillaClicks.physicallyDown(mc.gameSettings.keyBindUseItem)
-                    || mc.thePlayer.inventory.currentItem != slot) { cancel(false); return; }
+                    || slotLease == null || !slotLease.valid()) { cancel(false); return; }
             if (phase == Phase.RESTORE) {
                 releaseInput();
                 if (now >= due) {
-                    if (previousSlot >= 0) mc.thePlayer.inventory.currentItem = previousSlot;
+                    if (slotLease != null) { slotLease.close(); slotLease=null; }
                     clearRotation(); phase = Phase.IDLE; slot = previousSlot = -1; active = null;
                 }
                 return;
             }
-            if (changed(mc.thePlayer.getHeldItem(), expected) || !enabled(active)) { finish(now); return; }
+            if (changed(selectedStack(), expected) || !enabled(active)) { finish(now); return; }
             if (phase == Phase.USING && pressed && !mc.thePlayer.isUsingItem()
-                    && !shouldUse(active, mc.thePlayer.getHeldItem())) { finish(now); return; }
+                    && !shouldUse(active, selectedStack())) { finish(now); return; }
             if (splash(expected)) {
                 MoveFixModule fix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
                 if (fix == null) { cancel(true); return; }
@@ -112,7 +114,7 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
             }
             return;
         }
-        if (now < cooldown || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()
+        if (now < cooldown || HotbarSwitches.busy(this,HotbarSwitches.BUFF) || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()
                 || dev.vibe.module.impl.movement.FreecamModule.cameraActiveHook()
                 || mc.thePlayer.isUsingItem() || VanillaClicks.physicallyDown(mc.gameSettings.keyBindUseItem)
                 || mc.thePlayer.inventory.getItemStack() != null) { candidate = null; return; }
@@ -125,7 +127,9 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
                 if (now >= candidateDue) {
                     active = kind; slot = found; previousSlot = mc.thePlayer.inventory.currentItem;
                     expected = mc.thePlayer.inventory.getStackInSlot(found).copy();
-                    mc.thePlayer.inventory.currentItem = found; selectedTick = mc.thePlayer.ticksExisted;
+                    slotLease=HotbarSwitches.acquire(this,switching,found,HotbarSwitches.BUFF);
+                    if(slotLease==null||!slotLease.active()){if(slotLease!=null)slotLease.close(false,true);slotLease=null;return;}
+                    selectedTick = mc.thePlayer.ticksExisted;
                     phase = Phase.SELECTED; due = now + pick(switchDelay); pressed = false; candidate = null;
                 }
                 return;
@@ -232,12 +236,12 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
     }
     private void cancel(boolean restoreSlot) {
         inventory.close(); refilling = false; releaseInput(); clearRotation();
-        if (restoreSlot && mc.thePlayer != null && player == mc.thePlayer && mc.thePlayer.inventory.currentItem == slot && previousSlot >= 0)
-            mc.thePlayer.inventory.currentItem = previousSlot;
+        if(slotLease!=null){slotLease.close(true,restoreSlot);slotLease=null;}
         phase = Phase.IDLE; active = candidate = null; expected = null; slot = previousSlot = -1; player = world = null;
     }
     @Override protected void onDisable() { cancel(true); }
     private long pick(RangeSetting s) { return s.getMinInt() + random.nextInt(s.getMaxInt() - s.getMinInt() + 1); }
+    private ItemStack selectedStack(){return slotLease==null?null:slotLease.stack();}
     private static AutoBuffModule module() { return Vibe.getInstance() == null ? null : Vibe.getInstance().getModuleManager().getModule(AutoBuffModule.class); }
     public static boolean ownsUseInput() { AutoBuffModule m = module(); return m != null && m.isEnabled() && m.phase != Phase.IDLE; }
     /** Recomputed with vanilla movement each tick, before MoveFix corrects the camera-relative input. */
@@ -246,8 +250,8 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
         if (m == null || !m.isEnabled() || m.phase != Phase.USING || !m.pressed || !m.enabled(m.active)
                 || m.mc.thePlayer == null || m.player != m.mc.thePlayer || m.world != m.mc.theWorld
                 || m.mc.currentScreen != null || !m.mc.thePlayer.isEntityAlive() || m.mc.thePlayer.isSpectator()
-                || !m.mc.thePlayer.isUsingItem() || m.mc.thePlayer.inventory.currentItem != m.slot
-                || changed(m.mc.thePlayer.getHeldItem(), m.expected)
+                || !m.mc.thePlayer.isUsingItem() || m.slotLease==null || !m.slotLease.active()
+                || changed(m.selectedStack(), m.expected)
                 || VanillaClicks.physicallyDown(m.mc.gameSettings.keyBindUseItem)
                 || dev.vibe.module.impl.movement.FreecamModule.cameraActiveHook()
                 || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()) return;
@@ -261,6 +265,7 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
     public static void prepareInputHook() {
         AutoBuffModule m = module();
         if (m == null || !ownsUseInput() || m.mc.currentScreen != null) return;
+        HotbarSwitches.beginInputHook();
         if (dev.vibe.module.impl.movement.FreecamModule.cameraActiveHook() || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()) { m.cancel(true); return; }
         if (splash(m.expected) && m.phase != Phase.RESTORE) {
             MoveFixModule fix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);

@@ -47,7 +47,8 @@ public final class HypixelModule extends Module {
     private final BooleanSetting detectBow = addSetting(new BooleanSetting("Detect bow", true, () -> modes.isSelected(MURDER)));
     private final BooleanSetting murdererTracer = addSetting(new BooleanSetting("Murderer tracer", true, () -> modes.isSelected(MURDER)));
     private final BooleanSetting announce = addSetting(new BooleanSetting("Announce murderer", false, () -> modes.isSelected(MURDER)));
-    private final BooleanSetting silentMurderer = addSetting(new BooleanSetting("Silent murderer", false, () -> modes.isSelected(MURDER)));
+    private final BooleanSetting silentMurderer = addSetting(new BooleanSetting("Auto Weapon", false, () -> modes.isSelected(MURDER)));
+    public final dev.vibe.inventory.ItemSwitching switching = new dev.vibe.inventory.ItemSwitching(this::addSetting,"Silent",()->modes.isSelected(MURDER)&&silentMurderer.isEnabled());
     private final ColorSetting murdererColor = addSetting(new ColorSetting("Murderer ESP color", 0xFFFF4B57, () -> modes.isSelected(MURDER)));
     private final ColorSetting bowColor = addSetting(new ColorSetting("Bow ESP color", 0xFF54A8FF, () -> modes.isSelected(MURDER) && detectBow.isEnabled()));
     private final BooleanSetting highlightGold = addSetting(new BooleanSetting("Highlight dropped gold", true, () -> modes.isSelected(MURDER)));
@@ -73,7 +74,8 @@ public final class HypixelModule extends Module {
     private int silentSlot = -1, oldFps = -1;
     private int silentWeaponSlot = -1;
     private net.minecraft.client.entity.EntityPlayerSP silentOwner;
-    private dev.vibe.module.impl.world.AutoToolModule.HotbarAction silentAction;
+    private dev.vibe.inventory.HotbarSwitches.Lease silentAction;
+    private int silentClickToken=-1;
     private boolean oldPauseOnLostFocus, forcedSprint, forcedKeys;
     private List<BlockPos> pitPath = Collections.emptyList();
     private BlockPos pathGoal;
@@ -428,6 +430,7 @@ public final class HypixelModule extends Module {
         int slot=beginAttackHook(module.mc.objectMouseOver.entityHit);
         if(slot<0)return -1;
         module.silentClickScope=true;
+        module.silentClickToken=dev.vibe.inventory.HotbarSwitches.beginActionHook();
         return slot;
     }
     public static void endClickHook(int slot) {
@@ -440,13 +443,13 @@ public final class HypixelModule extends Module {
                 || module.mc.playerController == null || target == module.mc.thePlayer
                 || ((EntityLivingBase)target).worldObj != module.mc.theWorld || !((EntityLivingBase)target).isEntityAlive()) return -1;
         if(module.silentPending) {if(module.silentAction!=null)module.silentAction.reselect();return module.silentSlot;}
-        int old = module.mc.thePlayer.inventory.currentItem;
+        int old = dev.vibe.inventory.HotbarSwitches.visibleSlot();
         int slot=module.selectSilentWeapon();
         if(slot<0)return -1;
         module.silentSlot=old;module.silentWeaponSlot=slot;module.silentOwner=module.mc.thePlayer;module.silentPending=true;
         try {
-            module.silentAction=dev.vibe.module.impl.world.AutoToolModule.beginHotbarAction(slot);
-            if(module.silentAction!=null)return old;
+            module.silentAction=dev.vibe.inventory.HotbarSwitches.acquire(module,module.switching,slot,dev.vibe.inventory.HotbarSwitches.MURDER);
+            if(module.silentAction!=null&&module.silentAction.active())return old;
             module.finishSilentAttack();return -1;
         } catch(RuntimeException|Error failure) {module.finishSilentAttack();throw failure;}
     }
@@ -473,13 +476,14 @@ public final class HypixelModule extends Module {
     }
     /** Same server-slot resolver as AutoTool, scoped to this single controller attack. */
     public static int serverSlotHook(int vanilla) {
-        HypixelModule module=active();return ownsSilentSlot()?module.silentWeaponSlot:vanilla;
+        return dev.vibe.inventory.HotbarSwitches.serverSlotHook(vanilla);
     }
     private void finishSilentAttack() {
         if(!silentPending)return;
-        dev.vibe.module.impl.world.AutoToolModule.HotbarAction action=silentAction;
+        dev.vibe.inventory.HotbarSwitches.Lease action=silentAction;
+        int token=silentClickToken;silentClickToken=-1;
         silentPending=silentClickScope=false;silentSlot=silentWeaponSlot=-1;silentOwner=null;
         silentAction=null;
-        if(action!=null)action.close();
+        try{if(action!=null)action.close();}finally{dev.vibe.inventory.HotbarSwitches.endActionHook(token);}
     }
 }

@@ -6,7 +6,7 @@ import org.objectweb.asm.tree.*;
 
 /** Wrap vanilla tool actions in a finally scope, keeping the displayed slot untouched between calls. */
 final class ToolActionTransformer implements Opcodes {
-    private static final String HOOK = "dev/vibe/module/impl/world/AutoToolModule";
+    private static final String HOOK = "dev/vibe/inventory/HotbarSwitches";
     private static final String PICKEN = "dev/vibe/module/impl/combat/PickenSwitchModule";
     private static final String HYPIXEL = "dev/vibe/module/impl/meme/HypixelModule";
     private ToolActionTransformer() { }
@@ -44,6 +44,8 @@ final class ToolActionTransformer implements Opcodes {
             int index = 1;
             for (Type argument : arguments) {
                 wrapper.visitVarInsn(argument.getOpcode(ILOAD), index);
+                if(argument.getSort()==Type.OBJECT&&(argument.getInternalName().equals("net/minecraft/item/ItemStack")||argument.getInternalName().equals("zx")))
+                    wrapper.visitMethodInsn(INVOKESTATIC,"dev/vibe/inventory/HotbarSwitches","actionStack","(Lnet/minecraft/item/ItemStack;)Lnet/minecraft/item/ItemStack;",false);
                 index += argument.getSize();
             }
             wrapper.visitMethodInsn(INVOKESPECIAL, node.name, original.name, original.desc, false);
@@ -92,6 +94,10 @@ final class ToolActionTransformer implements Opcodes {
     }
 
     private static boolean action(String name, String desc) {
+        if((name.equals("sendUseItem")||name.equals("func_78769_a")||name.equals("a"))
+                &&(desc.equals("(Lnet/minecraft/entity/player/EntityPlayer;Lnet/minecraft/world/World;Lnet/minecraft/item/ItemStack;)Z")||desc.equals("(Lwn;Ladm;Lzx;)Z")))return true;
+        if((name.equals("onPlayerRightClick")||name.equals("func_178890_a")||name.equals("a"))
+                &&(desc.equals("(Lnet/minecraft/client/entity/EntityPlayerSP;Lnet/minecraft/client/multiplayer/WorldClient;Lnet/minecraft/item/ItemStack;Lnet/minecraft/util/BlockPos;Lnet/minecraft/util/EnumFacing;Lnet/minecraft/util/Vec3;)Z")||desc.equals("(Lbew;Lbdb;Lzx;Lcj;Lcq;Laui;)Z")))return true;
         if (desc.equals("(Lnet/minecraft/util/BlockPos;Lnet/minecraft/util/EnumFacing;)Z") || desc.equals("(Lcj;Lcq;)Z"))
             return name.equals("clickBlock") || name.equals("func_180511_b") || name.equals("b")
                     || name.equals("onPlayerDamageBlock") || name.equals("func_180512_c") || name.equals("c")

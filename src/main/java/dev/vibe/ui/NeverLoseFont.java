@@ -110,6 +110,7 @@ public final class NeverLoseFont {
     public void endRun() { inRun = false; runAlphaKnown = false; }
 
     public void draw(String text, float x, float y, int color) {
+        if(dev.vibe.hud.NameProtectRenderer.drawCustom(this,text,x,y,color))return;
         prepareScript();
         text = LanguageManager.scriptFontText(text);
         if (text.isEmpty()) return;

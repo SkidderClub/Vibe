@@ -89,10 +89,14 @@ public class AntiAFKModuleTest {
         anti.tickEnd(); anti.keyboardInput(Keyboard.KEY_2); anti.tick(2250); input();
         FreecamModule.movementInputHook(f.player); assertFalse(f.player.movementInput.jump);
     }
-    @Test public void hotbarUsesTheVanillaQueuedKeyPressInsteadOfSpoofingSlots() {
+    @Test public void hotbarUsesSharedBasicAndSilentSwitching() {
         mode("Switch Items"); f.player.inventory.currentItem = 3; anti.tick(0);
-        assertEquals(3, f.player.inventory.currentItem); assertTrue(f.mc.gameSettings.keyBindsHotbar[4].isPressed());
+        assertEquals(4, f.player.inventory.currentItem); assertEquals(4,dev.vibe.inventory.HotbarSwitches.serverSlotHook(3));
         assertFalse(f.mc.gameSettings.keyBindsHotbar[4].isPressed());
+        anti.setEnabled(false);assertEquals(4,f.player.inventory.currentItem);
+        anti.switching.mode.setValue("Silent");anti.setEnabled(true);anti.tick(0);
+        assertEquals(4,f.player.inventory.currentItem);assertEquals(5,dev.vibe.inventory.HotbarSwitches.serverSlotHook(4));
+        anti.setEnabled(false);assertEquals(4,dev.vibe.inventory.HotbarSwitches.serverSlotHook(4));
     }
     @Test public void clickUsesVanillaPressAndFreecamOnlyAllowsThatBodyClick() {
         mode("Left Click"); camera.setEnabled(true); camera.tick();

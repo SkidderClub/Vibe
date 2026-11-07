@@ -82,6 +82,7 @@ public class ScaffoldModuleTest {
         player.inventory.mainInventory[3] = stone;
         player.inventory.currentItem = 0;
         minecraft.thePlayer = player;
+        player.worldObj=world;
 
         Vibe vibe = new Vibe();
         set(Vibe.class, null, "instance", vibe);
@@ -156,11 +157,11 @@ public class ScaffoldModuleTest {
 
     @Test public void withoutSpoofSlotTheBlocksAreSelectedAndRestoredOnDisable() throws Exception {
         world.blocks.put(new BlockPos(0, 63, 0), Blocks.stone.getDefaultState());
-        setting("Spoof Slot").setValue(false);
+        scaffold.switching.mode.setValue("Basic");
         standAt(1.2D, 64.0D, 0.5D, -90.0F, 20.0F);
         scaffold.setEnabled(true);
         scaffold.tickStart();
-        assertEquals(0, AutoToolModule.serverSlotHook(0));
+        assertEquals(3, AutoToolModule.serverSlotHook(0));
         ScaffoldModule.prepareInputHook();
         ScaffoldModule.finishInputHook();
         assertEquals(1, controller.placements.size());

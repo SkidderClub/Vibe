@@ -24,6 +24,7 @@ public final class GhostLoadingRenderer implements AutoCloseable {
     private final GhostArt ghost = new GhostArt();
     private final MenuPalette palette;
     private final StartupGlass glass;
+    private final StartupProgressBar bar = new StartupProgressBar();
     private final Map<String, Text> textCache = new LinkedHashMap<String, Text>(32, .75F, true);
     private String progressStage = "";
     private float displayedProgress;
@@ -77,7 +78,7 @@ public final class GhostLoadingRenderer implements AutoCloseable {
             if (!compact) text("Loading Minecraft", LABEL, left + icon + gap, titleY + lineHeight(title) + 2, palette.muted);
 
             float y = snap(cardTop + cardHeight - (compact ? 84 : 125), scale);
-            StartupGlass.rounded(left - 14, y - 14, contentWidth + 28, 84, 12, 0xC4000000 | palette.background & 0xFFFFFF);
+            StartupGlass.rounded(left - 14, y - 14, contentWidth + 28, 90, 12, 0xC4000000 | palette.background & 0xFFFFFF);
             GhostStartup.Stage current = stages.isEmpty() ? null : stages.get(stages.size() - 1);
             boolean determinate = current != null && current.steps > 0;
             String titleText = current == null || current.title.isEmpty() ? "Preparing Minecraft" : current.title;
@@ -85,22 +86,21 @@ public final class GhostLoadingRenderer implements AutoCloseable {
             text(fit(titleText, LABEL, contentWidth - measure(percent, LABEL) - 24), LABEL, left, y, FOREGROUND);
             text(percent, LABEL, right - measure(percent, LABEL), y, palette.muted);
 
-            float barY = snap(y + 28, scale), barHeight = 3;
-            StartupGlass.rounded(left, barY, contentWidth, barHeight, 1.5F, 0x42FFFFFF);
+            String message = current == null ? "" : current.message;
+            String count = determinate ? current.step + " of " + current.steps : "";
+            text(fit(message, DETAIL, contentWidth - measure(count, DETAIL) - 20), DETAIL, left, y + 19, palette.muted);
+            text(count, DETAIL, right - measure(count, DETAIL), y + 19, MUTED);
+            float barY = snap(y + 38, scale), barHeight = 9;
+            float dropFloor = cardTop + cardHeight - 6 - barY;
+            float poolSurface = cardTop + cardHeight * .90F - barY;
             if (determinate) {
                 String identity = stages.get(0).title + '\n' + current.title + '\n' + current.steps;
                 float amount = progress(identity, current.ratio(), millis);
-                progressBar(left, barY, contentWidth * amount, barHeight);
+                bar.draw(width, height, scale, left, barY, contentWidth, barHeight, amount, false, dropFloor, poolSurface, millis, palette);
             } else {
                 progressStage = ""; lastFrame = millis;
-                float segment = contentWidth * .16F;
-                float travel = (float)((Math.sin(millis / 650D) + 1) * .5);
-                progressBar(left + (contentWidth - segment) * travel, barY, segment, barHeight);
+                bar.draw(width, height, scale, left, barY, contentWidth, barHeight, 0, true, dropFloor, poolSurface, millis, palette);
             }
-            String message = current == null ? "" : current.message;
-            String count = determinate ? current.step + " of " + current.steps : "";
-            text(fit(message, DETAIL, contentWidth - measure(count, DETAIL) - 20), DETAIL, left, barY + 14, palette.muted);
-            text(count, DETAIL, right - measure(count, DETAIL), barY + 14, MUTED);
 
             if (!compact) text("Minecraft 1.8.9", META, margin, h - 32, MUTED);
         } finally {
@@ -109,14 +109,6 @@ public final class GhostLoadingRenderer implements AutoCloseable {
             if (shaders) GL20.glUseProgram(program);
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, texture); GL13.glActiveTexture(active); GL11.glPopAttrib();
         }
-    }
-
-    private void progressBar(float x, float y, float width, float height) {
-        MenuPalette palette=this.palette.sample(System.currentTimeMillis());
-        if (width <= 0) return;
-        StartupGlass.rounded(x - 3, y - 3, width + 6, height + 6, 4.5F, 0x10000000 | palette.accent & 0xFFFFFF);
-        StartupGlass.rounded(x - 1, y - 1, width + 2, height + 2, 2.5F, 0x24000000 | palette.accent & 0xFFFFFF);
-        StartupGlass.rounded(x, y, width, height, 1.5F, palette.light);
     }
 
     /** A brief catch-up to the measured Forge step; never advances beyond that step. */
@@ -194,5 +186,5 @@ public final class GhostLoadingRenderer implements AutoCloseable {
         @Override public void close() { GL11.glDeleteTextures(texture); }
     }
     private static void color(int c) { GL11.glColor4f((c >> 16 & 255) / 255F, (c >> 8 & 255) / 255F, (c & 255) / 255F, (c >>> 24) / 255F); }
-    @Override public void close() { glass.close(); ghost.close(); for (Text text : textCache.values()) text.close(); textCache.clear(); }
+    @Override public void close() { bar.close(); glass.close(); ghost.close(); for (Text text : textCache.values()) text.close(); textCache.clear(); }
 }

@@ -13,6 +13,21 @@ import static org.junit.Assert.*;
 
 public class GhostAssetsTest {
     @Rule public org.junit.rules.TemporaryFolder temporary = new org.junit.rules.TemporaryFolder();
+    @Test public void aMovingIndicatorReleasesWaxWithoutEndingItsFall() throws Exception {
+        Class<?> type=Class.forName("dev.vibe.core.startup.StartupDrips");
+        java.lang.reflect.Constructor<?> constructor=type.getDeclaredConstructor();constructor.setAccessible(true);Object motion=constructor.newInstance();
+        java.lang.reflect.Method sample=type.getDeclaredMethod("sample",float.class,float.class,float.class,float.class,float.class,float.class);sample.setAccessible(true);
+        java.lang.reflect.Field field=type.getDeclaredField("drops");field.setAccessible(true);
+        for(int time=0;time<=500;time+=50)sample.invoke(motion,time/1000F,544F,9F,0F,272F,81F);
+        float[] values=(float[])field.get(motion);int selected=-1;
+        for(int i=0;i<values.length;i+=4)if(values[i+2]>.4F){selected=i;break;}
+        assertTrue("No visible wax formed",selected>=0);float volume=values[selected+2]*values[selected+3];
+        sample.invoke(motion,.55F,544F,9F,400F,90F,81F);
+        assertTrue("The indicator cancelled its wax",values[selected+2]>.1F);
+        assertTrue("Detaching destroyed the drop's volume",values[selected+2]*values[selected+3]>=volume*.9F);
+        float releasedY=values[selected+1];sample.invoke(motion,1F,544F,9F,400F,90F,81F);
+        assertTrue("The released drop stopped falling",values[selected+1]>releasedY+2);
+    }
 
     @Test public void earlyStartupReadsTheSavedMenuPaletteAndToleratesInvalidPreferences() throws Exception {
         java.nio.file.Path game = temporary.newFolder("early-startup").toPath();

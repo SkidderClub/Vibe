@@ -23,7 +23,12 @@ public final class ProjectileFixture implements AutoCloseable {
         base.mc.playerController=PathTestFixture.allocate(PlayerControllerMP.class);PathTestFixture.set(net.minecraft.client.Minecraft.class,base.mc,"renderViewEntity",self);
         for(int x=-20;x<=20;x++)for(int z=-20;z<=80;z++)block(x,63,z,Blocks.stone.getDefaultState());
     }
-    public Player player(String name,double x,double y,double z)throws Exception{Player p=PathTestFixture.allocate(Player.class);p.name=name;p.duration=20;p.setEntityId(world.loadedEntityList.size()+1);p.worldObj=world;p.width=.6F;p.height=1.8F;p.inventory=new InventoryPlayer(p);p.setPosition(x,y,z);p.prevPosX=p.lastTickPosX=x;p.prevPosY=p.lastTickPosY=y;p.prevPosZ=p.lastTickPosZ=z;p.onGround=true;world.loadedEntityList.add(p);world.playerEntities.add(p);return p;}
+    public Player player(String name,double x,double y,double z)throws Exception{
+        Player p=PathTestFixture.allocate(Player.class);p.name=name;p.duration=20;p.setEntityId(world.loadedEntityList.size()+1);p.worldObj=world;p.width=.6F;p.height=1.8F;p.inventory=new InventoryPlayer(p);p.setPosition(x,y,z);p.prevPosX=p.lastTickPosX=x;p.prevPosY=p.lastTickPosY=y;p.prevPosZ=p.lastTickPosZ=z;p.onGround=true;
+        DataWatcher watcher=new DataWatcher(p);watcher.addObject(6,20F);PathTestFixture.set(Entity.class,p,"dataWatcher",watcher);
+        net.minecraft.entity.ai.attributes.ServersideAttributeMap attributes=new net.minecraft.entity.ai.attributes.ServersideAttributeMap();attributes.registerAttribute(SharedMonsterAttributes.maxHealth).setBaseValue(20);PathTestFixture.set(EntityLivingBase.class,p,"attributeMap",attributes);
+        world.loadedEntityList.add(p);world.playerEntities.add(p);return p;
+    }
     public void block(int x,int y,int z,IBlockState s){world.blocks.put(new BlockPos(x,y,z),s);}
     @Override public void close()throws Exception{base.close();}
     public static class Player extends EntityPlayerSP{
@@ -34,6 +39,8 @@ public final class ProjectileFixture implements AutoCloseable {
         @Override public boolean isUsingItem(){return drawing;}@Override public int getItemInUseDuration(){return duration;}@Override public ItemStack getHeldItem(){return inventory.getCurrentItem();}
         @Override public void addStat(net.minecraft.stats.StatBase stat,int amount){}@Override public void swingItem(){}
         @Override public boolean isSprinting(){return false;}@Override public boolean isSneaking(){return false;}
+        @Override public boolean canBeCollidedWith(){return !isDead;}
+        @Override public float getAbsorptionAmount(){return 0;}
     }
     public static class TestWorld extends WorldClient{
         public Map<BlockPos,IBlockState> blocks;public boolean loaded;public int reads;Scoreboard scoreboard;

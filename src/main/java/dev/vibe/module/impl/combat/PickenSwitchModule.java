@@ -1,6 +1,7 @@
 package dev.vibe.module.impl.combat;
 
 import dev.vibe.Vibe;
+import dev.vibe.inventory.*;
 import dev.vibe.module.Category;
 import dev.vibe.module.Module;
 import dev.vibe.module.impl.world.AutoToolModule;
@@ -21,7 +22,10 @@ import org.lwjgl.input.Keyboard;
  * and return through vanilla's C09 writer before leaving the controller call.
  */
 public final class PickenSwitchModule extends Module {
-    private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Basic", "Basic", "Silent"));
+    public final ItemSwitching switching = new ItemSwitching(this::addSetting,"Basic");
+    private final ModeSetting mode = switching.mode;
+    private HotbarSwitches.Lease slotLease;
+    private boolean preparedWeapon;
     private final ModeSetting priority = addSetting(new ModeSetting("Enchantment Priority", "Both", "Both", "Knockback", "Fire Aspect"));
     private final ModeSetting selection = addSetting(new ModeSetting("Enchanted Item", "Automatic", "Automatic", "Hotbar Slot"));
     private final NumberSetting itemSlot = addSetting(new NumberSetting("Item Slot", 9, 1, 9, 1, () -> selection.is("Hotbar Slot")));
@@ -32,7 +36,7 @@ public final class PickenSwitchModule extends Module {
     private final BooleanSetting respectTargets = addSetting(new BooleanSetting("Respect Targets", true));
     private final BooleanSetting skipBurning = addSetting(new BooleanSetting("Skip Fire On Burning Targets", true));
     private final BooleanSetting requireGround = addSetting(new BooleanSetting("On Ground Only", false));
-    private final ColorSetting silentColor = addSetting(new ColorSetting("Silent Slot Color", 0xFFFFAA55, () -> mode.is("Silent")));
+    private final ColorSetting silentColor = switching.color;
     private final Minecraft mc = Minecraft.getMinecraft();
     private EntityPlayer owner;
     private World ownerWorld;
@@ -48,29 +52,31 @@ public final class PickenSwitchModule extends Module {
     public void tick() {
         tick++;
         if (owner != mc.thePlayer || ownerWorld != mc.theWorld) {
+            if(slotLease!=null)slotLease.close(false,true);slotLease=null;preparedWeapon=false;
             clear(); owner = mc.thePlayer; ownerWorld=mc.theWorld; stableSlot = -1; stableStack = null; stableTicks = 0;
         }
         if (mc.thePlayer == null || mc.theWorld == null || mc.playerController == null) return;
+        if(slotLease!=null&&!slotLease.valid()){slotLease=null;preparedWeapon=false;clear();}
         if (enchantedSlot >= 0) finishAttack();
         if(isEnabled()&&autoWeapon.isEnabled()&&canUseSlots())prepareDamageWeapon();
-        ItemStack stack = mc.thePlayer.getHeldItem();
-        int slot = mc.thePlayer.inventory.currentItem;
+        int slot = HotbarSwitches.selectedSlot();
+        ItemStack stack = mc.thePlayer.inventory.mainInventory[slot];
         if (stableSlot == slot && sameWeapon(stableStack, stack)) stableTicks++;
         else { stableTicks = 0; stableSlot = slot; stableStack = stack==null?null:stack.copy(); }
     }
 
     private boolean canUseSlots(){
         if(mc.currentScreen!=null||mc.thePlayer.isUsingItem()||mc.playerController.getIsHittingBlock()
-                ||AutoBuffModule.ownsUseInput()||AutoToolModule.hasHotbarAction()||dev.vibe.module.impl.meme.HypixelModule.ownsSilentSlot())return false;
-        int visible=mc.thePlayer.inventory.currentItem;
-        return AutoToolModule.serverSlotHook(visible)==visible;
+                ||AutoBuffModule.ownsUseInput()||HotbarSwitches.busy(this,HotbarSwitches.PICKEN)||dev.vibe.module.impl.meme.HypixelModule.ownsSilentSlot())return false;
+        return true;
     }
 
     private void prepareDamageWeapon(){
-        ItemStack held=mc.thePlayer.getHeldItem();
+        ItemStack held=HotbarSwitches.stack();
         if(held==null||(level(held,Enchantment.knockback)==0&&level(held,Enchantment.fireAspect)==0))return;
-        int best=damageWeapon(mc.thePlayer.inventory.mainInventory,mc.thePlayer.inventory.currentItem);
-        if(best!=mc.thePlayer.inventory.currentItem){mc.thePlayer.inventory.currentItem=best;mc.playerController.updateController();}
+        int current=HotbarSwitches.selectedSlot();
+        int best=damageWeapon(mc.thePlayer.inventory.mainInventory,current);
+        if(best!=current){slotLease=HotbarSwitches.acquire(this,switching,best,HotbarSwitches.PICKEN);preparedWeapon=slotLease!=null;}
     }
 
     static int damageWeapon(ItemStack[] hotbar,int held){
@@ -93,8 +99,8 @@ public final class PickenSwitchModule extends Module {
                 || playersOnly.isEnabled() && !(victim instanceof EntityPlayer) || requireGround.isEnabled() && !mc.thePlayer.onGround) return -1;
         TargetsModule filters = Vibe.getInstance().getModuleManager().getModule(TargetsModule.class);
         if (respectTargets.isEnabled() && filters != null && !filters.canTarget(victim)) return -1;
-        int visible = mc.thePlayer.inventory.currentItem;
-        ItemStack weapon = mc.thePlayer.getHeldItem();
+        int visible = HotbarSwitches.selectedSlot();
+        ItemStack weapon = mc.thePlayer.inventory.mainInventory[visible];
         if (visible != stableSlot || !sameWeapon(weapon, stableStack) || weapon == null
                 || !(weapon.getItem() instanceof ItemSword || weapon.getItem() instanceof ItemTool)) return -1;
         int candidate = chooseSlot(mc.thePlayer.inventory.mainInventory, visible, victim.isBurning());
@@ -102,7 +108,8 @@ public final class PickenSwitchModule extends Module {
         originalSlot = visible; enchantedSlot = candidate;
         lastSwitch = tick;
         // This is intentionally immediately before syncCurrentPlayItem, not at click time.
-        if(!mode.is("Silent"))mc.thePlayer.inventory.currentItem = candidate;
+        slotLease=HotbarSwitches.acquire(this,switching,candidate,HotbarSwitches.PICKEN,false);
+        if(slotLease==null||!slotLease.active()){clear();return -1;}
         return visible;
     }
 
@@ -141,17 +148,15 @@ public final class PickenSwitchModule extends Module {
     }
     private void clear() { originalSlot = enchantedSlot = -1; }
     @Override protected void onEnable() { stableTicks = 0; }
-    @Override protected void onDisable() { finishAttack();stableTicks=0; }
+    @Override protected void onDisable() { finishAttack();if(slotLease!=null)slotLease.close(true,mode.is("Silent"));slotLease=null;preparedWeapon=false;stableTicks=0; }
 
     private void finishAttack(){
         if(originalSlot<0)return;
-        int weapon=originalSlot,utility=enchantedSlot;
+        int weapon=originalSlot;
         boolean sameContext=owner==mc.thePlayer&&ownerWorld==mc.theWorld&&mc.thePlayer!=null&&mc.theWorld!=null;
         clear(); // Release the resolver before syncing, otherwise it sends the utility slot again.
         if(!sameContext)return;
-        int current=mc.thePlayer.inventory.currentItem;
-        if(current==utility||current==weapon)mc.thePlayer.inventory.currentItem=weapon;
-        if(mc.playerController!=null)mc.playerController.updateController();
+        if(slotLease!=null){if(preparedWeapon)slotLease.select(weapon);else{slotLease.close();slotLease=null;}}
     }
     private static PickenSwitchModule active() { Vibe vibe = Vibe.getInstance(); return vibe == null || vibe.getModuleManager() == null ? null : vibe.getModuleManager().getModule(PickenSwitchModule.class); }
     public static int beginAttackHook(Object target) { PickenSwitchModule module = active(); return module == null || dev.vibe.module.impl.meme.HypixelModule.ownsSilentSlot() ? -1 : module.beforeAttack(target); }
@@ -164,17 +169,13 @@ public final class PickenSwitchModule extends Module {
         PickenSwitchModule module = active();
         if (module != null) module.finishAttack();
     }
-    public static int serverSlotHook(int vanilla) { PickenSwitchModule module = active(); return module != null && module.hasSilentSlot() ? module.enchantedSlot : vanilla; }
+    public static int serverSlotHook(int vanilla) { return HotbarSwitches.serverSlotHook(vanilla); }
     public static int beginActionHook() {
-        PickenSwitchModule module = active();
-        if (module == null || !module.hasSilentSlot() || module.mc.thePlayer == null) return -1;
-        int old = module.mc.thePlayer.inventory.currentItem;
-        module.mc.thePlayer.inventory.currentItem = module.enchantedSlot;
-        return old;
+        return HotbarSwitches.beginActionHook();
     }
     public static boolean ownsSlot() { PickenSwitchModule module = active(); return module != null && module.enchantedSlot >= 0; }
     /** The override exists only inside this controller attack, never between ticks. */
-    public boolean hasSilentSlot() { return enchantedSlot >= 0 && owner == mc.thePlayer && ownerWorld==mc.theWorld; }
-    public int getSpoofedSlot() { return enchantedSlot; }
+    public boolean hasSilentSlot() { return mode.is("Silent")&&slotLease!=null&&slotLease.active(); }
+    public int getSpoofedSlot() { return slotLease==null?-1:slotLease.slot(); }
     public ColorSetting getSilentColor() { return silentColor; }
 }

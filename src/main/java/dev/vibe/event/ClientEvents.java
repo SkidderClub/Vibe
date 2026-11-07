@@ -353,6 +353,7 @@ public final class ClientEvents {
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
+        dev.vibe.inventory.HotbarSwitches.finishInputHook();
         dev.vibe.easter.EasterEggs.INSTANCE.tick();
         if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().tick();
         dev.vibe.module.impl.client.ChatterModule chatter = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.ChatterModule.class);
@@ -686,14 +687,15 @@ public final class ClientEvents {
     public void onHotbarPost(RenderGameOverlayEvent.Post event) {
         if (FreecamModule.hideHudHook()) return;
         if (event.type != RenderGameOverlayEvent.ElementType.HOTBAR) return;
+        if(dev.vibe.hud.HudManager.replacesHotbar())return;
         ScaledResolution resolution = new ScaledResolution(minecraft);
         int left = resolution.getScaledWidth() / 2 - 91;
         int top = resolution.getScaledHeight() - 22;
-        AutoToolModule autoTool = Vibe.getInstance().getModuleManager().getModule(AutoToolModule.class);
-        if (autoTool != null && autoTool.hasSilentSlot()) {
-            int x = left + autoTool.getSpoofedSlot() * 20;
+        dev.vibe.inventory.HotbarSwitches.Highlight slot=dev.vibe.inventory.HotbarSwitches.highlight();
+        if (slot != null) {
+            int x = left + slot.slot * 20;
             RenderUtils.roundedOutline(x, top, x + 22, top + 22, 2.0F, 1.5F,
-                    autoTool.getSilentColor().getArgb());
+                    slot.color);
         }
     }
 

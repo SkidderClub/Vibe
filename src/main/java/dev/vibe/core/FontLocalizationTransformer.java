@@ -67,6 +67,7 @@ public final class FontLocalizationTransformer implements IClassTransformer, Opc
                 if ("(Ljava/lang/String;FFIZ)I".equals(method.desc)) {
                     insertDrawHook(method, SCRIPT_RENDERER);
                     insertDrawHook(method, CHAT_RENDERER);
+                    insertDrawHook(method, "dev/vibe/hud/NameProtectRenderer");
                 } else if ("(Ljava/lang/String;)I".equals(method.desc)) {
                     insertScriptWidthHook(method);
                 }

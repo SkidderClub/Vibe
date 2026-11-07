@@ -19,7 +19,9 @@ public final class ModuleFeedback {
         if (vibe == null || vibe.getFeedback() == null || !vibe.getFeedback().ready || vibe.getModuleManager() == null
                 || (vibe.getConfig() != null && vibe.getConfig().isLoading())) return;
         dev.vibe.module.impl.client.HudModule hud = vibe.getModuleManager().getModule(dev.vibe.module.impl.client.HudModule.class);
-        if (hud == null || !hud.getHudElements().isSelectedIgnoreCase("notifications")) return;
+        if (hud == null || (!hud.getHudElements().isSelectedIgnoreCase("notifications")
+                && !(hud.isEnabled()&&hud.getHudElements().isSelectedIgnoreCase(dev.vibe.hud.HudManager.DYNAMIC_ISLAND)
+                && hud.island.transforms.isSelectedIgnoreCase("Notification")))) return;
         long now = System.nanoTime() / 1000000L;
         ModuleNotifications queue = vibe.getFeedback().notifications;
         queue.configure(hud.notifications.limit.getInt(), hud.notifications.durationMillis(), now);

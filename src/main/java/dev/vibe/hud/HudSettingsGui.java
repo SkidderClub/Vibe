@@ -43,6 +43,7 @@ public final class HudSettingsGui extends GuiScreen {
             settings.add(hud.getWatermarkOutline());
             settings.add(hud.getWatermarkDetails());
             settings.add(hud.getWatermarkText());
+            settings.addAll(hud.watermark.all);
         } else if (HudManager.ARRAY_LIST.equals(element)) {
             settings.add(hud.getArrayOutline());
             settings.add(hud.getArrayListModules());

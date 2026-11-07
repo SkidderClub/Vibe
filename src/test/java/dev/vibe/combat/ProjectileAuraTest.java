@@ -1,6 +1,8 @@
 package dev.vibe.combat;
 
 import dev.vibe.module.impl.combat.ProjectileAuraModule;
+import dev.vibe.module.impl.combat.KillAuraModule;
+import dev.vibe.module.impl.combat.AIAuraModule;
 import dev.vibe.module.impl.movement.MoveFixModule;
 import dev.vibe.module.impl.world.AutoToolModule;
 import dev.vibe.path.PathTestFixture;
@@ -18,6 +20,101 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ProjectileAuraTest {
+    @Test public void activationDefaultsAndHalfAngleFovHaveTheRequestedLimits() throws Exception {
+        try (Fixture f = new Fixture()) {
+            assertTrue(f.aura.activation.is("Always")); assertTrue(f.aura.rotationSpeed.isVisible());
+            assertEquals(180, f.aura.fov.getDouble(), 0); assertEquals(180, f.aura.fov.getMaximum(), 0);
+            for (String mode : Arrays.asList("Only While Killaura", "Only While AIAura")) {
+                f.aura.activation.setValue(mode); assertFalse(f.aura.rotationSpeed.isVisible()); f.tick(); assertEquals(0, f.uses());
+            }
+            f.aura.activation.setValue("Always");
+            f.target.setPosition(5.5, 64, 5.5); f.target.lastTickPosX = 5.5; f.target.lastTickPosZ = 5.5;
+            f.aura.fov.setValue(44D); f.tick(); assertEquals(0, f.uses());
+            f.aura.fov.setValue(45D); f.tick(); assertEquals(1, f.uses());
+        }
+    }
+    @Test public void fullFovIncludesBehindAndNarrowFovWrapsAcrossTheYawBoundary() throws Exception {
+        try (Fixture f = new Fixture()) {
+            f.target.setPosition(.5, 64, -6.5); f.target.lastTickPosZ = -6.5;
+            f.tick(); assertEquals(1, f.uses());
+            PathTestFixture.set(ProjectileAuraModule.class, f.aura, "nextThrow", 0L);
+            f.self().rotationYaw = 179; f.aura.fov.setValue(3D);
+            double yaw = Math.toRadians(-179);
+            f.target.setPosition(.5 - Math.sin(yaw) * 7, 64, .5 + Math.cos(yaw) * 7);
+            f.target.lastTickPosX = f.target.posX; f.target.lastTickPosZ = f.target.posZ;
+            f.tick(); assertEquals(2, f.uses());
+        }
+    }
+    @Test public void killauraModeUsesItsOwnRotationSpeedAndKeepsItsTargetAtProjectileRange() throws Exception {
+        try (Fixture f = new Fixture()) {
+            KillAuraModule melee = new KillAuraModule(); f.terrain.base.modules.registerDynamic(melee); melee.setEnabled(true);
+            for (dev.vibe.setting.Setting<?> setting : melee.getSettings()) if (setting.getRawName().equals("Rotation Speed")) ((dev.vibe.setting.RangeSetting)setting).setRange(5, 5);
+            f.aura.activation.setValue("Only While Killaura"); f.aura.rotationSpeed.setValue(180D);
+            f.target.setPosition(5.5, 64, 5.5); f.target.lastTickPosX = 5.5; f.target.lastTickPosZ = 5.5;
+            double reach = melee.getReachRadius();
+            f.fix.beginRotationTick(); f.aura.prepare(); melee.tickStart(); f.aura.apply();
+            assertSame(f.target, melee.getTarget()); assertTrue(f.fix.ownsRotation(melee.getId()));
+            assertTrue(Math.abs(f.fix.getRotationYaw()) <= 5.2); assertNotNull(ProjectileAuraModule.rotationAimPoint(melee, f.target));
+            KillAuraModule.prepareInputHook(); assertSame(f.target, melee.getTarget()); assertTrue(f.fix.ownsRotation(melee.getId()));
+            f.walk(); assertEquals(0, f.uses());
+            for (int i = 0; i < 30 && f.uses() == 0; i++) f.tick(melee);
+            assertEquals(1, f.uses()); assertEquals(reach, melee.getReachRadius(), 0);
+            assertTrue(f.fix.ownsRotation(melee.getId())); assertFalse(f.fix.ownsRotation(f.aura.getId()));
+            assertNull(ProjectileAuraModule.rotationAimPoint(melee, f.target));
+            melee.setEnabled(false); PathTestFixture.set(ProjectileAuraModule.class, f.aura, "nextThrow", 0L);
+            f.tick(); assertEquals(1, f.uses());
+        }
+    }
+    @Test public void aiAuraModeUsesItsLearnedRotationAndThePredictedAimpoint() throws Exception {
+        try (Fixture f = new Fixture()) {
+            AIAuraModule ai = trainedAI(f);
+            f.aura.activation.setValue("Only While Killaura"); f.tick(ai); assertEquals(0, f.uses());
+            f.aura.activation.setValue("Only While AIAura");
+            Vec3[] forecast = ArrowAimSolver.forecast(f.terrain.world, f.target, true, 40);
+            AxisAlignedBB box = f.target.getEntityBoundingBox();
+            ProjectileAimSolver.Shot solution = ProjectileAimSolver.solve(f.self().getPositionEyes(1),
+                    new Vec3((box.minX + box.maxX) * .5, box.minY + (box.maxY - box.minY) * .55, (box.minZ + box.maxZ) * .5), forecast, ProjectileAimSolver.Kind.THROWABLE);
+            assertNotNull(solution); f.fix.discardOwnedState(ai.getId()); f.self().rotationPitch = solution.pitch;
+            PathTestFixture.set(KillAuraModule.class, ai, "rotationInitialized", false);
+            f.fix.beginRotationTick(); f.aura.prepare(); ai.tickStart();
+            Vec3 aim = ProjectileAuraModule.rotationAimPoint(ai, f.target); assertNotNull(aim);
+            assertSame(f.target, ai.getTarget()); assertTrue(f.fix.ownsRotation(ai.getId()));
+            float yaw = f.fix.getRotationYaw(), pitch = f.fix.getRotationPitch(); f.aura.apply();
+            assertEquals(yaw, f.fix.getRotationYaw(), 0); assertEquals(pitch, f.fix.getRotationPitch(), 0);
+            java.lang.reflect.Field brainField = AIAuraModule.class.getDeclaredField("brain"); brainField.setAccessible(true);
+            dev.vibe.aiaura.AuraBrain brain = (dev.vibe.aiaura.AuraBrain)brainField.get(ai);
+            double expectedPitch = -Math.toDegrees(Math.atan2(aim.yCoord - f.self().getPositionEyes(1).yCoord,
+                    Math.hypot(aim.xCoord - f.self().posX, aim.zCoord - f.self().posZ)));
+            assertEquals((expectedPitch - solution.pitch) / 90, brain.memory.history[1], .00001);
+            KillAuraModule.prepareInputHook(); assertSame(f.target, ai.getTarget()); f.walk(); assertEquals(1, f.uses());
+        }
+    }
+    private static AIAuraModule trainedAI(Fixture f) throws Exception {
+        AIAuraModule ai = new AIAuraModule();
+        dev.vibe.aiaura.AuraLearning learning = PathTestFixture.allocate(dev.vibe.aiaura.AuraLearning.class);
+        dev.vibe.aiaura.TrainedAura model = dev.vibe.aiaura.AuraFixtures.policy();
+        model.minRotationDelay = model.maxRotationDelay = 0; dev.vibe.aiaura.AuraFixtures.bias(model, 0, 0);
+        PathTestFixture.set(dev.vibe.aiaura.AuraLearning.class, learning, "model", model);
+        PathTestFixture.set(AIAuraModule.class, ai, "learning", learning);
+        f.terrain.base.mc.displayWidth = 960; f.terrain.base.mc.displayHeight = 600; f.terrain.base.mc.gameSettings.fovSetting = 70;
+        f.terrain.base.modules.registerDynamic(ai); ai.setEnabled(true); return ai;
+    }
+    @Test public void linkedRodReelsThroughItsAuraAndDisablingThatAuraReleasesTheSlot() throws Exception {
+        try (Fixture f = new Fixture()) {
+            KillAuraModule melee = new KillAuraModule(); f.terrain.base.modules.registerDynamic(melee); melee.setEnabled(true);
+            f.aura.activation.setValue("Only While Killaura"); f.aura.modes.setValue(Collections.singleton("Rod"));
+            f.self().inventory.mainInventory[6] = new ItemStack(Items.fishing_rod);
+            for (int i = 0; i < 20 && f.uses() == 0; i++) f.tick(melee);
+            assertEquals(1, f.uses()); assertEquals(6, f.self().inventory.currentItem);
+            f.self().fishEntity = new EntityFishHook(f.terrain.world, 0, 65, 4, f.self());
+            f.self().fishEntity.caughtEntity = f.target; f.tick(melee);
+            assertEquals(2, f.uses()); assertEquals(0, f.self().inventory.currentItem); assertFalse(AutoToolModule.hasHotbarAction());
+            f.self().fishEntity = null; PathTestFixture.set(ProjectileAuraModule.class, f.aura, "nextThrow", 0L);
+            f.tick(melee); assertEquals(3, f.uses());
+            melee.setEnabled(false); f.tick();
+            assertEquals(0, f.self().inventory.currentItem); assertFalse(AutoToolModule.hasHotbarAction()); assertEquals(3, f.uses());
+        }
+    }
     @Test public void realWalkingRotationPrecedesNativeSlotAndUsePacketsAndReturnsToWeapon() throws Exception {
         try (Fixture f = new Fixture()) {
             f.aura.modes.setValue(Collections.singleton("Snowball"));
@@ -168,7 +265,8 @@ public class ProjectileAuraTest {
             aura.rotationSpeed.setValue(180D); aura.setEnabled(true); walking.setAccessible(true);
         }
         ProjectileFixture.Player self() { return terrain.self; }
-        void tick() throws Exception { fix.beginRotationTick(); aura.prepare(); aura.apply(); walk(); }
+        void tick() throws Exception { tick(null); }
+        void tick(KillAuraModule controller) throws Exception { fix.beginRotationTick(); aura.prepare(); if (controller != null) controller.tickStart(); aura.apply(); walk(); }
         void walk() throws Exception {
             MoveFixModule.beginPacketRotationHook(self()); walking.invoke(self()); MoveFixModule.endPacketRotationHook(self());
         }

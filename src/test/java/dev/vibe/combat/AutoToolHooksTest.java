@@ -30,15 +30,17 @@ public class AutoToolHooksTest implements Opcodes {
         minecraft = allocate(Minecraft.class); set(Minecraft.class, null, "theMinecraft", minecraft);
         minecraft.thePlayer = allocate(EntityPlayerSP.class);
         minecraft.thePlayer.inventory = new InventoryPlayer(minecraft.thePlayer);
+        minecraft.theWorld=allocate(net.minecraft.client.multiplayer.WorldClient.class);minecraft.thePlayer.worldObj=minecraft.theWorld;
         visible = allocate(ItemStack.class); tool = allocate(ItemStack.class);
         minecraft.thePlayer.inventory.mainInventory[0] = visible;
         minecraft.thePlayer.inventory.mainInventory[4] = tool;
         AutoToolModule autoTool = new AutoToolModule();
         set(Module.class, autoTool, "enabled", true);
         for (dev.vibe.setting.Setting<?> setting : autoTool.getSettings())
-            if (setting.getRawName().equals("Mode")) ((dev.vibe.setting.ModeSetting)setting).setValue("Silent");
+            if (setting.getRawName().equals("Item Switching")) ((dev.vibe.setting.ModeSetting)setting).setValue("Silent");
         set(AutoToolModule.class, autoTool, "originalSlot", 0);
         set(AutoToolModule.class, autoTool, "spoofedSlot", 4);
+        dev.vibe.inventory.HotbarSwitches.acquire(autoTool,autoTool.switching,4,dev.vibe.inventory.HotbarSwitches.TOOL,false);
         ModuleManager modules = allocate(ModuleManager.class);
         set(ModuleManager.class, modules, "modules", new ArrayList<Module>(Arrays.asList(autoTool)));
         Vibe vibe = new Vibe(); set(Vibe.class,vibe,"moduleManager",modules); set(Vibe.class,null,"instance",vibe);

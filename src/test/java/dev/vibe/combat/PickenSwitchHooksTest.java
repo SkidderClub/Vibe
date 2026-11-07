@@ -122,7 +122,7 @@ public class PickenSwitchHooksTest implements Opcodes {
     @Test public void everyHitCanSwitchAndBothModesRestoreBeforeTheControllerReturns()throws Exception{
         warm();
         for(String mode:new String[]{"Basic","Silent"}){
-            for(dev.vibe.setting.Setting<?> setting:module.getSettings())if(setting.getRawName().equals("Mode"))((dev.vibe.setting.ModeSetting)setting).setValue(mode);
+            for(dev.vibe.setting.Setting<?> setting:module.getSettings())if(setting.getRawName().equals("Item Switching"))((dev.vibe.setting.ModeSetting)setting).setValue(mode);
             calls.clear();hit();hit();
             assertEquals(Arrays.asList("slot:4","attack:4","slot:0","slot:4","attack:4","slot:0"),calls);
             assertEquals(0,server);assertEquals(0,mc.thePlayer.inventory.currentItem);assertFalse(PickenSwitchModule.ownsSlot());
@@ -156,15 +156,16 @@ public class PickenSwitchHooksTest implements Opcodes {
     private void installSilentMurder(boolean withAuto) throws Exception {
         dev.vibe.module.impl.meme.HypixelModule murder=new dev.vibe.module.impl.meme.HypixelModule();
         murder.getMurderWeapons().setValue("stick");
-        for(dev.vibe.setting.Setting<?> s:murder.getSettings())if(s.getRawName().equals("Silent murderer"))((dev.vibe.setting.BooleanSetting)s).setEnabled(true);
+        for(dev.vibe.setting.Setting<?> s:murder.getSettings())if(s.getRawName().equals("Auto Weapon"))((dev.vibe.setting.BooleanSetting)s).setEnabled(true);
         set(Module.class,murder,"enabled",true);set(murder.getClass(),murder,"observedWorld",mc.theWorld);set(murder.getClass(),murder,"murderRoundActive",true);
         mc.thePlayer.inventory.mainInventory[0]=null;
         mc.thePlayer.inventory.mainInventory[7]=new ItemStack(net.minecraft.init.Items.stick);
         List<Module> modules=new ArrayList<Module>(Arrays.asList(module,murder));
         if(withAuto) {
             dev.vibe.module.impl.world.AutoToolModule auto=new dev.vibe.module.impl.world.AutoToolModule();
-            for(dev.vibe.setting.Setting<?> s:auto.getSettings())if(s.getRawName().equals("Mode"))((dev.vibe.setting.ModeSetting)s).setValue("Silent");
+            for(dev.vibe.setting.Setting<?> s:auto.getSettings())if(s.getRawName().equals("Item Switching"))((dev.vibe.setting.ModeSetting)s).setValue("Silent");
             set(Module.class,auto,"enabled",true);set(auto.getClass(),auto,"originalSlot",0);set(auto.getClass(),auto,"spoofedSlot",4);modules.add(auto);
+            dev.vibe.inventory.HotbarSwitches.acquire(auto,auto.switching,4,dev.vibe.inventory.HotbarSwitches.TOOL,false);
         }
         set(ModuleManager.class,Vibe.getInstance().getModuleManager(),"modules",modules);
     }

@@ -55,9 +55,11 @@ public final class AutomationFixture implements AutoCloseable {
         @Override public net.minecraft.entity.item.EntityItem dropPlayerItemWithRandomChoice(net.minecraft.item.ItemStack stack,boolean random){droppedStacks.add(stack.copy());return null;}
     }
     public static class Queue extends NetHandlerPlayClient {
+        private static final net.minecraft.network.NetworkManager NETWORK=new net.minecraft.network.NetworkManager(net.minecraft.network.EnumPacketDirection.CLIENTBOUND);
         public List<Packet<?>> packets;
         private Queue(){super(null,null,null,null);}
         @Override public void addToSendQueue(Packet packet){packets.add(packet);}
+        @Override public net.minecraft.network.NetworkManager getNetworkManager(){return NETWORK;}
     }
     public static class Client extends Minecraft {
         private Client(){super(null);}

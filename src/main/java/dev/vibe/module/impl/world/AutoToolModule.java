@@ -1,6 +1,7 @@
 package dev.vibe.module.impl.world;
 
 import dev.vibe.module.Category;
+import dev.vibe.inventory.*;
 import dev.vibe.module.Module;
 import dev.vibe.module.impl.combat.PickenSwitchModule;
 import dev.vibe.setting.BooleanSetting;
@@ -31,7 +32,9 @@ public final class AutoToolModule extends Module {
 
     private final MultiSelectSetting types = addSetting(new MultiSelectSetting("Types",
             Arrays.asList("Weapon", "Tools"), Arrays.asList("Weapon", "Tools")));
-    private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Basic", "Basic", "Silent"));
+    public final ItemSwitching switching = new ItemSwitching(this::addSetting, "Basic");
+    private final ModeSetting mode = switching.mode;
+    private HotbarSwitches.Lease lease;
     public final dev.vibe.setting.NumberSetting durabilityReserve=addSetting(new dev.vibe.setting.NumberSetting("Durability Reserve",0,0,500,1));
     private final RangeSetting startDelay = addSetting(new RangeSetting("Start Delay (ms)", 40.0D, 95.0D,
             0.0D, 1000.0D, 5.0D));
@@ -39,8 +42,7 @@ public final class AutoToolModule extends Module {
             () -> mode.is("Basic")));
     private final RangeSetting switchBackDelay = addSetting(new RangeSetting("Switch Back Delay (ms)", 80.0D, 160.0D,
             0.0D, 2000.0D, 5.0D, () -> mode.is("Silent") || switchBack.isEnabled()));
-    private final ColorSetting silentColor = addSetting(new ColorSetting("Silent Slot Color", 0xFF2DE2C2,
-            () -> mode.is("Silent")));
+    private final ColorSetting silentColor = switching.color;
 
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final Random random = new Random();
@@ -51,7 +53,7 @@ public final class AutoToolModule extends Module {
     private int wantedSlot = -1;
     private long waitStart, waitBack;
     private net.minecraft.entity.player.EntityPlayer owner;
-    private static HotbarAction instantAction;
+
 
     public AutoToolModule() {
         super("AutoTool", "Select the best hotbar tool for the current vanilla action", Category.WORLD, Keyboard.KEY_NONE);
@@ -59,7 +61,8 @@ public final class AutoToolModule extends Module {
 
     /** Runs at tick start before Minecraft consumes a held attack input. */
     public void tick() {
-        if (currentHotbarAction() != null) return;
+        if (HotbarSwitches.busy(this, HotbarSwitches.PICKEN)) return;
+        if(lease!=null&&!lease.valid()){lease=null;originalSlot=spoofedSlot=wantedSlot=-1;}
         if(PickenSwitchModule.ownsSlot())return;
         if (owner != minecraft.thePlayer) {
             originalSlot = spoofedSlot = wantedSlot = -1;
@@ -130,15 +133,14 @@ public final class AutoToolModule extends Module {
         int best = safeCurrent?visible:-1;
         net.minecraft.util.BlockPos pos = minecraft.objectMouseOver.getBlockPos();
         float strength = safeCurrent?block.getPlayerRelativeBlockHardness(minecraft.thePlayer, minecraft.theWorld, pos):-1;
-        try {
-            for (int slot = 0; slot < 9; slot++) {
-                ItemStack stack = minecraft.thePlayer.inventory.mainInventory[slot];
-                if (stack == null || stack.stackSize <= 0||!usable(stack)) continue;
-                minecraft.thePlayer.inventory.currentItem = slot;
-                float candidate = block.getPlayerRelativeBlockHardness(minecraft.thePlayer, minecraft.theWorld, pos);
-                if (candidate > strength + .000001F) { strength = candidate; best = slot; }
-            }
-        } finally { minecraft.thePlayer.inventory.currentItem = visible; }
+        for (int slot = 0; slot < 9; slot++) {
+            ItemStack stack = minecraft.thePlayer.inventory.mainInventory[slot];
+            if (stack == null || stack.stackSize <= 0 || !usable(stack)) continue;
+            final int candidateSlot = slot;
+            float candidate = HotbarSwitches.evaluate(candidateSlot,
+                    () -> block.getPlayerRelativeBlockHardness(minecraft.thePlayer, minecraft.theWorld, pos));
+            if (candidate > strength + .000001F) { strength = candidate; best = slot; }
+        }
         return best;
     }
 
@@ -146,7 +148,7 @@ public final class AutoToolModule extends Module {
         return bestHotbarWeaponSlot(minecraft.thePlayer.inventory, this::usable);
     }
     public boolean usable(ItemStack stack){return stack!=null&&(durabilityReserve.getInt()==0||!stack.isItemStackDamageable()||stack.getMaxDamage()-stack.getItemDamage()>durabilityReserve.getInt());}
-    public static boolean hasHotbarAction(){return currentHotbarAction()!=null;}
+    public static boolean hasHotbarAction(){return HotbarSwitches.hasAction();}
 
     /** Shared weapon scoring for AutoTool and immediate combat actions. */
     public static int bestHotbarWeaponSlot(InventoryPlayer inventory, Predicate<ItemStack> accepted) {
@@ -177,42 +179,15 @@ public final class AutoToolModule extends Module {
         if (originalSlot < 0) originalSlot = minecraft.thePlayer.inventory.currentItem;
         lastAction = System.currentTimeMillis();
         waitBack = pick(switchBackDelay);
-        if (mode.is("Basic")) {
-            minecraft.thePlayer.inventory.currentItem = slot;
-            minecraft.playerController.updateController();
-            spoofedSlot = -1;
-            return;
-        }
-        // Keep the client-selected slot unchanged. The C09 packet is the
-        // server-side selection used by block interaction packets, while the
-        // hotbar renderer continues to show the player's real selection.
-        if (spoofedSlot != slot) {
-            spoofedSlot = slot;
-            minecraft.playerController.updateController();
-        }
+        lease=HotbarSwitches.acquire(this,switching,slot,HotbarSwitches.TOOL);
+        spoofedSlot=mode.is("Silent")?slot:-1;
     }
 
     private void reset(boolean restore) {
-        wantedSince = 0L;
-        if (!restore || minecraft.thePlayer == null || originalSlot < 0) {
-            if (restore) {
-                originalSlot = -1;
-                spoofedSlot = -1;
-            }
-            return;
-        }
-        if (spoofedSlot >= 0) {
-            spoofedSlot = -1;
-            minecraft.playerController.updateController();
-        } else if (mode.is("Basic") && switchBack.isEnabled()) {
-            minecraft.thePlayer.inventory.currentItem = originalSlot;
-            minecraft.playerController.updateController();
-        }
-        originalSlot = -1;
-        spoofedSlot = -1;
-        lastAction = 0L;
+        wantedSince=0L;
+        if(lease!=null){lease.close(true,restore&&(mode.is("Silent")||switchBack.isEnabled()));lease=null;}
+        originalSlot=spoofedSlot=wantedSlot=-1;lastAction=0L;
     }
-
     private boolean isBreakingBlock() {
         try { return minecraft.playerController != null && minecraft.playerController.getIsHittingBlock(); }
         catch (Throwable ignored) { return false; }
@@ -235,92 +210,25 @@ public final class AutoToolModule extends Module {
         return min + (max <= min ? 0 : random.nextInt(max - min + 1));
     }
 
-    public boolean hasSilentSlot() { return isEnabled() && mode.is("Silent") && spoofedSlot >= 0; }
-    private static AutoToolModule active() {
-        Vibe vibe = Vibe.getInstance();
-        return vibe == null || vibe.getModuleManager() == null ? null : vibe.getModuleManager().getModule(AutoToolModule.class);
-    }
-    public static int serverSlotHook(int vanilla) {
-        if (dev.vibe.module.impl.combat.AutoBuffModule.ownsUseInput()) return vanilla;
-        HotbarAction instant = currentHotbarAction();
-        if (instant != null) return instant.slot;
-        AutoToolModule module = active();
-        return PickenSwitchModule.serverSlotHook(module != null && module.hasSilentSlot() ? module.spoofedSlot
-                : ScaffoldModule.serverSlotHook(vanilla));
-    }
-    public static int beginActionHook() {
-        if (dev.vibe.module.impl.combat.AutoBuffModule.ownsUseInput()) return -1;
-        HotbarAction instant = currentHotbarAction();
-        if (instant != null) {
-            int visible = instant.minecraft.thePlayer.inventory.currentItem;
-            instant.reselect(); return visible;
-        }
-        int picken=PickenSwitchModule.beginActionHook();if(picken>=0)return picken;
-        AutoToolModule module = active();
-        if (module == null || !module.hasSilentSlot() || module.minecraft.thePlayer == null) return ScaffoldModule.beginActionHook();
-        int visible = module.minecraft.thePlayer.inventory.currentItem;
-        module.minecraft.thePlayer.inventory.currentItem = module.spoofedSlot;
-        return visible;
-    }
-    public static void endActionHook(int visible) {
-        Minecraft mc = Minecraft.getMinecraft();
-        if (visible >= 0 && mc.thePlayer != null) mc.thePlayer.inventory.currentItem = visible;
-    }
-
-    /** Uses vanilla's same selected-slot cache/C09 writer as AutoTool, without a timer. */
+    public boolean hasSilentSlot() { HotbarSwitches.Lease active=HotbarSwitches.owned(this);return active!=null&&active.active()&&active.silent(); }
+    public static int serverSlotHook(int vanilla) { return HotbarSwitches.serverSlotHook(vanilla); }
+    public static int beginActionHook() { return HotbarSwitches.beginActionHook(); }
+    public static void endActionHook(int token) { HotbarSwitches.endActionHook(token); }
+    /** Compatibility facade; ownership and synchronization live in HotbarSwitches. */
     public static HotbarAction beginHotbarAction(int slot) {
-        Minecraft mc = Minecraft.getMinecraft();
-        if (mc == null || mc.thePlayer == null || mc.theWorld == null || mc.playerController == null || mc.thePlayer.worldObj != mc.theWorld
-                || slot < 0 || slot >= 9 || currentHotbarAction() != null) return null;
-        ItemStack stack = mc.thePlayer.inventory.mainInventory[slot];
-        if (stack == null || stack.stackSize <= 0) return null;
-        HotbarAction action = new HotbarAction(mc, slot);
-        instantAction = action; action.reselect();
-        try { mc.playerController.updateController(); return action; }
-        catch (RuntimeException | Error failure) {
-            try { action.close(); } catch (RuntimeException | Error restore) { failure.addSuppressed(restore); }
-            throw failure;
-        }
+        ItemSwitching options=new ItemSwitching(ignored->{},"Basic");
+        HotbarSwitches.Lease action=HotbarSwitches.acquire(new Object(),options,slot,HotbarSwitches.PROJECTILE);
+        if(action==null)return null;
+        if(!action.active()){action.close(false,true);return null;}
+        return new HotbarAction(action);
     }
-
-    private static HotbarAction currentHotbarAction() {
-        HotbarAction action = instantAction;
-        if (action != null && !action.matchesContext()) instantAction = action = null;
-        return action;
-    }
-
     public static final class HotbarAction implements AutoCloseable {
-        private final Minecraft minecraft;
-        private final net.minecraft.client.entity.EntityPlayerSP player;
-        private final net.minecraft.world.World world;
-        private final int visible, slot;
-        private boolean closed;
-        private HotbarAction(Minecraft minecraft, int slot) {
-            this.minecraft = minecraft; this.player = minecraft.thePlayer; this.world = minecraft.theWorld;
-            this.visible = player.inventory.currentItem; this.slot = slot;
-        }
-        private boolean matchesContext() {
-            return !closed && Minecraft.getMinecraft() == minecraft && minecraft.thePlayer == player
-                    && minecraft.theWorld == world && player.worldObj == world;
-        }
-        public void reselect() { if (matchesContext()) player.inventory.currentItem = slot; }
-        @Override public void close() {
-            finish(true);
-        }
-        /** Release ownership after a manual slot change without undoing that selection. */
-        public void closePreservingSelection() {
-            finish(false);
-        }
-        private void finish(boolean restoreSelection) {
-            if (closed) return;
-            boolean restore = matchesContext(); closed = true;
-            if (instantAction == this) instantAction = null;
-            if (restore) {
-                if (restoreSelection) player.inventory.currentItem = visible;
-                if (minecraft.playerController != null) minecraft.playerController.updateController();
-            }
-        }
+        private final HotbarSwitches.Lease action;
+        private HotbarAction(HotbarSwitches.Lease action){this.action=action;}
+        public void reselect(){action.reselect();}
+        @Override public void close(){action.close();}
+        public void closePreservingSelection(){action.closePreservingSelection();}
     }
-    public int getSpoofedSlot() { return spoofedSlot; }
+    public int getSpoofedSlot() { HotbarSwitches.Lease active=HotbarSwitches.owned(this);return active==null?-1:active.slot(); }
     public ColorSetting getSilentColor() { return silentColor; }
 }

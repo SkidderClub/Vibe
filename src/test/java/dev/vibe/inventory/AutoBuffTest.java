@@ -95,13 +95,13 @@ public class AutoBuffTest {
         try(AutomationFixture f=new AutomationFixture()) {
             AutoBuffModule m=new AutoBuffModule();dev.vibe.module.impl.world.AutoToolModule tool=new dev.vibe.module.impl.world.AutoToolModule();
             f.base.modules.registerDynamic(tool);f.base.modules.registerDynamic(m);tool.setEnabled(true);
-            for(dev.vibe.setting.Setting<?> s:tool.getSettings())if(s instanceof dev.vibe.setting.ModeSetting && s.getRawName().equals("Mode"))((dev.vibe.setting.ModeSetting)s).setValue("Silent");
-            dev.vibe.path.PathTestFixture.set(dev.vibe.module.impl.world.AutoToolModule.class,tool,"spoofedSlot",2);
+            tool.switching.mode.setValue("Silent");
+            HotbarSwitches.acquire(tool,tool.switching,2,HotbarSwitches.TOOL,false);
             assertTrue(tool.hasSilentSlot());
             m.refill.setEnabled(false);m.delays.get(Kind.SOUP).setRange(0,0);
             f.health(10);f.player.inventory.setInventorySlotContents(8,new ItemStack(Items.mushroom_stew));m.setEnabled(true);m.tick(1000);m.tick(1000);
             assertEquals(8,dev.vibe.module.impl.world.AutoToolModule.serverSlotHook(8));
-            assertEquals(-1,dev.vibe.module.impl.world.AutoToolModule.beginActionHook());
+            int scope=dev.vibe.module.impl.world.AutoToolModule.beginActionHook();assertTrue(scope>0);dev.vibe.module.impl.world.AutoToolModule.endActionHook(scope);
             m.setEnabled(false);assertEquals(2,dev.vibe.module.impl.world.AutoToolModule.serverSlotHook(8));tool.setEnabled(false);
         }
     }

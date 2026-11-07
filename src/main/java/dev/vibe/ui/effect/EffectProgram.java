@@ -2,6 +2,7 @@ package dev.vibe.ui.effect;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.FloatBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import org.lwjgl.opengl.GL11;
@@ -58,5 +59,6 @@ public final class EffectProgram implements AutoCloseable {
     public void vec2(String name, float x, float y) { GL20.glUniform2f(location(name), x, y); }
     public void vec3(String name, float x, float y, float z) { GL20.glUniform3f(location(name), x, y, z); }
     public void vec4(String name, float x, float y, float z, float w) { GL20.glUniform4f(location(name), x, y, z, w); }
+    public void vec4Array(String name, FloatBuffer values) { GL20.glUniform4(location(name), values); }
     public void close() { if (program != 0) GL20.glDeleteProgram(program); program = 0; uniforms.clear(); }
 }

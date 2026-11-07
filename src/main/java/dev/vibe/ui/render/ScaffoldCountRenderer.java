@@ -25,6 +25,7 @@ public final class ScaffoldCountRenderer {
     private float barWidth;
 
     public void render() {
+        if(dev.vibe.hud.HudManager.replaces(dev.vibe.hud.HudManager.BLOCK_COUNTER))return;
         ScaffoldModule scaffold = Vibe.getInstance() == null || Vibe.getInstance().getModuleManager() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
         if (scaffold == null || !scaffold.shouldRenderCount()) {

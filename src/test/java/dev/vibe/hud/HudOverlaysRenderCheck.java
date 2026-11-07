@@ -26,6 +26,7 @@ public final class HudOverlaysRenderCheck {
             manager.getElement(HudManager.HOTBAR).setTheme(theme);frame(1280,720);for(String id:ids)manager.drawPreview(manager.getElement(id),mc.fontRendererObj);
             save(output.resolve("overlays-hotbar-"+theme.toLowerCase(java.util.Locale.ROOT)+".png"),1280,720);
         }
+        hotbarSwitchHighlight(mc,manager,hud,output);
         manager.getElement(HudManager.HOTBAR).setTheme("Vibe");
         for(String mode:hud.customHealth.mode.getModes()){
             hud.customHealth.mode.setValue(mode);frame(1280,720);for(String id:ids)manager.drawPreview(manager.getElement(id),mc.fontRendererObj);
@@ -67,8 +68,49 @@ public final class HudOverlaysRenderCheck {
         editorMovementAndThemes(mc,manager,hud,output);
         dev.vibe.ui.effect.LavaLampRenderCheck.verify(mc,output);
         lavaWidgets(mc,manager,hud,output);
+        HudAdditionsRenderCheck.verify(mc,manager,hud,output);
         check(GL11.glGetError()==0,"Custom HUD overlays left a GL error");
         System.out.println("Custom HUD pixels passed: six hotbar themes, three health modes, transparent analog clock, custom Tab, chat side/bottom resizing, native item previews and Lavalamp widgets.");
+    }
+    private static void hotbarSwitchHighlight(Minecraft mc,HudManager manager,HudModule hud,Path output)throws Exception{
+        net.minecraft.client.entity.EntityPlayerSP oldPlayer=mc.thePlayer;
+        net.minecraft.client.multiplayer.WorldClient oldWorld=mc.theWorld;
+        net.minecraft.client.multiplayer.PlayerControllerMP oldController=mc.playerController;
+        HudManager.HudElement hotbar=manager.getElement(HudManager.HOTBAR);
+        try{
+            mc.theWorld=dev.vibe.path.PathTestFixture.allocate(net.minecraft.client.multiplayer.WorldClient.class);
+            mc.thePlayer=dev.vibe.path.PathTestFixture.allocate(dev.vibe.inventory.AutomationFixture.Player.class);
+            mc.thePlayer.worldObj=mc.theWorld;mc.thePlayer.inventory=new net.minecraft.entity.player.InventoryPlayer(mc.thePlayer);mc.playerController=null;
+            dev.vibe.inventory.ItemSwitching options=new dev.vibe.inventory.ItemSwitching(setting-> {},"Silent");
+            options.color.setRgba(0,255,136,255);
+            dev.vibe.inventory.HotbarSwitches.Lease lease=dev.vibe.inventory.HotbarSwitches.acquire(new Object(),options,7,dev.vibe.inventory.HotbarSwitches.BUFF,false);
+            for(String theme:new String[]{"Minecraft","Fortnite","Skeet","Vibe","LiquidGlass","Lavalamp"}){
+                hotbar.setTheme(theme);hotbar.setScale(1);frame(1280,720);manager.drawPreview(hotbar,mc.fontRendererObj);
+                save(output.resolve("hotbar-silent-highlight-"+theme.toLowerCase(java.util.Locale.ROOT)+".png"),1280,720);
+                check(mc.thePlayer.inventory.currentItem==0,"Rendering changed the visible silent slot");
+                check(dev.vibe.inventory.HotbarSwitches.highlight().slot==7,"Custom hotbar lost shared silent selection");
+            }
+            hotbar.setTheme("Vibe");hotbar.setScale(1.25F);frame(1280,720);manager.drawPreview(hotbar,mc.fontRendererObj);
+            save(output.resolve("hotbar-silent-highlight-scaled.png"),1280,720);
+            dev.vibe.event.ClientEvents events=dev.vibe.path.PathTestFixture.allocate(dev.vibe.event.ClientEvents.class);
+            dev.vibe.path.PathTestFixture.set(dev.vibe.event.ClientEvents.class,events,"minecraft",mc);
+            net.minecraftforge.client.event.RenderGameOverlayEvent base=new net.minecraftforge.client.event.RenderGameOverlayEvent(0,new ScaledResolution(mc));
+            boolean custom=hud.getHudElements().isSelected(HudManager.HOTBAR);
+            if(custom)hud.getHudElements().toggle(HudManager.HOTBAR);
+            try{
+                frame(1280,720);events.onHotbarPost(new net.minecraftforge.client.event.RenderGameOverlayEvent.Post(base,net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType.HOTBAR));
+                save(output.resolve("hotbar-vanilla-silent-highlight.png"),1280,720);
+                int tint=0;
+                for(int y=699;y<719;y++)for(int x=689;x<713;x++){
+                    int rgb=pixel(x,y,720);if((rgb>>8&255)>150&&(rgb>>16&255)<70)tint++;
+                }
+                check(tint>12,"Vanilla hotbar did not draw the selected server slot highlight");
+            }finally{if(custom)hud.getHudElements().toggle(HudManager.HOTBAR);}
+            lease.close(false,true);
+        }finally{
+            dev.vibe.inventory.HotbarSwitches.reset();hotbar.setScale(1);
+            mc.thePlayer=oldPlayer;mc.theWorld=oldWorld;mc.playerController=oldController;
+        }
     }
     private static void lavaWidgets(Minecraft mc,HudManager manager,HudModule hud,Path output)throws Exception{
         dev.vibe.path.PathTestFixture.set(dev.vibe.Vibe.class,dev.vibe.Vibe.getInstance(),"hudManager",manager);

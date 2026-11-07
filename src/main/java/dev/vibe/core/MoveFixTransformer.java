@@ -96,7 +96,8 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
             }, 0);
             byte[] result = writer.toByteArray();
             return target == 8 ? dev.vibe.core.ToolActionTransformer.transform(result)
-                    : target == 5 ? dev.vibe.core.SilentMurderClickTransformer.transform(result) : result;
+                    : target == 5 ? HotbarLogicTransformer.transform(dev.vibe.core.SilentMurderClickTransformer.transform(result),false)
+                    : target == 3 ? HotbarLogicTransformer.transform(result,true) : result;
         } catch (Throwable ignored) {
             // A failed optional hook must never stop Forge from loading Vibe.
             return bytes;
@@ -173,6 +174,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
             if (!prepared && opcode == Opcodes.INVOKEVIRTUAL && "()Z".equals(descriptor)
                     && (PLAYER.equals(owner) || "bew".equals(owner))
                     && ("isUsingItem".equals(name) || "func_71039_bw".equals(name) || "bS".equals(name))) {
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/inventory/HotbarSwitches", "beginInputHook", "()V", false);
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, AURA_HOOK, "prepareInputHook", "()V", false);
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, BED_AURA_HOOK, "prepareInputHook", "()V", false);
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/module/impl/movement/AntiAFKModule", "prepareClickHook", "()V", false);
@@ -185,6 +187,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
                     && ("updateRenderer".equals(name) || "func_78464_a".equals(name) || "e".equals(name))) {
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, SCAFFOLD_HOOK, "finishInputHook", "()V", false);
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, BED_AURA_HOOK, "finishInputHook", "()V", false);
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/inventory/HotbarSwitches", "finishInputHook", "()V", false);
                 finished = true;
             }
             super.visitMethodInsn(opcode, owner, name, descriptor, itf);
@@ -229,7 +232,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
             super.visitFieldInsn(opcode, owner, name, desc);
             if (opcode == Opcodes.GETFIELD && "I".equals(desc)
                     && ("currentItem".equals(name) || "field_70461_c".equals(name) || ("wm".equals(owner) && "c".equals(name)))) {
-                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/module/impl/world/AutoToolModule", "serverSlotHook", "(I)I", false);
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/inventory/HotbarSwitches", "serverSlotHook", "(I)I", false);
             }
         }
     }

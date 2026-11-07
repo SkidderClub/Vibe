@@ -53,8 +53,8 @@ public class SilentMurderPacketsTest implements Opcodes {
         victim=PathTestFixture.allocate(PickenSwitchHooksTest.Victim.class);victim.worldObj=mc.theWorld;victim.setEntityId(42);
         mc.objectMouseOver=new MovingObjectPosition(victim);
         murder=new HypixelModule();auto=new AutoToolModule();
-        for(Setting<?> s:murder.getSettings())if(s.getRawName().equals("Silent murderer"))((BooleanSetting)s).setEnabled(true);
-        for(Setting<?> s:auto.getSettings())if(s.getRawName().equals("Mode"))((ModeSetting)s).setValue("Silent");
+        for(Setting<?> s:murder.getSettings())if(s.getRawName().equals("Auto Weapon"))((BooleanSetting)s).setEnabled(true);
+        for(Setting<?> s:auto.getSettings())if(s.getRawName().equals("Item Switching"))((ModeSetting)s).setValue("Silent");
         PathTestFixture.set(Module.class,murder,"enabled",true);
         PathTestFixture.set(HypixelModule.class,murder,"observedWorld",mc.theWorld);
         PathTestFixture.set(HypixelModule.class,murder,"murderRoundActive",true);
@@ -72,6 +72,7 @@ public class SilentMurderPacketsTest implements Opcodes {
     @Test public void emptyHandClickUsesRealSwordSelectionAttackAndImmediateReturnPackets() throws Exception {
         for(boolean useAuto:new boolean[]{false,true}) {
             PathTestFixture.set(Module.class,auto,"enabled",useAuto);
+            if(useAuto)dev.vibe.inventory.HotbarSwitches.acquire(auto,auto.switching,4,dev.vibe.inventory.HotbarSwitches.TOOL,false);
             player.inventory.currentItem=8;mc.playerController.updateController();connection.trace.clear();
             int original=HypixelModule.beginClickHook();
             try {

@@ -65,6 +65,7 @@ public final class HudManager {
     public static final String CPS = "cps";
     public static final String CPS_GRAPH = "cpsgraph";
     public static final String NOTIFICATIONS = "notifications";
+    public static final String BLOCK_COUNTER="blockcounter",DYNAMIC_ISLAND="dynamicisland";
     public static final String CHAT="customchat", HOTBAR="customhotbar", CUSTOM_HEALTH="customhealth", TAB="customtab";
 
     private final Minecraft minecraft = Minecraft.getMinecraft();
@@ -87,6 +88,11 @@ public final class HudManager {
     private final HudElement customHealth=new HudElement(CUSTOM_HEALTH,0,55,false,true);
     private final HudElement tab=new HudElement(TAB,0,12,false,false);
     private final HudOverlayRenderer overlays=new HudOverlayRenderer();
+    private final HudElement blockCounter=new HudElement(BLOCK_COUNTER,9,145,false,false);
+    private final HudElement dynamicIsland=new HudElement(DYNAMIC_ISLAND,0,8,false,false);
+    private final BlockCounterRenderer blockCounterRenderer=new BlockCounterRenderer();
+    private final DynamicIslandRenderer islandRenderer=new DynamicIslandRenderer();
+    private final WatermarkRenderer watermarkRenderer=new WatermarkRenderer();
     private final HudElement ghosts = new HudElement(GHOSTS, 12, 142, false, true);
     private final dev.vibe.core.startup.GhostArt ghostArt = new dev.vibe.core.startup.GhostArt();
     private final HudElement sessionInfo = new HudElement(SESSION_INFO, 9, 96, false, false);
@@ -133,6 +139,7 @@ public final class HudManager {
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         overlays.updateTabKey(hud);
         if (hud == null || !hud.isEnabled() || minecraft.thePlayer == null) {
+            blockCounterRenderer.reset();islandRenderer.reset();
             return;
         }
         try (dev.vibe.ui.render.HudItemGeometryRenderer.Scope items = dev.vibe.ui.render.HudItemGeometryRenderer.begin()) {
@@ -147,7 +154,7 @@ public final class HudManager {
             if (hud.getHudElements().isSelectedIgnoreCase(COORDINATES)) {
                 renderScaled(coordinates, resolution, () -> drawCoordinates(hud, resolution, font));
             }
-            if (hud.getHudElements().isSelectedIgnoreCase(TARGET_HUD)) {
+            if (hud.getHudElements().isSelectedIgnoreCase(TARGET_HUD)&&!DynamicIslandRenderer.owns(hud,"TargetHud")) {
                 drawTargetHud(hud, resolution, font);
             }
             if (hud.getHudElements().isSelectedIgnoreCase(CLOCK)) {
@@ -179,7 +186,13 @@ public final class HudManager {
             }
             if(isEnabled(HOTBAR)&&!minecraft.thePlayer.isSpectator())renderScaled(hotbar,resolution,()->overlays.hotbar(this,hud,hotbar,resolution,previewingHud));
             if(isEnabled(CUSTOM_HEALTH)&&(minecraft.playerController==null||minecraft.playerController.shouldDrawHUD()))renderScaled(customHealth,resolution,()->overlays.health(this,hud,customHealth,resolution,previewingHud));
-            if(isEnabled(TAB)&&overlays.tabVisible())renderScaled(tab,resolution,()->overlays.tab(this,hud,tab,resolution,false));
+            if(isEnabled(TAB)&&overlays.tabVisible()&&!DynamicIslandRenderer.owns(hud,"Tab"))renderScaled(tab,resolution,()->overlays.tab(this,hud,tab,resolution,false));
+            if(isEnabled(BLOCK_COUNTER))renderScaled(blockCounter,resolution,()->blockCounterRenderer.draw(this,hud,blockCounter,resolution,false));else blockCounterRenderer.reset();
+            if(isEnabled(DYNAMIC_ISLAND)){
+                net.minecraft.entity.EntityLivingBase target=DynamicIslandRenderer.owns(hud,"TargetHud")?targetTracker.resolve(minecraft,hud.targetHud,System.currentTimeMillis()):null;
+                TargetHudData data=target==null?null:TargetHudData.from(minecraft,target);
+                renderScaled(dynamicIsland,resolution,()->islandRenderer.draw(this,hud,dynamicIsland,resolution,overlays,data,false));
+            }else islandRenderer.reset();
             if (hud.getHudElements().isSelectedIgnoreCase(CPS_GRAPH)) {
                 renderScaled(cpsGraph, resolution, () -> drawCpsGraph(hud, resolution, font));
             }
@@ -189,6 +202,7 @@ public final class HudManager {
     /** Toggle feedback remains visible when HUD itself is switched off. The widget selector owns it. */
     public void drawNotifications() {
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        if(!previewingHud&&DynamicIslandRenderer.owns(hud,"Notification"))return;
         if (hud == null || (!previewingHud && (!hud.getHudElements().isSelectedIgnoreCase(NOTIFICATIONS)
                 || minecraft.gameSettings.hideGUI))) return;
         ScaledResolution resolution = new ScaledResolution(minecraft);
@@ -326,32 +340,26 @@ public final class HudManager {
     }
 
     private void drawWatermark(HudModule hud, ScaledResolution resolution, FontRenderer font) {
-        String text = hud.getWatermarkText().getValue();
-        if (hud.getWatermarkDetails().isSelected("FPS")) text += " §r| §b" + Minecraft.getDebugFPS();
-        if (hud.getWatermarkDetails().isSelected("Version")) text += " §r| §fv" + Vibe.VERSION;
-        if (hud.getWatermarkDetails().isSelected("Username")) {
-            NameProtectModule protect = Vibe.getInstance().getModuleManager().getModule(NameProtectModule.class);
-            String name = playerName();
-            text += " §r| " + (protect == null ? name : protect.getDisplayName(name));
-        }
-        int width = font.getStringWidth(text) + 20;
-        watermark.ensureOnScreen(resolution, width, 26);
+        List<String> tags=watermarkRenderer.tags(hud,previewingHud);
+        WatermarkRenderer.Layout layout=watermarkRenderer.layout(hud,font,tags,(int)((resolution.getScaledWidth()-18)/watermark.getScale())-20);
+        int width=layout.width+20,height=layout.height;
+        watermark.ensureOnScreen(resolution, width, height);
         int left = watermark.left(resolution, width);
         int top = watermark.getY();
-        if (hideForDebug(watermark, left, top, width, 26, !isSkeet() && hud.getWatermarkOutline().isEnabled() ? 1 : 0)) return;
+        if (hideForDebug(watermark, left, top, width, height, !isSkeet() && hud.getWatermarkOutline().isEnabled() ? 1 : 0)) return;
         if (blurEnabled(BlurModule.WATERMARK)) {
-            KawaseBlur.drawRegion(left, top, left + width, top + 26, 3, 0.0F);
+            KawaseBlur.drawRegion(left, top, left + width, top + height, 3, 0.0F);
         }
         // The blur texture supplies the depth. A light tinted surface keeps
         // it legible without turning the rounded widget into a dark slab.
-        drawHudSurface(hud, watermark, left, top, left + width, top + 26);
+        drawHudSurface(hud, watermark, left, top, left + width, top + height);
         if (hud.getWatermarkOutline().isEnabled()) {
-            drawHudOutline(watermark, hud, left, top, left + width, top + 26, hudOutlineColor(hud, 0.0F));
+            drawHudOutline(watermark, hud, left, top, left + width, top + height, hudOutlineColor(hud, 0.0F));
         }
-        int textLeft = left + (width - font.getStringWidth(text)) / 2;
+        int textLeft = left + 10;
         int textTop = top + (26 - font.FONT_HEIGHT) / 2;
-        font.drawStringWithShadow(text, textLeft, textTop, RenderUtils.TEXT);
-        watermark.setBounds(left, top, width, 26);
+        watermarkRenderer.draw(hud,font,layout,textLeft,textTop);
+        watermark.setBounds(left, top, width, height);
     }
 
     private final dev.vibe.hud.ArrayListRenderer arrayRenderer = new dev.vibe.hud.ArrayListRenderer();
@@ -532,7 +540,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     public void recordTarget(net.minecraft.entity.EntityLivingBase target) {
         if (!(target instanceof EntityPlayer) || target == minecraft.thePlayer || target.worldObj != minecraft.theWorld) return;
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
-        if (hud != null && hud.isEnabled() && hud.getHudElements().isSelectedIgnoreCase(TARGET_HUD))
+        if (hud != null && hud.isEnabled() && (hud.getHudElements().isSelectedIgnoreCase(TARGET_HUD)||DynamicIslandRenderer.owns(hud,"TargetHud")))
             targetTracker.attack(target, System.currentTimeMillis());
     }
 
@@ -541,7 +549,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         if (targetWorld != minecraft.theWorld) {
             targetCards.clear(); targetRenderer.clear(); targetWorld = minecraft.theWorld;
         }
-        if (hud == null || !hud.isEnabled() || !hud.getHudElements().isSelectedIgnoreCase(TARGET_HUD)) {
+        if (hud == null || !hud.isEnabled() || (!hud.getHudElements().isSelectedIgnoreCase(TARGET_HUD)&&!DynamicIslandRenderer.owns(hud,"TargetHud"))) {
             targetTracker.clear(); targetRenderer.clear(); targetCards.clear();
         } else targetTracker.expire(minecraft, hud.targetHud, System.currentTimeMillis());
     }
@@ -1110,6 +1118,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     public HudElement getElement(String id) {
+        if(BLOCK_COUNTER.equals(id))return blockCounter;if(DYNAMIC_ISLAND.equals(id))return dynamicIsland;
         if(CHAT.equals(id))return chat;if(HOTBAR.equals(id))return hotbar;if(CUSTOM_HEALTH.equals(id))return customHealth;if(TAB.equals(id))return tab;
         if (GHOSTS.equals(id)) return ghosts;
         if (TARGET_HUD.equals(id)) return targetHud;
@@ -1155,7 +1164,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     public String[] getElementIds() {
         return new String[] {WATERMARK, ARRAY_LIST, COORDINATES, SCOREBOARD, CLOCK, SESSION_INFO, MOTION_GRAPH, STALKER,
-                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, TARGET_HUD, NOTIFICATIONS, MUSIC, GHOSTS,CHAT,HOTBAR,CUSTOM_HEALTH,TAB};
+                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, TARGET_HUD, NOTIFICATIONS, MUSIC, GHOSTS,CHAT,HOTBAR,CUSTOM_HEALTH,TAB,BLOCK_COUNTER,DYNAMIC_ISLAND};
     }
 
     public boolean isEnabled(String id) {
@@ -1172,7 +1181,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         if(vibe==null||vibe.getModuleManager()==null||mc.thePlayer==null||mc.theWorld==null||mc.gameSettings.hideGUI
                 ||dev.vibe.module.impl.movement.FreecamModule.hideHudHook()||dev.vibe.module.impl.meme.HypixelModule.visualsSuppressed())return false;
         HudModule hud=vibe.getModuleManager().getModule(HudModule.class);
-        return hud!=null&&hud.isEnabled()&&hud.getHudElements().isSelectedIgnoreCase(id);
+        return hud!=null&&hud.isEnabled()&&(hud.getHudElements().isSelectedIgnoreCase(id)||TAB.equals(id)&&DynamicIslandRenderer.owns(hud,"Tab"));
     }
     public static boolean replacesHotbar(){return replaces(HOTBAR)&&!Minecraft.getMinecraft().thePlayer.isSpectator();}
     public void drawChat(){HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);ScaledResolution res=new ScaledResolution(minecraft);renderScaled(chat,res,()->HudChat.draw(this,hud,chat,res,false));}
@@ -1203,6 +1212,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
     public List<dev.vibe.setting.Setting<?>> overlaySettings(String id){
         HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);if(hud==null)return Collections.emptyList();
+        if(BLOCK_COUNTER.equals(id))return hud.blockCounter.all;if(DYNAMIC_ISLAND.equals(id))return hud.island.all;
         if(CHAT.equals(id))return hud.chat.all;if(HOTBAR.equals(id))return hud.hotbar.all;if(CUSTOM_HEALTH.equals(id))return hud.customHealth.all;if(TAB.equals(id))return hud.tab.all;return Collections.emptyList();
     }
 
@@ -1219,6 +1229,8 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         previewingHud = true;
         try (dev.vibe.ui.render.HudItemGeometryRenderer.Scope items = dev.vibe.ui.render.HudItemGeometryRenderer.begin()) {
             if (element == targetHud) drawTargetHud(hud, resolution, font);
+            else if(element==blockCounter)renderScaled(element,resolution,()->blockCounterRenderer.draw(this,hud,element,resolution,true));
+            else if(element==dynamicIsland)renderScaled(element,resolution,()->islandRenderer.draw(this,hud,element,resolution,overlays,null,true));
             else if(element==chat)renderScaled(element,resolution,()->HudChat.draw(this,hud,chat,resolution,true));
             else if(element==hotbar)renderScaled(element,resolution,()->overlays.hotbar(this,hud,hotbar,resolution,true));
             else if(element==customHealth)renderScaled(element,resolution,()->overlays.health(this,hud,customHealth,resolution,true));
@@ -1290,6 +1302,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         root.add(COORDINATES, coordinates.toJson());
         root.add(SCOREBOARD, scoreboard.toJson());
         root.add(CLOCK, clock.toJson());
+        root.add(BLOCK_COUNTER,blockCounter.toJson());root.add(DYNAMIC_ISLAND,dynamicIsland.toJson());
         root.add(CHAT,chat.toJson());root.add(HOTBAR,hotbar.toJson());root.add(CUSTOM_HEALTH,customHealth.toJson());root.add(TAB,tab.toJson());
         root.add(GHOSTS, ghosts.toJson());
         root.add(TARGET_HUD, targetHud.toJson());
@@ -1316,7 +1329,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         scoreboard.fromJson(root.has(SCOREBOARD) && root.get(SCOREBOARD).isJsonObject() ? root.getAsJsonObject(SCOREBOARD) : null);
         targetHud.fromJson(root.has(TARGET_HUD) && root.get(TARGET_HUD).isJsonObject() ? root.getAsJsonObject(TARGET_HUD) : null);
         clock.fromJson(root.has(CLOCK) && root.get(CLOCK).isJsonObject() ? root.getAsJsonObject(CLOCK) : null);
-        for(String id:new String[]{CHAT,HOTBAR,CUSTOM_HEALTH,TAB})getElement(id).fromJson(root.has(id)&&root.get(id).isJsonObject()?root.getAsJsonObject(id):null);
+        for(String id:new String[]{CHAT,HOTBAR,CUSTOM_HEALTH,TAB,BLOCK_COUNTER,DYNAMIC_ISLAND})getElement(id).fromJson(root.has(id)&&root.get(id).isJsonObject()?root.getAsJsonObject(id):null);
         ghosts.fromJson(root.has(GHOSTS) && root.get(GHOSTS).isJsonObject() ? root.getAsJsonObject(GHOSTS) : null);
         sessionInfo.fromJson(root.has(SESSION_INFO) && root.get(SESSION_INFO).isJsonObject() ? root.getAsJsonObject(SESSION_INFO) : null);
         motionGraph.fromJson(root.has(MOTION_GRAPH) && root.get(MOTION_GRAPH).isJsonObject() ? root.getAsJsonObject(MOTION_GRAPH) : null);
@@ -1514,7 +1527,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         }
 
         public String getId() { return id; }
-        private boolean horizontalCenter(){return centred||HOTBAR.equals(id)||TAB.equals(id)||CUSTOM_HEALTH.equals(id);}
+        private boolean horizontalCenter(){return centred||HOTBAR.equals(id)||TAB.equals(id)||CUSTOM_HEALTH.equals(id)||DYNAMIC_ISLAND.equals(id);}
         public int getLeft() { return left; }
         public int getTop() { return top; }
         public int getWidth() { return width; }

@@ -79,6 +79,7 @@ public final class GhostBrandingRenderCheck {
                 check((pinkPool >> 16 & 255) > (pinkPool >> 8 & 255) + 25, "Saved menu palette was ignored by startup glass");
             }
             verifyLoadingState(loading);
+            verifyProgressBar(loading, out);
             for (int i = 0; i < 80; i++) loading.draw(W, H, Collections.singletonList(
                     new GhostStartup.Stage("Stitching textures", "assets/vibe/textures/resource-" + i + ".png", i, 80)), 600 + i * 16);
             java.lang.reflect.Field cache = GhostLoadingRenderer.class.getDeclaredField("textCache"); cache.setAccessible(true);
@@ -101,6 +102,48 @@ public final class GhostBrandingRenderCheck {
             check(GL11.glGetError() == 0, "Ghost rendering left a GL error");
             System.out.println("Ghost pixels passed: still-image mode, animation, flips, selective tint, GL state, scaled HUD preview, startup lava motion/palettes at 960/427/320 pixels, empty/long stages and bounded text textures.");
         } finally { buffer.destroy(); }
+    }
+    private static void verifyProgressBar(GhostLoadingRenderer loading, Path out) throws Exception {
+        java.lang.reflect.Field barField=GhostLoadingRenderer.class.getDeclaredField("bar");barField.setAccessible(true);
+        Object bar=barField.get(loading);
+        java.lang.reflect.Field failed=bar.getClass().getDeclaredField("failed");failed.setAccessible(true);
+        check(!failed.getBoolean(bar), "Liquid progress shader silently fell back");
+        BufferedImage[] stages=new BufferedImage[3];int[] amounts={0,50,100};
+        for(int i=0;i<amounts.length;i++){
+            frame(W,H);loading.draw(W,H,Collections.singletonList(new GhostStartup.Stage("Loading resources "+amounts[i],"Vibe",amounts[i],100)),6500);
+            stages[i]=read(W,H);ImageIO.write(stages[i],"png",out.resolve("startup-progress-"+amounts[i]+".png").toFile());
+        }
+        check(distance(stages[0].getRGB(340,382),stages[1].getRGB(340,382))>80,"Measured half progress did not fill the bar");
+        check(distance(stages[0].getRGB(700,382),stages[1].getRGB(700,382))<8,"Lava falsely filled past measured progress");
+        check(distance(stages[0].getRGB(700,382),stages[2].getRGB(700,382))>80,"Completed progress did not reach the end");
+        check(distance(stages[0].getRGB(340,374),stages[1].getRGB(340,374))>12,"The liquid bar has no external glow");
+        try(GhostLoadingRenderer animated=new GhostLoadingRenderer()){
+            Object animatedBar=barField.get(animated);java.lang.reflect.Field motionField=animatedBar.getClass().getDeclaredField("motion");motionField.setAccessible(true);
+            Object motion=motionField.get(animatedBar);java.lang.reflect.Field dropsField=motion.getClass().getDeclaredField("drops"),formsField=motion.getClass().getDeclaredField("forms"),necksField=motion.getClass().getDeclaredField("necks");
+            dropsField.setAccessible(true);formsField.setAccessible(true);necksField.setAccessible(true);
+            Set<Integer> roots=new HashSet<>();float smallest=Float.MAX_VALUE,largest=0,minShape=1,maxShape=-1,deepest=0;
+            BufferedImage before=null,after=null;
+            for(int time=0;time<=6800;time+=50){
+                frame(W,H);animated.draw(W,H,Collections.singletonList(new GhostStartup.Stage("Loading resources","Vibe",50,100)),time);
+                float[] d=(float[])dropsField.get(motion),f=(float[])formsField.get(motion),n=(float[])necksField.get(motion);
+                for(int i=0;i<d.length;i+=4)if(d[i+2]>1){roots.add(Math.round(n[i]*10));smallest=Math.min(smallest,n[i+3]);largest=Math.max(largest,n[i+3]);minShape=Math.min(minShape,f[i+2]);maxShape=Math.max(maxShape,f[i+2]);if(d[i+1]<78)deepest=Math.max(deepest,d[i+1]-9);}
+                if(time==6500)before=read(W,H);if(time==6800)after=read(W,H);
+                if(time==3000||time==4500)ImageIO.write(read(W,H),"png",out.resolve("startup-progress-drips-"+time+".png").toFile());
+            }
+            ImageIO.write(after,"png",out.resolve("startup-progress-drips.png").toFile());
+            int moving=0;for(int y=390;y<449;y++)for(int x=208;x<480;x++)if(distance(before.getRGB(x,y),after.getRGB(x,y))>24)moving++;
+            check(moving>25,"Wax drops below the progress bar are not moving");
+            check(roots.size()>8,"Wax emissions are still stuck to fixed evenly spaced roots");
+            check(largest/smallest>2,"Wax droplets have insufficient size variation");
+            check(maxShape-minShape>.2F,"Wax droplets have insufficient shape variation");
+            check(deepest>45,"Wax drops disappear before reaching the lower pool");
+        }
+        try(GhostLoadingRenderer fallback=new GhostLoadingRenderer()){
+            Object legacyBar=barField.get(fallback);failed.setBoolean(legacyBar,true);
+            frame(320,200);fallback.draw(320,200,Collections.singletonList(new GhostStartup.Stage("Loading resources","Vibe",50,100)),1700);
+            ImageIO.write(read(320,200),"png",out.resolve("startup-progress-legacy.png").toFile());
+        }
+        check(GL11.glGetError()==0,"Liquid progress rendering left an OpenGL error");
     }
     private static void verifyLoadingState(GhostLoadingRenderer loading) throws Exception {
         int texture = GL11.glGenTextures(), mode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);

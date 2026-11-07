@@ -7,6 +7,16 @@ import static org.junit.Assert.*;
 
 public class AuraPolicyTest {
     @Rule public TemporaryFolder temp=new TemporaryFolder();
+    @Test public void externalAimpointChangesTheGoalWithoutReplacingTheTargetOrPolicy(){
+        TrainedAura model=AuraFixtures.policy();model.minRotationDelay=model.maxRotationDelay=0;
+        AuraFeatures.Observation o=AuraFixtures.observation();o.targetX=0;o.eyeY=1.08;
+        o.hasAimPoint=true;o.aimX=-1;o.aimY=4;o.aimZ=3;
+        AuraBrain brain=new AuraBrain(new Random(1));int[] counts=brain.advance(model,o,0,1,1);
+        assertTrue(brain.memory.history[0]>0);assertTrue(brain.memory.history[1]<0);assertTrue(counts[1]<0);
+        assertEquals(o.targetId,brain.memory.target);assertEquals(AuraFeatures.distance(o)/9,brain.memory.history[2],.00001);
+        assertEquals(0,o.targetX,0);assertEquals(1.8,o.targetHeight,0);
+        o.hasAimPoint=false;brain.advance(model,o,50,1,1);assertEquals(0,brain.memory.history[0],.00001);
+    }
     @Test public void noModelDoesNotProduceAnyInput(){AuraBrain brain=new AuraBrain();assertArrayEquals(new int[]{0,0},brain.advance(null,AuraFixtures.observation(),100,1,1));assertFalse(brain.due(Long.MAX_VALUE));assertEquals(0,brain.poll(100));}
     @Test public void learnedReactionGatesAimAndClickSeparately(){
         AuraBrain brain=new AuraBrain(new Random(1));TrainedAura model=AuraFixtures.policy();assertArrayEquals(new int[]{0,0},brain.advance(model,AuraFixtures.observation(),0,1,1));assertFalse(brain.due(199));int[] motion=brain.advance(model,AuraFixtures.observation(),150,1,1);assertEquals(5,motion[0]);assertTrue(motion[1]>0&&motion[1]<=16);assertTrue(brain.due(200));assertEquals(1,brain.poll(200));assertFalse(brain.due(299));assertEquals(1,brain.poll(300));

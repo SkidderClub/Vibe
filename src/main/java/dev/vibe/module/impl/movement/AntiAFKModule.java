@@ -20,6 +20,9 @@ import org.lwjgl.input.Mouse;
 
 /** Short normal player inputs; EntityPlayerSP and PlayerControllerMP own all resulting packets. */
 public final class AntiAFKModule extends Module {
+    public final dev.vibe.inventory.ItemSwitching switching = new dev.vibe.inventory.ItemSwitching(this::addSetting,"Basic");
+    private dev.vibe.inventory.HotbarSwitches.Lease slotLease;
+    private int switchTicks;
     public final MultiSelectSetting modes = addSetting(new MultiSelectSetting("Modes",
             Arrays.asList("Move", "Switch Items", "Jump", "Rotate", "Left Click"), Collections.singleton("Rotate")));
     public final NumberSetting idleDelay = addSetting(new NumberSetting("Idle Delay (s)", 30, 0, 600, 1));
@@ -43,6 +46,7 @@ public final class AntiAFKModule extends Module {
     private static long now() { return System.nanoTime() / 1000000L; }
     private void reset(long time) { cancelActions(); schedule.userInput(time); }
     private void cancelActions() {
+        if(slotLease!=null){slotLease.close(true,switching.silent());slotLease=null;}switchTicks=0;
         moveTicks = jumpTicks = rotationTicks = rotationTick = 0; pendingClick = false;
         Minecraft mc = Minecraft.getMinecraft();
         if (ownedClick && mc != null && mc.gameSettings != null) VanillaClicks.restore(mc.gameSettings.keyBindAttack);
@@ -53,6 +57,7 @@ public final class AntiAFKModule extends Module {
     /** Time is passed in for deterministic verification of the same production input path. */
     public void tick(long time) {
         Minecraft mc = Minecraft.getMinecraft();
+        if(slotLease!=null&&(--switchTicks<=0||!slotLease.valid())){slotLease.close(true,switching.silent());slotLease=null;}
         if (!isEnabled() || mc == null || mc.theWorld == null || mc.thePlayer == null) {
             reset(time); world = null; player = null; return;
         }
@@ -91,11 +96,9 @@ public final class AntiAFKModule extends Module {
                 if (!player.onGround) continue;
                 jumpTicks = 1;
             } else if (action.equals("Switch Items")) {
-                if (player.isUsingItem()) continue;
+                if (player.isUsingItem()||dev.vibe.inventory.HotbarSwitches.busy(this,dev.vibe.inventory.HotbarSwitches.AFK)) continue;
                 int slot = (player.inventory.currentItem + 1) % 9;
-                int key = mc.gameSettings.keyBindsHotbar[slot].getKeyCode();
-                if (key != Keyboard.KEY_NONE) KeyBinding.onTick(key);
-                else player.inventory.changeCurrentItem(-1); // Vanilla wheel path for an unbound hotbar key.
+                slotLease=dev.vibe.inventory.HotbarSwitches.acquire(this,switching,slot,dev.vibe.inventory.HotbarSwitches.AFK);switchTicks=2;
             } else if (action.equals("Rotate")) {
                 rotationStart = player.rotationYaw;
                 rotationDelta = rotation.getFloat() * (random.nextBoolean() ? 1 : -1);

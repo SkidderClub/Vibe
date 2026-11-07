@@ -13,6 +13,8 @@ import org.lwjgl.input.Keyboard;
 
 public final class ChatterModule extends Module {
     public final BooleanSetting openMessageMenu=addSetting(new BooleanSetting("Open Message Menu",false).onEnable(()->openMenu()));
+    public final dev.vibe.inventory.ItemSwitching switching = new dev.vibe.inventory.ItemSwitching(this::addSetting,"Basic");
+    private dev.vibe.inventory.HotbarSwitches.Lease slotLease;
     private ChatterEngine engine;
     private String session="";
     private boolean menuRequested;
@@ -32,7 +34,7 @@ public final class ChatterModule extends Module {
         }
     }
     @Override protected void onDisable(){clear();}
-    public void clear(){if(engine!=null)engine.cancel();session="";interactionSlot=-1;interactionConnection=null;releaseUse();}
+    public void clear(){if(engine!=null)engine.cancel();session="";interactionSlot=-1;interactionConnection=null;releaseUse();if(slotLease!=null){slotLease.close(true,switching.silent());slotLease=null;}}
     private void releaseUse(){if(useOwned){dev.vibe.input.VanillaClicks.discardPresses(Minecraft.getMinecraft().gameSettings.keyBindUseItem);dev.vibe.input.VanillaClicks.restore(Minecraft.getMinecraft().gameSettings.keyBindUseItem);useOwned=false;}}
     private boolean canInteract(){Minecraft mc=Minecraft.getMinecraft();return isEnabled()&&mc.thePlayer!=null&&mc.theWorld!=null&&mc.currentScreen==null&&mc.inGameHasFocus&&!mc.thePlayer.isUsingItem()
             &&!dev.vibe.module.impl.world.ScaffoldModule.isActive()&&!dev.vibe.module.impl.world.BedAuraModule.ownsMiningInput()
@@ -45,7 +47,9 @@ public final class ChatterModule extends Module {
         if(interactionSlot<0)return;Minecraft mc=Minecraft.getMinecraft();
         if(!isEnabled()||mc.getNetHandler()!=interactionConnection||now()-interactionQueued>10000){interactionSlot=-1;interactionConnection=null;return;}
         if(!canInteract())return;int slot=interactionSlot;interactionSlot=-1;interactionConnection=null;
-        mc.thePlayer.inventory.currentItem=slot;dev.vibe.input.VanillaClicks.pulseUse(mc.gameSettings.keyBindUseItem);useOwned=true;
+        slotLease=dev.vibe.inventory.HotbarSwitches.acquire(this,switching,slot,dev.vibe.inventory.HotbarSwitches.CHATTER);
+        if(slotLease==null||!slotLease.active()){if(slotLease!=null)slotLease.close(false,true);slotLease=null;return;}
+        dev.vibe.inventory.HotbarSwitches.beginInputHook();dev.vibe.input.VanillaClicks.pulseUse(mc.gameSettings.keyBindUseItem);useOwned=true;
     }
     public static void titleHook(String title,String subtitle){
         if(dev.vibe.Vibe.getInstance()==null||dev.vibe.Vibe.getInstance().getModuleManager()==null)return;
@@ -56,6 +60,8 @@ public final class ChatterModule extends Module {
     public void receive(String text){if(isEnabled())engine().receive(text,context(),now());}
     public void tick(){
         releaseUse();
+        Minecraft mc=Minecraft.getMinecraft();
+        if(slotLease!=null&&(!slotLease.valid()||mc.thePlayer==null||!mc.thePlayer.isUsingItem())){slotLease.close(true,switching.silent());slotLease=null;}
         // Opening after chat key handling also lets the normal setting command
         // open this editor, instead of vanilla Enter immediately closing it.
         if(menuRequested){menuRequested=false;Minecraft.getMinecraft().displayGuiScreen(new ChatterGui(this,menuParent));menuParent=null;}

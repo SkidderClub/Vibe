@@ -133,7 +133,8 @@ public final class ScaffoldModule extends Module {
             () -> mode.is("Normal") && sneak.isEnabled()));
     private final BooleanSetting safeWalk = addSetting(new BooleanSetting("Safe Walk", true, () -> mode.is("Normal")));
     private final BooleanSetting movementFix = addSetting(new BooleanSetting("Move Fix", true, () -> mode.is("Normal") && !hypixelRotations()));
-    private final BooleanSetting spoofSlot = addSetting(new BooleanSetting("Spoof Slot", true));
+    public final dev.vibe.inventory.ItemSwitching switching = new dev.vibe.inventory.ItemSwitching(this::addSetting,"Silent");
+    private dev.vibe.inventory.HotbarSwitches.Lease slotLease;
     private final BooleanSetting swing = addSetting(new BooleanSetting("Swing", false));
     private final BooleanSetting jump = addSetting(new BooleanSetting("Jump", false, () -> mode.is("Normal") && !hypixelRotations()));
     private final BooleanSetting dragClick = addSetting(new BooleanSetting("Drag Click", false));
@@ -206,9 +207,7 @@ public final class ScaffoldModule extends Module {
         hypixel.reset();
         restoreSwap();
         EntityPlayerSP player = minecraft.thePlayer;
-        if (player != null && player == owner && restoreSlot >= 0 && restoreSlot < 9) {
-            player.inventory.currentItem = restoreSlot;
-        }
+        if(slotLease!=null){slotLease.close(false,true);slotLease=null;}
         restoreSlot = -1;
         // The next syncCurrentPlayItem returns the server to the visible slot.
         serverSlot = blockSlot = -1;
@@ -230,6 +229,7 @@ public final class ScaffoldModule extends Module {
             releaseRotation();
             owner = player;
             starting = true;
+            if(slotLease!=null)slotLease.close(false,true);slotLease=null;
             serverSlot = blockSlot = swappedSlot = restoreSlot = -1;
             blockPos = null;
             facing = null;
@@ -263,11 +263,13 @@ public final class ScaffoldModule extends Module {
             int preferred = hypixel.preferredIceSlot(player);
             if (preferred >= 0) blockSlot = preferred;
         }
-        serverSlot = spoofSlot.isEnabled() ? blockSlot : -1;
+        serverSlot = switching.silent() ? blockSlot : -1;
         if (blockSlot < 0 || fix == null) {
+            if(slotLease!=null){slotLease.close(false,true);slotLease=null;}
             releaseRotation();
             return;
         }
+        slotLease=dev.vibe.inventory.HotbarSwitches.acquire(this,switching,blockSlot,dev.vibe.inventory.HotbarSwitches.SCAFFOLD,false);
         if (hypixelRotations()) return;
         processBlockData(player);
         updateRotations(player, fix);
@@ -847,13 +849,8 @@ public final class ScaffoldModule extends Module {
                 || minecraft.playerController == null || minecraft.currentScreen != null || blockSlot < 0) {
             return;
         }
-        if (serverSlot >= 0 && swappedSlot < 0) {
-            // The server already holds the blocks; vanilla's clicks in this
-            // pass use the same stack, and the visible slot returns before
-            // the renderer samples the held item.
-            swappedSlot = player.inventory.currentItem;
-            player.inventory.currentItem = serverSlot;
-        }
+        if(slotLease==null||!slotLease.active())return;
+        dev.vibe.inventory.HotbarSwitches.beginInputHook();
         setRightClickDelay(0);
         if (hypixelRotations()) return;
         boolean wasPlaced = place(player, fix);
@@ -872,10 +869,6 @@ public final class ScaffoldModule extends Module {
         if (blockPos == null || facing == null) return false;
         // Telly only places once it has turned around in the air.
         if (mode.is("Telly") && !tellyPlacing) return false;
-        if (serverSlot < 0 && player.inventory.currentItem != blockSlot) {
-            if (restoreSlot < 0) restoreSlot = player.inventory.currentItem;
-            player.inventory.currentItem = blockSlot;
-        }
         MovingObjectPosition hit = serverRayTrace(player, fix);
         if (hit == null || hit.typeOfHit != MovingObjectPosition.MovingObjectType.BLOCK || !blockPos.equals(hit.getBlockPos())) {
             return false;
@@ -923,9 +916,7 @@ public final class ScaffoldModule extends Module {
     }
 
     private void restoreSwap() {
-        if (swappedSlot >= 0 && minecraft.thePlayer != null && minecraft.thePlayer == owner) {
-            minecraft.thePlayer.inventory.currentItem = swappedSlot;
-        }
+        dev.vibe.inventory.HotbarSwitches.finishInputHook();
         swappedSlot = -1;
     }
 
@@ -1036,11 +1027,11 @@ public final class ScaffoldModule extends Module {
     }
 
     public boolean hasSilentSlot() {
-        return isEnabled() && serverSlot >= 0 && owner != null && owner == minecraft.thePlayer;
+        return isEnabled() && switching.silent() && slotLease!=null && slotLease.active();
     }
 
     public int getServerSlot() {
-        return serverSlot;
+        return slotLease==null?-1:slotLease.slot();
     }
 
     public BlockPos getTargetBlock() {
@@ -1099,11 +1090,10 @@ public final class ScaffoldModule extends Module {
         if (player == null || player != module.owner || module.minecraft.theWorld == null
                 || module.minecraft.playerController == null || module.blockSlot < 0
                 || !module.minecraft.theWorld.isBlockLoaded(new BlockPos(player.posX, 0.0D, player.posZ))) return;
-        int visibleSlot = player.inventory.currentItem;
-        if (!module.spoofSlot.isEnabled() && visibleSlot != module.blockSlot && module.restoreSlot < 0) module.restoreSlot = visibleSlot;
-        player.inventory.currentItem = module.blockSlot;
+        if(module.slotLease==null||!module.slotLease.active())return;
+        int scope=dev.vibe.inventory.HotbarSwitches.beginActionHook();
         try { module.hypixel.update(); }
-        finally { if (module.spoofSlot.isEnabled()) player.inventory.currentItem = visibleSlot; }
+        finally { dev.vibe.inventory.HotbarSwitches.endActionHook(scope); }
     }
     public static boolean hypixelPacketHook(Object packet) {
         ScaffoldModule module = module();
@@ -1178,17 +1168,12 @@ public final class ScaffoldModule extends Module {
 
     /** Server slot for PlayerControllerMP.syncCurrentPlayItem while Spoof Slot is active. */
     public static int serverSlotHook(int vanilla) {
-        ScaffoldModule module = module();
-        return module != null && module.hasSilentSlot() ? module.serverSlot : vanilla;
+        return dev.vibe.inventory.HotbarSwitches.serverSlotHook(vanilla);
     }
 
     /** Wrapped block/attack actions run with the stack the server holds. */
     public static int beginActionHook() {
-        ScaffoldModule module = module();
-        if (module == null || !module.hasSilentSlot()) return -1;
-        int visible = module.owner.inventory.currentItem;
-        module.owner.inventory.currentItem = module.serverSlot;
-        return visible;
+        return dev.vibe.inventory.HotbarSwitches.beginActionHook();
     }
 
     private static final class GameKeys {

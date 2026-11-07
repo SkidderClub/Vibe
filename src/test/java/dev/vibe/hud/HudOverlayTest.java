@@ -48,12 +48,12 @@ public class HudOverlayTest {
             language(f.mc);
             f.mc.displayWidth=960;f.mc.displayHeight=540;f.mc.gameSettings.guiScale=1;HudModule hud=new HudModule();f.modules.registerDynamic(hud);
             HudManager source=new HudManager(temporary.newFolder());HudManager restored=new HudManager(temporary.newFolder());
-            for(String id:new String[]{HudManager.CHAT,HudManager.HOTBAR,HudManager.CUSTOM_HEALTH,HudManager.TAB}){
+            for(String id:new String[]{HudManager.CHAT,HudManager.HOTBAR,HudManager.CUSTOM_HEALTH,HudManager.TAB,HudManager.BLOCK_COUNTER,HudManager.DYNAMIC_ISLAND}){
                 assertTrue(hud.getHudElements().hasOption(id));assertFalse(hud.getHudElements().isSelected(id));
                 HudManager.HudElement e=source.getElement(id);e.setBounds(0,0,220,48);e.moveTo(123,100,new ScaledResolution(f.mc));e.setScale(1.4F);e.setTheme(id.equals(HudManager.HOTBAR)?"Fortnite":"LiquidGlass");
             }
             restored.fromJson(source.toJson());
-            for(String id:new String[]{HudManager.CHAT,HudManager.HOTBAR,HudManager.CUSTOM_HEALTH,HudManager.TAB}){assertEquals(source.getElement(id).getTheme(),restored.getElement(id).getTheme());assertEquals(1.4F,restored.getElement(id).getScale(),0);assertEquals(123,restored.getElement(id).left(new ScaledResolution(f.mc),220));}
+            for(String id:new String[]{HudManager.CHAT,HudManager.HOTBAR,HudManager.CUSTOM_HEALTH,HudManager.TAB,HudManager.BLOCK_COUNTER,HudManager.DYNAMIC_ISLAND}){assertEquals(source.getElement(id).getTheme(),restored.getElement(id).getTheme());assertEquals(1.4F,restored.getElement(id).getScale(),0);assertEquals(123,restored.getElement(id).left(new ScaledResolution(f.mc),220));}
             assertTrue(hud.chat.all.contains(hud.chat.width));assertTrue(hud.chat.all.contains(hud.chat.height));assertNotSame(hud.chat.width,hud.chat.height);
         }
     }

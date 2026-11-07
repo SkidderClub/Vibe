@@ -58,14 +58,14 @@ public class PickenSwitchPacketsTest {
     @After public void cleanup()throws Exception{PathTestFixture.set(Minecraft.class,null,"theMinecraft",previous);PathTestFixture.set(Vibe.class,null,"instance",oldVibe);}
     @Test public void realPacketsCombineBaseDamageWithUtilityEnchantmentsAndReturnImmediately(){
         for(String mode:new String[]{"Basic","Silent"}){
-            for(Setting<?> setting:module.getSettings())if(setting.getRawName().equals("Mode"))((ModeSetting)setting).setValue(mode);
+            for(Setting<?> setting:module.getSettings())if(setting.getRawName().equals("Item Switching"))((ModeSetting)setting).setValue(mode);
             connection.trace.clear();victim.damage=0;victim.motionZ=0;victim.fireSeconds=0;
             mc.playerController.attackEntity(client,clientTarget);
             assertEquals(Arrays.asList("C09:4","C02:4","C09:0"),connection.trace);
             assertEquals(10.5F,victim.damage,0);assertEquals(8,victim.fireSeconds);assertEquals(1,victim.motionZ,.00001);
             assertEquals(0,attacker.inventory.currentItem);assertEquals(0,client.inventory.currentItem);assertFalse(PickenSwitchModule.ownsSlot());
             assertEquals(8,attacker.getEntityAttribute(SharedMonsterAttributes.attackDamage).getAttributeValue(),0);
-            assertSame(mode.equals("Silent")?client.inventory.mainInventory[0]:client.inventory.mainInventory[4],client.predictionItem);
+            assertSame(client.inventory.mainInventory[4],client.predictionItem);
         }
         // After the transaction the real weapon's Sharpness, not the utility's, applies normally.
         module.setEnabled(false);victim.damage=0;attacker.attackTargetEntityWithCurrentItem(victim);assertEquals(14.25F,victim.damage,0);

@@ -51,7 +51,7 @@ public final class AIAuraModule extends KillAuraModule {
     @Override public void tickStart(){
         boolean wasTracking=target!=null||returning;float lastYaw=rotation.getYaw(),lastPitch=rotation.getPitch();super.tickStart();
         if(target!=null){returning=false;cameraFrame(rotation.getYaw(),rotation.getPitch());if(lockFov.isEnabled()){minecraft.thePlayer.rotationYaw=rotation.getYaw();minecraft.thePlayer.rotationPitch=rotation.getPitch();}return;}
-        if(wasTracking&&canOperate()&&!dev.vibe.module.impl.world.ScaffoldModule.isActive()&&!BedAuraModule.ownsMiningInput()&&!ProjectileAuraModule.reserving()){
+        if(wasTracking&&canOperate()&&!dev.vibe.module.impl.world.ScaffoldModule.isActive()&&!BedAuraModule.ownsMiningInput()&&!ProjectileAuraModule.blocksRotations(this)){
             double step=MouseMath.step(minecraft.gameSettings.mouseSensitivity),dy=MouseMath.wrap(minecraft.thePlayer.rotationYaw-lastYaw),dp=minecraft.thePlayer.rotationPitch-lastPitch;
             dev.vibe.module.impl.movement.MoveFixModule fix=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.MoveFixModule.class);
             if(fix!=null&&(Math.abs(dy)>step||Math.abs(dp)>step)){
@@ -103,7 +103,10 @@ public final class AIAuraModule extends KillAuraModule {
     @Override protected boolean validTarget(EntityLivingBase entity){float yaw=lockFov.isEnabled()&&cameraFollowing?rotation.getYaw():minecraft.thePlayer.rotationYaw,pitch=lockFov.isEnabled()&&cameraFollowing?rotation.getPitch():minecraft.thePlayer.rotationPitch;return super.validTarget(entity)&&AuraFeatures.inView(observation(entity,yaw,pitch),minecraft.gameSettings.fovSetting,minecraft.displayWidth/(double)Math.max(1,minecraft.displayHeight));}
     @Override protected Vec3 aimPoint(EntityLivingBase entity){AxisAlignedBB box=entity.getEntityBoundingBox();return new Vec3(box.minX+(box.maxX-box.minX)*brain.memory.pointX,box.minY+(box.maxY-box.minY)*brain.memory.pointY,box.minZ+(box.maxZ-box.minZ)*brain.memory.pointZ);}
     @Override protected void advanceRotation(EntityLivingBase entity){
-        int[] counts=brain.advance(learning().model(),observation(entity,rotation.getYaw(),rotation.getPitch()),System.nanoTime()/1000000L,boosterAiming.getDouble(),boosterClicking.getDouble());
+        AuraFeatures.Observation context=observation(entity,rotation.getYaw(),rotation.getPitch());
+        Vec3 point=ProjectileAuraModule.rotationAimPoint(this,entity);
+        if(point!=null){context.hasAimPoint=true;context.aimX=point.xCoord;context.aimY=point.yCoord;context.aimZ=point.zCoord;}
+        int[] counts=brain.advance(learning().model(),context,System.nanoTime()/1000000L,boosterAiming.getDouble(),boosterClicking.getDouble());
         rotation.reset(MouseMath.angle(rotation.getYaw(),counts[0],minecraft.gameSettings.mouseSensitivity),MouseMath.pitch(rotation.getPitch(),counts[1],minecraft.gameSettings.mouseSensitivity));
     }
     @Override protected boolean clickDue(long now){return brain.due(now);}

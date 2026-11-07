@@ -25,6 +25,8 @@ import org.lwjgl.input.Keyboard;
 
 /** Plans rotations at tick start; Minecraft's normal held-attack input owns all digging and swings. */
 public final class BedAuraModule extends Module {
+    public final dev.vibe.inventory.ItemSwitching switching = new dev.vibe.inventory.ItemSwitching(this::addSetting,"Basic");
+    private dev.vibe.inventory.HotbarSwitches.Lease slotLease;
     private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Raycast", "Raycast", "Vanilla", "Hypixel"));
     private final NumberSetting range = addSetting(new NumberSetting("Range", 5, 2, 8, .1));
     private final NumberSetting fov = addSetting(new NumberSetting("FOV", 180, 30, 360, 1));
@@ -102,6 +104,10 @@ public final class BedAuraModule extends Module {
         if (actual == null || (mode.is("Raycast") && !target.equals(actual.getBlockPos()))
                 || !withinReach(actual.hitVec)) { holdingAttack = ready = false; return; }
         equipTool();
+        if (dev.vibe.inventory.HotbarSwitches.busy(this, dev.vibe.inventory.HotbarSwitches.BED)) {
+            holdingAttack = ready = false;
+            return;
+        }
         savedMouseOver = minecraft.objectMouseOver;
         savedPointedEntity = minecraft.pointedEntity;
         inputOwned = true;
@@ -217,18 +223,11 @@ public final class BedAuraModule extends Module {
             float value = stack.getStrVsBlock(minecraft.theWorld.getBlockState(target).getBlock());
             if (value > strength) { strength = value; best = slot; }
         }
-        if (best >= 0 && best != owner.inventory.currentItem) {
-            if (previousSlot < 0) previousSlot = owner.inventory.currentItem;
-            owner.inventory.currentItem = best; minecraft.playerController.updateController();
-        }
+        if (best >= 0) slotLease=dev.vibe.inventory.HotbarSwitches.acquire(this,switching,best,dev.vibe.inventory.HotbarSwitches.BED);
     }
     private void reset() {
         restoreInput(); holdingAttack = ready = false;
-        if (switchBack.isEnabled() && previousSlot >= 0 && owner == minecraft.thePlayer && owner != null) {
-            // Vanilla's next input tick synchronizes the slot. Toggling after
-            // movement must not inject a post-C03 held-item-change packet.
-            owner.inventory.currentItem = previousSlot;
-        }
+        if(slotLease!=null){slotLease.close(false,switching.silent()||switchBack.isEnabled());slotLease=null;}
         if (Vibe.getInstance() != null && Vibe.getInstance().getModuleManager() != null) {
             MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
             if (moveFix != null) moveFix.clearFakeRotation(getId());

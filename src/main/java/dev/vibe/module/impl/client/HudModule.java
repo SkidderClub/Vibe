@@ -49,14 +49,14 @@ public final class HudModule extends Module {
             () -> true));
 
     private final MultiSelectSetting hudElements = addSetting(new MultiSelectSetting("HUD Elements",
-                        Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph", "notifications", "targethud", "ghosts", "customchat", "customhotbar", "customhealth", "customtab"),
+                        Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph", "notifications", "targethud", "ghosts", "customchat", "customhotbar", "customhealth", "customtab", "blockcounter", "dynamicisland"),
             Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "notifications")));
 
     private final BooleanSetting replaceScoreboardServer = addSetting(new BooleanSetting("Replace Scoreboard Server", false,
             () -> true));
     private final MultiSelectSetting watermarkDetails = addSetting(new MultiSelectSetting("Watermark Details",
-            Arrays.asList("Version", "FPS", "Username"), Arrays.asList("Version", "FPS"), () -> true));
-    private final StringSetting watermarkText = addSetting(new StringSetting("Watermark Text", "VIBE", 24, () -> true));
+            Arrays.asList("Version", "FPS", "TPS", "Speed", "Coordinates", "Date", "Time", "Username"), Arrays.asList("Version", "FPS"), () -> true));
+    private final StringSetting watermarkText = addSetting(new StringSetting("Watermark Text", "Vibe", 24, () -> true));
     private final MultiSelectSetting arrayListModules = addSetting(new MultiSelectSetting("ArrayList Modules",
             DEFAULT_ARRAY_LIST_OPTIONS, DEFAULT_ARRAY_LIST_DEFAULTS, () -> true));
     private final BooleanSetting arrayOutline = addSetting(new BooleanSetting("ArrayList Outline", true, () -> true));
@@ -88,6 +88,9 @@ public final class HudModule extends Module {
     public final dev.vibe.hud.OverlaySettings.Hotbar hotbar = new dev.vibe.hud.OverlaySettings.Hotbar(this::addSetting);
     public final dev.vibe.hud.OverlaySettings.Health customHealth = new dev.vibe.hud.OverlaySettings.Health(this::addSetting);
     public final dev.vibe.hud.OverlaySettings.Tab tab = new dev.vibe.hud.OverlaySettings.Tab(this::addSetting);
+    public final dev.vibe.hud.OverlaySettings.BlockCounter blockCounter = new dev.vibe.hud.OverlaySettings.BlockCounter(this::addSetting);
+    public final dev.vibe.hud.OverlaySettings.DynamicIsland island = new dev.vibe.hud.OverlaySettings.DynamicIsland(this::addSetting);
+    public final dev.vibe.hud.WatermarkSettings watermark = new dev.vibe.hud.WatermarkSettings(this::addSetting);
 
     public final dev.vibe.hud.ArrayListSettings array = new dev.vibe.hud.ArrayListSettings(this::addSetting);
     public final dev.vibe.feedback.NotificationSettings notifications = new dev.vibe.feedback.NotificationSettings(this::addSetting);

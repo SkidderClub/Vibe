@@ -528,6 +528,7 @@ public final class VibeConfig {
         // profile never writes its contents back to disk.
         loading = true;
         try {
+            dev.vibe.inventory.HotbarSwitches.reset();
             if (withVisuals && root.has("hud") && root.get("hud").isJsonObject() && Vibe.getInstance().getHudManager() != null) {
                 Vibe.getInstance().getHudManager().fromJson(root.getAsJsonObject("hud"));
             }
@@ -536,6 +537,7 @@ public final class VibeConfig {
             ScaffoldConfigMigration.migrate(modules);
             OofArrowsConfigMigration.migrate(modules);
             AmbienceConfigMigration.migrate(modules);
+            ItemSwitchConfigMigration.migrate(modules);
             for (JsonElement element : modules) {
                 if (!element.isJsonObject()) continue;
                 JsonObject data = element.getAsJsonObject();

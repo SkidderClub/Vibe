@@ -28,6 +28,35 @@ public abstract class OverlaySettings {
             lineHeight=super.number("Line Height",11,9,20,1);fadeSeconds=super.number("Fade Seconds",10,2,60,1);opacity=super.number("Opacity",1,.1,1,.05);
             fade=super.bool("Fade Messages",true);keepColors=super.bool("Keep Message Colors",true);scrollbar=super.bool("Scrollbar",true);}
     }
+    public static final class BlockCounter extends OverlaySettings {
+        public final BooleanSetting block,scaffold,eagle,warning,bar,animate,label;
+        public final ModeSetting calculate,easing;
+        public final NumberSetting yellowAt,redAt,duration,width;
+        public final ColorSetting yellow,red,barEmpty;
+        public BlockCounter(Function<Setting<?>,Setting<?>> r){super(r,"Block Counter");
+            block=bool("Display Block",true);scaffold=bool("While Scaffold",true);eagle=bool("While Eagle",false);
+            calculate=add(new ModeSetting("Block Counter Calculate","Total","Slot","Total"));
+            label=bool("Show Label",true);warning=bool("Warning",true);yellowAt=number("Yellow Below",32,1,576,1);redAt=number("Red Below",8,0,576,1);
+            yellow=color("Warning Yellow",0xFFFFD46A);red=color("Warning Red",0xFFFF6476);
+            bar=bool("Depletion Bar",true);barEmpty=color("Empty Bar",0x60344557);width=number("Minimum Width",96,64,240,1);
+            animate=bool("Animation",true);duration=number("Animation Duration (ms)",220,50,800,10);
+            easing=add(new ModeSetting("Block Counter Easing","Smoothstep","Linear","Smoothstep","Cubic"));
+        }
+    }
+    public static final class DynamicIsland extends OverlaySettings {
+        public final MultiSelectSetting transforms;
+        public final BooleanSetting logo,animate;
+        public final StringSetting title;
+        public final ModeSetting easing,preview;
+        public final NumberSetting idleWidth,idleHeight,duration;
+        public DynamicIsland(Function<Setting<?>,Setting<?>> r){super(r,"Dynamic Island");
+            transforms=add(new MultiSelectSetting("Dynamic Island Views",Arrays.asList("Tab","Notification","TargetHud"),Arrays.asList("Tab","Notification","TargetHud")));
+            logo=bool("Logo",true);title=add(new StringSetting("Dynamic Island Text","Vibe",32,()->true));
+            idleWidth=number("Idle Width",108,70,240,1);idleHeight=number("Idle Height",28,22,48,1);
+            animate=bool("Animation",true);duration=number("Transition (ms)",260,80,600,10);easing=add(new ModeSetting("Dynamic Island Easing","Smoothstep","Linear","Smoothstep","Cubic"));
+            preview=add(new ModeSetting("Dynamic Island Editor Preview","Idle","Idle","Tab","Notification","TargetHud"));radius.setValue(14D);
+        }
+    }
     public static final class Hotbar extends OverlaySettings {
         public final NumberSetting slotSize,gap;
         public final BooleanSetting numbers,durability,counts,animate,experience,itemName;

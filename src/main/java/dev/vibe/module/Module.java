@@ -45,7 +45,7 @@ public abstract class Module {
             if (enabled) onEnable();
             else {
                 try { onDisable(); }
-                finally { dev.vibe.module.impl.movement.MoveFixModule.producerDisabled(this); }
+                finally { dev.vibe.module.impl.movement.MoveFixModule.producerDisabled(this); dev.vibe.inventory.HotbarSwitches.releaseOwner(this); }
             }
         }
         finally { toggleDepth--; }

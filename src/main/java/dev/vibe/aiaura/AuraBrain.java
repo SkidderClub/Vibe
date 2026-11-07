@@ -29,6 +29,7 @@ public final class AuraBrain {
         if(now>=rotationAt){
             AuraPitchStyle vertical=model.pitchStyle==null?AuraPitchStyle.legacy(model):model.pitchStyle;
             double px=observation.targetX+(memory.pointX-.5)*observation.targetWidth,py=observation.targetY+memory.pointY*observation.targetHeight,pz=observation.targetZ+(memory.pointZ-.5)*observation.targetWidth;
+            if(observation.hasAimPoint){px=observation.aimX;py=observation.aimY;pz=observation.aimZ;}
             double goal=AuraFeatures.angles(observation.eyeX,observation.eyeY,observation.eyeZ,px,py,pz)[1];
             double future=AuraFeatures.angles(observation.eyeX+observation.vx,observation.eyeY+observation.vy,observation.eyeZ+observation.vz,px+observation.targetVx,py+observation.targetVy,pz+observation.targetVz)[1];
             double pitchError=goal-observation.pitch,conversion=aimBoost*reference/actualStep,maxX=model.maxCounts[bucket][0]*conversion,maxY=vertical.maximumCounts*conversion;

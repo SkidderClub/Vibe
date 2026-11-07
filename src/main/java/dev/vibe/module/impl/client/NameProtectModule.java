@@ -30,7 +30,8 @@ public final class NameProtectModule extends Module {
 
     private final StringSetting protectedName = addSetting(new StringSetting("Protected Name", "", 16, () -> true));
     private final BooleanSetting overrideColor = addSetting(new BooleanSetting("Override Color", false));
-    private final ColorSetting nameColor = addSetting(new ColorSetting("Name Color", 0xFF2DE2C2, () -> overrideColor.isEnabled()));
+    public final dev.vibe.hud.HudTextStyle nameStyle = new dev.vibe.hud.HudTextStyle(this::addSetting,"Name",0xFF2DE2C2,()->overrideColor.isEnabled());
+    private final ColorSetting nameColor = nameStyle.color;
     private final BooleanSetting hideOthers = addSetting(new BooleanSetting("Hide Others", false));
     private final Map<String, String> hiddenNames = new HashMap<String, String>();
 
@@ -47,8 +48,8 @@ public final class NameProtectModule extends Module {
             dev.vibe.friend.FriendManager.Friend friend = Vibe.getInstance().getFriendManager().find(original);
             if (friend != null) return (overrideColor.isEnabled() ? nearestChatColor() : "") + friend.getAlias();
         }
-        String accountName = Vibe.getInstance().getMinecraft().getSession().getUsername();
-        if (original != null && original.equalsIgnoreCase(accountName)) return getColoredGamertag();
+        String accountName = accountName();
+        if (original != null && original.equalsIgnoreCase(accountName)&&isConfigured()) return getColoredGamertag();
         if (hideOthers.isEnabled() && original != null && !original.trim().isEmpty()) return hidden(original);
         return original;
     }
@@ -59,8 +60,8 @@ public final class NameProtectModule extends Module {
         }
         String result = text;
         if (isConfigured()) {
-            String accountName = Vibe.getInstance().getMinecraft().getSession().getUsername();
-            if (accountName != null && !accountName.isEmpty() && !accountName.equals(Vibe.getInstance().getIdentity().getGamertag())) {
+            String accountName = accountName();
+            if (!accountName.isEmpty() && !accountName.equals(getPlainGamertag())) {
                 result = replacePreserving(result, accountName, getColoredGamertag());
             }
         }
@@ -74,7 +75,7 @@ public final class NameProtectModule extends Module {
             for (Object raw : Vibe.getInstance().getMinecraft().theWorld.playerEntities) {
                 if (!(raw instanceof net.minecraft.entity.player.EntityPlayer)) continue;
                 String name = ((net.minecraft.entity.player.EntityPlayer) raw).getName();
-                String account = Vibe.getInstance().getMinecraft().getSession().getUsername();
+                String account = accountName();
                 if (name != null && !name.equalsIgnoreCase(account)) result = replacePreserving(result, name, hidden(name));
             }
         }
@@ -108,10 +109,12 @@ public final class NameProtectModule extends Module {
         if (!isConfigured()) {
             return "";
         }
-        String name = protectedName.getValue() == null ? "" : protectedName.getValue().trim();
-        if (name.isEmpty()) name = Vibe.getInstance().getIdentity().getGamertag();
-        return (overrideColor.isEnabled() ? nearestChatColor() : EnumChatFormatting.RESET) + name;
+        return (overrideColor.isEnabled() ? nearestChatColor(nameStyle.colorAt(System.currentTimeMillis(),0)) : EnumChatFormatting.RESET) + getPlainGamertag();
     }
+    public String getPlainGamertag(){if(!isConfigured())return "";String name=protectedName.getValue()==null?"":protectedName.getValue().trim();return name.isEmpty()?Vibe.getInstance().getIdentity().getGamertag():name;}
+    public boolean stylesOwnName(){return isConfigured()&&(overrideColor.isEnabled()||nameStyle.glow.isEnabled());}
+    public boolean overridesOwnColor(){return overrideColor.isEnabled();}
+    private String accountName(){net.minecraft.client.Minecraft mc=net.minecraft.client.Minecraft.getMinecraft();return mc==null||mc.getSession()==null?"":mc.getSession().getUsername();}
 
     public ColorSetting getNameColor() {
         return nameColor;
@@ -124,9 +127,12 @@ public final class NameProtectModule extends Module {
     }
 
     private EnumChatFormatting nearestChatColor() {
-        int red = nameColor.getRed();
-        int green = nameColor.getGreen();
-        int blue = nameColor.getBlue();
+        return nearestChatColor(nameColor.getArgb());
+    }
+    private EnumChatFormatting nearestChatColor(int argb) {
+        int red = argb>>16&255;
+        int green = argb>>8&255;
+        int blue = argb&255;
         int selected = 0;
         int difference = Integer.MAX_VALUE;
         for (int index = 0; index < CHAT_COLOR_RGB.length; index++) {

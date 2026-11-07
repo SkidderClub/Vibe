@@ -40,12 +40,13 @@ final class HudOverlayRenderer {
     private static final Field HIGHLIGHT=ReflectionHelper.findField(GuiIngame.class,"remainingHighlightTicks","field_92017_k");
 
     void updateTabKey(HudModule hud){
-        boolean allowed=hud!=null&&hud.isEnabled()&&hud.getHudElements().isSelectedIgnoreCase(HudManager.TAB)&&mc.theWorld!=null&&mc.currentScreen==null&&mc.inGameHasFocus;
+        boolean allowed=hud!=null&&hud.isEnabled()&&(hud.getHudElements().isSelectedIgnoreCase(HudManager.TAB)||DynamicIslandRenderer.owns(hud,"Tab"))&&mc.theWorld!=null&&mc.currentScreen==null&&mc.inGameHasFocus;
         boolean pressed=dev.vibe.input.VanillaClicks.physicallyDown(mc.gameSettings.keyBindPlayerList);
         visible=tabKey.update(pressed,hud!=null&&hud.tab.toggle.isEnabled(),allowed,mc.theWorld);
         tabAmount=tabMotion.update(visible);
     }
     boolean tabVisible(){return tabAmount>.001F;}
+    boolean tabRequested(){return visible;}
 
     static void panel(HudManager manager,HudModule hud,HudManager.HudElement e,OverlaySettings settings,int x,int y,int w,int h){
         String theme=manager.theme(e,hud);if("Transparent".equals(theme))return;
@@ -54,7 +55,7 @@ final class HudOverlayRenderer {
         if(settings.border.isEnabled())RenderUtils.roundedOutline(x,y,x+w,y+h,"Skeet".equals(theme)?1:settings.radius.getFloat(),1,RenderUtils.alpha(settings.accent.getArgb(),90));
         if("Skeet".equals(theme))Gui.drawRect(x+2,y+2,x+w-2,y+3,settings.accent.getArgb());
     }
-    private void text(String s,float x,float y,int color,boolean shadow){mc.fontRendererObj.drawString(s,x,y,color,shadow);}
+    private void text(String s,float x,float y,int color,boolean shadow){if((color>>>24)*contentOpacity>=4)mc.fontRendererObj.drawString(s,x,y,fade(color,contentOpacity),shadow);}
 
     void hotbar(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){
         OverlaySettings.Hotbar s=hud.hotbar;String theme=manager.theme(e,hud);boolean vanilla="Minecraft".equals(theme),fortnite="Fortnite".equals(theme);
@@ -82,8 +83,8 @@ final class HudOverlayRenderer {
         }}finally{RenderHelper.disableStandardItemLighting();GlStateManager.disableDepth();GlStateManager.enableBlend();GlStateManager.color(1,1,1,1);}
         if(s.counts.isEnabled())for(int i=0;i<9;i++){ItemStack item=stack(i,preview);if(item==null||item.stackSize==1)continue;String value=(item.stackSize<1?"§c":"")+item.stackSize;int xx=x+pad+i*(cell+gap)+(cell-16)/2,yy=y+pad+(cell-16)/2;text(value,xx+17-mc.fontRendererObj.getStringWidth(value),yy+9,0xFFFFFFFF,true);}
         if(s.durability.isEnabled())for(int i=0;i<9;i++){ItemStack item=stack(i,preview);if(item==null||!item.isItemDamaged())continue;int xx=x+pad+i*(cell+gap),yy=y+pad+cell-2;Gui.drawRect(xx+2,yy,xx+cell-2,yy+1,0xB0000000);Gui.drawRect(xx+2,yy,xx+2+Math.round((cell-4)*(1-item.getItemDamage()/(float)item.getMaxDamage())),yy+1,s.accent.getArgb());}
-        dev.vibe.module.impl.world.AutoToolModule tool=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.world.AutoToolModule.class);
-        if(tool!=null&&tool.hasSilentSlot()){int xx=x+pad+tool.getSpoofedSlot()*(cell+gap);RenderUtils.roundedOutline(xx,y+pad,xx+cell,y+pad+cell,2,1,tool.getSilentColor().getArgb());}
+        dev.vibe.inventory.HotbarSwitches.Highlight activeSlot=dev.vibe.inventory.HotbarSwitches.highlight();
+        if(activeSlot!=null){int xx=x+pad+activeSlot.slot*(cell+gap);RenderUtils.roundedOutline(xx,y+pad,xx+cell,y+pad+cell,2,1,activeSlot.color);}
         if(xp){int level=mc.thePlayer==null?17:mc.thePlayer.experienceLevel;float value=horse?mc.thePlayer.getHorseJumpPower():mc.thePlayer==null?.6F:mc.thePlayer.experience;
             Gui.drawRect(x+pad,widgetTop+10,x+w-pad,widgetTop+13,s.empty.getArgb());Gui.drawRect(x+pad,widgetTop+10,x+pad+Math.round((w-pad*2)*Math.max(0,Math.min(1,value))),widgetTop+13,horse?s.selected.getArgb():s.experienceColor.getArgb());
             if(!horse&&level>0){String caption=String.valueOf(level);text(caption,x+(w-mc.fontRendererObj.getStringWidth(caption))/2F,widgetTop,s.experienceColor.getArgb(),true);}
@@ -137,9 +138,9 @@ final class HudOverlayRenderer {
     private static final int[] HEART={0x36,0x7F,0x7F,0x7F,0x3E,0x1C,0x08};
     private static void heart(int x,int y,float value,int filled,int empty){for(int row=0;row<7;row++)for(int col=0;col<7;col++)if((HEART[row]&(1<<col))!=0)Gui.drawRect(x+col,y+row,x+col+1,y+row+1,col<Math.round(7*value)?filled:empty);}
 
-    void tab(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){
+    TabLayout measureTab(HudModule hud,ScaledResolution res,float scale,boolean preview){
         OverlaySettings.Tab s=hud.tab;refreshPlayers();FontRenderer font=mc.fontRendererObj;int count=preview&&players.isEmpty()?12:players.size();
-        int viewportWidth=Math.round(res.getScaledWidth()/e.getScale()),viewportHeight=Math.round(res.getScaledHeight()/e.getScale());
+        int viewportWidth=Math.round(res.getScaledWidth()/scale),viewportHeight=Math.round(res.getScaledHeight()/scale);
         int columns=Math.max(1,Math.min(Math.min(s.columns.getInt(),Math.max(1,(count+s.rows.getInt()-1)/s.rows.getInt())),(viewportWidth-24)/80));
         int colWidth=Math.min(s.width.getInt(),Math.max(60,(viewportWidth-24)/columns));
         int rowHeight=s.rowHeight.getInt(),w=columns*colWidth+12;
@@ -147,18 +148,31 @@ final class HudOverlayRenderer {
         int titleHeight=s.title.getValue().isEmpty()?0:18,headHeight=header.size()*10,footHeight=footer.size()*10;
         int maxRows=Math.max(1,Math.min(s.rows.getInt(),(viewportHeight-48-titleHeight-headHeight-footHeight)/rowHeight));
         int shown=Math.min(count,maxRows*columns),rows=Math.max(1,(shown+columns-1)/columns),h=12+titleHeight+headHeight+rows*rowHeight+footHeight+(shown<count?12:0);
+        return new TabLayout(count,colWidth,rowHeight,w,h,titleHeight,shown,rows,header,footer);
+    }
+    void tab(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){
+        TabLayout layout=measureTab(hud,res,e.getScale(),preview);int w=layout.width,h=layout.height;
         e.ensureOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h);
         float opening=preview?1:tabAmount;
         GlStateManager.pushMatrix();GlStateManager.translate(x+w/2F,y-8*(1-opening),0);GlStateManager.scale(.96F+.04F*opening,opening,1);GlStateManager.translate(-x-w/2F,-y,0);
-        panel(manager,hud,e,s,x,y,w,h);
+        panel(manager,hud,e,hud.tab,x,y,w,h);
+        tabContents(hud,layout,x,y,1);
+        e.setBounds(x,y,w,h);GlStateManager.popMatrix();GlStateManager.color(1,1,1,1);
+    }
+    void tabContents(HudModule hud,TabLayout l,int x,int y,float opacity){
+        OverlaySettings.Tab s=hud.tab;FontRenderer font=mc.fontRendererObj;
+        int w=l.width,count=l.count,rows=l.rows,shown=l.shown,colWidth=l.colWidth,rowHeight=l.rowHeight,titleHeight=l.titleHeight;
+        List<String> header=l.header,footer=l.footer;
+        contentOpacity=opacity;
+        try{
         int top=y+6;if(titleHeight>0){text(s.title.getValue()+"  "+count,x+7,top,s.text.getArgb(),s.shadow.isEnabled());top+=18;}
         for(String line:header){text(line,x+(w-font.getStringWidth(line))/2F,top,s.text.getArgb(),s.shadow.isEnabled());top+=10;}
         ScoreObjective objective=mc.theWorld==null?null:mc.theWorld.getScoreboard().getObjectiveInDisplaySlot(0);
         NameProtectModule protect=Vibe.getInstance().getModuleManager().getModule(NameProtectModule.class);
         for(int i=0;i<shown;i++){
             int column=i/rows,row=i%rows,xx=x+6+column*colWidth,yy=top+row*rowHeight;NetworkPlayerInfo info=i<players.size()?players.get(i):null;
-            Gui.drawRect(xx,yy,xx+colWidth-3,yy+rowHeight-1,(row&1)==0?0x242A3445:0x1218202C);int textX=xx+4;
-            if(s.heads.isEnabled()){ResourceLocation skin=info==null?new ResourceLocation("textures/entity/steve.png"):info.getLocationSkin();mc.getTextureManager().bindTexture(skin);GlStateManager.color(1,1,1,1);Gui.drawScaledCustomSizeModalRect(textX,yy+(rowHeight-10)/2,8,8,8,8,10,10,64,64);textX+=14;}
+            Gui.drawRect(xx,yy,xx+colWidth-3,yy+rowHeight-1,fade((row&1)==0?0x242A3445:0x1218202C,opacity));int textX=xx+4;
+            if(s.heads.isEnabled()){ResourceLocation skin=info==null?new ResourceLocation("textures/entity/steve.png"):info.getLocationSkin();mc.getTextureManager().bindTexture(skin);GlStateManager.color(1,1,1,opacity);Gui.drawScaledCustomSizeModalRect(textX,yy+(rowHeight-10)/2,8,8,8,8,10,10,64,64);textX+=14;}
             String name=info==null?"Player"+(i+1):info.getDisplayName()!=null?info.getDisplayName().getFormattedText():ScorePlayerTeam.formatPlayerName(info.getPlayerTeam(),info.getGameProfile().getName());
             if(protect!=null&&protect.isEnabled())name=protect.protectText(name);
             int right=xx+colWidth-7;if(s.ping.isEnabled()){int ping=info==null?24+i*7:info.getResponseTime();String p=ping<0?"--":ping+"ms";right-=font.getStringWidth(p);text(p,right,yy+(rowHeight-8)/2F,ping<0?0xFF8691A1:ping<100?0xFF80D8A3:ping<200?0xFFE4C57B:0xFFF28A8A,s.shadow.isEnabled());right-=7;}
@@ -166,7 +180,16 @@ final class HudOverlayRenderer {
             text(font.trimStringToWidth(name,Math.max(1,right-textX)),textX,yy+(rowHeight-8)/2F,s.text.getArgb(),s.shadow.isEnabled());
         }
         top+=rows*rowHeight+2;for(String line:footer){text(line,x+(w-font.getStringWidth(line))/2F,top,s.text.getArgb(),s.shadow.isEnabled());top+=10;}
-        if(shown<count)text("+"+(count-shown)+" more players",x+7,top,s.accent.getArgb(),s.shadow.isEnabled());e.setBounds(x,y,w,h);GlStateManager.popMatrix();GlStateManager.color(1,1,1,1);
+        if(shown<count)text("+"+(count-shown)+" more players",x+7,top,s.accent.getArgb(),s.shadow.isEnabled());
+        }finally{contentOpacity=1;GlStateManager.color(1,1,1,1);}
+    }
+    private float contentOpacity=1;
+    private static int fade(int c,float alpha){return Math.round((c>>>24)*alpha)<<24|c&0xFFFFFF;}
+    static final class TabLayout{
+        final int count,colWidth,rowHeight,width,height,titleHeight,shown,rows;final List<String> header,footer;
+        TabLayout(int count,int colWidth,int rowHeight,int width,int height,int titleHeight,int shown,int rows,List<String> header,List<String> footer){
+            this.count=count;this.colWidth=colWidth;this.rowHeight=rowHeight;this.width=width;this.height=height;this.titleHeight=titleHeight;this.shown=shown;this.rows=rows;this.header=header;this.footer=footer;
+        }
     }
     private void refreshPlayers(){long now=System.nanoTime();if(now<nextPlayers)return;nextPlayers=now+250000000L;players.clear();if(mc.getNetHandler()!=null)players.addAll(mc.getNetHandler().getPlayerInfoMap());players.sort(Comparator.comparing((NetworkPlayerInfo p)->p.getGameType()==WorldSettings.GameType.SPECTATOR).thenComparing(p->p.getPlayerTeam()==null?"":p.getPlayerTeam().getRegisteredName()).thenComparing(p->p.getGameProfile().getName(),String.CASE_INSENSITIVE_ORDER));}
     private String component(Field field){try{if(mc.ingameGUI==null)return "";IChatComponent c=(IChatComponent)field.get(mc.ingameGUI.getTabList());return c==null?"":c.getFormattedText();}catch(IllegalAccessException e){return "";}}

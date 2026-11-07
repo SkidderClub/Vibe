@@ -295,6 +295,8 @@ public final class PacketDelayService {
         }
 
         @Override public void channelRead(ChannelHandlerContext ctx, Object message) throws Exception {
+            if(message instanceof net.minecraft.network.play.server.S03PacketTimeUpdate)
+                dev.vibe.hud.ServerTickRate.observe(ctx.channel(),((net.minecraft.network.play.server.S03PacketTimeUpdate)message).getTotalWorldTime(),System.nanoTime()/1000000);
             if (message instanceof Packet && delayInbound((Packet<?>) message, ctx)) return;
             super.channelRead(ctx, message);
         }

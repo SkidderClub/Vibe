@@ -90,11 +90,14 @@ public final class HudShapes {
         }
     }
     public static void face(ResourceLocation skin,float x,float y,float size,float radius,float hurt) {
+        face(skin,x,y,size,radius,hurt,1);
+    }
+    public static void face(ResourceLocation skin,float x,float y,float size,float radius,float hurt,float opacity) {
         Minecraft.getMinecraft().getTextureManager().bindTexture(skin);
         try(EffectState ignored=state()) {
             GL11.glEnable(GL11.GL_TEXTURE_2D);GL11.glDisable(GL11.GL_DEPTH_TEST);
             GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);
-            GL11.glColor4f(1,1-hurt*.45F,1-hurt*.45F,1);
+            GL11.glColor4f(1,1-hurt*.45F,1-hurt*.45F,opacity);
             for(int layer=0;layer<2;layer++) {
                 float u=layer==0?8:40;
                 GL11.glBegin(GL11.GL_TRIANGLE_FAN);

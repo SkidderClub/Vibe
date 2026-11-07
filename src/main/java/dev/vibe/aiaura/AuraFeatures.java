@@ -9,6 +9,9 @@ public final class AuraFeatures {
         public double eyeX,eyeY,eyeZ,yaw,pitch,vx,vy,vz,reach=3,targetX,targetY,targetZ,targetVx,targetVy,targetVz,targetWidth=.6,targetHeight=1.8,border=.1;
         public boolean visible,grounded,sprint,leftHeld,jump;public float sensitivity=.5F;public long targetId=-1;
         public double targetHurt,selfHurt,targetHealth=1,selfHealth=1,targetYaw;public boolean targetGrounded;
+        /** Optional launch aimpoint; the real target's body and movement context stay intact. */
+        public boolean hasAimPoint;
+        public double aimX,aimY,aimZ;
     }
     public static final class Memory {
         public double pointX=.5,pointY=.6,pointZ=.5,lastYaw,lastPitch,yawAcceleration,pitchAcceleration,lastDistance;
@@ -21,6 +24,7 @@ public final class AuraFeatures {
     public static float[] build(Observation o,Memory m,long now){
         boolean changed=m.target!=o.targetId;if(changed){m.target=o.targetId;m.acquired=now;m.pointX=m.pointZ=.5;m.pointY=.6;m.lastDistance=distance(o);m.lastHit=Long.MIN_VALUE/2;m.previousHurt=0;}
         float[] f=new float[WIDTH];double distance=distance(o),px=o.targetX+(m.pointX-.5)*o.targetWidth,py=o.targetY+m.pointY*o.targetHeight,pz=o.targetZ+(m.pointZ-.5)*o.targetWidth;
+        if(o.hasAimPoint){px=o.aimX;py=o.aimY;pz=o.aimZ;}
         double[] angle=angles(o.eyeX,o.eyeY,o.eyeZ,px,py,pz),old=angles(o.eyeX,o.eyeY,o.eyeZ,px-o.targetVx,py-o.targetVy,pz-o.targetVz);
         double yaw=Math.toRadians(o.yaw),ratio=distance/Math.max(.1,o.reach);
         f[0]=clip(MouseMath.wrap(angle[0]-o.yaw)/180,-1,1);f[1]=clip((angle[1]-o.pitch)/90,-2,2);f[2]=clip(distance/9,0,3);
