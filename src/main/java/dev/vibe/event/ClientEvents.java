@@ -141,6 +141,10 @@ public final class ClientEvents {
     private final ParticlesRenderer particlesRenderer = new ParticlesRenderer();
     private final QolRenderer qolRenderer = new QolRenderer();
     private final HitmarkerRenderer hitmarkerRenderer = new HitmarkerRenderer();
+    private final dev.vibe.ui.render.KillEffectsRenderer killEffectsRenderer=new dev.vibe.ui.render.KillEffectsRenderer();
+    private final dev.vibe.ui.render.MotionBlurRenderer motionBlurRenderer=new dev.vibe.ui.render.MotionBlurRenderer();
+    private final dev.vibe.ui.render.CompanionRenderer companionRenderer=new dev.vibe.ui.render.CompanionRenderer();
+    private final dev.vibe.ui.render.TeleportPortalRenderer teleportPortalRenderer=new dev.vibe.ui.render.TeleportPortalRenderer();
     private final dev.vibe.ui.render.esp.DamageEspRenderer damageEspRenderer = new dev.vibe.ui.render.esp.DamageEspRenderer();
     private final dev.vibe.ui.effect.FogRenderer fogRenderer = new dev.vibe.ui.effect.FogRenderer();
     private final BedEspRenderer bedEspRenderer = new BedEspRenderer();
@@ -215,6 +219,7 @@ public final class ClientEvents {
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
+            dev.vibe.module.impl.visual.KillEffectsModule kills=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.KillEffectsModule.class);if(kills!=null&&!minecraft.isGamePaused())kills.tick();
             if (Vibe.getInstance().getHudManager() != null) Vibe.getInstance().getHudManager().tickTargets();
             if (Vibe.getInstance().getConfig() != null)
                 Vibe.getInstance().getConfig().tickSession(Vibe.getInstance().getModuleManager());
@@ -229,6 +234,7 @@ public final class ClientEvents {
             if (music != null) music.tick();
             MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
             if (moveFix != null) moveFix.beginRotationTick();
+            dev.vibe.module.impl.movement.BasicTeleportModule teleport=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.BasicTeleportModule.class);if(teleport!=null)teleport.tick();
             NoteBotModule noteBot = Vibe.getInstance().getModuleManager().getModule(NoteBotModule.class);
             if (noteBot != null) noteBot.tickStart();
             dev.vibe.module.impl.world.AutoRespawnModule respawn = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.world.AutoRespawnModule.class);
@@ -349,6 +355,7 @@ public final class ClientEvents {
             dev.vibe.module.impl.visual.TntESPModule tnt=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.TntESPModule.class);if(tnt!=null)tnt.tick();
             dev.vibe.module.impl.visual.BlockESPModule blocks=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.BlockESPModule.class);if(blocks!=null)blocks.tick();
             if (damageESP != null) damageESP.tick();
+            HitmarkerModule hitParticles=Vibe.getInstance().getModuleManager().getModule(HitmarkerModule.class);if(hitParticles!=null)hitParticles.tickParticles();
         }
         if (event.phase != TickEvent.Phase.END) {
             return;
@@ -466,6 +473,7 @@ public final class ClientEvents {
     public void onRenderTick(TickEvent.RenderTickEvent event) {
         if (event.phase == TickEvent.Phase.START) {
             dev.vibe.ui.render.ChunkAnimationHooks.beginFrame();
+            motionBlurRenderer.beginFrame();
             dev.vibe.easter.EasterEggs.INSTANCE.beginFrame();
             dev.vibe.module.impl.combat.AIAuraModule ai=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AIAuraModule.class);
             if(ai!=null)ai.frameTick(event.renderTickTime);
@@ -475,6 +483,7 @@ public final class ClientEvents {
         }
         if (event.phase == TickEvent.Phase.END) {
             if(minecraft.currentScreen instanceof dev.vibe.ui.screen.AIAuraRecorderGui)return;
+            if(minecraft.gameSettings.hideGUI)motionBlurRenderer.render(Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.MotionBlurModule.class));
             // F1 can skip the entire HUD event. Draw once after the frame so the
             // Phone's visibility preference also works with hidden HUDs and menus.
             if (minecraft.theWorld != null && minecraft.thePlayer != null && !FreecamModule.hideHudHook()
@@ -515,6 +524,12 @@ public final class ClientEvents {
         if (event.type == RenderGameOverlayEvent.ElementType.ALL)
             phoneRenderer.captureWorld(Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class));
     }
+
+    @SubscribeEvent(priority=net.minecraftforge.fml.common.eventhandler.EventPriority.HIGHEST)
+    public void onMotionBlur(RenderGameOverlayEvent.Pre event){if(event.type==RenderGameOverlayEvent.ElementType.ALL)motionBlurRenderer.render(Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.MotionBlurModule.class));}
+
+    @SubscribeEvent(priority=net.minecraftforge.fml.common.eventhandler.EventPriority.HIGHEST)
+    public void onKillCorpse(RenderPlayerEvent.Pre event){dev.vibe.module.impl.visual.KillEffectsModule kills=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.KillEffectsModule.class);if(kills!=null&&kills.hideCorpse(event.entityPlayer))event.setCanceled(true);}
 
     @SubscribeEvent
     public void onHud(RenderGameOverlayEvent.Post event) {
@@ -849,6 +864,8 @@ public final class ClientEvents {
         dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
         if (hypixel != null && hypixel.suppressVisuals()) return;
         fogRenderer.renderMinecraft();
+        companionRenderer.render(event.partialTicks);
+        teleportPortalRenderer.render();
         dev.vibe.ambience.AmbienceRenderer.INSTANCE.fireflies(event.partialTicks);
         ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
         if (scripts != null) scripts.renderWorld(event.partialTicks);
@@ -872,6 +889,7 @@ public final class ClientEvents {
         targetAreaRenderer.render();
         pathRenderer.render(event);
         hitmarkerRenderer.renderWorld(event);
+        killEffectsRenderer.render();
         damageEspRenderer.render(event);
         tntEspRenderer.render(event);
         blockEspRenderer.render(event);
@@ -928,6 +946,7 @@ public final class ClientEvents {
             return;
         }
         if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordAttack((EntityLivingBase) event.target);
+        dev.vibe.module.impl.visual.KillEffectsModule kills=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.KillEffectsModule.class);if(kills!=null)kills.attack((EntityLivingBase)event.target);
         WTapModule wTap = Vibe.getInstance().getModuleManager().getModule(WTapModule.class);
         if (wTap != null) wTap.onAttack((EntityLivingBase) event.target);
         BacktrackModule backtrack = Vibe.getInstance().getModuleManager().getModule(BacktrackModule.class);
@@ -1056,6 +1075,10 @@ public final class ClientEvents {
             dev.vibe.module.impl.visual.BlockESPModule blocks=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.BlockESPModule.class);if(blocks!=null)blocks.clear();
             dev.vibe.module.impl.visual.FreeLookModule look=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.FreeLookModule.class);if(look!=null&&look.isEnabled())look.setEnabled(false);
             fogRenderer.close(); hitmarkerRenderer.close(); phoneRenderer.close();
+            killEffectsRenderer.close();motionBlurRenderer.close();
+            companionRenderer.close();GirlfriendModule girlfriend=Vibe.getInstance().getModuleManager().getModule(GirlfriendModule.class);if(girlfriend!=null)girlfriend.clear();
+            teleportPortalRenderer.close();dev.vibe.module.impl.movement.BasicTeleportModule teleport=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.BasicTeleportModule.class);if(teleport!=null)teleport.clear();
+            dev.vibe.module.impl.visual.KillEffectsModule kills=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.KillEffectsModule.class);if(kills!=null)kills.clear();
             damageEspRenderer.close();
             tntEspRenderer.close();
             dev.vibe.module.impl.visual.DamageESPModule damageESP = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.DamageESPModule.class);

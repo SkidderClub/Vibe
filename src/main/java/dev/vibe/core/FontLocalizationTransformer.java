@@ -68,6 +68,7 @@ public final class FontLocalizationTransformer implements IClassTransformer, Opc
                     insertDrawHook(method, SCRIPT_RENDERER);
                     insertDrawHook(method, CHAT_RENDERER);
                     insertDrawHook(method, "dev/vibe/hud/NameProtectRenderer");
+                    InsnList containerColor=new InsnList();containerColor.add(new VarInsnNode(ILOAD,4));containerColor.add(new MethodInsnNode(INVOKESTATIC,"dev/vibe/hud/ContainerThemes","fontColor","(I)I",false));containerColor.add(new VarInsnNode(ISTORE,4));method.instructions.insert(containerColor);
                 } else if ("(Ljava/lang/String;)I".equals(method.desc)) {
                     insertScriptWidthHook(method);
                 }

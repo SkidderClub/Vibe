@@ -49,7 +49,7 @@ public final class MoveFixModule extends Module {
     private volatile FakeRotation fakeRotation;
     private FakeRotation previousRenderRotation;
     private volatile String rotationOwner;
-    // Retain the source during rotate-back so disabling it can end its correction immediately.
+    // Retain the source through rotate-back without retaining its forced inputs.
     private volatile String rotationSource;
     // A producer may pin the movement policy for its own rotation. The pin
     // lasts through the rotate-back and ends with the fake rotation itself.
@@ -194,18 +194,27 @@ public final class MoveFixModule extends Module {
         return rotationOwner != null && !owner.equals(rotationOwner) && activeRotation() != null;
     }
 
-    /** Explicitly disabling a producer leaves no rotate-back or input correction behind. */
+    /** Explicit hard reset for teleports, recorder contexts and external API callers. */
     public void discardOwnedState(String owner) {
+        if(owner!=null&&owner.equals(rotationSource)){
+            fakeRotation=previousRenderRotation=null;rotationOwner=rotationSource=correctionOverride=null;
+        }
+        clearForcedMovement(owner);
+    }
+    /** Module release keeps the return animation while stopping its forced inputs immediately. */
+    public void releaseOwnedState(String owner) {
         if (owner != null && owner.equals(rotationSource)) {
-            fakeRotation = previousRenderRotation = null;
-            rotationOwner = rotationSource = correctionOverride = null;
+            rotationOwner=null;
+            if(!smoothBackRotate.isEnabled()){
+                fakeRotation=previousRenderRotation=null;rotationSource=correctionOverride=null;
+            }
         }
         clearForcedMovement(owner);
     }
 
     public static void producerDisabled(Module producer) {
         MoveFixModule module = module();
-        if (module != null && producer != null) module.discardOwnedState(producer.getId());
+        if (module != null && producer != null) module.releaseOwnedState(producer.getId());
     }
 
     /** Feed a controlled movement vector through the same silent rotation path as player input. */

@@ -30,6 +30,7 @@ final class HudOverlayRenderer {
     private final OverlayMotion tabMotion=new OverlayMotion();
     private float tabAmount;
     private float selection=-1;
+    private final HudTween selectionTween=new HudTween();
     private long lastSelection;
     private Object healthOwner;
     private float healthFraction=-1,absorptionFraction;
@@ -64,19 +65,21 @@ final class HudOverlayRenderer {
         boolean xp=s.experience.isEnabled()&&(preview||mc.playerController==null||mc.playerController.shouldDrawHUD()||horse);
         int extra=xp?14:0,w=vanilla?182:pad*2+9*cell+8*gap,h=(vanilla?22:cell+pad*2+label)+extra;
         e.ensureOnScreen(res,w,h);int x=e.left(res,w),widgetTop=e.top(res,h),y=widgetTop+extra,slot=mc.thePlayer==null||mc.thePlayer.inventory==null?0:mc.thePlayer.inventory.currentItem;
-        if(vanilla){mc.getTextureManager().bindTexture(WIDGETS);GlStateManager.color(1,1,1,1);Gui.drawModalRectWithCustomSizedTexture(x,y,0,0,182,22,256,256);Gui.drawModalRectWithCustomSizedTexture(x-1+slot*20,y-1,0,22,24,22,256,256);}
+        long now=System.nanoTime();double dt=lastSelection==0?.05:Math.min(.1,(now-lastSelection)/1e9);lastSelection=now;
+        if(selection<0||!s.animate.isEnabled()){selection=slot;selectionTween.snap(slot);}
+        else if(s.selectionEase.is("Exponential")){selection+=(slot-selection)*(1-(float)Math.exp(-dt*s.selectionSpeed.getFloat()));selectionTween.snap(selection);}
+        else selection=selectionTween.update(slot,now/1000000,4000/s.selectionSpeed.getFloat(),s.selectionEase.getValue());
+        if(vanilla){mc.getTextureManager().bindTexture(WIDGETS);GlStateManager.color(1,1,1,1);Gui.drawModalRectWithCustomSizedTexture(x,y,0,0,182,22,256,256);}
         else{
             panel(manager,hud,e,s,x,y,w,h-extra);
-            long now=System.nanoTime();double dt=lastSelection==0?.05:Math.min(.1,(now-lastSelection)/1e9);lastSelection=now;
-            if(selection<0||!s.animate.isEnabled())selection=slot;else selection+=(slot-selection)*(1-(float)Math.exp(-dt*22));
             for(int i=0;i<9;i++){
                 int xx=x+pad+i*(cell+gap),yy=y+pad;ItemStack stack=stack(i,preview);int color=fortnite?rarity(stack,s):s.empty.getArgb();
                 HudShapes.round(xx,yy,cell,cell,fortnite?1:3,fortnite?RenderUtils.alpha(color,145):color);
                 if(fortnite)Gui.drawRect(xx,yy+cell-3,xx+cell,yy+cell,color);
                 if(s.numbers.isEnabled())text(net.minecraft.client.settings.GameSettings.getKeyDisplayString(mc.gameSettings.keyBindsHotbar[i].getKeyCode()),xx+2,yy+cell+2,s.text.getArgb(),s.shadow.isEnabled());
             }
-            float sx=x+pad+selection*(cell+gap);RenderUtils.roundedOutline(Math.round(sx),y+pad,Math.round(sx)+cell,y+pad+cell,fortnite?1:3,1.4F,s.selected.getArgb());
         }
+        drawSelection(s,x+pad+selection*(cell+gap),y+pad,cell,vanilla,s.selected.getArgb(),false);
         RenderHelper.enableGUIStandardItemLighting();GlStateManager.enableDepth();
         try{for(int i=0;i<9;i++){ItemStack item=stack(i,preview);if(item==null)continue;int xx=x+pad+i*(cell+gap)+(cell-16)/2,yy=y+pad+(cell-16)/2;
             mc.getRenderItem().renderItemAndEffectIntoGUI(item,xx,yy);
@@ -84,7 +87,7 @@ final class HudOverlayRenderer {
         if(s.counts.isEnabled())for(int i=0;i<9;i++){ItemStack item=stack(i,preview);if(item==null||item.stackSize==1)continue;String value=(item.stackSize<1?"§c":"")+item.stackSize;int xx=x+pad+i*(cell+gap)+(cell-16)/2,yy=y+pad+(cell-16)/2;text(value,xx+17-mc.fontRendererObj.getStringWidth(value),yy+9,0xFFFFFFFF,true);}
         if(s.durability.isEnabled())for(int i=0;i<9;i++){ItemStack item=stack(i,preview);if(item==null||!item.isItemDamaged())continue;int xx=x+pad+i*(cell+gap),yy=y+pad+cell-2;Gui.drawRect(xx+2,yy,xx+cell-2,yy+1,0xB0000000);Gui.drawRect(xx+2,yy,xx+2+Math.round((cell-4)*(1-item.getItemDamage()/(float)item.getMaxDamage())),yy+1,s.accent.getArgb());}
         dev.vibe.inventory.HotbarSwitches.Highlight activeSlot=dev.vibe.inventory.HotbarSwitches.highlight();
-        if(activeSlot!=null){int xx=x+pad+activeSlot.slot*(cell+gap);RenderUtils.roundedOutline(xx,y+pad,xx+cell,y+pad+cell,2,1,activeSlot.color);}
+        if(activeSlot!=null){int xx=x+pad+activeSlot.slot*(cell+gap);drawSelection(s,xx,y+pad,cell,false,activeSlot.color,true);}
         if(xp){int level=mc.thePlayer==null?17:mc.thePlayer.experienceLevel;float value=horse?mc.thePlayer.getHorseJumpPower():mc.thePlayer==null?.6F:mc.thePlayer.experience;
             Gui.drawRect(x+pad,widgetTop+10,x+w-pad,widgetTop+13,s.empty.getArgb());Gui.drawRect(x+pad,widgetTop+10,x+pad+Math.round((w-pad*2)*Math.max(0,Math.min(1,value))),widgetTop+13,horse?s.selected.getArgb():s.experienceColor.getArgb());
             if(!horse&&level>0){String caption=String.valueOf(level);text(caption,x+(w-mc.fontRendererObj.getStringWidth(caption))/2F,widgetTop,s.experienceColor.getArgb(),true);}
@@ -94,6 +97,15 @@ final class HudOverlayRenderer {
         e.setBounds(x,widgetTop,w,h);
     }
     private int highlightTicks(){try{return mc.ingameGUI==null?0:HIGHLIGHT.getInt(mc.ingameGUI);}catch(IllegalAccessException e){return 0;}}
+    private void drawSelection(OverlaySettings.Hotbar s,float x,float y,int cell,boolean vanilla,int color,boolean silent){
+        String style=silent?"Outline":s.selectionStyle.getValue();if(style.equals("None"))return;
+        if(style.equals("Native")&&vanilla){mc.getTextureManager().bindTexture(WIDGETS);GlStateManager.color(1,1,1,1);Gui.drawModalRectWithCustomSizedTexture(Math.round(x)-2,Math.round(y)-2,0,22,24,22,256,256);return;}
+        float p=s.selectionPadding.getFloat(),r=s.selectionRadius.getFloat(),thickness=s.selectionWidth.getFloat();int left=Math.round(x-p),top=Math.round(y-p),right=Math.round(x+cell+p),bottom=Math.round(y+cell+p);
+        if(s.selectionGlow.isEnabled())for(int i=3;i>=1;i--)RenderUtils.roundedOutline(left-i,top-i,right+i,bottom+i,r+i,1,fade(color,s.selectionGlowStrength.getFloat()*.12F));
+        if(style.equals("Fill")||style.equals("Fill and Outline"))HudShapes.round(left,top,right-left,bottom-top,r,s.selectionFill.getArgb());
+        if(style.equals("Underline"))HudShapes.round(left,bottom-thickness,right-left,thickness,thickness/2,color);
+        else if(!style.equals("Fill"))RenderUtils.roundedOutline(left,top,right,bottom,r,thickness,color);
+    }
     private ItemStack stack(int slot,boolean preview){
         ItemStack actual=mc.thePlayer==null||mc.thePlayer.inventory==null?null:mc.thePlayer.inventory.mainInventory[slot];
         if(actual!=null||!preview)return actual;

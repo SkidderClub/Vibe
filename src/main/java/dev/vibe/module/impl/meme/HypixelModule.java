@@ -421,7 +421,7 @@ public final class HypixelModule extends Module {
         finishSilentAttack();
         resetRound(); resetPath(); restoreFps(); releaseMovement();
         MoveFixModule fix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
-        if (fix != null) { fix.discardOwnedState("HypixelBlockParty"); fix.discardOwnedState("PitBot"); }
+        if (fix != null) { fix.releaseOwnedState("HypixelBlockParty"); fix.releaseOwnedState("PitBot"); }
     }
     private static HypixelModule active() { Vibe vibe = Vibe.getInstance(); return vibe == null || vibe.getModuleManager() == null ? null : vibe.getModuleManager().getModule(HypixelModule.class); }
     public static int beginClickHook() {

@@ -28,20 +28,22 @@ public final class HologramRenderer implements AutoCloseable {
     private EffectProgram material;
     private boolean failed;
     private static HitmarkerModule module(){Vibe vibe=Vibe.getInstance();return vibe==null||vibe.getModuleManager()==null?null:vibe.getModuleManager().getModule(HitmarkerModule.class);}
+    private static dev.vibe.module.impl.visual.KillEffectsModule kills(){Vibe v=Vibe.getInstance();return v==null||v.getModuleManager()==null?null:v.getModuleManager().getModule(dev.vibe.module.impl.visual.KillEffectsModule.class);}
+    private static boolean capturing(){HitmarkerModule h=module();dev.vibe.module.impl.visual.KillEffectsModule k=kills();return h!=null&&h.isEnabled()&&h.getModes().isSelected("Hologram")||k!=null&&k.isEnabled();}
     public static void beginWorld(){
-        inverseWorld=null;HitmarkerModule m=module();if(m==null||!m.isEnabled()||!m.getModes().isSelected("Hologram"))return;
+        inverseWorld=null;if(!capturing())return;
         MATRIX.clear();GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX,MATRIX);inverseWorld=Matrix4f.invert((Matrix4f)new Matrix4f().load(MATRIX),null);
     }
     public static void endWorld(){inverseWorld=null;}
     public void installLayers(){
         HitmarkerModule m=module();Minecraft mc=Minecraft.getMinecraft();
-        if(m==null||!m.isEnabled()||!m.getModes().isSelected("Hologram")||mc.getRenderManager()==null)return;
+        if(!capturing()||mc.getRenderManager()==null)return;
         for(Map.Entry<String,RenderPlayer> entry:mc.getRenderManager().getSkinMap().entrySet()){
             final RenderPlayer renderer=entry.getValue();final boolean small=entry.getKey().equals("slim");if(!installed.add(renderer))continue;
             renderer.addLayer(new LayerRenderer<AbstractClientPlayer>(){
                 @Override public boolean shouldCombineTextures(){return false;}
                 @Override public void doRenderLayer(AbstractClientPlayer player,float swing,float amount,float partial,float age,float yaw,float pitch,float scale){
-                    HitmarkerModule module=module();if(inverseWorld==null||module==null||!module.isEnabled()||!module.getModes().isSelected("Hologram")||player.worldObj!=Minecraft.getMinecraft().theWorld)return;
+                    HitmarkerModule module=module();if(inverseWorld==null||!capturing()||player.worldObj!=Minecraft.getMinecraft().theWorld)return;
                     ModelPlayer model=renderer.getMainModel();
                     // Custom bodies can bypass ModelPlayer.render. Reuse its native
                     // joint calculation with the same renderer parameters in that case too.
@@ -51,7 +53,9 @@ public final class HologramRenderer implements AutoCloseable {
                         MATRIX.clear();GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX,MATRIX);
                         Matrix4f root=Matrix4f.mul(inverseWorld,(Matrix4f)new Matrix4f().load(MATRIX),null);
                         net.minecraft.client.renderer.entity.RenderManager manager=Minecraft.getMinecraft().getRenderManager();
-                        module.captureHologram(player,new HologramPose(model,root,player.getLocationSkin(),small,System.currentTimeMillis(),manager.viewerPosX,manager.viewerPosY,manager.viewerPosZ));
+                        HologramPose pose=new HologramPose(model,root,player.getLocationSkin(),small,System.currentTimeMillis(),manager.viewerPosX,manager.viewerPosY,manager.viewerPosZ);
+                        if(module!=null)module.captureHologram(player,pose);
+                        dev.vibe.module.impl.visual.KillEffectsModule kill=kills();if(kill!=null)kill.capture(player,pose);
                     }finally{GL11.glPopMatrix();}
                 }
             });

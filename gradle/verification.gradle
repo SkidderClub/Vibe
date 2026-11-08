@@ -75,6 +75,8 @@ registerRenderCheck('verifyCameraHologramRendering', 'dev.vibe.ui.render.CameraH
         'Checks SmoothF5, native hit hologram poses/materials/glow and pause/chest controls offscreen.', true)
 registerRenderCheck('verifyDamageEspRendering', 'dev.vibe.ui.render.esp.DamageEspRenderCheck', 'damage-esp-render-check',
         'Checks DamageESP fonts, health deltas, fade/depth pixels, camera roll and GL state preservation.', true)
+registerRenderCheck('verifyHitParticles', 'dev.vibe.hitmarker.HitParticleRenderCheck', 'hit-particle-check',
+        'Checks HitMarker particle glow, physics presentation, depth and GL state preservation.', true)
 registerRenderCheck('verifyPhoneRendering', 'dev.vibe.phone.PhoneRenderCheck', 'phone-render-check',
         'Checks VibeOS apps, the phone hand, photo capture and graphics state.')
 registerRenderCheck('verifyItemGlow', 'dev.vibe.ui.render.ItemGlowRenderCheck', 'item-glow-check',
@@ -218,6 +220,12 @@ registerRenderCheck('verifyHudEditorRendering', 'dev.vibe.ui.ClientChangesRender
         'Checks all HUD editor widgets and legacy layout/scale behavior.', false) {
     args 'hud-editor'
 }
+registerRenderCheck('verifyVisualAdditions','dev.vibe.ui.ClientChangesRenderCheck','visual-additions-check',
+        'Checks all KillEffects modes, temporal blur and configurable Keystrokes in native OpenGL.',false){args 'visual-additions'}
+registerRenderCheck('verifyCompanion','dev.vibe.ui.ClientChangesRenderCheck','companion-check',
+        'Checks the Girlfriend model, hair, colors and native rendering.',false){args 'companion'}
+registerRenderCheck('verifyTeleportPortal','dev.vibe.ui.ClientChangesRenderCheck','teleport-check',
+        'Checks the provided portal atlas animation and native world rendering state.',false){args 'teleport'}
 registerRenderCheck('verifyConfigRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'config-render-check',
         'Checks local/online config tabs, scrolling and compact layouts without rewriting profiles.', false) {
     args 'configs'

@@ -16,6 +16,7 @@ public final class HitmarkerRenderer {
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final dev.vibe.ui.effect.TorusRenderer torus = new dev.vibe.ui.effect.TorusRenderer();
     private final HologramRenderer hologram = new HologramRenderer();
+    private final HitParticleRenderer particles=new HitParticleRenderer();
     public void installLayers(){hologram.installLayers();}
 
     public void renderOverlay() {
@@ -64,6 +65,7 @@ public final class HitmarkerRenderer {
                 if (progress > 0.0F) renderWorldMarker(module, marker, progress);
             }
         }
+        if (module.getModes().isSelected("Particle")) particles.render(module,event.partialTicks);
         if (module.getModes().isSelected("Torus")) torus.render(module);
         if (module.getModes().isSelected("Hologram")) hologram.render(module);
     }
@@ -123,7 +125,7 @@ public final class HitmarkerRenderer {
     private HitmarkerModule module() {
         return Vibe.getInstance() == null ? null : Vibe.getInstance().getModuleManager().getModule(HitmarkerModule.class);
     }
-    public void close() { torus.close(); hologram.close(); }
+    public void close() { particles.close();torus.close(); hologram.close(); }
 
     private static void color(int argb) {
         GL11.glColor4f(((argb >>> 16) & 255) / 255.0F, ((argb >>> 8) & 255) / 255.0F,

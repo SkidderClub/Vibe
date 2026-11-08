@@ -1,13 +1,195 @@
 {
-  "battlefront.fire": { "category": "player", "sounds": [{ "name": "vibe:battlefront/fire", "volume": 0.45 }] },
-  "battlefront.distant": { "category": "player", "sounds": [{ "name": "vibe:battlefront/fire", "volume": 0.10 }] },
-  "battlefront.blast": { "category": "player", "sounds": [{ "name": "vibe:battlefront/blast", "volume": 0.65 }] },
-  "battlefront.confirm": { "category": "player", "sounds": [{ "name": "vibe:battlefront/confirm", "volume": 0.35 }] },
-  "toggle.soft.on": { "category": "master", "sounds": ["vibe:toggle/soft_on"] },
-  "toggle.soft.off": { "category": "master", "sounds": ["vibe:toggle/soft_off"] },
-  "toggle.pop.on": { "category": "master", "sounds": ["vibe:toggle/pop_on"] },
-  "toggle.pop.off": { "category": "master", "sounds": ["vibe:toggle/pop_off"] },
-  "toggle.chime.on": { "category": "master", "sounds": ["vibe:toggle/chime_on"] },
-  "toggle.chime.off": { "category": "master", "sounds": ["vibe:toggle/chime_off"] },
-  "phone.message": { "category": "master", "sounds": [{ "name": "vibe:toggle/chime_on", "volume": 0.5, "pitch": 1.2 }] }
+  "battlefront.fire": {
+    "category": "player",
+    "sounds": [
+      {
+        "name": "vibe:battlefront/fire",
+        "volume": 0.45
+      }
+    ]
+  },
+  "battlefront.distant": {
+    "category": "player",
+    "sounds": [
+      {
+        "name": "vibe:battlefront/fire",
+        "volume": 0.1
+      }
+    ]
+  },
+  "battlefront.blast": {
+    "category": "player",
+    "sounds": [
+      {
+        "name": "vibe:battlefront/blast",
+        "volume": 0.65
+      }
+    ]
+  },
+  "battlefront.confirm": {
+    "category": "player",
+    "sounds": [
+      {
+        "name": "vibe:battlefront/confirm",
+        "volume": 0.35
+      }
+    ]
+  },
+  "toggle.soft.on": {
+    "category": "master",
+    "sounds": [
+      "vibe:toggle/soft_on"
+    ]
+  },
+  "toggle.soft.off": {
+    "category": "master",
+    "sounds": [
+      "vibe:toggle/soft_off"
+    ]
+  },
+  "toggle.pop.on": {
+    "category": "master",
+    "sounds": [
+      "vibe:toggle/pop_on"
+    ]
+  },
+  "toggle.pop.off": {
+    "category": "master",
+    "sounds": [
+      "vibe:toggle/pop_off"
+    ]
+  },
+  "toggle.chime.on": {
+    "category": "master",
+    "sounds": [
+      "vibe:toggle/chime_on"
+    ]
+  },
+  "toggle.chime.off": {
+    "category": "master",
+    "sounds": [
+      "vibe:toggle/chime_off"
+    ]
+  },
+  "phone.message": {
+    "category": "master",
+    "sounds": [
+      {
+        "name": "vibe:toggle/chime_on",
+        "volume": 0.5,
+        "pitch": 1.2
+      }
+    ]
+  },
+  "girlfriend.breaking_bed": {
+    "category": "player",
+    "sounds": [
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/blockbreaking/breakingbed/bedbreaking1"
+      },
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/blockbreaking/breakingbed/bedbreaking2"
+      }
+    ]
+  },
+  "girlfriend.breaking_other": {
+    "category": "player",
+    "sounds": [
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/blockbreaking/breaking1"
+      },
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/blockbreaking/breaking2"
+      }
+    ]
+  },
+  "girlfriend.hurt": {
+    "category": "player",
+    "sounds": [
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/gettingdamaged/gettingdamaged1"
+      },
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/gettingdamaged/gettingdamaged2"
+      },
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/gettingdamaged/gettingdamaged3"
+      }
+    ]
+  },
+  "girlfriend.eating_vegan": {
+    "category": "player",
+    "sounds": [
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/eating/vegan/vegan1"
+      },
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/eating/vegan/vegan2"
+      }
+    ]
+  },
+  "girlfriend.eating_other": {
+    "category": "player",
+    "sounds": [
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/eating/brutal/brutal1"
+      },
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/eating/brutal/brutal2"
+      },
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/eating/brutal/brutal3"
+      },
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/eating/brutal/brutal4"
+      }
+    ]
+  },
+  "girlfriend.attacking": {
+    "category": "player",
+    "sounds": [
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/attacking/attacking1"
+      },
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/attacking/attacking2"
+      }
+    ]
+  },
+  "girlfriend.dying": {
+    "category": "player",
+    "sounds": [
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/dying/dying1"
+      },
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/dying/dying2"
+      },
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/dying/dying3"
+      },
+      {
+        "stream": true,
+        "name": "vibe:girlfriend/dying/dying4"
+      }
+    ]
+  }
 }

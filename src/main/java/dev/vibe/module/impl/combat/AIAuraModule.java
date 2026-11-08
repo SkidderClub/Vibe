@@ -58,7 +58,7 @@ public final class AIAuraModule extends KillAuraModule {
                 int x=(int)Math.round(dy*.28/step),y=(int)Math.round(dp*.28/step);if(x==0&&Math.abs(dy)>step)x=(int)Math.signum(dy);if(y==0&&Math.abs(dp)>step)y=(int)Math.signum(dp);
                 rotation.reset(MouseMath.angle(lastYaw,x,minecraft.gameSettings.mouseSensitivity),MouseMath.pitch(lastPitch,y,minecraft.gameSettings.mouseSensitivity));fix.setFakeRotation(getId(),rotation.getYaw(),rotation.getPitch());returning=true;cameraFrame(rotation.getYaw(),rotation.getPitch());return;
             }
-            if(fix!=null)fix.discardOwnedState(getId());
+            if(fix!=null)fix.releaseOwnedState(getId());
         }
         returning=cameraFollowing=false;cameraPlayer=null;
     }

@@ -163,7 +163,7 @@ public final class NoteBotModule extends Module {
 
     private void reset() {
         MoveFixModule fix = moveFix();
-        if (fix != null) fix.discardOwnedState(getId());
+        if (fix != null) fix.releaseOwnedState(getId());
         if (loading != null) loading.cancel(false);
         loading = null;
         song = null;

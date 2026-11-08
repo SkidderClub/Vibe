@@ -52,7 +52,7 @@ public final class EspRenderCheck {
             ModuleManager modules=(ModuleManager)u.getMethod("allocateInstance",Class.class).invoke(unsafe,ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<dev.vibe.module.Module>(Arrays.asList(esp,editorModule)));set(Vibe.class,vibe,"moduleManager",modules);
             esp.getModes().setValue(new LinkedHashSet<String>(Arrays.asList("2D")));renderer=new Esp2DRenderer();
-            cornersAndContext();textBackgrounds();textAfterBars();fontFilterRestored();distanceAnchors();subpixelOutlines();subpixelBars();scalingGallery();healthAndState();check("bars");gradientMask();check("gradient");textFonts();check("fonts");editor(editorModule);check("editor");
+            cornersAndContext();textBackgrounds();textAfterBars();fontFilterRestored();distanceAnchors();subpixelOutlines();subpixelBars();scalingGallery();healthAndState();check("bars");gradientMask();check("gradient");textFonts();check("fonts");editor(editorModule);check("editor");protectedNameGlow();check("protected name");
             if(GL11.glGetError()!=0)throw new AssertionError("OpenGL error after ESP checks");
             System.out.println("ESP native checks passed: bars, global gradient masks, fonts, editor selection/resizing and settings visibility.");
         } finally {buffer.destroy();}
@@ -202,6 +202,29 @@ public final class EspRenderCheck {
         s.distanceScaling.setValue(.6);frame();
         int i=0;for(String font:new String[]{"Minecraft","Sans","Sans Bold"}){s.text.font.setValue(font);renderer.draw(s,actor(75,150),new EspLayout.Rect(140+i*270,180+i*30,100-i*25,180-i*45),W,H,true);i++;}
         save("fonts-distance-and-items.png");s.text.font.setValue("Minecraft");
+    }
+    private static void protectedNameGlow()throws Exception {
+        dev.vibe.module.impl.client.NameProtectModule protect=new dev.vibe.module.impl.client.NameProtectModule();
+        Vibe.getInstance().getModuleManager().registerDynamic(protect);
+        for(dev.vibe.setting.Setting<?> setting:protect.getSettings()){
+            if(setting.getRawName().equals("Protected Name"))((dev.vibe.setting.StringSetting)setting).setValue("VibeUser");
+            if(setting.getRawName().equals("Override Color"))((dev.vibe.setting.BooleanSetting)setting).setEnabled(true);
+        }
+        protect.nameStyle.glow.setEnabled(true);protect.nameStyle.color.setValue(0xFF18F099);
+        Esp2DSettings s=new EspModule().get2D();for(Esp2DSettings.Element e:s.elements)e.enabled.setValue(false);
+        s.distanceScaling.setValue(0D);s.name.enabled.setValue(true);s.name.outline.setValue(true);s.name.outlineWidth.setValue(1D);
+        s.text.size.setValue(18D);s.text.shadow.setValue(true);s.text.color.mode.setValue("Global Gradient");s.global.speed.setValue(0D);
+        frame();int column=0;
+        for(String font:new String[]{"Sans","Sans Bold"}){
+            s.text.font.setValue(font);Esp2DRenderer.Actor actor=new Esp2DRenderer.Actor("VibeUser",20,20,12,0,"",null,null,.5F);
+            EspLayout.Rect rect=renderer.draw(s,actor,new EspLayout.Rect(200+column++*350,250,100,160),W,H,true).elements.get("Name");
+            int strongest=0;for(int y=(int)rect.y-3;y<rect.bottom()+3;y++)for(int x=(int)rect.x-3;x<rect.right()+3;x++){
+                int rgb=pixel(x,y),r=rgb>>16&255,g=rgb>>8&255,b=rgb&255;
+                if(g>r*3&&b>r*2)strongest=Math.max(strongest,g);
+            }
+            if(strongest<90||strongest>180)throw new AssertionError("Protected-name glow lost its own color or ESP alpha: "+font+" "+strongest);
+        }
+        save("protected-name-glow-and-esp-gradient.png");protect.setEnabled(false);
     }
     private static void editor(EspEditorModule module)throws Exception {
         // Register only client preview items. Forge's statistics bootstrap requires a LaunchClassLoader.

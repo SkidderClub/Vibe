@@ -8,10 +8,21 @@ import net.minecraft.client.gui.FontRenderer;
 public final class NameProtectRenderer {
     public static final int UNHANDLED=Integer.MIN_VALUE;
     private static final ThreadLocal<Boolean> DRAWING=new ThreadLocal<>();
+    private static final ThreadLocal<Integer> SUPPRESSED=new ThreadLocal<>();
+    public static DecorationScope suppress(){return new DecorationScope();}
+    public static final class DecorationScope implements AutoCloseable{
+        private final Integer previous=SUPPRESSED.get();private DecorationScope(){SUPPRESSED.set(previous==null?1:previous+1);}
+        @Override public void close(){if(previous==null)SUPPRESSED.remove();else SUPPRESSED.set(previous);}
+    }
+    public static boolean styles(String text){
+        if(text==null||Vibe.getInstance()==null||Vibe.getInstance().getModuleManager()==null)return false;
+        NameProtectModule p=Vibe.getInstance().getModuleManager().getModule(NameProtectModule.class);
+        return p!=null&&p.stylesOwnName()&&!p.getPlainGamertag().isEmpty()&&text.contains(p.getPlainGamertag());
+    }
     private NameProtectRenderer(){}
     public static int draw(Object renderer,String text,float x,float y,int color,boolean shadow){return drawAt(renderer,text,x,y,color,shadow,System.currentTimeMillis());}
     public static int drawAt(Object renderer,String text,float x,float y,int color,boolean shadow,long now){
-        if(Boolean.TRUE.equals(DRAWING.get())||!(renderer instanceof FontRenderer)||text==null||Vibe.getInstance()==null||Vibe.getInstance().getModuleManager()==null)return UNHANDLED;
+        if(SUPPRESSED.get()!=null||Boolean.TRUE.equals(DRAWING.get())||!(renderer instanceof FontRenderer)||text==null||Vibe.getInstance()==null||Vibe.getInstance().getModuleManager()==null)return UNHANDLED;
         NameProtectModule protect=Vibe.getInstance().getModuleManager().getModule(NameProtectModule.class);
         if(protect==null||!protect.stylesOwnName())return UNHANDLED;
         String name=protect.getPlainGamertag();if(name.isEmpty()||!text.contains(name))return UNHANDLED;
@@ -44,7 +55,7 @@ public final class NameProtectRenderer {
     }
     /** Vibe's smooth GUI font uses the same decoration without changing its glyph advances. */
     public static boolean drawCustom(dev.vibe.ui.NeverLoseFont font,String text,float x,float y,int color){
-        if(Boolean.TRUE.equals(DRAWING.get())||text==null||Vibe.getInstance()==null||Vibe.getInstance().getModuleManager()==null)return false;
+        if(SUPPRESSED.get()!=null||Boolean.TRUE.equals(DRAWING.get())||text==null||Vibe.getInstance()==null||Vibe.getInstance().getModuleManager()==null)return false;
         NameProtectModule protect=Vibe.getInstance().getModuleManager().getModule(NameProtectModule.class);
         if(protect==null||!protect.stylesOwnName())return false;String name=protect.getPlainGamertag();if(name.isEmpty()||!text.contains(name))return false;
         long now=System.currentTimeMillis();HudTextStyle s=protect.nameStyle;DRAWING.set(true);
@@ -54,7 +65,7 @@ public final class NameProtectRenderer {
                 for(int pass=0;pass<2;pass++){
                     if(pass==0&&!s.glow.isEnabled())continue;float cursor=x;
                     for(int i=0;i<name.length();i++){String letter=name.substring(i,i+1);int c=protect.overridesOwnColor()?s.colorAt(now,i):color;
-                        int a=Math.round((c>>>24)*(color>>>24)/255F);
+                        int a=protect.overridesOwnColor()?Math.round((c>>>24)*(color>>>24)/255F):color>>>24;
                         if(pass==0){int ga=Math.round(a*s.glowStrength.getFloat()*.18F);float r=Math.min(1.25F,s.glowRadius.getFloat()*.35F);
                             if(ga>=1)for(int n=0;n<4;n++){double angle=n*Math.PI/2;font.draw(letter,cursor+(float)Math.cos(angle)*r,y+(float)Math.sin(angle)*r,ga<<24|c&0xFFFFFF);}
                         }else if(a>0)font.draw(letter,cursor,y,a<<24|c&0xFFFFFF);

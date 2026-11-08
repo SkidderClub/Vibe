@@ -12,6 +12,7 @@ import static org.junit.Assert.*;
 
 /** Exercises the real render scope and interpolation endpoints without a GL window. */
 public class MoveFixRenderTest {
+    @org.junit.BeforeClass public static void bootstrap()throws Exception{dev.vibe.camera.DroneCollisionsTest.registerBlocks();}
     private Minecraft minecraft;
     private Minecraft previousMinecraft;
     private EntityPlayerSP player;
@@ -155,6 +156,15 @@ public class MoveFixRenderTest {
 
     private float headAt(float partial) {
         return player.prevRotationYawHead + RotationMath.difference(player.rotationYawHead, player.prevRotationYawHead) * partial;
+    }
+    @Test public void disablingAProducerKeepsTheSmoothReturnButDropsForcedInput(){
+        moveFix.beginRotationTick();moveFix.setFakeRotation("aura",100,40,"Silent");moveFix.setForcedMovement("aura",1,0,true);
+        moveFix.getRotateBackSpeed().setRange(10,10);moveFix.releaseOwnedState("aura");
+        assertFalse(moveFix.ownsRotation("aura"));assertFalse(moveFix.hasForcedMovement());assertEquals(100,moveFix.getRotationYaw(),0);
+        moveFix.tick();assertEquals(90,moveFix.getRotationYaw(),.001);assertEquals(30,moveFix.getRotationPitch(),.001);
+        for(int i=0;i<12;i++)moveFix.tick();assertEquals(0,moveFix.getRotationYaw(),0);
+        moveFix.setFakeRotation("other",75,20);moveFix.releaseOwnedState("aura");assertEquals(75,moveFix.getRotationYaw(),0);
+        moveFix.getSmoothBackRotate().setEnabled(false);moveFix.releaseOwnedState("other");assertEquals(0,moveFix.getRotationYaw(),0);
     }
 
     @Test public void forcedMovementSprintsInServerSpaceAndResetsOnRespawn() throws Exception {

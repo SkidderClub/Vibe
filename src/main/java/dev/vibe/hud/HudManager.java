@@ -66,6 +66,8 @@ public final class HudManager {
     public static final String CPS_GRAPH = "cpsgraph";
     public static final String NOTIFICATIONS = "notifications";
     public static final String BLOCK_COUNTER="blockcounter",DYNAMIC_ISLAND="dynamicisland";
+    public static final String EFFECTS="effects",CUSTOM_GUIS="customguis";
+    public static final String KEYSTROKES="keystrokes";
     public static final String CHAT="customchat", HOTBAR="customhotbar", CUSTOM_HEALTH="customhealth", TAB="customtab";
 
     private final Minecraft minecraft = Minecraft.getMinecraft();
@@ -91,6 +93,10 @@ public final class HudManager {
     private final HudElement blockCounter=new HudElement(BLOCK_COUNTER,9,145,false,false);
     private final HudElement dynamicIsland=new HudElement(DYNAMIC_ISLAND,0,8,false,false);
     private final BlockCounterRenderer blockCounterRenderer=new BlockCounterRenderer();
+    private final HudElement effects=new HudElement(EFFECTS,9,60,true,false),customGuis=new HudElement(CUSTOM_GUIS,0,0,false,false);
+    private final EffectsRenderer effectsRenderer=new EffectsRenderer();
+    private final HudElement keystrokes=new HudElement(KEYSTROKES,9,200,false,false);
+    private final KeystrokesRenderer keystrokesRenderer=new KeystrokesRenderer();
     private final DynamicIslandRenderer islandRenderer=new DynamicIslandRenderer();
     private final WatermarkRenderer watermarkRenderer=new WatermarkRenderer();
     private final HudElement ghosts = new HudElement(GHOSTS, 12, 142, false, true);
@@ -188,6 +194,8 @@ public final class HudManager {
             if(isEnabled(CUSTOM_HEALTH)&&(minecraft.playerController==null||minecraft.playerController.shouldDrawHUD()))renderScaled(customHealth,resolution,()->overlays.health(this,hud,customHealth,resolution,previewingHud));
             if(isEnabled(TAB)&&overlays.tabVisible()&&!DynamicIslandRenderer.owns(hud,"Tab"))renderScaled(tab,resolution,()->overlays.tab(this,hud,tab,resolution,false));
             if(isEnabled(BLOCK_COUNTER))renderScaled(blockCounter,resolution,()->blockCounterRenderer.draw(this,hud,blockCounter,resolution,false));else blockCounterRenderer.reset();
+            if(isEnabled(EFFECTS))renderScaled(effects,resolution,()->effectsRenderer.draw(this,hud,effects,resolution,false));else effectsRenderer.clear();
+            if(isEnabled(KEYSTROKES))renderScaled(keystrokes,resolution,()->keystrokesRenderer.draw(this,hud,keystrokes,resolution,false));
             if(isEnabled(DYNAMIC_ISLAND)){
                 net.minecraft.entity.EntityLivingBase target=DynamicIslandRenderer.owns(hud,"TargetHud")?targetTracker.resolve(minecraft,hud.targetHud,System.currentTimeMillis()):null;
                 TargetHudData data=target==null?null:TargetHudData.from(minecraft,target);
@@ -546,6 +554,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     public void tickTargets() {
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        if(minecraft.thePlayer==null||hud==null||!hud.isEnabled()||!isEnabled(EFFECTS))effectsRenderer.clear();
         if (targetWorld != minecraft.theWorld) {
             targetCards.clear(); targetRenderer.clear(); targetWorld = minecraft.theWorld;
         }
@@ -1118,6 +1127,8 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     public HudElement getElement(String id) {
+        if(KEYSTROKES.equals(id))return keystrokes;
+        if(EFFECTS.equals(id))return effects;if(CUSTOM_GUIS.equals(id))return customGuis;
         if(BLOCK_COUNTER.equals(id))return blockCounter;if(DYNAMIC_ISLAND.equals(id))return dynamicIsland;
         if(CHAT.equals(id))return chat;if(HOTBAR.equals(id))return hotbar;if(CUSTOM_HEALTH.equals(id))return customHealth;if(TAB.equals(id))return tab;
         if (GHOSTS.equals(id)) return ghosts;
@@ -1164,7 +1175,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     public String[] getElementIds() {
         return new String[] {WATERMARK, ARRAY_LIST, COORDINATES, SCOREBOARD, CLOCK, SESSION_INFO, MOTION_GRAPH, STALKER,
-                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, TARGET_HUD, NOTIFICATIONS, MUSIC, GHOSTS,CHAT,HOTBAR,CUSTOM_HEALTH,TAB,BLOCK_COUNTER,DYNAMIC_ISLAND};
+                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, TARGET_HUD, NOTIFICATIONS, MUSIC, GHOSTS,CHAT,HOTBAR,CUSTOM_HEALTH,TAB,BLOCK_COUNTER,DYNAMIC_ISLAND,EFFECTS,CUSTOM_GUIS,KEYSTROKES};
     }
 
     public boolean isEnabled(String id) {
@@ -1212,7 +1223,8 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
     public List<dev.vibe.setting.Setting<?>> overlaySettings(String id){
         HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);if(hud==null)return Collections.emptyList();
-        if(BLOCK_COUNTER.equals(id))return hud.blockCounter.all;if(DYNAMIC_ISLAND.equals(id))return hud.island.all;
+        if(KEYSTROKES.equals(id))return hud.keystrokes.all;if(BLOCK_COUNTER.equals(id))return hud.blockCounter.all;if(DYNAMIC_ISLAND.equals(id))return hud.island.all;
+        if(EFFECTS.equals(id))return hud.effects.all;if(CUSTOM_GUIS.equals(id))return hud.containers.all;
         if(CHAT.equals(id))return hud.chat.all;if(HOTBAR.equals(id))return hud.hotbar.all;if(CUSTOM_HEALTH.equals(id))return hud.customHealth.all;if(TAB.equals(id))return hud.tab.all;return Collections.emptyList();
     }
 
@@ -1229,6 +1241,9 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         previewingHud = true;
         try (dev.vibe.ui.render.HudItemGeometryRenderer.Scope items = dev.vibe.ui.render.HudItemGeometryRenderer.begin()) {
             if (element == targetHud) drawTargetHud(hud, resolution, font);
+            else if(element==keystrokes)renderScaled(element,resolution,()->keystrokesRenderer.draw(this,hud,element,resolution,true));
+            else if(element==effects)renderScaled(element,resolution,()->effectsRenderer.draw(this,hud,element,resolution,true));
+            else if(element==customGuis)ContainerThemes.preview(this,hud,element,resolution);
             else if(element==blockCounter)renderScaled(element,resolution,()->blockCounterRenderer.draw(this,hud,element,resolution,true));
             else if(element==dynamicIsland)renderScaled(element,resolution,()->islandRenderer.draw(this,hud,element,resolution,overlays,null,true));
             else if(element==chat)renderScaled(element,resolution,()->HudChat.draw(this,hud,chat,resolution,true));
@@ -1303,6 +1318,8 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         root.add(SCOREBOARD, scoreboard.toJson());
         root.add(CLOCK, clock.toJson());
         root.add(BLOCK_COUNTER,blockCounter.toJson());root.add(DYNAMIC_ISLAND,dynamicIsland.toJson());
+        root.add(EFFECTS,effects.toJson());root.add(CUSTOM_GUIS,customGuis.toJson());
+        root.add(KEYSTROKES,keystrokes.toJson());
         root.add(CHAT,chat.toJson());root.add(HOTBAR,hotbar.toJson());root.add(CUSTOM_HEALTH,customHealth.toJson());root.add(TAB,tab.toJson());
         root.add(GHOSTS, ghosts.toJson());
         root.add(TARGET_HUD, targetHud.toJson());
@@ -1329,7 +1346,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         scoreboard.fromJson(root.has(SCOREBOARD) && root.get(SCOREBOARD).isJsonObject() ? root.getAsJsonObject(SCOREBOARD) : null);
         targetHud.fromJson(root.has(TARGET_HUD) && root.get(TARGET_HUD).isJsonObject() ? root.getAsJsonObject(TARGET_HUD) : null);
         clock.fromJson(root.has(CLOCK) && root.get(CLOCK).isJsonObject() ? root.getAsJsonObject(CLOCK) : null);
-        for(String id:new String[]{CHAT,HOTBAR,CUSTOM_HEALTH,TAB,BLOCK_COUNTER,DYNAMIC_ISLAND})getElement(id).fromJson(root.has(id)&&root.get(id).isJsonObject()?root.getAsJsonObject(id):null);
+        for(String id:new String[]{CHAT,HOTBAR,CUSTOM_HEALTH,TAB,BLOCK_COUNTER,DYNAMIC_ISLAND,EFFECTS,CUSTOM_GUIS,KEYSTROKES})getElement(id).fromJson(root.has(id)&&root.get(id).isJsonObject()?root.getAsJsonObject(id):null);
         ghosts.fromJson(root.has(GHOSTS) && root.get(GHOSTS).isJsonObject() ? root.getAsJsonObject(GHOSTS) : null);
         sessionInfo.fromJson(root.has(SESSION_INFO) && root.get(SESSION_INFO).isJsonObject() ? root.getAsJsonObject(SESSION_INFO) : null);
         motionGraph.fromJson(root.has(MOTION_GRAPH) && root.get(MOTION_GRAPH).isJsonObject() ? root.getAsJsonObject(MOTION_GRAPH) : null);
@@ -1416,6 +1433,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         }
 
         public int top(ScaledResolution resolution, int height) {
+            if(EFFECTS.equals(id))return y>resolution.getScaledHeight()/2?y-height:y;
             return verticallyCentred ? resolution.getScaledHeight() / 2 + y - height / 2
                     : centred ? resolution.getScaledHeight() / 2 + y
                     : (bottomAnchored ? resolution.getScaledHeight() - y - height : y);
@@ -1458,12 +1476,13 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         }
 
         public void moveTo(int desiredLeft, int desiredTop, ScaledResolution resolution) {
+            if(CUSTOM_GUIS.equals(id))return;
             int safeLeft = Math.max(0, Math.min(resolution.getScaledWidth() - Math.max(1, width), desiredLeft));
             int safeTop = Math.max(0, Math.min(resolution.getScaledHeight() - Math.max(1, height), desiredTop));
             centred = false;
             verticallyCentred = false;
             x = horizontalCenter()?safeLeft-resolution.getScaledWidth()/2+width/2:rightAnchored ? resolution.getScaledWidth() - safeLeft - width : safeLeft;
-            y = bottomAnchored ? resolution.getScaledHeight() - safeTop - height : safeTop;
+            y = EFFECTS.equals(id)?safeTop>resolution.getScaledHeight()/2?safeTop+height:safeTop:bottomAnchored ? resolution.getScaledHeight() - safeTop - height : safeTop;
             left = safeLeft;
             top = safeTop;
         }
@@ -1533,8 +1552,8 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         public int getWidth() { return width; }
         public int getHeight() { return height; }
         public int getY() { return y; }
-        public float getScale() { return scale; }
-        public void setScale(float value) { scale = Math.max(0.50F, Math.min(2.00F, value)); }
+        public float getScale() { return CUSTOM_GUIS.equals(id)?1:scale; }
+        public void setScale(float value) { scale = CUSTOM_GUIS.equals(id)?1:Math.max(0.50F, Math.min(2.00F, value)); }
         public String getTheme() { return theme; }
         public void setTheme(String value) {
             if (value == null) theme = null;

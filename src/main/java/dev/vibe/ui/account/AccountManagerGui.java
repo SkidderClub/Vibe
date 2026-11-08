@@ -265,15 +265,19 @@ public final class AccountManagerGui extends GuiScreen {
         boolean error = accounts.hasError() && !choosingFile && !folderView;
         String message = choosingFile ? chooserMessage : folderView ? accounts.getCookieFolder().getStatus()
                 : !error && System.currentTimeMillis() < copiedUntil ? "Code copied to clipboard." : accounts.getStatus();
-        AccountScreenStyle.panel(innerLeft, statusTop, innerWidth, 27,
-                error ? 0xFF2B1C25 : AccountScreenStyle.SURFACE, error ? 0xFF59313F : AccountScreenStyle.BORDER);
+        AccountScreenStyle.buttonPanel(innerLeft, statusTop, innerWidth, 27,
+                error ? 0xFF2B1C25 : AccountScreenStyle.SURFACE, error ? 0xFF59313F : AccountScreenStyle.BORDER,.08F,mouseX,mouseY);
         int color = error ? AccountScreenStyle.ERROR : AccountScreenStyle.MUTED;
         RenderUtils.roundedRect(innerLeft + 9, statusTop + 11, innerLeft + 13, statusTop + 15, 2,
                 error ? color : accounts.isBusy() || choosingFile ? AccountScreenStyle.ACCENT : AccountScreenStyle.SUCCESS);
-        List<String> lines = fontRendererObj.listFormattedStringToWidth(message, innerWidth - 32);
+        message=net.minecraft.util.EnumChatFormatting.getTextWithoutFormattingCodes(message);
+        dev.vibe.ui.menu.MenuFont font=AccountScreenStyle.SMALL_FONT;
+        List<String> lines = font.wrap(message, innerWidth - 32);
+        int rows=Math.min(2,lines.size());float rowHeight=font.inkHeight("Ag"),gap=3;
+        float textY=statusTop+(27-rows*rowHeight-(rows-1)*gap)/2F;
         for (int i = 0; i < Math.min(2, lines.size()); i++) {
-            String line = i == 1 && lines.size() > 2 ? AccountScreenStyle.fit(lines.get(i), innerWidth - 48) + "..." : lines.get(i);
-            AccountScreenStyle.text(line, innerLeft + 20, statusTop + (lines.size() > 1 ? 5 : 10) + i * 9, color);
+            String line = i == 1 && lines.size() > 2 ? font.fit(lines.get(i)+"…", innerWidth - 32) : lines.get(i);
+            font.draw(line,innerLeft+20,textY+i*(rowHeight+gap),color);
         }
         if (mouseX >= innerLeft && mouseX < innerLeft + innerWidth && mouseY >= statusTop && mouseY < statusTop + 27 && lines.size() > 2)
             drawHoveringText(fontRendererObj.listFormattedStringToWidth(message, Math.min(300, innerWidth)), mouseX, mouseY);

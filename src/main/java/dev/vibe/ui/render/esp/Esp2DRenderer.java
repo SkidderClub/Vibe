@@ -180,14 +180,16 @@ public final class Esp2DRenderer {
             // The outline and shadow passes are plain glyph draws; one alpha-test query serves them.
             NeverLoseFont run=t.font.is("Minecraft")?null:font(t);
             if(run!=null)run.beginRun();
-            try {
+            try (dev.vibe.hud.NameProtectRenderer.DecorationScope decoration=dev.vibe.hud.NameProtectRenderer.suppress()) {
                 if(e.outline.isEnabled()) {
                     float d=e.outlineWidth.getFloat()*scale/size;
                     for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)if(x!=0||y!=0)text(t,value,x*d,y*d,alpha(resolve(e.outlineColor,actor),opacity));
                 }
                 if(t.shadow.isEnabled())text(t,value,1,1,alpha(0xB0000000,opacity));
             } finally {if(run!=null)run.endRun();}
-            boolean shader=paint(settings,t.color,r,w,h,true,actor,seconds);
+            boolean protectedName=dev.vibe.hud.NameProtectRenderer.styles(value);
+            boolean shader=!protectedName&&paint(settings,t.color,r,w,h,true,actor,seconds);
+            if(protectedName)GL20.glUseProgram(0);
             text(t,value,0,0,shader?0xFFFFFFFF:alpha(fallback(settings,t.color,r,w,h,seconds,actor),opacity));
         } finally {GL20.glUseProgram(0);GlStateManager.popMatrix();}
     }

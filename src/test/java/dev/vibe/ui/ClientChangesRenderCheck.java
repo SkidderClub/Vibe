@@ -88,6 +88,9 @@ public final class ClientChangesRenderCheck {
             Vibe vibe = new Vibe(); set(Vibe.class,null,"instance",vibe);
             ModuleManager modules = instance(ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<Module>()); set(Vibe.class,vibe,"moduleManager",modules);
+            if(args.length>0&&args[0].equals("visual-additions")){dev.vibe.hud.VisualAdditionsRenderCheck.verify(mc,OUTPUT);return;}
+            if(args.length>0&&args[0].equals("companion")){dev.vibe.companion.CompanionRenderCheck.verify(mc,OUTPUT);return;}
+            if(args.length>0&&args[0].equals("teleport")){dev.vibe.teleport.PortalRenderCheck.verify(OUTPUT);return;}
             if(args.length>0&&args[0].equals("clickgui-reopen")){dev.vibe.ui.clickgui.ClickGuiReopenRenderCheck.verify(mc,modules,OUTPUT);return;}
             if(args.length>0&&args[0].equals("ambience")){dev.vibe.ambience.AmbienceRenderCheck.verify(mc,modules,OUTPUT);return;}
             if(args.length>0&&args[0].equals("tnt")){dev.vibe.ui.render.esp.TntEspRenderCheck.verify(mc,modules,OUTPUT);return;}
@@ -177,7 +180,7 @@ public final class ClientChangesRenderCheck {
                 save("hud-editor-all.png");
                 for (String id : manager.getElementIds()) {
                     dev.vibe.hud.HudManager.HudElement element = manager.getElement(id);
-                    if (manager.isEnabled(id) && (element.getWidth() <= 1 || element.getHeight() <= 1))
+                    if (manager.isEnabled(id) && !id.equals(dev.vibe.hud.HudManager.CUSTOM_GUIS) && (element.getWidth() <= 1 || element.getHeight() <= 1))
                         throw new AssertionError("HUD editor preview is missing " + id);
                 }
                 // Without framebuffers the editor draws the HUD directly into the scaled canvas.

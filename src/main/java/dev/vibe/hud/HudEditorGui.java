@@ -198,8 +198,8 @@ public final class HudEditorGui extends GuiScreen {
         boolean hover = hovered(innerLeft, y, right, y + rowHeight, mouseX, mouseY);
         AccountScreenStyle.panel(innerLeft, y, right - innerLeft, rowHeight, active ? TINT : hover ? HOVER : SURFACE, active ? ACCENT : BORDER);
         int switchX = right - 28, padding = compact ? 8 : 10;
-        AccountScreenStyle.rawText(AccountScreenStyle.fitRaw(friendlyName(id), switchX - innerLeft - padding - 4), innerLeft + padding,
-                y + (rowHeight - 8) / 2, enabled ? TEXT : MUTED);
+        String label=AccountScreenStyle.BODY_FONT.fit(friendlyName(id),switchX-innerLeft-padding-4);
+        AccountScreenStyle.BODY_FONT.middle(label,innerLeft+padding,y,rowHeight,enabled?TEXT:MUTED);
         toggle(switchX, y + (rowHeight - 12) / 2, enabled);
         addHit(innerLeft, y, right, y + rowHeight, (x, yy) -> select(element));
         addHit(switchX - 4, y, right, y + rowHeight, (x, yy) -> { select(element); toggleElement(id); });
@@ -258,7 +258,8 @@ public final class HudEditorGui extends GuiScreen {
         manager.beginEditorPreview(physicalPixels);
         Framebuffer previousTarget = KawaseBlur.useHudTarget(physicalPixels ? preview : null);
         try {
-            for (String id : manager.getElementIds()) if (manager.isEnabled(id)) manager.drawPreview(manager.getElement(id), fontRendererObj);
+            for (String id : manager.getElementIds()) if (!HudManager.CUSTOM_GUIS.equals(id)&&manager.isEnabled(id)) manager.drawPreview(manager.getElement(id), fontRendererObj);
+            if(selected!=null&&HudManager.CUSTOM_GUIS.equals(selected.getId()))manager.drawPreview(selected,fontRendererObj);
         } finally {
             KawaseBlur.useHudTarget(previousTarget);
             manager.endEditorPreview();
@@ -335,6 +336,7 @@ public final class HudEditorGui extends GuiScreen {
         if (selected == null || !manager.isEnabled(selected.getId())) return;
         int[] bounds = bounds(selected);
         GuiLine.outline(bounds[0] - 1, bounds[1] - 1, bounds[2] + 1, bounds[3] + 1, ACCENT);
+        if(HudManager.CUSTOM_GUIS.equals(selected.getId()))return;
         MenuRoundedRenderer.rect(bounds[2] - 5, bounds[3] - 5, 10, 10, 5, BACKGROUND);
         MenuRoundedRenderer.rect(bounds[2] - 4, bounds[3] - 4, 8, 8, 4, ACCENT);
         if(HudManager.CHAT.equals(selected.getId())){
@@ -382,16 +384,16 @@ public final class HudEditorGui extends GuiScreen {
         final String id = selected.getId();
         boolean shown = manager.isEnabled(id);
         String state = LanguageManager.translate(shown ? "Visible" : "Hidden");
-        int tagWidth = fontRendererObj.getStringWidth(state) + 10, tagX = right - tagWidth - 9, color = shown ? SUCCESS : MUTED;
-        MenuRoundedRenderer.rect(tagX, y + 10, tagWidth, 14, 4, RenderUtils.blend(SURFACE, color, .16F));
-        AccountScreenStyle.rawText(state, tagX + 5, y + 13, color);
+        int tagWidth = dev.vibe.ui.menu.MenuStatusChip.width(state), tagX = right - tagWidth - 9, color = shown ? SUCCESS : MUTED;
+        dev.vibe.ui.menu.MenuStatusChip.draw(tagX,y+9,tagWidth,18,state,color);
         AccountScreenStyle.rawText(AccountScreenStyle.fitRaw(friendlyName(id), tagX - x - 16), x + 10, y + 7, TEXT);
         AccountScreenStyle.rawText(AccountScreenStyle.fitRaw("X " + selected.getLeft() + "  Y " + selected.getTop(), tagX - x - 16),
                 x + 10, y + 20, MUTED);
-        addHit(tagX, y + 10, tagX + tagWidth, y + 24, (mouseX, mouseY) -> toggleElement(id));
+        addHit(tagX, y + 9, tagX + tagWidth, y + 27, (mouseX, mouseY) -> toggleElement(id));
     }
 
     private void drawScale(int x, int right, int y, int mouseX, int mouseY) {
+        if(selected!=null&&HudManager.CUSTOM_GUIS.equals(selected.getId())){AccountScreenStyle.panel(x,y,right-x,CONTROL,SURFACE,BORDER);AccountScreenStyle.SMALL_FONT.centered("Fixed native layout",x,y,right-x,CONTROL,MUTED);return;}
         final HudManager.HudElement element = selected;
         AccountScreenStyle.panel(x, y, right - x, CONTROL, SURFACE, BORDER);
         String percent = Math.round(element.getScale() * 100.0F) + "%";
@@ -744,6 +746,7 @@ public final class HudEditorGui extends GuiScreen {
         HudManager.HudElement target = selected != null && manager.isEnabled(selected.getId()) && isInside(selected, x, y) ? selected : elementAt(x, y);
         if (target == null) return;
         select(target);
+        if(HudManager.CUSTOM_GUIS.equals(target.getId()))return;
         dragged = target;
         resizing = false;
         dragStartMouseX=mouseX;dragStartMouseY=mouseY;dragStarted=false;
@@ -776,6 +779,7 @@ public final class HudEditorGui extends GuiScreen {
         if (mouseX>=themeLeft&&mouseX<themeRight&&mouseY>=themeTop&&mouseY<themeBottom) {
             themeScroll=Math.max(0,Math.min(themeMaxScroll,themeScroll+step*17));
         } else if (selected != null && insideCanvas(mouseX, mouseY)) {
+            if(HudManager.CUSTOM_GUIS.equals(selected.getId()))return;
             selected.setScale(selected.getScale() - step * .05F);
             persist();
         } else if (mouseX >= inspectorLeft && mouseX < inspectorLeft + inspectorWidth) {
@@ -823,6 +827,7 @@ public final class HudEditorGui extends GuiScreen {
     }
 
     private void select(HudManager.HudElement element) {
+        revealElement(element);
         if (element == selected) return;
         selected = element;
         settingsScroll = 0;
@@ -830,6 +835,15 @@ public final class HudEditorGui extends GuiScreen {
         openMode = null;
         editingColor = null;
         openMulti.clear();
+    }
+    private void revealElement(HudManager.HudElement element){
+        if(element==null)return;String[] ids=manager.getElementIds();
+        for(int i=0;i<ids.length;i++)if(ids[i].equals(element.getId())){
+            int row=i*(rowHeight+GAP),height=contentBottom-areaTop;
+            if(row<elementsScroll)elementsScroll=row;
+            else if(row+rowHeight>elementsScroll+height)elementsScroll=row+rowHeight-height;
+            elementsScroll=Math.max(0,Math.min(elementsScroll,maxElementScroll()));break;
+        }
     }
 
     private Pointer dragging(final Pointer pointer) {
@@ -885,6 +899,7 @@ public final class HudEditorGui extends GuiScreen {
 
     private boolean overResizeHandle(int mouseX, int mouseY) {
         if (selected == null) return false;
+        if(HudManager.CUSTOM_GUIS.equals(selected.getId()))return false;
         int[] bounds = bounds(selected);
         return hit(bounds[2] - 7, bounds[3] - 7, bounds[2] + 8, bounds[3] + 8, mouseX, mouseY);
     }
@@ -897,7 +912,7 @@ public final class HudEditorGui extends GuiScreen {
 
     private HudManager.HudElement elementAt(int x, int y) {
         String[] ids = manager.getElementIds();
-        for (int i = ids.length - 1; i >= 0; i--) if (manager.isEnabled(ids[i]) && isInside(manager.getElement(ids[i]), x, y)) return manager.getElement(ids[i]);
+        for (int i = ids.length - 1; i >= 0; i--) if (!HudManager.CUSTOM_GUIS.equals(ids[i])&&manager.isEnabled(ids[i]) && isInside(manager.getElement(ids[i]), x, y)) return manager.getElement(ids[i]);
         return null;
     }
 
@@ -956,11 +971,14 @@ public final class HudEditorGui extends GuiScreen {
         return headerHeight(setting);
     }
     private String effectiveTheme(HudManager.HudElement element) { if (HudManager.GHOSTS.equals(element.getId())) return Vibe.getInstance().getModuleManager().getModule(HudModule.class).ghosts.mode.getValue(); if (HudManager.TARGET_HUD.equals(element.getId())) return Vibe.getInstance().getModuleManager().getModule(HudModule.class).targetHud.mode.getValue(); if (element.getTheme() != null) return element.getTheme(); HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class); return hud == null ? "Vibe" : hud.getMode().getValue(); }
-    private String friendlyName(String id) { String value; if(HudManager.BLOCK_COUNTER.equals(id))return "Block Counter";if(HudManager.DYNAMIC_ISLAND.equals(id))return "Dynamic Island"; if(HudManager.CHAT.equals(id))return "Custom Chat";if(HudManager.HOTBAR.equals(id))return "Custom Hotbar";if(HudManager.CUSTOM_HEALTH.equals(id))return "Custom Health";if(HudManager.TAB.equals(id))return "Custom Tab"; if (HudManager.TARGET_HUD.equals(id)) value = "Target HUD"; else if (HudManager.ARRAY_LIST.equals(id)) value = "Array list"; else if (HudManager.SESSION_INFO.equals(id)) value = "Statistics"; else if (HudManager.MOTION_GRAPH.equals(id)) value = "Motion graph"; else if (HudManager.CPS_GRAPH.equals(id)) value = "CPS graph"; else if (HudManager.MUSIC.equals(id)) value = "Music"; else { value = id == null ? "" : id.replace('_', ' '); value = value.isEmpty() ? value : Character.toUpperCase(value.charAt(0)) + value.substring(1); } return LanguageManager.translate(value); }
+    private String friendlyName(String id) { String value; if(HudManager.EFFECTS.equals(id))return "Effects";if(HudManager.CUSTOM_GUIS.equals(id))return "Custom GUIs"; if(HudManager.BLOCK_COUNTER.equals(id))return "Block Counter";if(HudManager.DYNAMIC_ISLAND.equals(id))return "Dynamic Island"; if(HudManager.CHAT.equals(id))return "Custom Chat";if(HudManager.HOTBAR.equals(id))return "Custom Hotbar";if(HudManager.CUSTOM_HEALTH.equals(id))return "Custom Health";if(HudManager.TAB.equals(id))return "Custom Tab"; if (HudManager.TARGET_HUD.equals(id)) value = "Target HUD"; else if (HudManager.ARRAY_LIST.equals(id)) value = "Array list"; else if (HudManager.SESSION_INFO.equals(id)) value = "Statistics"; else if (HudManager.MOTION_GRAPH.equals(id)) value = "Motion graph"; else if (HudManager.CPS_GRAPH.equals(id)) value = "CPS graph"; else if (HudManager.MUSIC.equals(id)) value = "Music"; else { value = id == null ? "" : id.replace('_', ' '); value = value.isEmpty() ? value : Character.toUpperCase(value.charAt(0)) + value.substring(1); } return LanguageManager.translate(value); }
     private String displayName(Setting<?> setting, String element) {
         String value = setting.getRawName();
+        if(HudManager.KEYSTROKES.equals(element))return LanguageManager.translate(value.replaceFirst("(?i)^Keystrokes\\s+", ""));
         if(HudManager.BLOCK_COUNTER.equals(element))return LanguageManager.translate(value.replaceFirst("(?i)^Block Counter\\s+", ""));
         if(HudManager.DYNAMIC_ISLAND.equals(element))return LanguageManager.translate(value.replaceFirst("(?i)^Dynamic Island\\s+", ""));
+        if(HudManager.EFFECTS.equals(element))return LanguageManager.translate(value.replaceFirst("(?i)^Effects\\s+", ""));
+        if(HudManager.CUSTOM_GUIS.equals(element))return LanguageManager.translate(value.replaceFirst("(?i)^Custom GUIs\\s+", ""));
         if (HudManager.TARGET_HUD.equals(element)) value = value.replaceFirst("(?i)^Target HUD\\s+", "");
         else if (HudManager.CLOCK.equals(element)) value = value.replaceFirst("(?i)^Clock\\s+", "");
         else if (HudManager.GHOSTS.equals(element)) value = value.replaceFirst("(?i)^Ghosts\\s+", "");

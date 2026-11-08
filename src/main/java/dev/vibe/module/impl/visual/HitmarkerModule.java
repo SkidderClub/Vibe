@@ -23,7 +23,9 @@ import org.lwjgl.input.Keyboard;
 public final class HitmarkerModule extends Module {
 
     private final MultiSelectSetting modes = addSetting(new MultiSelectSetting("Modes",
-            Arrays.asList("2D (Crosshair)", "3D (World)", "Torus", "Hologram"), Arrays.asList("2D (Crosshair)")));
+            Arrays.asList("2D (Crosshair)", "3D (World)", "Torus", "Hologram", "Particle"), Arrays.asList("2D (Crosshair)")));
+    public final dev.vibe.hitmarker.HitParticleSettings particleSettings=new dev.vibe.hitmarker.HitParticleSettings(this::addSetting,()->modes.isSelected("Particle"));
+    public final dev.vibe.hitmarker.HitParticles particles=new dev.vibe.hitmarker.HitParticles();
     public final NumberSetting hologramLifetime=addSetting(new NumberSetting("Hologram Lifetime",1000,100,5000,50,()->modes.isSelected("Hologram")));
     public final NumberSetting hologramDelay=addSetting(new NumberSetting("Hologram Delay",100,0,1000,10,()->modes.isSelected("Hologram")));
     public final ColorSetting hologramColor=addSetting(new ColorSetting("Hologram Color",0xFF65D8FF,()->modes.isSelected("Hologram")));
@@ -84,7 +86,7 @@ public final class HitmarkerModule extends Module {
     private final List<Marker> torusMarkers = new ArrayList<Marker>();
 
     public HitmarkerModule() {
-        super("Hitmarker", "2D, 3D, torus and frozen player hologram hit confirmations", Category.VISUAL, Keyboard.KEY_NONE);
+        super("Hitmarker", "Crosshair, world, torus, hologram and physical particle hit confirmations", Category.VISUAL, Keyboard.KEY_NONE);
     }
 
     public void mark(EntityLivingBase target) {
@@ -94,6 +96,9 @@ public final class HitmarkerModule extends Module {
         lastHit = System.currentTimeMillis();
         hitTarget = target;
         captureHitPoint(target);
+        Minecraft mc=Minecraft.getMinecraft();
+        if(modes.isSelected("Particle")&&mc.theWorld!=null&&target.worldObj==mc.theWorld)
+            particles.emit(mc.theWorld,particleSettings,new Vec3(lastX,lastY,lastZ),new Vec3(lastLookX,lastLookY,lastLookZ),lastHit);
         if(modes.isSelected("Hologram")&&target instanceof net.minecraft.entity.player.EntityPlayer&&(lastHologram==0||lastHit-lastHologram>=hologramDelay.getInt())){
             pendingHolograms.entrySet().removeIf(entry->lastHit-entry.getValue()>500);
             if(pendingHolograms.size()>=32)pendingHolograms.remove(pendingHolograms.keySet().iterator().next());
@@ -175,7 +180,8 @@ public final class HitmarkerModule extends Module {
     }
 
     @Override protected void onDisable() { clear(); }
-    public void clear() { markers.clear(); torusMarkers.clear(); hologramPoses.clear();pendingHolograms.clear();holograms.clear();lastHologram=0;lastHit = lastTorus = 0; hitTarget = null; }
+    public void clear() { particles.clear();markers.clear(); torusMarkers.clear(); hologramPoses.clear();pendingHolograms.clear();holograms.clear();lastHologram=0;lastHit = lastTorus = 0; hitTarget = null; }
+    public void tickParticles(){Minecraft mc=Minecraft.getMinecraft();if(!isEnabled()||!modes.isSelected("Particle")||mc.thePlayer==null){particles.clear();return;}if(!mc.isGamePaused())particles.tick(mc.theWorld,particleSettings);}
     public void captureHologram(net.minecraft.entity.player.EntityPlayer player,dev.vibe.ui.render.HologramPose pose){
         if(!isEnabled()||!modes.isSelected("Hologram"))return;
         hologramPoses.entrySet().removeIf(entry->pose.created-entry.getValue().created>500);

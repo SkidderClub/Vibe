@@ -9,6 +9,17 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class HudAdditionsTest {
+    @Test public void effectsAnchorExpandsAwayFromTheNearestScreenEdgeAndContainerPreviewIsFixed()throws Exception{
+        try(PathTestFixture f=new PathTestFixture()){
+            f.mc.displayWidth=1280;f.mc.displayHeight=720;f.mc.gameSettings.guiScale=1;
+            PathTestFixture.set(net.minecraft.client.Minecraft.class,f.mc,"mcLanguageManager",new net.minecraft.client.resources.LanguageManager(new net.minecraft.client.resources.data.IMetadataSerializer(),"en_US"));
+            HudManager manager=new HudManager(new java.io.File("build/hud-polish-unit"));net.minecraft.client.gui.ScaledResolution res=new net.minecraft.client.gui.ScaledResolution(f.mc);
+            HudManager.HudElement effects=manager.getElement(HudManager.EFFECTS);effects.setBounds(0,0,154,90);effects.moveTo(100,500,res);
+            assertEquals(500,effects.top(res,90));assertEquals(470,effects.top(res,120));
+            effects.moveTo(100,100,res);assertEquals(100,effects.top(res,90));assertEquals(100,effects.top(res,120));
+            HudManager.HudElement gui=manager.getElement(HudManager.CUSTOM_GUIS);gui.setScale(1.5F);gui.moveTo(50,100,res);assertEquals(1,gui.getScale(),0);assertEquals(0,gui.getY());
+        }
+    }
     @Test public void blockCountsUseOnlyTheChosenSlotOrHotbarIncludingSilentSelection()throws Exception{
         try(AutomationFixture f=new AutomationFixture()){
             f.player.inventory.mainInventory[0]=new ItemStack(Items.diamond_sword);

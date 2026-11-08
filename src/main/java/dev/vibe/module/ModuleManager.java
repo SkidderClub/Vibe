@@ -36,6 +36,8 @@ public final class ModuleManager {
         register(new ItemEspModule());
         register(new TntESPModule());
         register(new HitmarkerModule());
+        register(new KillEffectsModule());
+        register(new MotionBlurModule());
         register(new ChestEspModule());
         register(new BedEspModule());
         register(new BlockChangeEspModule());
@@ -76,6 +78,7 @@ public final class ModuleManager {
         register(new AutoClickerModule());
         register(new SprintModule());
         register(new AutoWalkModule());
+        register(new BasicTeleportModule());
         register(new GuiMoveModule());
         register(new AntiAFKModule());
         register(new NoSlowModule());

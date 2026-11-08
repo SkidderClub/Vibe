@@ -49,7 +49,7 @@ public final class HudModule extends Module {
             () -> true));
 
     private final MultiSelectSetting hudElements = addSetting(new MultiSelectSetting("HUD Elements",
-                        Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph", "notifications", "targethud", "ghosts", "customchat", "customhotbar", "customhealth", "customtab", "blockcounter", "dynamicisland"),
+                        Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph", "notifications", "targethud", "ghosts", "customchat", "customhotbar", "customhealth", "customtab", "blockcounter", "dynamicisland", "effects", "customguis", "keystrokes"),
             Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "notifications")));
 
     private final BooleanSetting replaceScoreboardServer = addSetting(new BooleanSetting("Replace Scoreboard Server", false,
@@ -91,6 +91,9 @@ public final class HudModule extends Module {
     public final dev.vibe.hud.OverlaySettings.BlockCounter blockCounter = new dev.vibe.hud.OverlaySettings.BlockCounter(this::addSetting);
     public final dev.vibe.hud.OverlaySettings.DynamicIsland island = new dev.vibe.hud.OverlaySettings.DynamicIsland(this::addSetting);
     public final dev.vibe.hud.WatermarkSettings watermark = new dev.vibe.hud.WatermarkSettings(this::addSetting);
+    public final dev.vibe.hud.OverlaySettings.Effects effects = new dev.vibe.hud.OverlaySettings.Effects(this::addSetting);
+    public final dev.vibe.hud.OverlaySettings.Containers containers = new dev.vibe.hud.OverlaySettings.Containers(this::addSetting);
+    public final dev.vibe.hud.OverlaySettings.Keystrokes keystrokes = new dev.vibe.hud.OverlaySettings.Keystrokes(this::addSetting);
 
     public final dev.vibe.hud.ArrayListSettings array = new dev.vibe.hud.ArrayListSettings(this::addSetting);
     public final dev.vibe.feedback.NotificationSettings notifications = new dev.vibe.feedback.NotificationSettings(this::addSetting);

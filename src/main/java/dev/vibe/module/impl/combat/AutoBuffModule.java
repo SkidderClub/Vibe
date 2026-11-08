@@ -232,7 +232,7 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
     private void clearRotation() {
         if (Vibe.getInstance() == null) return;
         MoveFixModule fix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
-        if (fix != null) fix.discardOwnedState(getId());
+        if (fix != null) fix.releaseOwnedState(getId());
     }
     private void cancel(boolean restoreSlot) {
         inventory.close(); refilling = false; releaseInput(); clearRotation();

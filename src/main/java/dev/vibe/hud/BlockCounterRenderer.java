@@ -30,7 +30,13 @@ final class BlockCounterRenderer {
         int shown=preview?count:Math.max(0,Math.round(amount.update(count,now,duration,s.easing.getValue())));
         float fill=preview?fraction:bar.update(fraction,now,duration,s.easing.getValue());
         String text=shown+(s.label.isEnabled()?shown==1?" block":" blocks":"");
-        FontRenderer font=mc.fontRendererObj;int icon=s.block.isEnabled()?24:0,w=Math.max(s.width.getInt(),font.getStringWidth(text)+20+icon),h=s.bar.isEnabled()?35:29;
+        boolean circle=s.bar.isEnabled()&&s.barMode.is("Circle");
+        FontRenderer font=mc.fontRendererObj;int pad=s.compact.isEnabled()?6:10,icon=s.block.isEnabled()?21:0;
+        String percent=Math.round(fill*100)+"%";int ring=circle?s.ringSize.getInt()+6:0;
+        int textWidth=font.getStringWidth(text),contentWidth=textWidth+icon+ring;
+        if(s.percentage.isEnabled()&&!circle)contentWidth+=font.getStringWidth(percent)+7;
+        int w=Math.max(s.compact.isEnabled()?0:s.width.getInt(),contentWidth+pad*2);
+        int h=Math.max(s.block.isEnabled()?26:22,circle?s.ringSize.getInt()+pad*2:s.bar.isEnabled()?28:22);
         e.ensureOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
         if(opacity<.02F)return;
         String theme=manager.theme(e,hud);int textColor=s.text.getArgb();
@@ -46,14 +52,26 @@ final class BlockCounterRenderer {
             if(!BlockCounterState.block(stack)&&mc.thePlayer!=null&&s.calculate.is("Total"))for(int i=0;i<9;i++)if(BlockCounterState.block(mc.thePlayer.inventory.mainInventory[i])){stack=mc.thePlayer.inventory.mainInventory[i];break;}
             if(BlockCounterState.block(stack)){
                 RenderHelper.enableGUIStandardItemLighting();GlStateManager.enableDepth();
-                try{mc.getRenderItem().renderItemAndEffectIntoGUI(stack,x+7,y+6);}
+                try{mc.getRenderItem().renderItemAndEffectIntoGUI(stack,x+pad,y+(h-16-(s.bar.isEnabled()&&!circle?4:0))/2);}
                 finally{RenderHelper.disableStandardItemLighting();GlStateManager.disableDepth();GlStateManager.enableBlend();GlStateManager.color(1,1,1,1);}
             }
         }
-        if((textColor>>>24)*opacity>=4)font.drawString(text,x+icon+(w-icon-font.getStringWidth(text))/2F,y+(s.bar.isEnabled()?12:10),alpha(textColor,opacity),s.shadow.isEnabled());
+        int textY=y+(h-8-(s.bar.isEnabled()&&!circle?4:0))/2;
+        if((textColor>>>24)*opacity>=4)font.drawString(text,x+pad+icon,textY,alpha(textColor,opacity),s.shadow.isEnabled());
         if(s.bar.isEnabled()){
-            HudShapes.round(x+8,y+h-7,w-16,2,1,alpha(s.barEmpty.getArgb(),opacity));
-            HudShapes.round(x+8,y+h-7,(w-16)*fill,2,1,alpha(s.warning.isEnabled()?textColor:s.accent.getArgb(),opacity));
+            int barColor=s.warning.isEnabled()&&count<=Math.max(s.yellowAt.getInt(),s.redAt.getInt())?textColor:s.barColor.getArgb();
+            if(circle){float size=s.ringSize.getFloat(),cx=x+w-pad-size/2,cy=y+h/2F;
+                HudShapes.arc(cx,cy,size/2-s.barThickness.getFloat()/2,s.barThickness.getFloat(),1,alpha(s.barEmpty.getArgb(),opacity));
+                HudShapes.arc(cx,cy,size/2-s.barThickness.getFloat()/2,s.barThickness.getFloat(),fill,alpha(barColor,opacity));
+                if(s.percentage.isEnabled()&&(textColor>>>24)*opacity>=4){
+                    float scale=Math.min(.75F,(size-5)/font.getStringWidth(percent));GlStateManager.pushMatrix();GlStateManager.translate(cx,cy,0);GlStateManager.scale(scale,scale,1);
+                    font.drawString(percent,-font.getStringWidth(percent)/2F,-4,alpha(textColor,opacity),false);GlStateManager.popMatrix();
+                }
+            }else{
+                float thickness=s.barThickness.getFloat();HudShapes.round(x+pad,y+h-4-thickness,w-pad*2,thickness,thickness/2,alpha(s.barEmpty.getArgb(),opacity));
+                HudShapes.round(x+pad,y+h-4-thickness,(w-pad*2)*fill,thickness,thickness/2,alpha(barColor,opacity));
+                if(s.percentage.isEnabled()&&(textColor>>>24)*opacity>=4)font.drawString(percent,x+w-pad-font.getStringWidth(percent),textY,alpha(textColor,opacity),s.shadow.isEnabled());
+            }
         }
     }
     private static int alpha(int c,float a){return Math.round((c>>>24)*a)<<24|c&0xFFFFFF;}

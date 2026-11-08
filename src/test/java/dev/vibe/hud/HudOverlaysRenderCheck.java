@@ -69,6 +69,7 @@ public final class HudOverlaysRenderCheck {
         dev.vibe.ui.effect.LavaLampRenderCheck.verify(mc,output);
         lavaWidgets(mc,manager,hud,output);
         HudAdditionsRenderCheck.verify(mc,manager,hud,output);
+        HudPolishRenderCheck.verify(mc,manager,hud,output);
         check(GL11.glGetError()==0,"Custom HUD overlays left a GL error");
         System.out.println("Custom HUD pixels passed: six hotbar themes, three health modes, transparent analog clock, custom Tab, chat side/bottom resizing, native item previews and Lavalamp widgets.");
     }

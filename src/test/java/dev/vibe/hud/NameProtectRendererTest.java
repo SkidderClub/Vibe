@@ -22,6 +22,11 @@ public class NameProtectRendererTest {
             assertTrue(font.calls.stream().anyMatch(c->c.text.contains("Before")&&c.color==0xFFE5E5E5));
             assertTrue(font.calls.stream().anyMatch(c->c.text.contains("after")&&c.text.contains("§r")));
             assertEquals(NameProtectRenderer.UNHANDLED,NameProtectRenderer.drawAt(font,"Other player",0,0,-1,false,1000));
+            try(NameProtectRenderer.DecorationScope outer=NameProtectRenderer.suppress()){
+                try(NameProtectRenderer.DecorationScope inner=NameProtectRenderer.suppress()){assertEquals(NameProtectRenderer.UNHANDLED,NameProtectRenderer.drawAt(font,text,0,0,-1,false,1000));}
+                assertEquals(NameProtectRenderer.UNHANDLED,NameProtectRenderer.drawAt(font,text,0,0,-1,false,1000));
+            }
+            assertNotEquals(NameProtectRenderer.UNHANDLED,NameProtectRenderer.drawAt(font,text,0,0,-1,false,1000));
         }
     }
     @Test public void rainbowFadeAndGlowAnimateAtDrawTimeWithoutChangingTheChatText()throws Exception{
