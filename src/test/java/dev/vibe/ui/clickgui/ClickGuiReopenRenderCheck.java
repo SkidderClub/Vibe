@@ -27,7 +27,7 @@ public final class ClickGuiReopenRenderCheck {
         ClickGuiModule theme=new ClickGuiModule();modules.registerDynamic(theme);
         for(int i=0;i<36;i++)modules.registerDynamic(new Fixture("Combat test "+i,i==0?24:3));
         VibeClickGui cached=null;
-        for(String name:new String[]{"Novoline","PacketV3","SuizideX","NeverLose","Xanax","Skeet","Futuristic","Breeze"}){
+        for(String name:new String[]{"Novoline","PacketV3","SuizideX","NeverLose","Xanax","Skeet","Futuristic","Breeze","Lavalamp"}){
             theme.getTheme().setValue(name);Vibe.getInstance().openClickGui();
             VibeClickGui gui=(VibeClickGui)mc.currentScreen;
             if(cached==null)cached=gui;else check(cached==gui,"Opening "+name+" discarded the shared screen");
@@ -46,6 +46,8 @@ public final class ClickGuiReopenRenderCheck {
                 for(int i=0;i<4;i++)gui.wheel((Integer)get(gui,"skeetX")+110,(Integer)get(gui,"skeetY")+100,-120);
             }else if(name.equals("Futuristic")){
                 Object panel=((Map<?,?>)get(gui,"panels")).values().iterator().next();gui.wheel((Integer)get(panel,"x")+12,(Integer)get(panel,"y")+35,-120);
+            }else if(name.equals("Lavalamp")){
+                Object workspace=get(gui,"lavalamp");for(int i=0;i<4;i++){gui.wheel((Integer)get(workspace,"x")+25,(Integer)get(workspace,"cy")+60,-120);gui.wheel((Integer)get(workspace,"cx")+30,(Integer)get(workspace,"cy")+70,-120);}
             }else{
                 Object workspace=get(gui,"breeze");for(int i=0;i<4;i++)gui.wheel((Integer)get(workspace,"contentX")+20,(Integer)get(workspace,"contentY")+30,-120);
             }
@@ -79,6 +81,7 @@ public final class ClickGuiReopenRenderCheck {
         else if(name.equals("Xanax"))for(String pane:new String[]{"modulesPane","settingsPane"})values.put(pane,((Number)get(get(get(gui,"xanax"),pane),"scroll")).doubleValue());
         else if(name.equals("Skeet"))values.put("scroll",((Number)get(gui,"skeetScroll")).doubleValue());
         else if(name.equals("Breeze"))values.put("scroll",((Number)get(get(gui,"breeze"),"scroll")).doubleValue());
+        else if(name.equals("Lavalamp")){Object ws=get(gui,"lavalamp");for(String key:new String[]{"listTarget","target","x","y","w","h"})values.put(key,((Number)get(ws,key)).doubleValue());}
         else for(Object panel:((Map<?,?>)get(gui,"panels")).values())values.put(get(panel,"category").toString(),((Number)get(panel,"y")).doubleValue());
         return values;
     }

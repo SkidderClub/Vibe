@@ -11,7 +11,8 @@ import net.minecraft.util.*;
 import org.lwjgl.input.Keyboard;
 
 /** A repeatable key action. Vanilla reports the changed position in its normal movement update. */
-public final class BasicTeleportModule extends Module {
+public final class TeleportModule extends Module {
+    public final ModeSetting mode=addSetting(new ModeSetting("Mode","Vanilla","Vanilla"));
     public final NumberSetting range=addSetting(new NumberSetting("Range",64,4,96,1));
     public final NumberSetting cooldown=addSetting(new NumberSetting("Cooldown (ms)",400,100,2000,50));
     public final BooleanSetting effects=addSetting(new BooleanSetting("Portal Animation",true));
@@ -20,7 +21,7 @@ public final class BasicTeleportModule extends Module {
     public final NumberSetting glow=addSetting(new NumberSetting("Portal Glow",.6,0,1.5,.05,()->effects.isEnabled()));
     private final List<Portal> portals=new ArrayList<>();private final List<Portal> view=Collections.unmodifiableList(portals);
     private Object world;private long last=-1;
-    public BasicTeleportModule(){super("Basic Teleport","Press the bound key to teleport onto the block in view",Category.MOVEMENT,Keyboard.KEY_G);}
+    public TeleportModule(){super("Teleport","Press the bound key to teleport onto the block in view",Category.MOVEMENT,Keyboard.KEY_G);}
     @Override public void toggle(){if(Keyboard.isCreated()&&Keyboard.isRepeatEvent())return;super.toggle();}
     @Override protected void onEnable(){try{if(!isConfigLoading())activate();}finally{setEnabled(false);}}
     public boolean activate(){
@@ -38,6 +39,13 @@ public final class BasicTeleportModule extends Module {
         if(destination==null){say("There is no clear landing space on that block.");return false;}
         if(p.getDistanceSq(destination.xCoord,destination.yCoord,destination.zCoord)<.01){say("You are already on that block.");return false;}
         double fromX=p.posX,fromY=p.posY,fromZ=p.posZ;
+        // Position-only updates subdivide long vanilla moves; don't rely on the next walking tick.
+        if(p.sendQueue!=null){
+            double distance=p.getDistance(destination.xCoord,destination.yCoord,destination.zCoord);
+            int steps=Math.max(1,(int)Math.ceil(distance/4));
+            for(int i=1;i<=steps;i++){double t=i/(double)steps;p.sendQueue.addToSendQueue(new net.minecraft.network.play.client.C03PacketPlayer.C04PacketPlayerPosition(
+                    fromX+(destination.xCoord-fromX)*t,fromY+(destination.yCoord-fromY)*t,fromZ+(destination.zCoord-fromZ)*t,i==steps));}
+        }
         p.setPositionAndUpdate(destination.xCoord,destination.yCoord,destination.zCoord);
         p.prevPosX=p.lastTickPosX=p.posX;p.prevPosY=p.lastTickPosY=p.posY;p.prevPosZ=p.lastTickPosZ=p.posZ;
         p.motionX=p.motionY=p.motionZ=0;p.fallDistance=0;p.onGround=true;last=now;
@@ -53,7 +61,7 @@ public final class BasicTeleportModule extends Module {
     private void bind(Minecraft mc){if(world!=mc.theWorld||mc.thePlayer==null){portals.clear();last=-1;world=mc.theWorld;}}
     public List<Portal> portals(){return view;}
     public void clear(){portals.clear();world=null;last=-1;}
-    private static void say(String text){Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText("§b[Vibe] §7"+text));}
+    private static void say(String text){dev.vibe.chat.ClientChat.send(text);}
     public static final class Portal{
         public final double x,y,z;public final float yaw;public final long born;public final int duration;
         public Portal(double x,double y,double z,float yaw,long born,int duration){this.x=x;this.y=y;this.z=z;this.yaw=yaw;this.born=born;this.duration=duration;}

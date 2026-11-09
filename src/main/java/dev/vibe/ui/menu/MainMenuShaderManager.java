@@ -67,6 +67,7 @@ public final class MainMenuShaderManager {
     public void draw(int width,int height,int pixelBudget,int intervalMillis) {
         backgroundAvailable = false;
         ensureInitialized();
+        if(MenuThemes.simpleMenus()){net.minecraft.client.gui.Gui.drawRect(0,0,width,height,MenuThemes.style().equals("Skeet")?0xFF101010:0xFF0E131C);return;}
         if ("liquid-lava.frag".equals(selected)) { pixelBudget = Math.min(pixelBudget, 160000); intervalMillis = Math.max(50, Math.min(intervalMillis, 100)); }
         // Prestige's volumetric clouds are ambient scenery; keep their costly
         // ray march separate from the full-rate controls and glass animation.
@@ -240,6 +241,8 @@ public final class MainMenuShaderManager {
             GL11.glViewport(viewport.get(0),viewport.get(1),viewport.get(2),viewport.get(3));GlStateManager.bindTexture(texture);
         }
     }
+    /** Isolated editor renderer: no selection file or active-theme writes. */
+    void preview(String shader,boolean background){initialized=true;enabled=background;if(!selected.equals(shader)){selected=shader;deleteProgram();lastShaderFrame=0;} }
     public void close(){deleteProgram();if(renderTarget!=null){renderTarget.deleteFramebuffer();renderTarget=null;}backgroundAvailable=false;}
 
     public boolean openFolder() {

@@ -34,7 +34,7 @@ public class MenuThemesGui extends GuiScreen {
     private void rebuild(){
         entries.clear();String q=query.trim().toLowerCase(Locale.ROOT);
         if(custom&&chooseShader==null){for(MenuTheme theme:MenuThemes.custom())if((theme.name+" "+theme.shader).toLowerCase(Locale.ROOT).contains(q))entries.add(theme.copy());}
-        else{knownShaders=shaders.getPresets();for(String shader:knownShaders){MenuTheme theme=MenuThemes.automatic(shader);if((theme.name+" "+shader).toLowerCase(Locale.ROOT).contains(q))entries.add(theme);}}
+        else{knownShaders=shaders.getPresets();if(chooseShader==null)for(String style:new String[]{"Minimalistic","Skeet"}){MenuTheme theme=MenuTheme.builtin(style);if(style.toLowerCase(Locale.ROOT).contains(q))entries.add(theme);}for(String shader:knownShaders){MenuTheme theme=MenuThemes.automatic(shader);if((theme.name+" "+shader).toLowerCase(Locale.ROOT).contains(q))entries.add(theme);}}
         scrollRow=Math.max(0,Math.min(scrollRow,Math.max(0,(entries.size()+columns-1)/columns-visibleRows)));buttonList.clear();
         buttonList.add(new AccountScreenStyle.Button(0,left+panelWidth-66,top+12,52,24,"Back","",false,false));
         if(chooseShader==null){int x=left+panelWidth-180;buttonList.add(new AccountScreenStyle.Button(1,x,top+44,78,23,"Presets","",!custom,false));buttonList.add(new AccountScreenStyle.Button(2,x+84,top+44,82,23,"Custom","",custom,false));}
@@ -63,7 +63,7 @@ public class MenuThemesGui extends GuiScreen {
         if(button.id==0){mc.displayGuiScreen(parent);return;}
         if(button instanceof ThemeCard){MenuTheme theme=((ThemeCard)button).theme;if(chooseShader!=null){chooseShader.accept(theme.shader);mc.displayGuiScreen(parent);}else try{status=MenuThemes.activate(theme,shaders)?"Selected "+theme.name:"Could not save the theme.";}catch(IllegalArgumentException invalid){status=invalid.getMessage();}return;}
         if(button.id==1||button.id==2){custom=button.id==2;query="";search.setText("");scrollRow=0;rebuild();}
-        else if(button.id==3){MenuTheme t=MenuThemes.active(shaders);t.id=UUID.randomUUID().toString();t.name="My theme";mc.displayGuiScreen(new MenuThemeEditorGui(this,shaders,t,false));}
+        else if(button.id==3){MenuTheme t=MenuThemes.active(shaders);t.id=UUID.randomUUID().toString();t.name="My theme";t.menuStyle="Lavalamp";mc.displayGuiScreen(new MenuThemeEditorGui(this,shaders,t,false));}
         else if(button.id==4)importShader();else if(button.id==5){if(!shaders.openFolder())status="Folder: "+shaders.getShaderDirectory();}
     }
     private void importShader(){
@@ -72,7 +72,7 @@ public class MenuThemesGui extends GuiScreen {
             final java.nio.file.Path source=selected;mc.addScheduledTask(()->{choosingFile=false;if(source!=null)try{String name=shaders.importShader(source);custom=false;query=name.substring(0,name.length()-5);if(search!=null)search.setText(query);status="Imported "+name+". Select it to use it.";}catch(IOException failure){status=failure.getMessage();}if(mc.currentScreen==this)rebuild();});});
     }
     @Override protected void mouseClicked(int x,int y,int button)throws IOException{
-        search.mouseClicked(x,y,button);if(button==1&&chooseShader==null)for(GuiButton b:buttonList)if(b instanceof ThemeCard&&x>=b.xPosition&&x<b.xPosition+b.width&&y>=b.yPosition&&y<b.yPosition+b.height){MenuTheme t=((ThemeCard)b).theme;if(!t.automatic()){mc.displayGuiScreen(new MenuThemeEditorGui(this,shaders,t.copy(),true));return;}}
+        search.mouseClicked(x,y,button);if(button==1&&chooseShader==null)for(GuiButton b:buttonList)if(b instanceof ThemeCard&&x>=b.xPosition&&x<b.xPosition+b.width&&y>=b.yPosition&&y<b.yPosition+b.height){MenuTheme t=((ThemeCard)b).theme;if(!t.automatic()&&!t.builtin()){mc.displayGuiScreen(new MenuThemeEditorGui(this,shaders,t.copy(),true));return;}}
         super.mouseClicked(x,y,button);
     }
     @Override protected void keyTyped(char c,int key)throws IOException{if(key==Keyboard.KEY_ESCAPE){mc.displayGuiScreen(parent);return;}if(search.textboxKeyTyped(c,key)){query=search.getText();scrollRow=0;rebuild();return;}super.keyTyped(c,key);}
@@ -82,13 +82,18 @@ public class MenuThemesGui extends GuiScreen {
     @Override public void onGuiClosed(){Keyboard.enableRepeatEvents(false);for(Framebuffer f:thumbnails.values())f.deleteFramebuffer();thumbnails.clear();}
     private void updatePreview(){
         if(System.nanoTime()<nextPreview||!OpenGlHelper.isFramebufferEnabled())return;
-        for(GuiButton b:buttonList)if(b instanceof ThemeCard){String name=((ThemeCard)b).theme.shader;if(thumbnails.containsKey(name)||unavailable.contains(name))continue;nextPreview=System.nanoTime()+180000000L;
+        for(String name:previewQueue()){if(thumbnails.containsKey(name)||unavailable.contains(name))continue;nextPreview=System.nanoTime()+120000000L;
             try{Framebuffer f=shaders.thumbnail(name);if(f==null){unavailable.add(name);return;}thumbnails.put(name,f);
                 try(dev.vibe.ui.effect.EffectState state=new dev.vibe.ui.effect.EffectState()){f.bindFramebuffer(false);ByteBuffer pixels=BufferUtils.createByteBuffer(128*72*4);GL11.glReadPixels(0,0,128,72,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,pixels);int color=ShaderThemeColors.sample(pixels);MenuThemes.sampled(name,color);for(MenuTheme theme:entries)if(theme.automatic()&&theme.shader.equals(name))theme.first=theme.second=color;}
-                while(thumbnails.size()>8){String oldest=thumbnails.keySet().iterator().next();thumbnails.remove(oldest).deleteFramebuffer();}
+                Set<String> retain=new HashSet<>(previewQueue());Iterator<Map.Entry<String,Framebuffer>> it=thumbnails.entrySet().iterator();while(it.hasNext()){Map.Entry<String,Framebuffer> e=it.next();if(!retain.contains(e.getKey())){e.getValue().deleteFramebuffer();it.remove();}}
             }catch(RuntimeException error){unavailable.add(name);}return;
         }
     }
+    /** Visible cards first, then the adjacent row in each direction. Never compiles the full catalogue. */
+    List<String> previewQueue(){LinkedHashSet<String> result=new LinkedHashSet<>();int start=scrollRow*columns,end=Math.min(entries.size(),start+visibleRows*columns);
+        for(int i=start;i<end;i++)if(!entries.get(i).builtin())result.add(entries.get(i).shader);
+        for(int i=Math.max(0,start-columns);i<start;i++)if(!entries.get(i).builtin())result.add(entries.get(i).shader);
+        for(int i=end;i<Math.min(entries.size(),end+columns);i++)if(!entries.get(i).builtin())result.add(entries.get(i).shader);return new ArrayList<>(result);}
     private final class ThemeCard extends GuiButton{
         final MenuTheme theme;
         ThemeCard(int id,int x,int y,int w,int h,MenuTheme theme){super(id,x,y,w,h,theme.name);this.theme=theme;}
@@ -98,6 +103,9 @@ public class MenuThemesGui extends GuiScreen {
             AccountScreenStyle.BOLD_FONT.middle(AccountScreenStyle.BOLD_FONT.fit(theme.name,width-40),xPosition+10,yPosition+2,24,AccountScreenStyle.TEXT);
             MenuPalette p=theme.palette().sample(System.currentTimeMillis());dev.vibe.ui.MenuRoundedRenderer.rect(xPosition+width-23,yPosition+9,11,11,5,p.accent);
             Framebuffer f=thumbnails.get(theme.shader);int x=xPosition+7,y=yPosition+29,w=width-14,h=height-36;
+            if(theme.builtin()){dev.vibe.ui.MenuRoundedRenderer.rect(x,y,w,h,4,theme.menuStyle.equals("Skeet")?0xFF181818:0xFF171C24);int accent=theme.first;
+                Gui.drawRect(x+8,y+8,x+w-8,y+9,accent);for(int i=0;i<3;i++){int bx=x+8+i*(w-16)/3;dev.vibe.ui.MenuRoundedRenderer.rect(bx,y+h/3,(w-25)/3,Math.max(8,h/3),theme.menuStyle.equals("Skeet")?0:4,0xFF30363E);}
+                AccountScreenStyle.SMALL_FONT.centered("Menu style",x,y+h-15,w,12,AccountScreenStyle.MUTED);return;}
             if(f==null){AccountScreenStyle.SMALL_FONT.centered(unavailable.contains(theme.shader)?"Preview unavailable":"Preparing preview",x,y,w,h,AccountScreenStyle.MUTED);return;}
             GlStateManager.enableTexture2D();GlStateManager.enableBlend();GlStateManager.color(1,1,1,1);f.bindFramebufferTexture();float span=Math.min(1,(128/72F)/(w/(float)h)),v0=(1-span)/2,v1=1-v0;
             GL11.glBegin(GL11.GL_QUADS);GL11.glTexCoord2f(0,v1);GL11.glVertex2f(x,y);GL11.glTexCoord2f(0,v0);GL11.glVertex2f(x,y+h);GL11.glTexCoord2f(1,v0);GL11.glVertex2f(x+w,y+h);GL11.glTexCoord2f(1,v1);GL11.glVertex2f(x+w,y);GL11.glEnd();

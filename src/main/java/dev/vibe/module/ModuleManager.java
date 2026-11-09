@@ -78,7 +78,7 @@ public final class ModuleManager {
         register(new AutoClickerModule());
         register(new SprintModule());
         register(new AutoWalkModule());
-        register(new BasicTeleportModule());
+        register(new TeleportModule());
         register(new GuiMoveModule());
         register(new AntiAFKModule());
         register(new NoSlowModule());

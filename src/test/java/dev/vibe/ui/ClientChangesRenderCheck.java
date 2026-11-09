@@ -91,6 +91,8 @@ public final class ClientChangesRenderCheck {
             if(args.length>0&&args[0].equals("visual-additions")){dev.vibe.hud.VisualAdditionsRenderCheck.verify(mc,OUTPUT);return;}
             if(args.length>0&&args[0].equals("companion")){dev.vibe.companion.CompanionRenderCheck.verify(mc,OUTPUT);return;}
             if(args.length>0&&args[0].equals("teleport")){dev.vibe.teleport.PortalRenderCheck.verify(OUTPUT);return;}
+            if(args.length>0&&args[0].equals("lavalamp")){dev.vibe.ui.clickgui.LavalampRenderCheck.verify(mc,modules,OUTPUT);return;}
+            if(args.length>0&&args[0].equals("health-transparency")){dev.vibe.hud.HealthTransparencyRenderCheck.verify(mc,modules,OUTPUT);return;}
             if(args.length>0&&args[0].equals("clickgui-reopen")){dev.vibe.ui.clickgui.ClickGuiReopenRenderCheck.verify(mc,modules,OUTPUT);return;}
             if(args.length>0&&args[0].equals("ambience")){dev.vibe.ambience.AmbienceRenderCheck.verify(mc,modules,OUTPUT);return;}
             if(args.length>0&&args[0].equals("tnt")){dev.vibe.ui.render.esp.TntEspRenderCheck.verify(mc,modules,OUTPUT);return;}

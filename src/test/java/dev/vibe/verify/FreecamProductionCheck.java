@@ -71,8 +71,8 @@ public final class FreecamProductionCheck {
                 OUTPUT.println("KillEffects, MotionBlur and Keystrokes linked through production Forge/OptiFine.");
                 for(String name:new String[]{"dev.vibe.module.impl.meme.GirlfriendModule","dev.vibe.companion.CompanionFollower","dev.vibe.companion.CompanionModel","dev.vibe.ui.render.CompanionRenderer"})Class.forName(name,false,loader).getDeclaredMethods();
                 OUTPUT.println("Girlfriend companion and native positional voice linked through production Forge/OptiFine.");
-                for(String name:new String[]{"dev.vibe.module.impl.movement.BasicTeleportModule","dev.vibe.teleport.TeleportDestination","dev.vibe.teleport.PortalSprite","dev.vibe.ui.render.TeleportPortalRenderer"})Class.forName(name,false,loader).getDeclaredMethods();
-                OUTPUT.println("Basic Teleport and portal rendering linked through production Forge/OptiFine.");
+                for(String name:new String[]{"dev.vibe.module.impl.movement.TeleportModule","dev.vibe.teleport.TeleportDestination","dev.vibe.teleport.PortalSprite","dev.vibe.ui.render.TeleportPortalRenderer","dev.vibe.ui.clickgui.LavalampWorkspace","dev.vibe.ui.menu.MenuThemeEditorGui"})Class.forName(name,false,loader).getDeclaredMethods();
+                OUTPUT.println("Teleport and portal rendering linked through production Forge/OptiFine.");
                 for(String name:new String[]{"net.minecraft.client.renderer.ActiveRenderInfo","net.minecraft.client.renderer.EntityRenderer",
                         "dev.vibe.module.impl.visual.SmoothF5Module","dev.vibe.ui.render.HologramRenderer","dev.vibe.ui.render.HologramPose"})Class.forName(name,false,loader).getDeclaredMethods();
                 Class.forName("dev.vibe.module.impl.movement.FreecamModule",false,loader).getMethod("frontViewHook",boolean.class);

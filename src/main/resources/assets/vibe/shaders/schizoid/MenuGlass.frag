@@ -4,7 +4,7 @@ uniform vec2 Resolution,Origin,Size,LavaOrigin,LavaSize;
 uniform float Radius,Scale,Emphasis,Window,Time,Pass,Depth;
 uniform vec3 Tint,Accent,Wax,Light;
 uniform vec4 Drop,Form;
-uniform float Hover,Fade;
+uniform float Hover,Fade,Clarity;
 uniform vec2 Pointer;
 vec4 unite(vec4 a,vec4 b,float amount){float h=clamp(.5+.5*(b.x-a.x)/amount,0.,1.);vec4 result=mix(b,a,h);result.x-=amount*h*(1.-h);return result;}
 vec3 radiance(float distance){
@@ -30,7 +30,9 @@ void main(){
         float bend=exp(-abs(paneDistance)/max(1.,Scale*9.));
         vec2 refracted=(gl_FragCoord.xy-outward*bend*Scale*4.)/Resolution;
         vec3 scene=texture2D(Scene,refracted).rgb;
-        vec3 color=mix(scene*(Window>.5?.96:.79),Tint,Window>.5?.18:.44)+Accent*Emphasis*.045;
+        float brightness=mix(Window>.5?.96:.79,Window>.5?1.:.92,Clarity);
+        float tint=mix(Window>.5?.18:.44,Window>.5?.07:.27,Clarity);
+        vec3 color=mix(scene*brightness,Tint,tint)+Accent*Emphasis*.045;
         float outside=exp(-max(paneDistance,0.)/max(1.,Scale*3.1))*(.045+Emphasis*.025);
         gl_FragColor=vec4(mix(Accent*.55,color,pane),(pane+(1.-pane)*outside)*(1.-Fade));return;
     }

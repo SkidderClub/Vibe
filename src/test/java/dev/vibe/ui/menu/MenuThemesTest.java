@@ -36,4 +36,21 @@ public class MenuThemesTest {
         assertEquals(0xFF123456,MenuPalette.custom("Solid",0xFF123456,0xFFFFFFFF,"Solid",1).sample(2000).accent);
     }
     @Test public void invalidShaderPathIsNotATheme(){MenuTheme t=new MenuTheme();t.shader="../escape.frag";try{t.validate();fail("Accepted a shader outside its folder");}catch(IllegalArgumentException expected){}}
+    @Test public void menuStylesPersistAndIngameLavaUsesRainbow()throws Exception{
+        try(PathTestFixture f=new PathTestFixture()){
+            Path dir=temp.newFolder().toPath();PathTestFixture.set(Minecraft.class,f.mc,"mcDataDir",dir.toFile());MainMenuShaderManager shaders=new MainMenuShaderManager();shaders.getPresets();
+            for(String style:new String[]{"Minimalistic","Skeet"}){MenuTheme t=MenuTheme.builtin(style);assertTrue(MenuThemes.activate(t,shaders));assertEquals(style,MenuThemes.active(shaders).menuStyle);
+                assertFalse(MenuThemes.simpleMenus());assertNotEquals(MenuThemes.lavaPalette().accent,t.first);f.mc.theWorld=null;assertTrue(MenuThemes.simpleMenus());f.mc.theWorld=f.world;
+                java.util.Properties p=new java.util.Properties();try(java.io.InputStream in=Files.newInputStream(dir.resolve("vibe/menu.properties"))){p.load(in);}assertEquals(style,p.getProperty("menuStyle"));}
+            MenuTheme original=MenuThemes.active(shaders);MenuTheme draft=new MenuTheme();draft.first=0xFF123456;MenuThemes.preview(draft);MenuThemes.frame();assertEquals(draft.first,MenuThemes.current().accent);assertEquals(original.id,MenuThemes.active(shaders).id);MenuThemes.preview(null);
+        }
+    }
+    @Test public void thumbnailQueueIncludesVisibleAndAdjacentRowsInOrder()throws Exception{
+        try(PathTestFixture f=new PathTestFixture()){
+            MenuThemesGui gui=new MenuThemesGui(null,new MainMenuShaderManager());
+            PathTestFixture.set(MenuThemesGui.class,gui,"columns",2);PathTestFixture.set(MenuThemesGui.class,gui,"visibleRows",2);PathTestFixture.set(MenuThemesGui.class,gui,"scrollRow",2);
+            java.lang.reflect.Field field=MenuThemesGui.class.getDeclaredField("entries");field.setAccessible(true);java.util.List<MenuTheme> entries=(java.util.List<MenuTheme>)field.get(gui);for(int i=0;i<20;i++)entries.add(MenuTheme.automatic("test"+i+".frag",0xFFFFFFFF));
+            assertEquals(java.util.Arrays.asList("test4.frag","test5.frag","test6.frag","test7.frag","test2.frag","test3.frag","test8.frag","test9.frag"),gui.previewQueue());
+        }
+    }
 }

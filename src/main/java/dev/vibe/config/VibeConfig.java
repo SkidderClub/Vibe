@@ -475,6 +475,7 @@ public final class VibeConfig {
         // rather than silently discarding the module record.
         if ("bhop".equalsIgnoreCase(id)) id = "speed";
         if ("autocrafter".equalsIgnoreCase(id)) id = "crafter";
+        if ("basicteleport".equalsIgnoreCase(id) || "Basic Teleport".equalsIgnoreCase(id)) id = "teleport";
         for (Module module : manager.getModules()) {
             if (module.getId().equalsIgnoreCase(id) || module.getRawName().equalsIgnoreCase(id)) {
                 return module;

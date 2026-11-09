@@ -26,15 +26,23 @@ public final class MenuGlass {
     private static MenuTransitions.Rect window;
     private static int scene,guiWidth,guiHeight,destination;
     private static long frameTime;
-    private static boolean failed,windowDrawn;
+    private static boolean failed,windowDrawn,simple;
+    private static MenuPalette workspacePalette;
     private MenuGlass(){}
     public static boolean active(){return screen!=null;}
-    public static MenuPalette currentPalette(){MenuThemes.frame();return MenuThemes.current();}
+    public static MenuPalette currentPalette(){MenuThemes.frame();return MenuThemes.lavaPalette();}
     public static float scale(){return active()?Minecraft.getMinecraft().displayWidth/(float)guiWidth:new ScaledResolution(Minecraft.getMinecraft()).getScaleFactor();}
     public static void begin(GuiScreen owner,MainMenuShaderManager shaders,int width,int height){
+        begin(owner,shaders,width,height,false);
+    }
+    /** ClickGUI uses the same material regardless of the selected out-of-world menu style. */
+    public static void beginLavalamp(GuiScreen owner,int width,int height){begin(owner,null,width,height,true);}
+    private static void begin(GuiScreen owner,MainMenuShaderManager shaders,int width,int height,boolean workspace){
         MenuThemes.frame();
+        workspacePalette=workspace?MenuThemes.lavaPalette():null;
         screen=owner;guiWidth=width;guiHeight=height;frameTime=System.nanoTime();windowDrawn=false;window=null;
         Minecraft mc=Minecraft.getMinecraft();destination=GL11.glGetInteger(0x8CA6);scene=shaders==null?0:shaders.getBackgroundTexture();
+        simple=!workspace&&MenuThemes.simpleMenus();if(simple)return;
         if(failed)return;
         try(EffectState state=new EffectState()){
             if(scene==0){fallback.capture(0,0,mc.displayWidth,mc.displayHeight,false);scene=fallback.color;}
@@ -50,7 +58,7 @@ public final class MenuGlass {
     private static void clear(Framebuffer framebuffer){framebuffer.bindFramebuffer(false);GL11.glColorMask(true,true,true,true);GL11.glClearColor(0,0,0,0);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);}
     /** Cache a reduced-resolution backdrop blur; lava never enters either blur pass. */
     private static void prepareFrost(int width,int height,long version) throws Exception {
-        int divisor=Math.max(4,Math.round(2*scale()));
+        int divisor=workspacePalette==null?Math.max(4,Math.round(2*scale())):Math.max(2,Math.round(scale()));
         int w=Math.max(1,(width+divisor-1)/divisor),h=Math.max(1,(height+divisor-1)/divisor);
         if(frostX==null||frostX.framebufferWidth!=w||frostX.framebufferHeight!=h){
             if(frostX!=null)frostX.deleteFramebuffer();if(frostY!=null)frostY.deleteFramebuffer();
@@ -61,7 +69,7 @@ public final class MenuGlass {
         frostedSource=scene;frostedFrame=version;
         if(frost==null)frost=new EffectProgram("fullscreen.vert","MenuFrost.frag");
         frost.bind();frost.integer("Scene",0);GL11.glDisable(GL11.GL_DEPTH_TEST);GL11.glDisable(GL11.GL_BLEND);GL11.glViewport(0,0,w,h);
-        float radius=3*scale();frostX.bindFramebuffer(false);FogRenderer.texture(0,scene);frost.vec2("Step",radius/width,0);FogRenderer.quad();
+        float radius=(workspacePalette==null?3:1.1F)*scale();frostX.bindFramebuffer(false);FogRenderer.texture(0,scene);frost.vec2("Step",radius/width,0);FogRenderer.quad();
         frostY.bindFramebuffer(false);FogRenderer.texture(0,frostX.framebufferTexture);frost.vec2("Step",0,radius/height);FogRenderer.quad();scene=frostY.framebufferTexture;
     }
     public static void end(){
@@ -78,7 +86,7 @@ public final class MenuGlass {
                 MenuTransitions.record(owner,window,layer);
             }
         }catch(Exception failure){failed=true;org.apache.logging.log4j.LogManager.getLogger("Vibe").warn("Menu layer composition unavailable",failure);}
-        finally{OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER,destination);screen=null;}
+        finally{OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER,destination);screen=null;workspacePalette=null;}
     }
     private static void drawLayer(int current,int previous,float weight,float oldWeight,boolean blend) throws Exception {
         Minecraft mc=Minecraft.getMinecraft();
@@ -91,14 +99,17 @@ public final class MenuGlass {
             FogRenderer.quad();
         }
     }
-    public static boolean pane(int x,int y,int width,int height,int radius,int fill,int border,boolean mainWindow){return pane(x,y,width,height,radius,fill,border,mainWindow,MenuThemes.current());}
+    private static MenuPalette palette(){return workspacePalette==null?MenuThemes.current():workspacePalette;}
+    public static boolean pane(int x,int y,int width,int height,int radius,int fill,int border,boolean mainWindow){return pane(x,y,width,height,radius,fill,border,mainWindow,palette());}
     static boolean pane(int x,int y,int width,int height,int radius,int fill,int border,boolean mainWindow,MenuPalette palette){
         return pane(x,y,width,height,radius,fill,border,mainWindow,palette,0,.5F,.5F);
     }
     static boolean button(int x,int y,int width,int height,int fill,int border,float hover,float pointerX,float pointerY){
-        return pane(x,y,width,height,10,fill,border,false,MenuThemes.current(),hover,pointerX,pointerY);
+        return pane(x,y,width,height,10,fill,border,false,palette(),hover,pointerX,pointerY);
     }
+    public static boolean control(int x,int y,int width,int height,int radius,int fill,int border,float hover,float pointerX,float pointerY){return pane(x,y,width,height,radius,fill,border,false,palette(),hover,pointerX,pointerY);}
     private static boolean pane(int x,int y,int width,int height,int radius,int fill,int border,boolean mainWindow,MenuPalette palette,float hover,float pointerX,float pointerY){
+        if(active()&&simple){flatPane(x,y,width,height,fill,border,mainWindow,hover);return true;}
         if(!active()||failed||scene==0||width<=0||height<=0)return false;
         Minecraft mc=Minecraft.getMinecraft();float sx=mc.displayWidth/(float)guiWidth,sy=mc.displayHeight/(float)guiHeight,scale=Math.min(sx,sy);
         boolean root=mainWindow&&!windowDrawn;
@@ -113,10 +124,11 @@ public final class MenuGlass {
         try(EffectState state=new EffectState()){
             if(program==null)program=new EffectProgram("fullscreen.vert","MenuGlass.frag");program.bind();prepareDrops();FogRenderer.texture(0,scene);program.integer("Scene",0);
             program.vec2("Resolution",mc.displayWidth,mc.displayHeight);program.vec2("Origin",bounds.x,mc.displayHeight-bounds.y-bounds.height);program.vec2("Size",bounds.width,bounds.height);
-            MenuTransitions.Rect lava=window==null||mainWindow||palette!=MenuThemes.current()?bounds:window;
+            MenuTransitions.Rect lava=window==null||mainWindow||palette!=palette()?bounds:window;
             program.vec2("LavaOrigin",lava.x,mc.displayHeight-lava.y-lava.height);program.vec2("LavaSize",lava.width,lava.height);
             program.scalar("Radius",Math.min(radius*scale,Math.min(bounds.width,bounds.height)*.5F));program.scalar("Scale",scale);program.scalar("Time",(frameTime-EPOCH)/1e9F);program.scalar("Window",mainWindow?1:0);
             program.scalar("Hover",hover);program.vec2("Pointer",pointerX,1-pointerY);
+            program.scalar("Clarity",workspacePalette==null?0:1);
             float emphasis=fill==AccountScreenStyle.ACCENT||border==palette.accent?1:Math.max(0,Math.min(1,1-colorDistance(border,palette.accent)/Math.max(1F,colorDistance(AccountScreenStyle.BORDER,palette.accent))));program.scalar("Emphasis",emphasis);
             rgb("Tint",mainWindow?palette.background:fill==AccountScreenStyle.ACCENT?palette.surface:fill);rgb("Accent",palette.accent);rgb("Wax",palette.lava);rgb("Light",palette.light);
             GL11.glViewport(0,0,mc.displayWidth,mc.displayHeight);GL11.glDisable(GL11.GL_DEPTH_TEST);GL11.glEnable(GL11.GL_SCISSOR_TEST);GL11.glScissor(left,bottom,right-left,top-bottom);
@@ -147,6 +159,12 @@ public final class MenuGlass {
         return true;
     }
     private static void rgb(String uniform,int color){program.vec3(uniform,(color>>16&255)/255F,(color>>8&255)/255F,(color&255)/255F);}
+    private static void flatPane(int x,int y,int w,int h,int fill,int border,boolean root,float hover){
+        boolean skeet=MenuThemes.style().equals("Skeet");
+        if(skeet){Gui.drawRect(x,y,x+w,y+h,0xFF090909);Gui.drawRect(x+1,y+1,x+w-1,y+h-1,0xFF555555);Gui.drawRect(x+2,y+2,x+w-2,y+h-2,0xFF141414);Gui.drawRect(x+3,y+3,x+w-3,y+h-3,root?0xFF202020:dev.vibe.ui.RenderUtils.blend(0xFF292929,0xFF444444,hover));
+            if(root){for(int i=0;i<w-8;i++){float f=i/(float)Math.max(1,w-9);int c=java.awt.Color.HSBtoRGB(.52F+f*.43F,.55F,.9F);Gui.drawRect(x+4+i,y+4,x+5+i,y+5,c);}}}
+        else{dev.vibe.ui.MenuRoundedRenderer.rect(x,y,w,h,root?10:5,dev.vibe.ui.RenderUtils.alpha(border,160));dev.vibe.ui.MenuRoundedRenderer.rect(x+1,y+1,w-2,h-2,root?9:4,root?0xF014171C:dev.vibe.ui.RenderUtils.blend(0xFF20252D,0xFF303B49,hover));}
+    }
     /** Emitter clocks and randomization are uniform for the whole frame, not per-pixel work. */
     private static void prepareDrops(){
         if(emissionFrame==frameTime)return;

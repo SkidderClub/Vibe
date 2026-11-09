@@ -234,7 +234,7 @@ public final class ClientEvents {
             if (music != null) music.tick();
             MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
             if (moveFix != null) moveFix.beginRotationTick();
-            dev.vibe.module.impl.movement.BasicTeleportModule teleport=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.BasicTeleportModule.class);if(teleport!=null)teleport.tick();
+            dev.vibe.module.impl.movement.TeleportModule teleport=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.TeleportModule.class);if(teleport!=null)teleport.tick();
             NoteBotModule noteBot = Vibe.getInstance().getModuleManager().getModule(NoteBotModule.class);
             if (noteBot != null) noteBot.tickStart();
             dev.vibe.module.impl.world.AutoRespawnModule respawn = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.world.AutoRespawnModule.class);
@@ -1077,7 +1077,7 @@ public final class ClientEvents {
             fogRenderer.close(); hitmarkerRenderer.close(); phoneRenderer.close();
             killEffectsRenderer.close();motionBlurRenderer.close();
             companionRenderer.close();GirlfriendModule girlfriend=Vibe.getInstance().getModuleManager().getModule(GirlfriendModule.class);if(girlfriend!=null)girlfriend.clear();
-            teleportPortalRenderer.close();dev.vibe.module.impl.movement.BasicTeleportModule teleport=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.BasicTeleportModule.class);if(teleport!=null)teleport.clear();
+            teleportPortalRenderer.close();dev.vibe.module.impl.movement.TeleportModule teleport=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.TeleportModule.class);if(teleport!=null)teleport.clear();
             dev.vibe.module.impl.visual.KillEffectsModule kills=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.KillEffectsModule.class);if(kills!=null)kills.clear();
             damageEspRenderer.close();
             tntEspRenderer.close();

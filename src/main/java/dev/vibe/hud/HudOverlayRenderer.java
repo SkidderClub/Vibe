@@ -115,6 +115,11 @@ final class HudOverlayRenderer {
     private static int rarity(ItemStack stack,OverlaySettings.Hotbar s){if(stack==null)return s.empty.getArgb();switch(stack.getRarity()){case EPIC:return s.epic.getArgb();case RARE:return s.rare.getArgb();case UNCOMMON:return s.uncommon.getArgb();default:return s.common.getArgb();}}
 
     void health(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){
+        // Vanilla's icon atlas has transparent pixels. Other HUD widgets can leave
+        // blending/alpha disabled, or the driver out of sync with Minecraft's cache.
+        boolean clipped=org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST);
+        dev.vibe.ui.GuiRenderState.prepare(false);
+        if(clipped)org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST);
         OverlaySettings.Health s=hud.customHealth;EntityPlayer p=mc.thePlayer;
         float hp=p==null?16:Math.max(0,p.getHealth()),max=p==null?20:Math.max(1,p.getMaxHealth()),abs=s.absorption.isEnabled()?(p==null?4:Math.max(0,p.getAbsorptionAmount())):0;
         int armor=p==null?15:p.inventory==null?0:p.getTotalArmorValue(),food=p==null?17:p.getFoodStats().getFoodLevel();
@@ -145,7 +150,7 @@ final class HudOverlayRenderer {
         if(s.armor.isEnabled()&&armor>0)for(int i=0;i<10;i++)icon(x+i*8,y,armor>=i*2+2?34:armor==i*2+1?25:16,9);
         e.setBounds(x,y,w,h);GlStateManager.color(1,1,1,1);
     }
-    private void icon(int x,int y,int u,int v){mc.getTextureManager().bindTexture(Gui.icons);GlStateManager.color(1,1,1,1);Gui.drawModalRectWithCustomSizedTexture(x,y,u,v,9,9,256,256);}
+    private void icon(int x,int y,int u,int v){GlStateManager.enableTexture2D();GlStateManager.enableBlend();GlStateManager.tryBlendFuncSeparate(770,771,1,771);mc.getTextureManager().bindTexture(Gui.icons);GlStateManager.color(1,1,1,1);Gui.drawModalRectWithCustomSizedTexture(x,y,u,v,9,9,256,256);}
     private static String format(float n){return n==Math.round(n)?String.valueOf(Math.round(n)):String.format(Locale.ROOT,"%.1f",n);}
     private static final int[] HEART={0x36,0x7F,0x7F,0x7F,0x3E,0x1C,0x08};
     private static void heart(int x,int y,float value,int filled,int empty){for(int row=0;row<7;row++)for(int col=0;col<7;col++)if((HEART[row]&(1<<col))!=0)Gui.drawRect(x+col,y+row,x+col+1,y+row+1,col<Math.round(7*value)?filled:empty);}
