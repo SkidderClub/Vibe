@@ -29,6 +29,7 @@ public abstract class OverlaySettings {
             fade=super.bool("Fade Messages",true);keepColors=super.bool("Keep Message Colors",true);scrollbar=super.bool("Scrollbar",true);}
     }
     public static final class BlockCounter extends OverlaySettings {
+        public final BooleanSetting barGlow;public final NumberSetting barGlowStrength;
         public final BooleanSetting block,scaffold,eagle,warning,bar,animate,label;
         public final ModeSetting calculate,easing,barMode;
         public final BooleanSetting compact,percentage;
@@ -42,6 +43,7 @@ public abstract class OverlaySettings {
             bar=bool("Depletion Bar",true);barEmpty=color("Empty Bar",0x60344557);width=number("Minimum Width",96,24,240,1);
             compact=bool("Compact",true);barMode=add(new ModeSetting("Block Counter Bar Style","Line","Line","Circle"));
             percentage=bool("Show Percentage",false);barThickness=number("Bar Thickness",2,1,6,.5);ringSize=number("Circle Size",22,16,40,1);barColor=color("Bar Color",0xFF79BFFF);
+            barGlow=add(new BooleanSetting("Block Counter Bar Glow",true,()->bar.isEnabled()));barGlowStrength=add(new NumberSetting("Block Counter Bar Glow Strength",.8,0,2,.05,()->bar.isEnabled()&&barGlow.isEnabled()));
             animate=bool("Animation",true);duration=number("Animation Duration (ms)",220,50,800,10);
             easing=add(new ModeSetting("Block Counter Easing","Smoothstep","Linear","Smoothstep","Cubic"));
         }
@@ -79,11 +81,13 @@ public abstract class OverlaySettings {
             common=super.color("Common Rarity",0xFF8F9AA8);uncommon=super.color("Uncommon Rarity",0xFF62BD65);rare=super.color("Rare Rarity",0xFF4C9DFF);epic=super.color("Epic Rarity",0xFFBC70ED);}
     }
     public static final class Effects extends OverlaySettings{
+        public final BooleanSetting barGlow;public final NumberSetting barGlowStrength;
         public final BooleanSetting icons,names,timers,amplifier,bar,potionColors;
         public final NumberSetting width,rowHeight,gap,barHeight;
         public final ModeSetting sort;
         public Effects(Function<Setting<?>,Setting<?>> r){super(r,"Effects");icons=bool("Icons",true);names=bool("Names",true);timers=bool("Timers",true);amplifier=bool("Amplifier",true);bar=bool("Timer Bar",true);potionColors=bool("Effect Colors",true);
-            width=number("Width",154,96,300,1);rowHeight=number("Row Height",30,24,48,1);gap=number("Gap",4,0,12,1);barHeight=number("Bar Height",2,1,5,.5);sort=add(new ModeSetting("Effects Sort","Time","Time","Name","Vanilla"));}
+            width=number("Width",154,96,300,1);rowHeight=number("Row Height",30,24,48,1);gap=number("Gap",4,0,12,1);barHeight=number("Bar Height",2,1,5,.5);sort=add(new ModeSetting("Effects Sort","Time","Time","Name","Vanilla"));
+            barGlow=add(new BooleanSetting("Effects Bar Glow",true,()->bar.isEnabled()));barGlowStrength=add(new NumberSetting("Effects Bar Glow Strength",.8,0,2,.05,()->bar.isEnabled()&&barGlow.isEnabled()));}
     }
     public static final class Keystrokes extends OverlaySettings{
         public final BooleanSetting leftClick,rightClick,space,animation;
@@ -106,6 +110,7 @@ public abstract class OverlaySettings {
         }
     }
     public static final class Health extends OverlaySettings {
+        public final BooleanSetting barGlow;public final NumberSetting barGlowStrength;
         public final ModeSetting mode;
         public final NumberSetting width,height;
         public final BooleanSetting numbers,absorption,armor,smooth;
@@ -114,7 +119,8 @@ public abstract class OverlaySettings {
         public Health(Function<Setting<?>,Setting<?>> r){super(r,"Custom Health");mode=super.add(new ModeSetting("Custom Health Mode","Fancy","Fancy","Recolor","Fortnite"));
             width=super.number("Width",182,90,360,1);height=super.number("Bar Height",8,5,20,1);numbers=super.bool("Show Values",false);absorption=super.bool("Absorption",true);armor=super.bool("Armor",true);
             smooth=super.bool("Smooth Bars",true);speed=super.number("Animation Speed",12,2,30,1);
-            high=super.color("Full Health",0xFF6BE58A);low=super.color("Low Health",0xFFFF5968);shield=super.color("Absorption Color",0xFF65B6FF);empty=super.color("Empty Bar",0x90333B47);}
+            high=super.color("Full Health",0xFF6BE58A);low=super.color("Low Health",0xFFFF5968);shield=super.color("Absorption Color",0xFF65B6FF);empty=super.color("Empty Bar",0x90333B47);
+            barGlow=add(new BooleanSetting("Custom Health Bar Glow",true,()->mode.is("Fortnite")));barGlowStrength=add(new NumberSetting("Custom Health Bar Glow Strength",.8,0,2,.05,()->mode.is("Fortnite")&&barGlow.isEnabled()));}
     }
     public static final class Tab extends OverlaySettings {
         public final BooleanSetting toggle,heads,ping,header,footer,serverScores;

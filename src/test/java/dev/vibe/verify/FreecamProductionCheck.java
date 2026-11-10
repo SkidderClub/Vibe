@@ -71,6 +71,9 @@ public final class FreecamProductionCheck {
                 OUTPUT.println("KillEffects, MotionBlur and Keystrokes linked through production Forge/OptiFine.");
                 for(String name:new String[]{"dev.vibe.module.impl.meme.GirlfriendModule","dev.vibe.companion.CompanionFollower","dev.vibe.companion.CompanionModel","dev.vibe.ui.render.CompanionRenderer"})Class.forName(name,false,loader).getDeclaredMethods();
                 OUTPUT.println("Girlfriend companion and native positional voice linked through production Forge/OptiFine.");
+                for(String name:new String[]{"dev.vibe.module.impl.meme.DabModule","dev.vibe.hud.HudBarGlow","net.minecraft.client.model.ModelBiped","net.minecraft.client.model.ModelPlayer"})Class.forName(name,false,loader).getDeclaredMethods();
+                if(!BrandingObserver.memeHooks.contains("poseHook")||!BrandingObserver.memeHooks.contains("basePoseHook")||!BrandingObserver.memeHooks.contains("hitHook"))throw new AssertionError("Dab/companion production hooks missing: "+BrandingObserver.memeHooks);
+                OUTPUT.println("Dab native body/armour pose and local companion hit hooks linked through production Forge/OptiFine.");
                 for(String name:new String[]{"dev.vibe.module.impl.movement.TeleportModule","dev.vibe.teleport.TeleportDestination","dev.vibe.teleport.PortalSprite","dev.vibe.ui.render.TeleportPortalRenderer","dev.vibe.ui.clickgui.LavalampWorkspace","dev.vibe.ui.menu.MenuThemeEditorGui"})Class.forName(name,false,loader).getDeclaredMethods();
                 OUTPUT.println("Teleport and portal rendering linked through production Forge/OptiFine.");
                 for(String name:new String[]{"net.minecraft.client.renderer.ActiveRenderInfo","net.minecraft.client.renderer.EntityRenderer",
@@ -105,13 +108,14 @@ public final class FreecamProductionCheck {
     public static final class BrandingObserver implements IClassTransformer {
         public static final Set<String> hooks=new HashSet<String>();
         public static final Set<String> cameraHooks=new java.util.TreeSet<String>();
+        public static final Set<String> memeHooks=new HashSet<String>();
         @Override public byte[] transform(String name,String mapped,byte[] bytes) {
             if(bytes==null)return null;
             boolean renderer="net.minecraft.client.renderer.EntityRenderer".equals(mapped);
-            if(!renderer&&!"net.minecraft.client.Minecraft".equals(mapped)&&!name.equals("net.minecraftforge.fml.client.SplashProgress$3"))return bytes;
+            if(!renderer&&!"net.minecraft.client.Minecraft".equals(mapped)&&!"net.minecraft.client.model.ModelBiped".equals(mapped)&&!"net.minecraft.client.model.ModelPlayer".equals(mapped)&&!name.equals("net.minecraftforge.fml.client.SplashProgress$3"))return bytes;
             org.objectweb.asm.tree.ClassNode node=new org.objectweb.asm.tree.ClassNode();new org.objectweb.asm.ClassReader(bytes).accept(node,0);
             for(Object entry:node.methods)for(org.objectweb.asm.tree.AbstractInsnNode insn:((org.objectweb.asm.tree.MethodNode)entry).instructions.toArray())
-                if(insn instanceof org.objectweb.asm.tree.MethodInsnNode){org.objectweb.asm.tree.MethodInsnNode call=(org.objectweb.asm.tree.MethodInsnNode)insn;if(call.owner.startsWith("dev/vibe/core/startup/"))hooks.add(call.name);if(renderer&&call.owner.equals("dev/vibe/module/impl/movement/FreecamModule"))cameraHooks.add(((org.objectweb.asm.tree.MethodNode)entry).name+":"+call.name);}
+                if(insn instanceof org.objectweb.asm.tree.MethodInsnNode){org.objectweb.asm.tree.MethodInsnNode call=(org.objectweb.asm.tree.MethodInsnNode)insn;if(call.owner.startsWith("dev/vibe/core/startup/"))hooks.add(call.name);if(renderer&&call.owner.equals("dev/vibe/module/impl/movement/FreecamModule"))cameraHooks.add(((org.objectweb.asm.tree.MethodNode)entry).name+":"+call.name);if(call.owner.equals("dev/vibe/module/impl/meme/DabModule")||call.owner.equals("dev/vibe/module/impl/meme/GirlfriendModule")&&call.name.equals("hitHook"))memeHooks.add(call.name);}
             return bytes;
         }
     }

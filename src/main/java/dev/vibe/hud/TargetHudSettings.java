@@ -13,6 +13,7 @@ public final class TargetHudSettings {
     public final ColorSetting health, healthEnd, background, text, particleColor;
     public final BooleanSetting gradient, absorption, ping, smoothing, damageTint, particles, animations;
     public final NumberSetting linger, width, radius, particleCount, particleSize, particleLifetime, maxTargets, animationDuration, gap;
+    public final BooleanSetting barGlow;public final NumberSetting barGlowStrength;
 
     public TargetHudSettings(Function<Setting<?>,Setting<?>> register) {
         mode=add(register,new ModeSetting("Target HUD Mode","Novoline","Novoline","Tenacity","Zeroday","Rise","LiquidGlass","Lavalamp","ThunderHack","NurikZapen","NurikZapen Mini","CelkaPasta","LiquidBounce"));
@@ -26,6 +27,7 @@ public final class TargetHudSettings {
         animationDuration=add(register,new NumberSetting("Target HUD Animation Duration",220,100,500,10,()->animations.isEnabled()));
         width=add(register,new NumberSetting("Target HUD Width",154,130,260,2));
         health=add(register,new ColorSetting("Target HUD Health Color",0xFFEC78DD));
+        barGlow=add(register,new BooleanSetting("Target HUD Bar Glow",true,()->mode.is("LiquidGlass")||mode.is("Lavalamp")));barGlowStrength=add(register,new NumberSetting("Target HUD Bar Glow Strength",.8,0,2,.05,()->barGlow.isEnabled()&&(mode.is("LiquidGlass")||mode.is("Lavalamp"))));
         gradient=add(register,new BooleanSetting("Target HUD Gradient",true,()->!mode.is("Novoline")&&!mode.is("Zeroday")));
         healthEnd=add(register,new ColorSetting("Target HUD Gradient End",0xFF678FFF,()->gradient.isEnabled()&&!mode.is("Novoline")&&!mode.is("Zeroday")));
         background=add(register,new ColorSetting("Target HUD Background",0xB51A1C23,()->!mode.is("LiquidGlass")&&!mode.is("Lavalamp")));

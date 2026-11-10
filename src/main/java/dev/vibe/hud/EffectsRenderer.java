@@ -45,6 +45,7 @@ final class EffectsRenderer {
             if(s.bar.isEnabled()){
                 float fraction=effect.getIsPotionDurationMax()?1:Math.min(1,effect.getDuration()/(float)(preview?1600:durations.get(effect.getPotionID())));
                 float height=s.barHeight.getFloat();HudShapes.round(x+5,yy+row-height-2,w-10,height,height/2,0x483B4758);
+                if(s.barGlow.isEnabled()&&HudBarGlow.glass(manager.theme(element,hud)))HudBarGlow.line(x+5,yy+row-height-2,(w-10)*fraction,height,color,s.barGlowStrength.getFloat());
                 HudShapes.round(x+5,yy+row-height-2,(w-10)*fraction,height,height/2,color);
             }
         }

@@ -219,6 +219,7 @@ public final class ClientEvents {
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
+            dev.vibe.module.impl.meme.DabModule dab=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.DabModule.class);if(dab!=null)dab.tick();
             dev.vibe.module.impl.visual.KillEffectsModule kills=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.KillEffectsModule.class);if(kills!=null&&!minecraft.isGamePaused())kills.tick();
             if (Vibe.getInstance().getHudManager() != null) Vibe.getInstance().getHudManager().tickTargets();
             if (Vibe.getInstance().getConfig() != null)
@@ -1077,6 +1078,7 @@ public final class ClientEvents {
             fogRenderer.close(); hitmarkerRenderer.close(); phoneRenderer.close();
             killEffectsRenderer.close();motionBlurRenderer.close();
             companionRenderer.close();GirlfriendModule girlfriend=Vibe.getInstance().getModuleManager().getModule(GirlfriendModule.class);if(girlfriend!=null)girlfriend.clear();
+            dev.vibe.module.impl.meme.DabModule dab=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.DabModule.class);if(dab!=null)dab.reset();
             teleportPortalRenderer.close();dev.vibe.module.impl.movement.TeleportModule teleport=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.TeleportModule.class);if(teleport!=null)teleport.clear();
             dev.vibe.module.impl.visual.KillEffectsModule kills=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.KillEffectsModule.class);if(kills!=null)kills.clear();
             damageEspRenderer.close();

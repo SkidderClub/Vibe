@@ -62,6 +62,7 @@ final class BlockCounterRenderer {
             int barColor=s.warning.isEnabled()&&count<=Math.max(s.yellowAt.getInt(),s.redAt.getInt())?textColor:s.barColor.getArgb();
             if(circle){float size=s.ringSize.getFloat(),cx=x+w-pad-size/2,cy=y+h/2F;
                 HudShapes.arc(cx,cy,size/2-s.barThickness.getFloat()/2,s.barThickness.getFloat(),1,alpha(s.barEmpty.getArgb(),opacity));
+                if(s.barGlow.isEnabled()&&HudBarGlow.glass(theme))HudBarGlow.ring(cx,cy,size/2-s.barThickness.getFloat()/2,s.barThickness.getFloat(),fill,alpha(barColor,opacity),s.barGlowStrength.getFloat());
                 HudShapes.arc(cx,cy,size/2-s.barThickness.getFloat()/2,s.barThickness.getFloat(),fill,alpha(barColor,opacity));
                 if(s.percentage.isEnabled()&&(textColor>>>24)*opacity>=4){
                     float scale=Math.min(.75F,(size-5)/font.getStringWidth(percent));GlStateManager.pushMatrix();GlStateManager.translate(cx,cy,0);GlStateManager.scale(scale,scale,1);
@@ -69,6 +70,7 @@ final class BlockCounterRenderer {
                 }
             }else{
                 float thickness=s.barThickness.getFloat();HudShapes.round(x+pad,y+h-4-thickness,w-pad*2,thickness,thickness/2,alpha(s.barEmpty.getArgb(),opacity));
+                if(s.barGlow.isEnabled()&&HudBarGlow.glass(theme))HudBarGlow.line(x+pad,y+h-4-thickness,(w-pad*2)*fill,thickness,alpha(barColor,opacity),s.barGlowStrength.getFloat());
                 HudShapes.round(x+pad,y+h-4-thickness,(w-pad*2)*fill,thickness,thickness/2,alpha(barColor,opacity));
                 if(s.percentage.isEnabled()&&(textColor>>>24)*opacity>=4)font.drawString(percent,x+w-pad-font.getStringWidth(percent),textY,alpha(textColor,opacity),s.shadow.isEnabled());
             }

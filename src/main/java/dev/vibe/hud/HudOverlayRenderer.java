@@ -133,6 +133,7 @@ final class HudOverlayRenderer {
         e.ensureOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h),color=RenderUtils.blend(s.low.getArgb(),s.high.getArgb(),Math.min(1,hp/max));
         if(fortnite){
             int by=y+armorHeight;
+            if(s.barGlow.isEnabled()&&HudBarGlow.glass(manager.theme(e,hud))){HudBarGlow.line(x,by,w*Math.min(1,absorptionFraction),bar,s.shield.getArgb(),s.barGlowStrength.getFloat());HudBarGlow.line(x,by+bar+3,w*Math.min(1,healthFraction),bar,color,s.barGlowStrength.getFloat());}
             HudShapes.round(x,by,w,bar,2,s.empty.getArgb());HudShapes.round(x,by,w*Math.min(1,absorptionFraction),bar,2,s.shield.getArgb());
             HudShapes.round(x,by+bar+3,w,bar,2,s.empty.getArgb());HudShapes.gradient(x,by+bar+3,w*Math.min(1,healthFraction),bar,2,RenderUtils.blend(color,0xFFFFFFFF,.12F),color);
             if(s.numbers.isEnabled())text(format(hp),x+4,by+bar+3+(bar-8)/2F,s.text.getArgb(),true);

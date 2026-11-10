@@ -93,9 +93,11 @@ public final class TargetHudRenderer {
     private void bar(TargetHudSettings s,TargetHudData d,float x,float y,float w,float h,int a,int b) {
         HudShapes.round(x,y,w,h,h/2,0x66222732);
         float filled=Math.max(0,Math.min(w,w*state.displayed));
+        if(s.barGlow.isEnabled()&&HudBarGlow.glass(s.mode.getValue()))HudBarGlow.line(x,y,filled,h,dev.vibe.ui.RenderUtils.blend(a,b,.5F),s.barGlowStrength.getFloat());
         HudShapes.gradient(x,y,filled,h,h/2,a,b);
         if(s.absorption.isEnabled()&&d.absorption>0) {
             float extra=Math.min(w-filled,w*d.absorption/d.maxHealth);
+            if(s.barGlow.isEnabled()&&HudBarGlow.glass(s.mode.getValue()))HudBarGlow.line(x+filled,y,extra,h,0xFFF0CD70,s.barGlowStrength.getFloat());
             HudShapes.round(x+filled,y,extra,h,h/2,0xFFF0CD70);
         }
     }

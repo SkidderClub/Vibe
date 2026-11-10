@@ -224,6 +224,8 @@ registerRenderCheck('verifyVisualAdditions','dev.vibe.ui.ClientChangesRenderChec
         'Checks all KillEffects modes, temporal blur and configurable Keystrokes in native OpenGL.',false){args 'visual-additions'}
 registerRenderCheck('verifyCompanion','dev.vibe.ui.ClientChangesRenderCheck','companion-check',
         'Checks the Girlfriend model, hair, colors and native rendering.',false){args 'companion'}
+registerRenderCheck('verifyMemeAdditions','dev.vibe.ui.ClientChangesRenderCheck','meme-additions-check',
+        'Checks Dab model poses and additive HUD bar glow in native rendering.',false){args 'meme-additions'}
 registerRenderCheck('verifyTeleportPortal','dev.vibe.ui.ClientChangesRenderCheck','teleport-check',
         'Checks the provided portal atlas animation and native world rendering state.',false){args 'teleport'}
 registerRenderCheck('verifyLavalampClickGui','dev.vibe.ui.ClientChangesRenderCheck','lavalamp-clickgui-check',

@@ -31,6 +31,7 @@ public final class ChamsRenderer {
     public static void endPreview(){previewDepth=Math.max(0,previewDepth-1);if(previewDepth==0)ChamsGlow.finish();}
 
     private ChamsRenderer() { }
+    public static boolean worldRendering(){return worldDepth>0;}
 
     public static void beginWorld() {
         if(worldDepth++!=0)return;

@@ -44,6 +44,7 @@ public final class GirlfriendModule extends Module {
     private final Queue<Digging> digging = new ConcurrentLinkedQueue<Digging>();
     private BlockPos breakingBed;
     private boolean breakingOther;
+    private int hitCooldown;
 
     public GirlfriendModule() {
         super("Girlfriend", "A nearby companion with local positional voice reactions", Category.MEME, Keyboard.KEY_NONE);
@@ -62,10 +63,12 @@ public final class GirlfriendModule extends Module {
             companion.setEntityId(Integer.MIN_VALUE+219);companion.width=.56F;companion.height=1.8F*modelScale.getFloat();
         }
         if(!minecraft.isGamePaused()){
+            if(hitCooldown>0)hitCooldown--;
             follower.tick(minecraft.theWorld,minecraft.thePlayer,followDistance.getDouble(),Math.max(closeRadius.getDouble(),followDistance.getDouble()+1),followSpeed.getDouble(),modelScale.getDouble());
             if(follower.active){companion.ticksExisted++;companion.setPosition(follower.x,follower.y,follower.z);companion.lastTickPosX=companion.prevPosX=follower.previousX;companion.lastTickPosY=companion.prevPosY=follower.previousY;companion.lastTickPosZ=companion.prevPosZ=follower.previousZ;
                 companion.prevRenderYawOffset=follower.previousYaw;companion.renderYawOffset=follower.yaw;companion.prevRotationYawHead=follower.previousHeadYaw;companion.rotationYawHead=follower.headYaw;companion.prevRotationPitch=follower.previousPitch;companion.rotationPitch=follower.pitch;
-                companion.limbSwing=follower.limbSwing;companion.prevLimbSwingAmount=follower.previousWalkAmount;companion.limbSwingAmount=follower.walkAmount;companion.onGround=follower.onGround;
+                companion.limbSwing=follower.limbSwing;companion.prevLimbSwingAmount=follower.previousWalkAmount;companion.limbSwingAmount=follower.walkAmount;companion.onGround=follower.onGround;companion.motionX=follower.motionX();companion.motionY=follower.motionY();companion.motionZ=follower.motionZ();companion.height=1.8F*modelScale.getFloat();
+                if(companion.hurtTime>0)companion.hurtTime--;
             }
         }
         if(voice!=null){voice.update();if(volume.getInt()==0)stopVoice();}
@@ -84,6 +87,28 @@ public final class GirlfriendModule extends Module {
     }
 
     public void onAttack(EntityLivingBase target) { if (isEnabled() && target != null && random.nextInt(100) == 0) play("attacking/"); }
+    /** Intercept only a real local companion hit, before any server attack or block action. */
+    public static boolean hitHook(){
+        dev.vibe.Vibe vibe=dev.vibe.Vibe.getInstance();Minecraft mc=Minecraft.getMinecraft();
+        if(vibe==null||vibe.getModuleManager()==null||mc==null||mc.thePlayer==null||mc.thePlayer.isDead||mc.theWorld==null||mc.currentScreen!=null||freecamActive())return false;
+        GirlfriendModule module=vibe.getModuleManager().getModule(GirlfriendModule.class);
+        if(module==null||!module.isEnabled()||!module.follower.active||module.companion==null||module.companionWorld!=mc.theWorld)return false;
+        double reach=mc.playerController!=null&&mc.playerController.extendedReach()?6:3;
+        float yaw=dev.vibe.module.impl.visual.FreeLookModule.yaw(mc.thePlayer,mc.thePlayer.rotationYaw),pitch=dev.vibe.module.impl.visual.FreeLookModule.pitch(mc.thePlayer,mc.thePlayer.rotationPitch);
+        double a=Math.toRadians(yaw),b=Math.toRadians(pitch);net.minecraft.util.Vec3 eyes=mc.thePlayer.getPositionEyes(1),end=eyes.addVector(-Math.sin(a)*Math.cos(b)*reach,-Math.sin(b)*reach,Math.cos(a)*Math.cos(b)*reach);
+        net.minecraft.util.MovingObjectPosition hit=module.follower.bounds().expand(.1,.1,.1).calculateIntercept(eyes,end);if(hit==null)return false;
+        double distance=eyes.distanceTo(hit.hitVec);net.minecraft.util.MovingObjectPosition block=mc.theWorld.rayTraceBlocks(eyes,end,false,true,false);
+        if(block!=null&&block.hitVec!=null&&eyes.distanceTo(block.hitVec)<distance)return false;
+        if(mc.objectMouseOver!=null&&mc.objectMouseOver.entityHit!=null&&mc.objectMouseOver.hitVec!=null&&eyes.distanceTo(mc.objectMouseOver.hitVec)<distance)return false;
+        mc.thePlayer.swingItem();if(module.hitCooldown>0)return true;
+        EntityOtherPlayerMP npc=module.companion;double dx=mc.thePlayer.posX-npc.posX,dz=mc.thePlayer.posZ-npc.posZ;if(dx*dx+dz*dz<.0001){dx=Math.sin(a)*.01;dz=-Math.cos(a)*.01;}
+        npc.motionX=module.follower.motionX();npc.motionY=module.follower.motionY();npc.motionZ=module.follower.motionZ();
+        npc.knockBack(mc.thePlayer,0,dx,dz);
+        int bonus=net.minecraft.enchantment.EnchantmentHelper.getKnockbackModifier(mc.thePlayer)+(mc.thePlayer.isSprinting()?1:0);
+        if(bonus>0)npc.addVelocity(-Math.sin(a)*bonus*.5,.1,Math.cos(a)*bonus*.5);
+        module.follower.impact(npc.motionX,npc.motionY,npc.motionZ);npc.hurtTime=npc.maxHurtTime=10;module.hitCooldown=10;return true;
+    }
+    private static boolean freecamActive(){return dev.vibe.module.impl.movement.FreecamModule.cameraActiveHook();}
     public void onBreak(BlockBed bed) { if (isEnabled()) play("blockBreaking/BreakingBed/"); }
     public void onBreakOther() { if (isEnabled() && random.nextInt(10) == 0) play("blockBreaking/"); }
 
@@ -132,7 +157,7 @@ public final class GirlfriendModule extends Module {
     public EntityOtherPlayerMP companion(){return companion;}
     public boolean speaking(){return voice!=null&&minecraft.getSoundHandler()!=null&&minecraft.getSoundHandler().isSoundPlaying(voice);}
     private void stopVoice(){if(voice!=null){voice.stop();if(minecraft.getSoundHandler()!=null)minecraft.getSoundHandler().stopSound(voice);voice=null;}}
-    public void clear(){stopVoice();follower.clear();companion=null;companionWorld=null;digging.clear();breakingBed=null;breakingOther=false;previousHealth=-1;wasDead=wasEating=false;}
+    public void clear(){stopVoice();follower.clear();companion=null;companionWorld=null;hitCooldown=0;digging.clear();breakingBed=null;breakingOther=false;previousHealth=-1;wasDead=wasEating=false;}
     @Override protected void onDisable(){clear();}
     final class Voice extends MovingSound {
         Voice(String event){super(new ResourceLocation("vibe","girlfriend."+event));attenuationType=AttenuationType.LINEAR;repeat=false;pitch=1;update();}

@@ -18,22 +18,36 @@ public final class CompanionFollower {
     private World world;private PathTerrain terrain;private WalkPathfinder.Search search;
     private BlockPos searchGoal;private List<Vec3> route=Collections.emptyList();private int cursor;
     private double height=1.72;
-    public void clear(){world=null;active=false;vx=vy=vz=0;search=null;route=Collections.emptyList();cursor=stuck=ticks=0;limbSwing=walkAmount=previousWalkAmount=0;}
+    private boolean knocked;private int impactTicks,recoveryTicks;
+    public void clear(){world=null;active=false;knocked=false;impactTicks=recoveryTicks=0;vx=vy=vz=0;search=null;route=Collections.emptyList();cursor=stuck=ticks=0;limbSwing=walkAmount=previousWalkAmount=0;}
+    public void impact(double motionX,double motionY,double motionZ){if(!active)return;vx=motionX;vy=motionY;vz=motionZ;knocked=true;impactTicks=10;search=null;route=Collections.emptyList();stuck=0;}
+    public double motionX(){return vx;}public double motionY(){return vy;}public double motionZ(){return vz;}
+    public AxisAlignedBB bounds(){return box(x,y,z);}
     public void tick(World next,EntityPlayer player,double distance,double radius,double speed,double scale){
         if(next==null||player==null){clear();return;}if(world!=next){clear();world=next;heading=player.rotationYaw;}
         height=1.8*scale;ticks++;
+        if(recoveryTicks>0)recoveryTicks--;
         double pdx=player.posX-player.lastTickPosX,pdz=player.posZ-player.lastTickPosZ;
         // Looking back must not move the follow anchor around the player. Only travel changes it.
         if(pdx*pdx+pdz*pdz>.0004)heading=angle(heading,(float)Math.toDegrees(Math.atan2(-pdx,pdz)),12);
         double a=Math.toRadians(heading);
         double idealX=player.posX+Math.sin(a)*distance-Math.cos(a)*.4,idealZ=player.posZ-Math.cos(a)*distance-Math.sin(a)*.4;
         if(active&&(!loaded(box(x,y,z))||!collisions(box(x,y,z)).isEmpty()))active=false;
-        if(!active||sq(x-player.posX)+sq(y-player.posY)+sq(z-player.posZ)>radius*radius||stuck>35){
+        double separation=sq(x-player.posX)+sq(y-player.posY)+sq(z-player.posZ);
+        if(!active||!knocked&&separation>(recoveryTicks>0?(radius+12)*(radius+12):radius*radius)||stuck>35){
             Vec3 safe=placement(player,idealX,idealZ);
             if(safe==null){active=false;return;}x=previousX=safe.xCoord;y=previousY=safe.yCoord;z=previousZ=safe.zCoord;
-            yaw=previousYaw=heading;headYaw=previousHeadYaw=heading;pitch=previousPitch=0;vx=vy=vz=0;active=true;stuck=0;search=null;route=Collections.emptyList();
+            yaw=previousYaw=heading;headYaw=previousHeadYaw=heading;pitch=previousPitch=0;vx=vy=vz=0;knocked=false;impactTicks=recoveryTicks=0;active=true;stuck=0;search=null;route=Collections.emptyList();
         }
         previousX=x;previousY=y;previousZ=z;previousYaw=yaw;previousHeadYaw=headYaw;previousPitch=pitch;previousWalkAmount=walkAmount;
+        if(knocked){
+            boolean water=world.isBlockLoaded(new BlockPos(x,y+.6,z))&&world.getBlockState(new BlockPos(x,y+.6,z)).getBlock().getMaterial()==Material.water;
+            float drag=onGround?world.getBlockState(new BlockPos(x,y-.01,z)).getBlock().slipperiness*.91F:.91F;
+            // Native player order: move first, then gravity and drag. Navigation waits for landing.
+            move(vx,vy,vz);if(water){vx*=.8;vz*=.8;vy=vy*.8-.02;}else{vx*=drag;vz*=drag;vy=(vy-.08)*.98;}
+            impactTicks--;if(impactTicks<=0&&onGround){knocked=false;recoveryTicks=60;}
+            double moved=Math.sqrt(sq(x-previousX)+sq(z-previousZ));walkAmount+=(Math.min(1,(float)moved*4)-walkAmount)*.4F;limbSwing+=walkAmount*.75F;return;
+        }
         if(ticks%5==0||terrain==null){
             terrain=new PathTerrain(world,player);BlockPos start=terrain.grounded(new BlockPos(x,y+.05,z)),goal=goal(player,idealX,idealZ,terrain);
             if(start!=null&&goal!=null){

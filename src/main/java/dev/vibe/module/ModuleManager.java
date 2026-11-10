@@ -97,6 +97,7 @@ public final class ModuleManager {
         register(new Gta8Module());
         register(new Battlefront3Module());
         register(new GirlfriendModule());
+        register(new DabModule());
         register(new ChessModule());
         register(new TicTacToeModule());
         register(new FourWinsModule());
