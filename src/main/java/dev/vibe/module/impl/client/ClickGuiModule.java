@@ -16,7 +16,7 @@ public final class ClickGuiModule extends Module {
 
     // Each style renders through VibeClickGui's shared Module/Setting model,
     // so switching the look never changes bindings, values, or config data.
-    private final ModeSetting theme = addSetting(new ModeSetting("Theme", "Skeet", "Skeet", "Futuristic", "NeverLose", "Augustus", "Xanax", "PacketV3", "Novoline", "SuizideX", "Breeze", "Lavalamp"));
+    private final ModeSetting theme = addSetting(new ModeSetting("Theme", "Skeet", "Skeet", "Futuristic", "NeverLose", "Augustus", "Xanax", "PacketV3", "Novoline", "SuizideX", "Breeze", "Lavalamp", "Wurst"));
     private final ModeSetting moduleSorting = addSetting(new ModeSetting("Module Sorting", "Normal", "Normal", "Alphabetic"));
     private final ModeSetting breezePalette = addSetting(new ModeSetting("Breeze Theme", "Default", () -> theme.is("Breeze"), "Default", "Fancy", "Silence", "Flarial", "Leaf", "Pink", "Quantum", "Hello Kitty"));
     private final dev.vibe.setting.StringSetting breezeFavorites = addSetting(new dev.vibe.setting.StringSetting("Breeze Favorites", "", 8192, () -> false));

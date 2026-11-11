@@ -181,6 +181,11 @@ public final class ClientEvents {
             return;
         }
         int key = Keyboard.getEventKey();
+        dev.vibe.features.UserActivity.mark();
+        dev.vibe.module.impl.meme.EmoteWheelModule emotes=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.EmoteWheelModule.class);
+        if(emotes!=null&&emotes.getKey()!=0&&key==emotes.getKey()&&minecraft.currentScreen==null){if(!Keyboard.isRepeatEvent())emotes.openWheel();return;}
+        dev.vibe.module.impl.movement.FreecamModule viewFreecam=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.FreecamModule.class);
+        if(viewFreecam!=null&&viewFreecam.isEnabled()&&minecraft.currentScreen==null&&key==minecraft.gameSettings.keyBindTogglePerspective.getKeyCode()&&!Keyboard.isRepeatEvent()){return;}
         dev.vibe.module.impl.meme.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class);
         if (minecraft.currentScreen == null && minecraft.thePlayer != null && phone != null
                 && phone.allowsContext(false, minecraft.gameSettings.thirdPersonView != 0, minecraft.gameSettings.hideGUI)
@@ -199,6 +204,8 @@ public final class ClientEvents {
         if (scripts != null && !scripts.key(Keyboard.getEventCharacter(), key)) {
             return;
         }
+        dev.vibe.module.impl.client.ChatterModule keyChatter=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.ChatterModule.class);
+        if(keyChatter!=null&&!Keyboard.isRepeatEvent())keyChatter.hotkey(key);
         ClickGuiModule clickGui = Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
         if ((clickGui != null && clickGui.getKey() == key)
                 && minecraft.currentScreen == null) {
@@ -235,6 +242,7 @@ public final class ClientEvents {
             if (music != null) music.tick();
             MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
             if (moveFix != null) moveFix.beginRotationTick();
+            dev.vibe.features.FeatureHooks.tick();
             dev.vibe.module.impl.movement.TeleportModule teleport=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.TeleportModule.class);if(teleport!=null)teleport.tick();
             NoteBotModule noteBot = Vibe.getInstance().getModuleManager().getModule(NoteBotModule.class);
             if (noteBot != null) noteBot.tickStart();
@@ -259,6 +267,7 @@ public final class ClientEvents {
             dev.vibe.module.impl.combat.BowAimbotModule bow=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.BowAimbotModule.class);if(bow!=null)bow.tick();
             if(projectile!=null)projectile.apply();
             if(fireball!=null)fireball.apply();
+            dev.vibe.features.FeatureHooks.rotate();
             if (moveFix != null) {
                 moveFix.tick();
                 moveFix.installInputHook();
@@ -444,6 +453,7 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onMouseInput(InputEvent.MouseInputEvent event) {
+        if(Mouse.getEventButtonState()||Mouse.getEventDWheel()!=0||Mouse.getEventDX()!=0||Mouse.getEventDY()!=0)dev.vibe.features.UserActivity.mark();
         dev.vibe.module.impl.movement.AntiAFKModule antiAFK = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.AntiAFKModule.class);
         if (antiAFK != null) antiAFK.mouseInput(Mouse.getEventButton(), Mouse.getEventDWheel(), Mouse.getEventDX(), Mouse.getEventDY());
         ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
@@ -459,6 +469,7 @@ public final class ClientEvents {
 
     @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.HIGHEST)
     public void onRavenMouse(net.minecraftforge.client.event.MouseEvent event) {
+        if(event.dx!=0||event.dy!=0||event.dwheel!=0||event.buttonstate)dev.vibe.features.UserActivity.mark();
         KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
         if (aura != null) aura.onHypixelMouse(event);
         ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
@@ -861,6 +872,7 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onWorldRender(RenderWorldLastEvent event) {
+        dev.vibe.features.FeatureHooks.render(event.partialTicks);
         oofArrowsRenderer.capture(event.partialTicks);
         dev.vibe.module.impl.meme.HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
         if (hypixel != null && hypixel.suppressVisuals()) return;
@@ -1035,6 +1047,7 @@ public final class ClientEvents {
     @SubscribeEvent
     public void onChat(ClientChatReceivedEvent event) {
         if (event.message != null) {
+            if(event.type!=2)dev.vibe.hud.SessionJournal.INSTANCE.chat(event.message);
             // Read the original plain text before Name Protect changes its
             // presentation. Board state continues to update when closed.
             String raw = event.message.getUnformattedText();

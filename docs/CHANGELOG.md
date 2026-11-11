@@ -1,5 +1,36 @@
 # Vibe changelog
 
+## 0.0.7
+
+11 November 2026
+
+### New
+
+- Projectile Dodge (Combat).
+- Pearl Catcher (Combat).
+- Beverage Notification (Visual).
+- Footprints and Landing Dust modes in CustomCosmetics (Visual).
+- Movement Predictor, Collision Preview, Enchantment Glint and Block Debris (Visual).
+- Colour grading controls in the Custom Healthbar (HUD).
+- Radar with Radar/Map modes, Network Graph, Kill Feed, Session Timeline and Candle HUD elements.
+- Wurst ClickGUI theme.
+- Step, Reverse Step, Parkour and Fast Ladder (Movement).
+- AutoFish with configurable delays and rod durability protection (World).
+- Emote Wheel, Bobblehead and Pocket Pets (Meme).
+- Minesweeper and Sudoku apps in the Phone module (Meme).
+- Local post-death exploration from the death screen.
+
+### Improved
+
+- AIAura recording has spacing, height-change, target-switch and projectile practice challenges.
+- Freecam supports saved routes and camera poses, playback and an F5 drone view.
+- Teleport uses blue and orange portal effects fitted to the terrain.
+- Chatter supports Hotkey detection rules.
+
+### Fixed
+
+- Replaced Projectile Dodge's all-or-nothing direction search with LiquidBounce's trajectory danger zones, perpendicular escape planning, momentum adjustment and obstacle rays, adapted to 1.8.9. It can act while movement keys are held, excludes embedded arrows, and validates both escape sides against voids and loaded terrain. MoveFix correction is included in the prediction.
+
 ## Unreleased
 
 - Moved Cosmetica Cosmetics, Cosmetics Editor, friend presets and the 629-entry offline catalog into the optional `Vibe-Cosmetica` extension. CustomCosmetics stays in core. Existing presets, assignments and caches retain their paths; NameProtect's skin masking remains available without Cosmetica.

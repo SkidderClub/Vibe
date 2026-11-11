@@ -172,6 +172,8 @@ public final class PhoneRenderer {
             case CAMERA: camera(phone); break;
             case FLAPPY: flappy(phone); break;
             case TETRIS: tetris(phone); break;
+            case MINESWEEPER: minesweeper(phone); break;
+            case SUDOKU: sudoku(phone); break;
             case PHOTOS: photos(phone); break;
             case INTERNET: internet(phone); break;
             case CONTACTS: contacts(phone); break;
@@ -240,8 +242,9 @@ public final class PhoneRenderer {
         round(24, 133, 184, 42, 14, 0x24405188);
         text(SMALL, "Apps and shortcuts", 35, 137, 0xE6D5E2FF);
         text(TITLE, "VibeOS", 35, 151, WHITE);
-        for (int i = 0; i < PhoneModule.appCount(); i++) {
-            int x = 26 + (i % 3) * 66, y = 181 + (i / 3) * 68;
+        int page=phone.homeSelection()/9;
+        for (int i = page*9; i < Math.min(PhoneModule.appCount(),page*9+9); i++) {
+            int x = 26 + (i % 3) * 66, y = 181 + (i % 9 / 3) * 68;
             boolean focused = phone.homeSelection() == i;
             if (focused) round(x - 5, y - 5, 58, 67, 15, 0x3CFFFFFF);
             icon(i, x, y, 48);
@@ -253,6 +256,7 @@ public final class PhoneRenderer {
             centered(SMALL, PhoneModule.appName(i), x + 24, y + 49, WHITE);
             if (focused) round(x + 16, y + 62, 16, 2, 1, 0xE8DDEAFF);
         }
+        for(int dot=0;dot<(PhoneModule.appCount()+8)/9;dot++)circle(111+dot*10,389,2.5F,dot==page?WHITE:0x55FFFFFF);
         keyHints(116, 400, 192, WHITE, phone.shortKey(Action.SELECT), "Open " + PhoneModule.appName(phone.homeSelection()));
     }
     private void status(PhoneModule phone) {
@@ -439,6 +443,30 @@ public final class PhoneRenderer {
         }
         keyHints(116,380,196,MUTED,phone.shortKey(Action.LEFT),"",phone.shortKey(Action.RIGHT),"Move",phone.shortKey(Action.UP),"Rotate",phone.shortKey(Action.DOWN),"Soft drop");
         keyHints(116,404,196,MUTED,phone.shortKey(Action.DELETE),"Hard drop",phone.shortKey(Action.SELECT),"Autoplay",phone.shortKey(Action.HOME),"Home");
+    }
+    private void puzzleMenu(PhoneModule phone,String title,String subtitle,boolean continuing,int selection,String[] names){
+        heading(title,subtitle);for(int i=0;i<4;i++){int y=118+i*51;round(20,y,192,43,10,i==selection?0xFF394D75:0xFF1C2A40);text(TEXT,i==0?"Continue":names[i-1],33,y+8,i==0&&!continuing?MUTED:WHITE);text(SMALL,i==0?(continuing?"Return to your game":"Start a new game below"):"New "+names[i-1].toLowerCase(java.util.Locale.ROOT)+" game",33,y+25,MUTED);}
+        keyHints(116,370,190,WHITE,phone.shortKey(Action.UP),"",phone.shortKey(Action.DOWN),"Choose");keyHints(116,402,190,WHITE,phone.shortKey(Action.SELECT),"Open");
+    }
+    private void minesweeper(PhoneModule phone){MinesweeperGame game=phone.mines();if(game.menu){puzzleMenu(phone,"Minesweeper",game.won?"Field cleared. Nicely done.":"Find the clear squares. Flag the mines.",game.hasGame()&&!game.over,game.menuSelection,new String[]{"Easy","Normal","Hard"});return;}
+        heading("Minesweeper",game.difficulty.name()+" field");text(TEXT,String.valueOf(game.difficulty.mines-game.flags())+" mines",20,98,WHITE);String timer=String.format(java.util.Locale.ROOT,"%d:%02d",(int)game.seconds/60,(int)game.seconds%60);text(TEXT,timer,212-TEXT.width(timer),98,WHITE);
+        int n=game.size(),cell=198/n,left=(232-n*cell)/2,top=120;round(left-3,top-3,n*cell+6,n*cell+6,8,0xFF0C1422);
+        try(PhoneClip clip=new PhoneClip(left,top,n*cell,n*cell)){for(int y=0;y<n;y++)for(int x=0;x<n;x++){int xx=left+x*cell,yy=top+y*cell;boolean open=game.revealed(x,y),selected=game.x==x&&game.y==y;round(xx+1,yy+1,cell-2,cell-2,3,selected?0xFF6587C7:open?0xFF223249:0xFF3B526F);
+            if(game.flagged(x,y)){round(xx+cell*.38F,yy+4,2,cell-8,1,WHITE);round(xx+cell*.38F+2,yy+4,cell*.35F,5,1,0xFFFF8793);}
+            else if(open||game.over&&game.cell(x,y)<0){int value=game.cell(x,y);if(value<0){circle(xx+cell/2F,yy+cell/2F,cell*.25F,0xFFFF8591);circle(xx+cell/2F-1,yy+cell/2F-1,1.5F,WHITE);}else if(value>0)centered(KEY,String.valueOf(value),xx+cell/2F,yy+(cell-12)/2F,new int[]{0,0xFF8EBAFF,0xFF8AE6BE,0xFFFFAB96,0xFFC3A5FF,0xFFFFD17B,0xFF91E2E8,0xFFF1A8E5,WHITE}[value]);}
+        }}
+        String result=game.over?(game.won?"Field cleared":"Mine found. Try another field."):"Best: "+(phone.mineBest(game.difficulty.ordinal())==0?"Not set":phone.mineBest(game.difficulty.ordinal())+" seconds");centered(SMALL,result,116,340,game.over?(game.won?0xFF97F0C5:0xFFFFA2AB):MUTED);
+        keyHints(116,371,192,WHITE,phone.shortKey(Action.SELECT),game.over?"New game":"Reveal",phone.shortKey(Action.DELETE),"Flag");keyHints(116,404,190,MUTED,phone.shortKey(Action.BACK),"Difficulty",phone.shortKey(Action.HOME),"Home");
+    }
+    private void sudoku(PhoneModule phone){SudokuGame game=phone.sudoku();if(game.menu){puzzleMenu(phone,"Sudoku",game.won?"Puzzle complete.":"Your puzzle saves automatically.",game.hasGame()&&!game.won,game.menuSelection,new String[]{"Easy","Normal","Hard"});return;}
+        heading("Sudoku",game.difficulty.name()+"    "+String.format(java.util.Locale.ROOT,"%d:%02d",(int)game.seconds/60,(int)game.seconds%60));round(14,115,204,204,7,0xFF091422);
+        try(PhoneClip clip=new PhoneClip(17,118,198,198)){for(int y=0;y<9;y++)for(int x=0;x<9;x++){int xx=17+x*22,yy=118+y*22;boolean selected=x==game.x&&y==game.y;round(xx,yy,21,21,1,selected?0xFF526FAD:x==game.x||y==game.y?0xFF273C58:0xFF1B2B40);int value=game.value(x,y);
+            if(value>0)centered(TEXT,String.valueOf(value),xx+10.5F,yy+3,game.conflict(x,y)?0xFFFF8999:game.given(x,y)?0xFFF1F4FC:0xFF8CDAFF);
+            else{int notes=game.pencil(x,y);for(int digit=1;digit<=9;digit++)if((notes&1<<(digit-1))!=0){GL11.glPushMatrix();GL11.glTranslatef(xx+1+(digit-1)%3*7,yy+1+(digit-1)/3*7,0);GL11.glScalef(.55F,.55F,1);text(SMALL,String.valueOf(digit),0,0,0xFFC9D5EC);GL11.glPopMatrix();}}
+        }for(int i=0;i<=9;i+=3){round(17+i*22-1,118,2,198,0,0xFF8499BA);round(17,118+i*22-1,198,2,0,0xFF8499BA);}}
+        centered(SMALL,game.won?"You solved it":game.pencilMode?"Pencil marks on":"Select a square, then choose a number",116,333,game.won?0xFF8FF1C2:MUTED);
+        keyHints(116,370,192,WHITE,phone.shortKey(Action.SELECT),game.won?"New puzzle":game.picker>=0?"Choose":"Number",phone.shortKey(Action.DELETE),game.picker>=0?"Clear":"Pencil");keyHints(116,403,192,MUTED,phone.shortKey(Action.BACK),game.picker>=0?"Cancel":"Undo",phone.shortKey(Action.HOME),"Home");
+        if(game.picker>=0){round(24,143,184,194,13,0xF6132035);centered(TEXT,"Choose a number",116,154,WHITE);for(int i=0;i<9;i++){int xx=35+i%3*55,yy=181+i/3*39;round(xx,yy,50,34,6,game.picker==i?0xFF4E72AD:0xFF293D5A);centered(TEXT,String.valueOf(i+1),xx+25,yy+8,WHITE);}for(int i=9;i<11;i++){int xx=35+(i-9)*82;round(xx,300,77,25,6,game.picker==i?0xFF4E72AD:0xFF293D5A);centered(SMALL,i==9?"Clear":"Hint",xx+38.5F,306,i==10&&!phone.sudokuHints.isEnabled()?MUTED:WHITE);}}
     }
     /** Cells from the board, live piece, ghost and previews are batched into two draw calls. */
     private static void tetrisCell(float x,float y,float size,int shade,boolean ghost){
@@ -687,7 +715,9 @@ public final class PhoneRenderer {
         previousHandFrame = now;
         float x = 48, y = 338;
         switch (phone.app()) {
-            case HOME: x = 50 + phone.homeSelection() % 3 * 66; y = 205 + phone.homeSelection() / 3 * 68; break;
+            case HOME: x = 50 + phone.homeSelection() % 3 * 66; y = 205 + phone.homeSelection() % 9 / 3 * 68; break;
+            case MINESWEEPER: x=29+phone.mines().x*(198F/phone.mines().size());y=143+phone.mines().y*(198F/phone.mines().size());break;
+            case SUDOKU: x=28+phone.sudoku().x*22;y=129+phone.sudoku().y*22;break;
             case SETTINGS:
                 int first = Math.max(0, Math.min(phone.settingsCount() - 7, phone.settingSelection() - 5));
                 x = 108; y = 126 + (phone.settingSelection() - first) * 38; break;
@@ -755,6 +785,7 @@ public final class PhoneRenderer {
         }
     }
     private static void icon(int index, float x, float y, int size) {
+        if(index==9||index==10){round(x,y,size,size,12,index==9?0xFFDE6675:0xFF8268DF);if(index==9){circle(x+size/2F,y+size/2F,10,0xFF263045);for(int i=0;i<4;i++){double a=i*Math.PI/2;round((float)(x+size/2+Math.cos(a)*12)-2,(float)(y+size/2+Math.sin(a)*12)-2,4,4,1,WHITE);}}else{for(int row=0;row<3;row++)for(int col=0;col<3;col++){round(x+9+col*11,y+9+row*11,8,8,2,0xDDEEE9FF);}}return;}
         int[] colors = {0xFF626D81, 0xFF8395AD, 0xFFFFBC4B, 0xFFF5F1EF, 0xFF419DDF, 0xFF8E94AE, 0xFF35AF72, 0xFF36A98B,0xFF514475};
         round((int)x, (int)y, size, size, size * .25F, colors[index]);
         GlStateManager.pushMatrix(); GlStateManager.translate(x + size / 2F, y + size / 2F, 0); GlStateManager.scale(size / 49F, size / 49F, 1);
@@ -840,6 +871,7 @@ public final class PhoneRenderer {
         }
         GL11.glVertex2f(x + w, y + h - r); GL11.glEnd(); endSolid();
     }
+    private static void round(float x,float y,float w,float h,float radius,int color){round(Math.round(x),Math.round(y),Math.round(w),Math.round(h),radius,color);}
     private static void outline(int x, int y, int w, int h, float radius, float width, int color) {
         float r = Math.min(radius, Math.min(w, h) / 2F), inner = Math.max(0, r - width);
         int steps = Math.max(8, (int) Math.ceil(r * 1.5));

@@ -3,6 +3,25 @@ package dev.vibe.ui.menu;
 /** Static release notes used by the expandable main-menu changelog. */
 public final class VibeChangelog {
     private static final Entry[] ENTRIES = {
+            new Entry("11.11.2026", new String[] {
+                    "+ Projectile Dodge and Pearl Catcher (Combat)",
+                    "+ Beverage Notification for observed potion drinking and golden apples (Visual)",
+                    "+ Footprints and bouncing Landing Dust in CustomCosmetics",
+                    "+ Movement Predictor, Collision Preview, Enchantment Glint and Block Debris (Visual)",
+                    "+ Colour grading controls for the Custom Healthbar (HUD)",
+                    "+ Radar with map mode, Network Graph, Kill Feed, Session Timeline and Candle HUD elements",
+                    "+ Wurst ClickGUI theme",
+                    "+ Step, Reverse Step, Parkour and Fast Ladder (Movement)",
+                    "+ AutoFish with delay and rod durability protection (World)",
+                    "+ Emote Wheel, Bobblehead and Pocket Pets (Meme)",
+                    "+ Minesweeper and Sudoku in VibeOS",
+                    "+ Local exploration from the death screen",
+                    "~ AIAura recording has spacing, height, target-switch and projectile practice challenges",
+                    "~ Freecam has saved camera paths and poses, playback and an F5 drone view",
+                    "~ Teleport has blue and orange portal effects fitted to terrain",
+                    "~ Chatter supports Hotkey detection rules",
+                    "~ Reworked Projectile Dodge using LiquidBounce's trajectory and perpendicular escape planner; movement input, MoveFix and void checks now cooperate"
+            }),
             new Entry("3.11.2026", new String[] {
                     "+ Item Physics adds tumbling and settling animations to dropped items",
                     "+ FreeLook with Hold and Toggle modes, independent of KillAura's silent rotations",

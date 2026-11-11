@@ -140,7 +140,7 @@ public final class ProjectileAuraModule extends dev.vibe.module.Module {
                 && mc.currentScreen == null && mc.inGameHasFocus && !mc.isGamePaused() && !player.isUsingItem()
                 && !mc.playerController.getIsHittingBlock() && !AutoBuffModule.ownsUseInput()
                 && !dev.vibe.module.impl.meme.HypixelModule.ownsSilentSlot()
-                && !dev.vibe.inventory.PlayerInventorySession.isBusy() && !AntiFireballModule.reserving() && !BowAimbotModule.drawing()
+                && !dev.vibe.inventory.PlayerInventorySession.isBusy() && !AntiFireballModule.reserving() && !PearlCatcherModule.reserving() && !BowAimbotModule.drawing()
                 && !dev.vibe.module.impl.world.ScaffoldModule.isActive() && !dev.vibe.module.impl.world.BedAuraModule.ownsMiningInput()
                 && !dev.vibe.module.impl.movement.FreecamModule.cameraActiveHook();
     }

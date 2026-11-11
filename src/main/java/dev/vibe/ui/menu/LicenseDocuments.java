@@ -47,7 +47,7 @@ public final class LicenseDocuments {
                 + "\n\nwebgl-noise / MIT\nIan McEwan, Stefan Gustavson / Ashima Arts\n" + tr("Simplex noise used by the visual effects.")
                 + "\n\nIn-Game Account Switcher / LGPLv3+\nThe_Fireplace, VidTu and contributors\n" + tr("Device-login reference and OAuth application; no library bundled.")
                 + "\n\nMinecraftAuth / LGPLv3+\nRK_01/RaphiMC and contributors\n" + tr("Authentication protocol and application configuration reference; no library bundled.")
-                + "\n\nLiquidBounce / GPLv3+\nCCBlueX and contributors\n" + tr("Nextgen TargetHUD layout and icons; login configuration reference. Shader provenance details are in Notices.")
+                + "\n\nLiquidBounce / GPLv3+\nCCBlueX and contributors\n" + tr("Nextgen TargetHUD layout and icons, AutoDodge trajectory/planner port, and login configuration reference. Shader provenance details are in Notices.")
                 + "\n\nThunderHack Recode / GPLv3\nThunderHack contributors\n" + tr("TargetHUD layouts and artwork. Pinned sources and port details are in Notices.")
                 + "\n\nAugustus Client\n" + tr("Vibe's Augustus ClickGUI theme is inspired by the Augustus Client.")
                 + "\nhttps://electriclauncher.de/\nhttps://discord.electriclauncher.de"

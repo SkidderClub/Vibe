@@ -4,10 +4,10 @@ Extensions are optional Java 8 JARs for Forge 1.8.9. Put core Vibe and whichever
 
 | JAR | Contents |
 | --- | --- |
-| `Vibe-1.8.9-0.0.6.jar` | Core client and extension API; no LEGO code/assets or Test module. |
-| `Vibe-Lego-0.0.6.jar` | All three LEGO modules, 989 characters/costumes, portraits, HUD, sounds, studs and progression. |
-| `Vibe-Example-0.0.6.jar` | The existing Test movement module, with yaw/pitch settings and a MoveFix rotation producer. |
-| `Vibe-Cosmetica-0.0.6.jar` | Cosmetics, Cosmetics Editor, 1,318 accessories, 419 capes, previews and friend presets. CustomCosmetics stays in core. |
+| `Vibe-1.8.9-0.0.7.jar` | Core client and extension API; no LEGO code/assets or Test module. |
+| `Vibe-Lego-0.0.7.jar` | All three LEGO modules, 989 characters/costumes, portraits, HUD, sounds, studs and progression. |
+| `Vibe-Example-0.0.7.jar` | The existing Test movement module, with yaw/pitch settings and a MoveFix rotation producer. |
+| `Vibe-Cosmetica-0.0.7.jar` | Cosmetics, Cosmetics Editor, 1,318 accessories, 419 capes, previews and friend presets. CustomCosmetics stays in core. |
 
 Install any combination of extensions. Remove the LEGO JAR to remove all three LEGO modules. LEGO progress remains in `vibe/lego/progress.json`; model caches remain in `vibe/lego/models`. Cosmetica presets remain in `config/vibe/cosmetics.json`, friend assignments in `config/vibe/friends.json`, and its caches under `vibe/cosmetica`. Removing Cosmetica hides its editor, modules and friend preset controls; CustomCosmetics and NameProtect still work in core. Extension settings and keybinds use normal Vibe profiles. Saving a profile while an extension is absent preserves its previous entries for reinstallation. No extension files are downloaded automatically.
 
@@ -45,7 +45,7 @@ To build the example independently inside this repository:
 For a copied project, use Gradle 8.8 and the absolute path to Vibe's **development** JAR:
 
 ```powershell
-gradle build -PvibeJar=C:/path/to/Vibe-1.8.9-0.0.6-dev.jar -PvibeVersion=0.0.6
+gradle build -PvibeJar=C:/path/to/Vibe-1.8.9-0.0.7-dev.jar -PvibeVersion=0.0.7
 ```
 
 Install the remapped JAR from that project's `build/libs/` beside core Vibe. Keep Vibe/Minecraft/Forge as compile-only dependencies; do not shade them or another copy of the extension API. Bytecode must target Java 8 even when building on JDK 21.
@@ -58,7 +58,7 @@ Include `META-INF/vibe-extension.json`:
   "id": "my_extension",
   "name": "My extension",
   "version": "1.0.0",
-  "vibeVersion": "0.0.6",
+  "vibeVersion": "0.0.7",
   "entrypoint": "example.MyExtension"
 }
 ```

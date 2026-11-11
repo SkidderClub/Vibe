@@ -28,6 +28,21 @@ public final class ModuleManager {
     private volatile TypeIndex typeIndex;
 
     public ModuleManager() {
+        register(new ProjectileDodgeModule());
+        register(new PearlCatcherModule());
+        register(new BaverageNotificationModule());
+        register(new MovementPredictorModule());
+        register(new CollisionPreviewModule());
+        register(new EnchantmentGlintModule());
+        register(new BlockDebrisModule());
+        register(new StepModule());
+        register(new ReverseStepModule());
+        register(new ParkourModule());
+        register(new FastLadderModule());
+        register(new AutoFishModule());
+        register(new EmoteWheelModule());
+        register(new BobbleheadModule());
+        register(new PocketPetsModule());
         register(new EspModule());
         register(new EspEditorModule());
         register(new TargetEspModule());

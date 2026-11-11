@@ -71,5 +71,10 @@ editing saved data cancels queued actions. Cooldowns, one queued action per rule
 echo suppression and a bounded queue prevent repeated prompts from multiplying
 sends. Chatter does not run in singleplayer.
 
+An accepted chat, title or subtitle trigger immediately adds a Chatter notification
+with the queued action. It uses the HUD notification settings and Dynamic Island
+integration. Disabled notifications stay hidden; duplicate or cooldown-blocked
+matches do not add cards. Notifications never include message contents or passwords.
+
 Verification: `gradlew.bat build verifyChatterRendering --offline`. The offscreen
 menu check uses fake credentials and saves previews in `build/chatter-render-check`.

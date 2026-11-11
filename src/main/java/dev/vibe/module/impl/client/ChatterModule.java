@@ -58,6 +58,7 @@ public final class ChatterModule extends Module {
         if(subtitle!=null&&!subtitle.isEmpty())m.engine().receive(subtitle,dev.vibe.chatter.ChatterData.Source.SUBTITLE,m.context(),now());
     }
     public void receive(String text){if(isEnabled())engine().receive(text,context(),now());}
+    public void hotkey(int key){Minecraft mc=Minecraft.getMinecraft();if(isEnabled()&&mc.currentScreen==null&&mc.inGameHasFocus)engine().key(key,context(),now());}
     public void tick(){
         releaseUse();
         Minecraft mc=Minecraft.getMinecraft();
@@ -78,6 +79,12 @@ public final class ChatterModule extends Module {
                 ?String.valueOf(handler.getNetworkManager().getRemoteAddress()):mc.getCurrentServerData().serverIP;
         return new ChatterEngine.Connection() {
             public Object identity(){return handler;}public String name(){return name;}public String server(){return host;}
+            public void matched(ChatterData.Source source,ChatterData.Action action){
+                if(!isEnabled()||mc.getNetHandler()!=handler)return;
+                String origin=source==ChatterData.Source.TITLE?"Title":source==ChatterData.Source.SUBTITLE?"Subtitle":source==ChatterData.Source.HOTKEY?"Hotkey":"Chat";
+                String queued=action==ChatterData.Action.LEAVE?"disconnect queued":action==ChatterData.Action.INTERACT?"item interaction queued":"message queued";
+                dev.vibe.feedback.ModuleFeedback.message("chatter.match",getName(),origin+" matched: "+queued);
+            }
             public void message(String value){if(mc.getNetHandler()==handler&&mc.thePlayer!=null)mc.thePlayer.sendChatMessage(value);}
             public boolean interact(int slot){if(mc.getNetHandler()!=handler||interactionSlot>=0||!canInteract())return false;interactionSlot=slot;interactionConnection=handler;interactionQueued=now();return true;}
             public void leave(){if(mc.getNetHandler()!=handler)return;mc.theWorld.sendQuittingDisconnectingPacket();mc.loadWorld(null);mc.displayGuiScreen(new GuiMultiplayer(new GuiMainMenu()));}

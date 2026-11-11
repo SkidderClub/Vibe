@@ -15,6 +15,7 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 /** Keeps a copy of the last remote connection even after Minecraft clears its world. */
 public final class ReconnectEvents {
     private static final int RECONNECT = 0x564901, RANDOM = 0x564902;
+    private static final int EXPLORE=0x564903;
     private ServerData lastServer;
     private String error = "";
 
@@ -34,6 +35,7 @@ public final class ReconnectEvents {
         if (!(event.gui instanceof GuiDisconnected)) error = "";
     }
     @SubscribeEvent public void init(GuiScreenEvent.InitGuiEvent.Post event) {
+        if(event.gui instanceof GuiGameOver){event.buttonList.removeIf(b->b.id==EXPLORE);event.buttonList.add(new dev.vibe.ui.menu.VibeMenuButton(new GuiButton(EXPLORE,event.gui.width/2-100,event.gui.height/4+120,200,20,"Explore")));return;}
         boolean pause=event.gui instanceof GuiIngameMenu;
         if (!(event.gui instanceof GuiDisconnected) && !pause) return;
         event.buttonList.removeIf(button->button.id==RECONNECT||button.id==RANDOM);
@@ -47,6 +49,7 @@ public final class ReconnectEvents {
         event.buttonList.add(reconnect); event.buttonList.add(random);
     }
     @SubscribeEvent public void click(GuiScreenEvent.ActionPerformedEvent.Pre event) {
+        if(event.gui instanceof GuiGameOver&&event.button.id==EXPLORE){event.setCanceled(true);dev.vibe.module.impl.movement.FreecamModule camera=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.FreecamModule.class);if(camera!=null&&camera.beginDeathReview())Minecraft.getMinecraft().displayGuiScreen(new dev.vibe.ui.screen.DeathReviewGui(camera));return;}
         boolean pause=event.gui instanceof GuiIngameMenu;
         if ((!(event.gui instanceof GuiDisconnected) && !pause) || event.button == null
                 || (event.button.id != RECONNECT && event.button.id != RANDOM)) return;

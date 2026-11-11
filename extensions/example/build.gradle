@@ -5,7 +5,7 @@ plugins {
 }
 group = 'dev.vibe.extensions'
 version = '1.0.0'
-def vibeVersion = providers.gradleProperty('vibeVersion').getOrElse('0.0.6')
+def vibeVersion = providers.gradleProperty('vibeVersion').getOrElse('0.0.7')
 def vibeJar = providers.gradleProperty('vibeJar').map { file(it) }.getOrElse(
         file("../../build/libs/Vibe-1.8.9-${vibeVersion}-dev.jar"))
 base { archivesName = 'Vibe-Example' }

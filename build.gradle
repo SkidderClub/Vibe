@@ -6,7 +6,7 @@ plugins {
 group = 'dev.vibe'
 // The single source of the Vibe version. The Vibe Launcher reads this line, and
 // generateBuildInfo exposes it to the code as dev.vibe.BuildInfo.VERSION.
-version = '0.0.6'
+version = '0.0.7'
 
 base {
     archivesName = 'Vibe-1.8.9'

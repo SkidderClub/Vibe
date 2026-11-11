@@ -1,5 +1,8 @@
 # Third-party notices
 
+The LiquidBounce AutoDodge planner and trajectory adaptation is documented in
+[LIQUIDBOUNCE-AUTODODGE.md](LIQUIDBOUNCE-AUTODODGE.md).
+
 TargetHUD layout and artwork ports from ThunderHack Recode and LiquidBounce,
 and the NightX Item Physics transform reference, are documented in
 [TARGET-HUD-PORTS.md](TARGET-HUD-PORTS.md).

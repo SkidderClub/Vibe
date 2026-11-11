@@ -13,21 +13,22 @@ import org.lwjgl.opengl.GL11;
 final class DropdownStyle {
     static final NeverLoseFont LABEL = new NeverLoseFont(java.awt.Font.PLAIN, 22);
     static final NeverLoseFont HEADER = new NeverLoseFont(java.awt.Font.BOLD, 23);
-    final boolean packet, novo, suizide, light;
+    final boolean packet, novo, suizide, light,wurst;
     final int text, muted, body, row, headerHeight, rowHeight, radius;
     final ClickGuiModule settings;
     final long now;
     DropdownStyle(ClickGuiModule settings, long now) {
         this.settings = settings; this.now = now;
-        packet = settings.getTheme().is("PacketV3"); novo = settings.getTheme().is("Novoline"); suizide = settings.getTheme().is("SuizideX");
+        packet = settings.getTheme().is("PacketV3"); novo = settings.getTheme().is("Novoline"); suizide = settings.getTheme().is("SuizideX");wurst=settings.getTheme().is("Wurst");
         light = suizide && !settings.getSuizideDarkMode().isEnabled();
         text = light ? 0xFF20272B : 0xFFF0F1F5; muted = light ? 0xFF5B686E : 0xFFB0B0BA;
-        body = light ? 0xEBEDF5F0 : novo ? 0xEC191820 : suizide ? 0xF20C0C11 : 0xEF1B1B1D;
+        body = wurst?0xFF404040:light ? 0xEBEDF5F0 : novo ? 0xEC191820 : suizide ? 0xF20C0C11 : 0xEF1B1B1D;
         row = light ? 0xF4F0F3F3 : suizide ? 0xEF202027 : body;
-        headerHeight = novo ? 23 : 25; rowHeight = novo ? 18 : 22; radius = novo ? 0 : 4;
+        headerHeight = wurst?15:novo ? 23 : 25; rowHeight = wurst?16:novo ? 18 : 22; radius = wurst||novo ? 0 : 4;
     }
     int accent(float x, int y) { return accent(settings, x, y, now); }
     static int accent(ClickGuiModule settings, float x, int y, long millis) {
+        if(settings.getTheme().is("Wurst"))return 0xFF40BA40;
         if (settings.getTheme().is("Novoline")) return settings.getNovolineColor().getArgb();
         if (settings.getTheme().is("SuizideX")) return RenderUtils.blend(settings.getSuizideColor().getArgb(), settings.getSuizideFadeColor().getArgb(), x);
         if (settings.getPacketAccent().is("Static")) return settings.getPacketColor().getArgb();

@@ -10,6 +10,7 @@ import net.minecraftforge.fml.common.launcher.FMLTweaker;
 public final class FreecamProductionCheck {
     private static final PrintStream OUTPUT=System.out,ERROR=System.err;
     public static void main(String[] args) {
+        Launch.minecraftHome=new File(args[0]);
         List<String> launch=new ArrayList<String>(Arrays.asList("--tweakClass",Tweaker.class.getName(),"--gameDir",args[0],"--version","1.8.9"));
         if(args.length>1&&args[1].equals("optifine"))Collections.addAll(launch,"--tweakClass","optifine.OptiFineForgeTweaker");
         new File(args[0]).mkdirs();Launch.main(launch.toArray(new String[0]));
@@ -18,14 +19,14 @@ public final class FreecamProductionCheck {
         private final FMLTweaker forge=new FMLTweaker();
         @Override public void acceptOptions(List<String> args,File gameDir,File assetsDir,String profile) {forge.acceptOptions(args,gameDir,assetsDir,profile);}
         @Override public void injectIntoClassLoader(LaunchClassLoader loader) {forge.injectIntoClassLoader(loader);}
-        @Override public String getLaunchTarget() {return Probe.class.getName();}
+        @Override public String getLaunchTarget() {Launch.classLoader.registerTransformer("dev.vibe.verify.FreecamProductionCheck$BrandingObserver");return "dev.vibe.verify.FreecamProductionCheck$Probe";}
         @Override public String[] getLaunchArguments() {return forge.getLaunchArguments();}
     }
     public static final class Probe {
         public static void main(String[] ignored) throws Exception {
             try {
                 LaunchClassLoader loader=Launch.classLoader;
-                loader.registerTransformer(BrandingObserver.class.getName());
+
                 // A rebuild replaces the source JAR after the running loader has opened
                 // its client. Lazy Freecam loading must keep using the session copy.
                 File mutable=new File(System.getProperty("vibe.check.mutableJar"));
@@ -57,6 +58,17 @@ public final class FreecamProductionCheck {
                 for(String name:new String[]{"dev.vibe.inventory.HotbarSwitches","dev.vibe.inventory.ItemSwitching"})
                     Class.forName(name,false,loader).getDeclaredMethods();
                 OUTPUT.println("Shared hotbar input, player and controller scopes linked through production Forge/OptiFine.");
+                for(String name:new String[]{"net.minecraft.client.renderer.entity.RenderItem","net.minecraft.client.renderer.entity.layers.LayerArmorBase","net.minecraft.client.particle.EffectRenderer",
+                        "dev.vibe.features.FeatureHooks","dev.vibe.features.MovementForecast","dev.vibe.features.dodge.DodgePlanner","dev.vibe.features.dodge.DodgeTrajectory","dev.vibe.module.impl.combat.ProjectileDodgeModule","dev.vibe.module.impl.combat.PearlCatcherModule","dev.vibe.module.impl.world.AutoFishModule",
+                        "dev.vibe.hud.DashboardWidgets","dev.vibe.hud.DashboardSettings","dev.vibe.hud.SessionJournal","dev.vibe.phone.MinesweeperGame","dev.vibe.phone.SudokuGame","dev.vibe.features.EmotePoses","dev.vibe.module.impl.meme.PocketPetsModule","dev.vibe.ui.screen.DeathReviewGui"})Class.forName(name,false,loader).getDeclaredMethods();
+                // Minecraft and ModelPlayer can load during OptiFine setup, before a late observer. Inspect LaunchWrapper's actual final class dumps as well.
+                java.lang.reflect.Field temp=LaunchClassLoader.class.getDeclaredField("tempFolder");temp.setAccessible(true);File dumps=(File)temp.get(null);
+                for(String className:new String[]{"net.minecraft.client.Minecraft","net.minecraft.client.model.ModelPlayer","net.minecraft.client.renderer.entity.RenderItem","net.minecraft.client.renderer.entity.layers.LayerArmorBase","net.minecraft.client.particle.EffectRenderer"}){
+                    Class.forName(className,false,loader).getDeclaredMethods();
+                    File file=new File(dumps,className.replace('.','/')+".class");if(!file.isFile())throw new AssertionError("Final class dump missing: "+file);new BrandingObserver().transform(className,className,java.nio.file.Files.readAllBytes(file.toPath()));
+                }
+                for(String required:new String[]{"RenderItem:tint","RenderItem:time","LayerArmorBase:color","LayerArmorBase:translate","EffectRenderer:destroyHook","Minecraft:perspectiveChangeHook","ModelPlayer:before"})if(!BrandingObserver.featureHooks.contains(required))throw new AssertionError("Production feature hook missing: "+required+" from "+BrandingObserver.featureHooks);
+                OUTPUT.println("New feature render, glint, block debris, emote restoration and F5 routing hooks verified in production: "+BrandingObserver.featureHooks);
                 for(String name:new String[]{"dev.vibe.hud.HudManager","dev.vibe.hud.DynamicIslandRenderer","dev.vibe.hud.BlockCounterRenderer",
                         "dev.vibe.hud.NameProtectRenderer","dev.vibe.hud.TextGlowScope","net.minecraft.client.gui.FontRenderer"})
                     Class.forName(name,false,loader).getDeclaredMethods();
@@ -109,13 +121,15 @@ public final class FreecamProductionCheck {
         public static final Set<String> hooks=new HashSet<String>();
         public static final Set<String> cameraHooks=new java.util.TreeSet<String>();
         public static final Set<String> memeHooks=new HashSet<String>();
+        public static final Set<String> featureHooks=new java.util.TreeSet<String>();
         @Override public byte[] transform(String name,String mapped,byte[] bytes) {
             if(bytes==null)return null;
             boolean renderer="net.minecraft.client.renderer.EntityRenderer".equals(mapped);
-            if(!renderer&&!"net.minecraft.client.Minecraft".equals(mapped)&&!"net.minecraft.client.model.ModelBiped".equals(mapped)&&!"net.minecraft.client.model.ModelPlayer".equals(mapped)&&!name.equals("net.minecraftforge.fml.client.SplashProgress$3"))return bytes;
+            if(!renderer&&!"net.minecraft.client.Minecraft".equals(mapped)&&!"net.minecraft.client.model.ModelBiped".equals(mapped)&&!"net.minecraft.client.model.ModelPlayer".equals(mapped)&&!"net.minecraft.client.renderer.entity.RenderItem".equals(mapped)&&!"net.minecraft.client.renderer.entity.layers.LayerArmorBase".equals(mapped)&&!"net.minecraft.client.particle.EffectRenderer".equals(mapped)&&!name.equals("net.minecraftforge.fml.client.SplashProgress$3"))return bytes;
             org.objectweb.asm.tree.ClassNode node=new org.objectweb.asm.tree.ClassNode();new org.objectweb.asm.ClassReader(bytes).accept(node,0);
             for(Object entry:node.methods)for(org.objectweb.asm.tree.AbstractInsnNode insn:((org.objectweb.asm.tree.MethodNode)entry).instructions.toArray())
                 if(insn instanceof org.objectweb.asm.tree.MethodInsnNode){org.objectweb.asm.tree.MethodInsnNode call=(org.objectweb.asm.tree.MethodInsnNode)insn;if(call.owner.startsWith("dev/vibe/core/startup/"))hooks.add(call.name);if(renderer&&call.owner.equals("dev/vibe/module/impl/movement/FreecamModule"))cameraHooks.add(((org.objectweb.asm.tree.MethodNode)entry).name+":"+call.name);if(call.owner.equals("dev/vibe/module/impl/meme/DabModule")||call.owner.equals("dev/vibe/module/impl/meme/GirlfriendModule")&&call.name.equals("hitHook"))memeHooks.add(call.name);}
+            for(Object entry:node.methods)for(org.objectweb.asm.tree.AbstractInsnNode n:((org.objectweb.asm.tree.MethodNode)entry).instructions.toArray())if(n instanceof org.objectweb.asm.tree.MethodInsnNode){org.objectweb.asm.tree.MethodInsnNode call=(org.objectweb.asm.tree.MethodInsnNode)n;if(call.owner.startsWith("dev/vibe/")&&(call.owner.contains("EnchantmentGlintModule")||call.owner.contains("BlockDebrisModule")||call.name.equals("perspectiveChangeHook")||call.owner.contains("EmotePoses")))featureHooks.add(mapped.substring(mapped.lastIndexOf('.')+1)+":"+call.name);}
             return bytes;
         }
     }

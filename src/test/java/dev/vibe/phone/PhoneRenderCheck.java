@@ -98,7 +98,10 @@ public final class PhoneRenderCheck {
                         for(int step=0;step<220;step++)phone.advance(.1);
                         if(!phone.tetris().autoplay()||phone.tetris().pieces()<1)throw new AssertionError("Tetris autoplay did not play");
                     }
+                    if(app==PhoneModule.App.MINESWEEPER){frame();draw(renderer,phone,1);save("minesweeper-menu.png");phone.mines().start(MinesweeperGame.Difficulty.Hard);phone.mines().reveal(4,4);phone.mines().x=0;phone.mines().y=0;phone.mines().flag();}
+                    if(app==PhoneModule.App.SUDOKU){frame();draw(renderer,phone,1);save("sudoku-menu.png");phone.sudoku().start(SudokuGame.Difficulty.Normal);}
                     frame(); draw(renderer, phone, 1); save(app.name().toLowerCase(java.util.Locale.ROOT) + ".png");
+                    if(app==PhoneModule.App.SUDOKU){SudokuGame game=phone.sudoku();outer:for(int yy=0;yy<9;yy++)for(int xx=0;xx<9;xx++)if(!game.given(xx,yy)){game.x=xx;game.y=yy;break outer;}phone.act(PhoneModule.Action.SELECT);frame();draw(renderer,phone,1);save("sudoku-number-picker.png");check();}
                     if (app == PhoneModule.App.HOME) savePortrait();
                     check();
                     if (app == PhoneModule.App.MESSAGES) {

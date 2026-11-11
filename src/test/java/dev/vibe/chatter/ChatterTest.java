@@ -87,13 +87,36 @@ public class ChatterTest {
     }
     @Test public void multipleMatchesQueueBoundedlyAndSendAtMostOnePerTick()throws Exception{
         engine.data().rules.clear();for(int i=0;i<64;i++)engine.data().rules.add(new Rule("hello",Action.MESSAGE,"response "+i,0,0,false));engine.save();
-        engine.receive("hello",server,0);assertEquals(32,engine.pending());engine.tick(server,0);assertEquals(1,server.sent.size());assertEquals(31,engine.pending());
+        engine.receive("hello",server,0);assertEquals(32,engine.pending());assertEquals(32,server.matches.size());engine.tick(server,0);assertEquals(1,server.sent.size());assertEquals(31,engine.pending());
+    }
+    @Test public void acceptedMatchesNotifyImmediatelyAndRespectPendingCooldownAndDisabledRules(){
+        engine.data().rules.clear();Rule rule=new Rule("hello",Action.MESSAGE,"secret response",100,100,false);engine.data().rules.add(rule);
+        engine.receive("unrelated",server,0);assertTrue(server.matches.isEmpty());
+        engine.receive("hello",server,0);assertEquals(Collections.singletonList("CHAT:MESSAGE"),server.matches);assertTrue(server.sent.isEmpty());
+        engine.receive("hello",server,50);assertEquals(1,server.matches.size());
+        engine.tick(server,100);engine.receive("hello",server,1000);assertEquals(1,server.matches.size());
+        engine.receive("hello",server,2000);assertEquals(2,server.matches.size());engine.tick(server,2100);
+        rule.enabled=false;engine.receive("hello",server,4000);assertEquals(2,server.matches.size());
+        rule.enabled=true;rule.oncePerConnection=true;engine.receive("hello",server,5000);assertEquals(2,server.matches.size());
+    }
+    @Test public void notificationsUseTheDetectedSourceAndCoverEveryAction(){
+        engine.data().rules.clear();Rule rule=new Rule("match",Action.INTERACT,"",100,100,false);rule.source=Source.ANY;engine.data().rules.add(rule);
+        engine.receive("match",Source.SUBTITLE,server,0);assertEquals(Collections.singletonList("SUBTITLE:INTERACT"),server.matches);
+        engine.cancel();rule.source=Source.TITLE;rule.action=Action.LEAVE;
+        engine.receive("match",server,1000);assertEquals(1,server.matches.size());
+        engine.receive("match",Source.TITLE,server,1000);assertEquals(Arrays.asList("SUBTITLE:INTERACT","TITLE:LEAVE"),server.matches);assertEquals(0,server.leaves);
     }
     private static final class Server implements ChatterEngine.Connection {
         final Object id=new Object();final String name,host;final List<String> sent=new ArrayList<>();int leaves;
+        final List<String> matches=new ArrayList<>();
         Server(String name,String host){this.name=name;this.host=host;}public Object identity(){return id;}public String name(){return name;}public String server(){return host;}
         int interacted=-1;boolean ready=true;
+        public void matched(Source source,Action action){matches.add(source+":"+action);}
         public void message(String text){sent.add(text);}public void leave(){leaves++;}public boolean interact(int slot){if(!ready)return false;interacted=slot;return true;}
+    }
+    @Test public void hotkeyRulesWaitUseTheNormalQueueAndDoNotMatchChat()throws Exception{
+        engine.data().rules.clear();Rule rule=new Rule("",Action.MESSAGE,"hello %name%",50,50,false);rule.source=Source.HOTKEY;rule.hotkey=34;engine.data().rules.add(rule);engine.save();
+        engine.receive("hello",server,0);engine.key(35,server,0);assertEquals(0,engine.pending());engine.key(34,server,0);engine.key(34,server,1);assertEquals(1,engine.pending());assertEquals(Collections.singletonList("HOTKEY:MESSAGE"),server.matches);engine.tick(server,49);assertTrue(server.sent.isEmpty());engine.tick(server,50);assertEquals(Collections.singletonList("hello Steve"),server.sent);engine.key(34,server,100);assertEquals(0,engine.pending());engine.key(34,server,2000);assertEquals(1,engine.pending());assertEquals(34,store.load().rules.get(0).hotkey);
     }
     @Test public void titlesAndSubtitlesAreScopedAndInteractionsWaitForAvailableInput()throws Exception{
         engine.data().rules.clear();Rule rule=new Rule("Victory",Action.INTERACT,"",50,50,false);rule.source=Source.TITLE;rule.hotbarSlot=4;engine.data().rules.add(rule);engine.save();

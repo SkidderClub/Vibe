@@ -51,7 +51,8 @@ public class CompanionFollowerTest {
             CompanionFollower c=new CompanionFollower();c.tick(f.world,f.player,2,6,1,.95);
             for(int x=-2;x<=2;x++)for(int y=64;y<=65;y++)f.block(x,y,1,Blocks.stone.getDefaultState());
             f.player.posZ=f.player.lastTickPosZ=5.5;
-            for(int i=0;i<150;i++){c.tick(f.world,f.player,2,9,1,.95);assertTrue("Tick "+i+": "+c.x+", "+c.y+", "+c.z,c.z+.28<=1.0001||c.z-.28>=2-.0001||c.x+.28<=-2.0001||c.x-.28>=3-.0001);}
+            net.minecraft.util.AxisAlignedBB wall=new net.minecraft.util.AxisAlignedBB(-2,64,1,3,66,2);
+            for(int i=0;i<150;i++){c.tick(f.world,f.player,2,9,1,.95);assertFalse("Tick "+i+": "+c.x+", "+c.y+", "+c.z,wall.intersectsWith(c.bounds().contract(.0001,.0001,.0001)));}
             assertTrue("Companion remained behind the wall",c.z>2.5);
             f.world.loaded=false;c.tick(f.world,f.player,2,9,1,.95);assertFalse(c.active);
         }

@@ -42,7 +42,7 @@ final class DropdownWorkspace {
         long now=System.nanoTime();float dt=previous==0?1/60F:Math.min(.05F,(now-previous)/1e9F);previous=now;
         float ease=1-(float)Math.exp(-20*dt);style=new DropdownStyle(settings,System.currentTimeMillis());
         int count=Category.values().length;
-        panelWidth=Math.max(116,Math.min(style.novo?136:148,(width-24-12*(count-1))/count));
+        panelWidth=Math.max(116,Math.min(style.wurst?126:style.novo?136:148,(width-24-12*(count-1))/count));
         int gap=12;
         if(panels.isEmpty()) {
             Map<String,int[]> saved=SAVED.get(theme);
@@ -66,7 +66,7 @@ final class DropdownWorkspace {
         for(Panel p:panels)p.modules.clear();
         for(Module module:ClickGuiModule.sortedModules(Vibe.getInstance().getModuleManager().getModules()))categories.get(module.getCategory()).modules.add(module);
         for(Panel p:panels) {
-            p.content=2;for(Module module:p.modules)p.content+=style.rowHeight+(host.dropdownExpanded(module)?host.dropdownSettingsHeight(module):0);
+            p.content=p.detail==null?2:host.dropdownSettingsHeight(p.detail)+4;for(Module module:p.modules)p.content+=style.rowHeight+(!style.wurst&&host.dropdownExpanded(module)?host.dropdownSettingsHeight(module):0);
             int margin=horizontalMax>0?37:22;
             int minimum=style.headerHeight+style.rowHeight+style.footerHeight()+2;
             if(!p.collapsed)p.y=clamp(p.y,4,height-minimum-margin);
@@ -82,6 +82,7 @@ final class DropdownWorkspace {
         if(mode==null&&dragging==null&&hovered!=null&&System.currentTimeMillis()-hoverAt>750)host.dropdownTooltip(hovered,mx,my);
     }
     private void drawPanelGlow(Panel p){
+        if(style.wurst)return;
         int x=screenX(p);if(x+panelWidth<0||x>width)return;
         if(style.novo){SoftPanelGlow.draw(x,p.y,panelWidth,p.h,2,12,0x8A000000);
             if(style.settings.getNovolineGlow().isEnabled())SoftPanelGlow.draw(x,p.y,panelWidth,p.h,2,9,RenderUtils.alpha(style.accent(.5F,p.y),24));}
@@ -105,16 +106,18 @@ final class DropdownWorkspace {
         } else {
             try(GuiClip clip=GuiClip.local(x,y,panelWidth,style.headerHeight)){rect(x,y,panelWidth,style.headerHeight+(p.collapsed?0:radius),radius,style.novo?0xF20D0D13:0xF7111113);}
         }
-        String title=p.category.getLabel();
-        if(style.novo){NeverLoseStyle.icon(p.category,x+8,y+7,0xFFD3D2DF);label(title,x+25,y+4,panelWidth-38,0xFFE8E7ED);}
+        String title=p.detail==null?p.category.getLabel():p.detail.getName();
+        if(style.wurst){net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.drawString(title,x+4,y+3,0xFFF0F0F0);net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.drawString(p.detail==null?(p.collapsed?"+":"-"):"x",x+panelWidth-10,y+3,0xFFF0F0F0);}
+        else if(style.novo){NeverLoseStyle.icon(p.category,x+8,y+7,0xFFD3D2DF);label(title,x+25,y+4,panelWidth-38,0xFFE8E7ED);}
         else ScrollingText.draw(HEADER,title,x+9,y+4,panelWidth-(p.collapsed?30:18),0xFFF7F7F9,ScrollingText.Alignment.CENTER);
-        if(p.collapsed){NeverLoseStyle.chevron(x+panelWidth-12,y+11,false,0xFFAAAAAE);return;}
+        if(p.collapsed){if(!style.wurst)NeverLoseStyle.chevron(x+panelWidth-12,y+11,false,0xFFAAAAAE);return;}
         int top=y+style.headerHeight,bottom=y+p.h-style.footerHeight();
         host.dropdownClip(p.name,top,bottom);
         try(GuiClip clip=GuiClip.local(x,top,panelWidth,bottom-top)) {
+            if(p.detail!=null)host.drawDropdownSettings(p.detail,x+4,top+2-Math.round(p.scroll),panelWidth-8,style,p.name);
             int rowY=top+2-Math.round(p.scroll);
             for(Module module:p.modules) {
-                boolean expanded=host.dropdownExpanded(module),over=accepts(p.name,mx,my)&&my>=rowY&&my<rowY+style.rowHeight;
+                boolean expanded=!style.wurst&&host.dropdownExpanded(module),over=accepts(p.name,mx,my)&&my>=rowY&&my<rowY+style.rowHeight;
                 float on=enabled.getOrDefault(module,module.isEnabled()?1F:0F);on+=((module.isEnabled()?1:0)-on)*ease;enabled.put(module,on);
                 float hover=hovering.getOrDefault(module,0F);hover+=((over?1:0)-hover)*ease;hovering.put(module,hover);
                 if(rowY+style.rowHeight>=top&&rowY<bottom) {
@@ -133,7 +136,8 @@ final class DropdownWorkspace {
                     int arrowSpace=!style.packet&&host.dropdownHasSettings(module)?13:0;
                     int leftReserve=style.novo?arrowSpace:0;
                     // One text pass: the optional glow belongs behind the panel, never offset glyphs.
-                    center(name,rx+leftReserve,rowY+(style.rowHeight-14)/2,rw-arrowSpace-leftReserve,color);
+                    if(style.wurst){Gui.drawRect(rx,rowY,rx+rw,rowY+style.rowHeight, module.isEnabled()?0xB040AA40:over?0xB0606060:0x70404040);Gui.drawRect(rx,rowY,rx+rw,rowY+1,0x80101010);net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.drawString(net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.trimStringToWidth(name,rw-17),rx+3,rowY+4,0xFFF0F0F0);}
+                    else center(name,rx+leftReserve,rowY+(style.rowHeight-14)/2,rw-arrowSpace-leftReserve,color);
                     if(arrowSpace>0)NeverLoseStyle.chevron(rx+rw-11,rowY+style.rowHeight/2-1,expanded,color);
                     host.dropdownModuleTarget(module,x,rowY,x+panelWidth,rowY+style.rowHeight,p.name);
                     if(over)hovered=module;
@@ -153,6 +157,7 @@ final class DropdownWorkspace {
         if(p.max>0){int track=bottom-top,thumb=ScrollbarDrag.thumb(track,p.max,15),sy=top+Math.round((track-thumb)*p.scroll/p.max);
             rect(x+panelWidth-3,sy,2,thumb,1,RenderUtils.alpha(style.muted,150));}
     }
+    void openWurstSettings(Module module){if(!style.wurst)return;for(Iterator<Panel> it=panels.iterator();it.hasNext();)if(it.next().detail==module){it.remove();return;}Panel parent=categories.get(module.getCategory());Panel p=new Panel(module.getCategory(),panels.size(),parent.x+panelWidth+6,parent.y);p.detail=module;p.name="Settings:"+module.getId();p.modules.clear();panels.add(p);}
     boolean accepts(String owner,int mx,int my) {Panel p=at(mx,my);return p!=null&&p.name.equals(owner)&&!p.collapsed&&my>=p.y+style.headerHeight&&my<p.y+p.h-style.footerHeight();}
     private Panel at(int mx,int my){for(int i=panels.size()-1;i>=0;i--){Panel p=panels.get(i);if(mx>=screenX(p)&&mx<screenX(p)+panelWidth&&my>=p.y&&my<p.y+p.h)return p;}return null;}
     boolean click(int mx,int my,int button) {
@@ -166,6 +171,7 @@ final class DropdownWorkspace {
         }
         Panel p=at(mx,my);if(p==null)return false;
         if(my<p.y+style.headerHeight) {
+            if(style.wurst&&button==0&&mx>=screenX(p)+panelWidth-13){if(p.detail!=null)panels.remove(p);else p.collapsed=!p.collapsed;return true;}
             mode=null;
             if(button==1)p.collapsed=!p.collapsed;
             else if(button==0){dragging=p;dragX=mx+Math.round(horizontal)-p.x;dragY=my-p.y;panels.remove(p);panels.add(p);}
@@ -217,13 +223,13 @@ final class DropdownWorkspace {
         }
     }
     private void drawNavigation(int mx,int my){int tab=Math.max(1,width/panels.size());for(Panel p:panels){int x=p.order*tab;boolean selected=screenX(p)>=0&&screenX(p)+panelWidth<=width;
-        rect(x+2,height-26,tab-4,22,4,style.light?0xEBF0F4F3:0xED17171E);label(p.category.getLabel(),x+7,height-22,tab-13,selected?style.accent(.5F,0):style.muted);}}
+        rect(x+2,height-26,tab-4,22,4,style.light?0xEBF0F4F3:0xED17171E);label(p.detail==null?p.category.getLabel():p.detail.getName(),x+7,height-22,tab-13,selected?style.accent(.5F,0):style.muted);}}
     void release(){dragging=scrolling=null;scrollbar=null;}
     void close(){for(Panel p:panels)p.target=p.scroll;targetHorizontal=horizontal;save();release();if(!inlineMode())mode=null;}
-    private void save(){if(theme.isEmpty())return;Map<String,int[]> values=new HashMap<>();for(Panel p:panels)values.put(p.category.name(),new int[]{p.x,p.y,p.collapsed?1:0,Math.round(p.scroll)});SAVED.put(theme,values);SAVED_SIZES.put(theme,new int[]{width,height});SAVED_HORIZONTAL.put(theme,horizontal);}
+    private void save(){if(theme.isEmpty())return;Map<String,int[]> values=new HashMap<>();for(Panel p:panels)if(p.detail==null)values.put(p.category.name(),new int[]{p.x,p.y,p.collapsed?1:0,Math.round(p.scroll)});SAVED.put(theme,values);SAVED_SIZES.put(theme,new int[]{width,height});SAVED_HORIZONTAL.put(theme,horizontal);}
     private static int clamp(int n,int min,int max){return Math.max(min,Math.min(Math.max(min,max),n));}
     private static final class Panel {
-        final Category category;final String name;final int order;int x,y,h,max,content;boolean collapsed;float scroll,target;final List<Module> modules=new ArrayList<>();
+        Module detail;final Category category;String name;final int order;int x,y,h,max,content;boolean collapsed;float scroll,target;final List<Module> modules=new ArrayList<>();
         Panel(Category category,int order,int x,int y){this.category=category;this.name=category.name().substring(0,1)+category.name().substring(1).toLowerCase(Locale.ROOT);this.order=order;this.x=x;this.y=y;}
     }
 }

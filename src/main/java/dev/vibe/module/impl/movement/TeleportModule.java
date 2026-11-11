@@ -50,9 +50,8 @@ public final class TeleportModule extends Module {
         p.prevPosX=p.lastTickPosX=p.posX;p.prevPosY=p.lastTickPosY=p.posY;p.prevPosZ=p.lastTickPosZ=p.posZ;
         p.motionX=p.motionY=p.motionZ=0;p.fallDistance=0;p.onGround=true;last=now;
         if(effects.isEnabled()){
-            double offsetX=-Math.sin(a)*.85,offsetZ=Math.cos(a)*.85;
-            portals.add(new Portal(fromX+offsetX,fromY,fromZ+offsetZ,yaw,now,duration.getInt()));
-            portals.add(new Portal(p.posX+offsetX,p.posY,p.posZ+offsetZ,yaw,now,duration.getInt()));
+            portals.add(Portal.onFloor(mc.theWorld,fromX,fromY,fromZ,yaw,0xFF359DFF,now,duration.getInt(),size.getDouble()));
+            portals.add(Portal.onFloor(mc.theWorld,p.posX,p.posY,p.posZ,yaw,0xFFFF912D,now,duration.getInt(),size.getDouble()));
             while(portals.size()>8)portals.remove(0);
         }
         say("Teleported to "+hit.getBlockPos().getX()+", "+String.format(java.util.Locale.ROOT,"%.2f",p.posY)+", "+hit.getBlockPos().getZ()+".");return true;
@@ -64,7 +63,16 @@ public final class TeleportModule extends Module {
     private static void say(String text){dev.vibe.chat.ClientChat.send(text);}
     public static final class Portal{
         public final double x,y,z;public final float yaw;public final long born;public final int duration;
-        public Portal(double x,double y,double z,float yaw,long born,int duration){this.x=x;this.y=y;this.z=z;this.yaw=yaw;this.born=born;this.duration=duration;}
+        public final boolean floor;public final int color;public final double span;
+        public Portal(double x,double y,double z,float yaw,long born,int duration){this(x,y,z,yaw,born,duration,false,0xFF359DFF,2.3);}
+        private Portal(double x,double y,double z,float yaw,long born,int duration,boolean floor,int color,double span){this.x=x;this.y=y;this.z=z;this.yaw=yaw;this.born=born;this.duration=duration;this.floor=floor;this.color=color;this.span=span;}
+        public static Portal onFloor(net.minecraft.world.World world,double x,double y,double z,float yaw,int color,long born,int duration,double size){
+            MovingObjectPosition hit=world.rayTraceBlocks(new Vec3(x,y+.15,z),new Vec3(x,y-2,z),false,true,false);
+            if(hit==null||hit.sideHit!=net.minecraft.util.EnumFacing.UP)return new Portal(x,y,z,yaw,born,duration,false,color,2.3*size);
+            double top=hit.hitVec.yCoord,allowed=.2;
+            for(double r=.2;r<=Math.min(1.05,size*1.15);r+=.1){boolean supported=true;for(int i=0;i<16;i++){double angle=i*Math.PI/8,px=x+Math.sin(angle)*r,pz=z+Math.cos(angle)*r;if(!world.isBlockLoaded(new BlockPos(px,top,pz))){supported=false;break;}MovingObjectPosition support=world.rayTraceBlocks(new Vec3(px,top+.05,pz),new Vec3(px,top-.12,pz),false,true,false);if(support==null||support.sideHit!=net.minecraft.util.EnumFacing.UP||Math.abs(support.hitVec.yCoord-top)>.025){supported=false;break;}}if(!supported)break;allowed=r;}
+            return new Portal(x,top+.018,z,yaw,born,duration,true,color,Math.max(.3,allowed*2-.04));
+        }
         public float progress(long now){return Math.max(0,Math.min(1,(now-born)/(float)duration));}
     }
 }

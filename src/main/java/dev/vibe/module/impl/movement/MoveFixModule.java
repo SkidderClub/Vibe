@@ -574,6 +574,7 @@ public final class MoveFixModule extends Module {
             VelocityModule velocity = Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
             if (velocity != null) velocity.afterWalkingUpdate(entity);
             module.endPacketRotation(entity);
+            dev.vibe.features.FeatureHooks.afterWalking(entity);
             dev.vibe.module.impl.combat.ProjectileAuraModule projectile =
                     Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.ProjectileAuraModule.class);
             if (projectile != null) projectile.afterWalking(entity, module);
@@ -720,6 +721,7 @@ public final class MoveFixModule extends Module {
                     : Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
             if (scaffold != null) scaffold.beforeMoveInput(this);
             dev.vibe.module.impl.combat.AutoBuffModule.inputHook(this);
+            dev.vibe.features.FeatureHooks.input(this);
             if (module.forcedMovementOwner != null) {
                 moveForward = module.forcedForward;
                 moveStrafe = module.forcedStrafe;
@@ -734,6 +736,8 @@ public final class MoveFixModule extends Module {
             // input, after physical keys and MoveFix correction are known.
             VelocityModule velocity = Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
             if (velocity != null) velocity.applyJumpInput(this);
+            dev.vibe.module.impl.visual.MovementPredictorModule predictor=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.MovementPredictorModule.class);
+            if(predictor!=null&&predictor.isEnabled())predictor.capture(this);
         }
     }
 

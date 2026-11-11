@@ -1,6 +1,6 @@
 # Cosmetica extension
 
-Install `Vibe-Cosmetica-0.0.6.jar` beside the updated core Vibe JAR in `mods/`, then restart. It provides **Cosmetics** (Visual), **Cosmetics Editor** (Client), friend preset assignments, skin previews and an offline catalog of 1,318 accessories and 419 capes as of 3 November 2026.
+Install `Vibe-Cosmetica-0.0.7.jar` beside the updated core Vibe JAR in `mods/`, then restart. It provides **Cosmetics** (Visual), **Cosmetics Editor** (Client), friend preset assignments, skin previews and an offline catalog of 1,318 accessories and 419 capes as of 3 November 2026.
 
 **CustomCosmetics remains in core Vibe** with its existing settings and rendering. This extension contains no CustomCosmetics code.
 

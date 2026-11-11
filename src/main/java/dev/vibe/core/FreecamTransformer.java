@@ -23,6 +23,11 @@ public final class FreecamTransformer implements IClassTransformer, Opcodes {
         new ClassReader(bytes).accept(node, 0);
         for (Object item : node.methods) {
             MethodNode method = (MethodNode) item;
+            String nativeName=method.name.startsWith("vibe$hotbar$")?method.name.substring("vibe$hotbar$".length()):method.name;
+            if(minecraft&&method.desc.equals("()V")&&named(nativeName,"runTick","func_71407_l","s")){
+                boolean installed=false;for(AbstractInsnNode n:method.instructions.toArray())if(n instanceof MethodInsnNode&&((MethodInsnNode)n).name.equals("perspectiveChangeHook"))installed=true;
+                if(!installed)for(AbstractInsnNode n:method.instructions.toArray())if(n instanceof FieldInsnNode&&n.getOpcode()==PUTFIELD){FieldInsnNode f=(FieldInsnNode)n;if(f.desc.equals("I")&&named(f.owner,"net/minecraft/client/settings/GameSettings","avh")&&named(f.name,"thirdPersonView","field_74320_O","aB"))method.instructions.insertBefore(n,call("perspectiveChangeHook","(I)I"));}
+            }
             if (renderer) {
                 if (method.desc.equals("(F)V") && named(method.name, "orientCamera", "func_78467_g", "f")) {
                     renderReads(method,false);

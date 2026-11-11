@@ -163,6 +163,7 @@ drawText(r.suffix,x+textWidth(r.name,s)*scale,y,s,hud,i,rows.size(),now,true,ele
     }
     public static String suffix(Module module,ArrayListSettings s){
         if(s.suffix.is("None"))return "";
+        if(module instanceof dev.vibe.module.impl.world.AutoFishModule)return decorate(((dev.vibe.module.impl.world.AutoFishModule)module).getStatus(),s);
         List<String> values=new ArrayList<>();
         for(Setting<?> setting:module.getSettings())if(setting instanceof ModeSetting && setting.isVisible()){
             if(s.suffix.is("All Modes"))values.add(((ModeSetting)setting).getValue());

@@ -163,13 +163,13 @@ public final class CustomModelRenderer {
         GlStateManager.enableAlpha();
         GlStateManager.alphaFunc(GL11.GL_GREATER, 0.0F);
         Minecraft.getMinecraft().getTextureManager().bindTexture(GLINT);
-        GlStateManager.color(0.5F, 0.25F, 0.8F, 1.0F);
+        dev.vibe.module.impl.visual.EnchantmentGlintModule.color(0.5F, 0.25F, 0.8F, 1.0F);
         GlStateManager.matrixMode(GL11.GL_TEXTURE);
         for (int layer = 0; layer < 2; layer++) {
             GlStateManager.pushMatrix();
             GlStateManager.scale(0.5F, 0.5F, 0.5F);
             long period = layer == 0 ? 3000L : 4873L;
-            float offset = (float) (Minecraft.getSystemTime() % period) / period / 8.0F;
+            float offset = (float) (dev.vibe.module.impl.visual.EnchantmentGlintModule.time(Minecraft.getSystemTime()) % period) / period / 8.0F;
             GlStateManager.translate(layer == 0 ? offset : -offset, 0.0F, 0.0F);
             GlStateManager.rotate(layer == 0 ? -50.0F : 10.0F, 0.0F, 0.0F, 1.0F);
             compiled.drawPart(0, 0, GLINT_TINT, true);

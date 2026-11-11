@@ -21,6 +21,7 @@ import net.minecraftforge.fml.relauncher.ReflectionHelper;
 /** Shared native-item and text drawing. Liquid glass is composed once per widget, never per slot or row. */
 final class HudOverlayRenderer {
     private final Minecraft mc=Minecraft.getMinecraft();
+    private final dev.vibe.ui.render.HealthGradePass healthGrading=new dev.vibe.ui.render.HealthGradePass();
     private ItemStack[] samples;
     private static final String[] SAMPLE_NAMES={"Diamond Sword","Bow","Golden Apple","Ender Pearl","Diamond Pickaxe","","","",""};
     private final List<NetworkPlayerInfo> players=new ArrayList<>();
@@ -115,6 +116,9 @@ final class HudOverlayRenderer {
     private static int rarity(ItemStack stack,OverlaySettings.Hotbar s){if(stack==null)return s.empty.getArgb();switch(stack.getRarity()){case EPIC:return s.epic.getArgb();case RARE:return s.rare.getArgb();case UNCOMMON:return s.uncommon.getArgb();default:return s.common.getArgb();}}
 
     void health(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){
+        healthGrading.render(hud.customHealth.grading,preview,()->healthRaw(manager,hud,e,res,preview));
+    }
+    private void healthRaw(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){
         // Vanilla's icon atlas has transparent pixels. Other HUD widgets can leave
         // blending/alpha disabled, or the driver out of sync with Minecraft's cache.
         boolean clipped=org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST);

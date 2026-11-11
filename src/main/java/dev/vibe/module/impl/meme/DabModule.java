@@ -34,7 +34,10 @@ public final class DabModule extends dev.vibe.module.Module implements Statistic
     /** Called after vanilla pose calculation, for the main model and its armour. */
     public static void poseHook(Object model,Object entity,float ageInTicks){
         if(!(model instanceof ModelBiped))return;Minecraft mc=Minecraft.getMinecraft();Vibe vibe=Vibe.getInstance();
-        if(vibe==null||vibe.getModuleManager()==null||mc==null||mc.thePlayer!=entity||mc.theWorld==null||mc.gameSettings.thirdPersonView==0||!dev.vibe.ui.render.esp.ChamsRenderer.worldRendering())return;
+        if(vibe==null||vibe.getModuleManager()==null||mc==null||mc.thePlayer!=entity||mc.theWorld==null)return;
+        boolean preview=dev.vibe.features.EmotePoses.preview!=null;
+        if(!preview&&(mc.gameSettings.thirdPersonView==0||!dev.vibe.ui.render.esp.ChamsRenderer.worldRendering()))return;
+        dev.vibe.features.EmotePoses.apply((ModelBiped)model);if(preview)return;
         DabModule dab=vibe.getModuleManager().getModule(DabModule.class);if(dab==null||!dab.isEnabled()||dab.world!=mc.theWorld||dab.player!=entity)return;
         float amount=dab.amount(ageInTicks-mc.thePlayer.ticksExisted);if(amount>0)applyPose((ModelBiped)model,amount);
     }

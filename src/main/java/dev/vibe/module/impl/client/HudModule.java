@@ -15,6 +15,7 @@ import java.util.Set;
 import org.lwjgl.input.Keyboard;
 
 public final class HudModule extends Module {
+    public final java.util.Map<String,dev.vibe.hud.DashboardSettings> dashboards=new java.util.LinkedHashMap<>();
 
     // Profiles written before selector initialization was fixed can contain
     // only this original selection, even though newer modules are enabled.
@@ -49,7 +50,7 @@ public final class HudModule extends Module {
             () -> true));
 
     private final MultiSelectSetting hudElements = addSetting(new MultiSelectSetting("HUD Elements",
-                        Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph", "notifications", "targethud", "ghosts", "customchat", "customhotbar", "customhealth", "customtab", "blockcounter", "dynamicisland", "effects", "customguis", "keystrokes"),
+                        Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph", "notifications", "targethud", "ghosts", "customchat", "customhotbar", "customhealth", "customtab", "blockcounter", "dynamicisland", "effects", "customguis", "keystrokes", "radar", "networkgraph", "killfeed", "sessiontimeline", "candle"),
             Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "notifications")));
 
     private final BooleanSetting replaceScoreboardServer = addSetting(new BooleanSetting("Replace Scoreboard Server", false,
@@ -100,6 +101,7 @@ public final class HudModule extends Module {
 
     public HudModule() {
         super("HUD", "Customizable Vibe HUD", Category.CLIENT, Keyboard.KEY_NONE);
+        for(String id:dev.vibe.hud.DashboardWidgets.IDS)dashboards.put(id,new dev.vibe.hud.DashboardSettings(this::addSetting,dev.vibe.hud.DashboardWidgets.title(id)));
         setEnabled(true);
     }
 

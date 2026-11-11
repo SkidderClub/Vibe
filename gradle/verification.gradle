@@ -121,6 +121,8 @@ tasks.register('verifyFreecamProduction', JavaExec) {
     workingDir project.projectDir
     systemProperty 'log4j.configurationFile', project.file('src/test/resources/log4j2-test.xml').absolutePath
     jvmArgs '-XX:-OmitStackTraceInFastThrow', '-Dfml.coreMods.load=dev.vibe.core.MoveFixLoadingPlugin'
+    systemProperty 'legacy.debugClassLoading', 'true'
+    systemProperty 'legacy.debugClassLoadingSave', 'true'
     args layout.buildDirectory.dir('freecam-production-check').get().asFile.absolutePath, (optifine.isFile() ? 'optifine' : 'forge')
     File frozenClient = null
     File mutableClient = null
@@ -348,3 +350,5 @@ public static final String scriptName = "%s";
         }
     }
 }
+
+registerRenderCheck('verifyNewFeaturesRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'new-features-check', 'Checks dashboard widgets, Wurst windows and isolated health grading.', false) { args 'new-features' }

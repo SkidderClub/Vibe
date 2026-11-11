@@ -159,6 +159,8 @@ public final class FpvFlight {
     }
 
     public double speed() { return Math.sqrt(velocityX * velocityX + velocityY * velocityY + velocityZ * velocityZ); }
+    /** Render-camera keyframes; never changes the real player or its packets. */
+    public void pose(double x,double y,double z,double yaw,double pitch,double roll){this.x=x;this.y=y;this.z=z;attitude=Quaternion.euler(yaw,pitch,roll);angleYaw=yaw;anglePitch=pitch;velocityX=velocityY=velocityZ=0;}
     public double groundSpeed() { return Math.sqrt(velocityX * velocityX + velocityZ * velocityZ); }
     public double relativeAltitude() { return y - homeY; }
     public double homeDistance() { return Math.hypot(homeX - x, homeZ - z); }

@@ -11,6 +11,7 @@ public final class RecorderArena extends ArenaPhysics.Body {
         public long id;public double health=20;public int age,deadAge,hurtTicks,immuneTicks,nextAttack,swingTicks,nextPlan,routeIndex;double phase,lastDamage;List<net.minecraft.util.Vec3> route=Collections.emptyList();
     }
     public final List<Enemy> enemies=new ArrayList<>();
+    public final PracticeChallenges challenges=new PracticeChallenges();
     public final List<Pillar> pillars=ArenaNavigation.trainingMap();
     public float pitch,previousPitch,sensitivity=.5F,fov=70;
     public double aspect=16/9D,reach=3;
@@ -34,6 +35,7 @@ public final class RecorderArena extends ArenaPhysics.Body {
     private int pendingYaw,pendingPitch,presses,missCooldown,sprintTap;private boolean previousForward;
     public RecorderArena(AuraLearning learning,long seed){this.learning=learning;random=new Random(seed);}
     public void begin(boolean preview)throws IOException{
+        challenges.reset();
         renderPartial=previousFovModifier=fovModifier=1;this.preview=preview;x=y=z=vx=vz=fallDistance=0;vy=-.0784000015258789;previousX=previousY=previousZ=0;yaw=pitch=previousYaw=previousPitch=0;grounded=true;sprint=horizontalCollision=previousForward=swinging=false;jumpCooldown=sprintTap=armSwingTick=0;swing=previousSwing=limbSwing=limbAmount=previousLimbAmount=0;wave=kills=hits=misses=damageHits=receivedHits=ticks=keys=playerHurtTicks=playerImmuneTicks=0;playerHealth=20;damageDealt=damageTaken=lastDamage=0;enemies.clear();selected=pendingEnemy=null;memory.reset();previewBrain.reset();acquisition=heldFrame=pending=null;pendingYaw=pendingPitch=presses=mouseWheel=0;lastPressNanos=heldNanos=0;lastPressTarget=-1;nextWave=20;originNanos=System.nanoTime();session=preview?0:learning.begin();captureNext();
     }
     public void finish(){if(!preview){releaseAttack();commit();learning.finish();}memory.reset();previewBrain.reset();}
@@ -67,7 +69,7 @@ public final class RecorderArena extends ArenaPhysics.Body {
         previousLimbAmount=limbAmount;limbAmount+=(Math.min(1,(float)Math.hypot(x-previousX,z-previousZ)*4)-limbAmount)*.4F;limbSwing+=limbAmount;ticks++;
         boolean alive=false;for(Enemy e:enemies)if(e.health>0)alive=true;
         if(!alive&&ticks>=nextWave){spawn();nextWave=Long.MAX_VALUE;}else if(!alive&&nextWave==Long.MAX_VALUE)nextWave=ticks+30;
-        captureNext();
+        challenges.tick(this);captureNext();
     }
     private void commit(){
         if(preview||pending==null)return;pending.y[0]=pendingYaw/128F;pending.y[1]=pendingPitch/128F;pending.mask[0]=pending.mask[1]=1;pending.keys=keys;pending.slot=slot;pending.wheel=mouseWheel;pending.press|=presses>0;pending.pressCount=presses;
@@ -94,7 +96,7 @@ public final class RecorderArena extends ArenaPhysics.Body {
         if(missCooldown>0)return;if(!swinging||armSwingTick>=3||armSwingTick<0){armSwingTick=-1;swinging=true;}Enemy hitEnemy=null;double[] point=null;double best=Double.MAX_VALUE;
         double sx=previousX+(x-previousX)*renderPartial,sy=previousY+(y-previousY)*renderPartial+eyeHeight(),sz=previousZ+(z-previousZ)*renderPartial;
         for(Enemy enemy:enemies){if(enemy.health<=0)continue;double[] hit=ray(enemy,reach,.1);if(hit!=null){double d=Math.sqrt((hit[0]-sx)*(hit[0]-sx)+(hit[1]-sy)*(hit[1]-sy)+(hit[2]-sz)*(hit[2]-sz));if(d<best&&!occludedBetween(sx,sy,sz,hit[0],hit[1],hit[2])){hitEnemy=enemy;best=d;point=hit;}}}
-        if(hitEnemy==null){misses++;missCooldown=10;return;}hits++;sparkX=point[0];sparkY=point[1];sparkZ=point[2];sparkTicks=8;
+        if(hitEnemy==null){misses++;missCooldown=10;return;}hits++;challenges.hit(this,hitEnemy);sparkX=point[0];sparkY=point[1];sparkZ=point[2];sparkTicks=8;
         double damage=fallDistance>0&&!grounded?1.5:1;boolean fresh=hitEnemy.immuneTicks<=10;
         if(!fresh&&damage<=hitEnemy.lastDamage)return;double applied=fresh?damage:damage-hitEnemy.lastDamage;hitEnemy.lastDamage=damage;hitEnemy.health-=applied;damageDealt+=applied;damageHits++;
         if(fresh){hitEnemy.hurtTicks=10;hitEnemy.immuneTicks=20;ArenaPhysics.knockback(hitEnemy,x,z);}
@@ -121,7 +123,7 @@ public final class RecorderArena extends ArenaPhysics.Body {
         ArenaPhysics.tick(this,strafe,forward,(keys&JUMP)!=0,sneak,pillars);
     }
     private void spawn(){
-        wave++;int count=Math.min(5,1+(wave-1)/2);for(int i=0;i<count;i++){Enemy e=new Enemy();e.id=++idCounter;for(int attempt=0;attempt<32;attempt++){double angle=Math.toRadians(yaw+(i==0?random.nextDouble()*70-35:random.nextDouble()*360-180)),radius=6+random.nextDouble()*5;e.x=Math.max(-22,Math.min(22,x-Math.sin(angle)*radius));e.z=Math.max(-22,Math.min(22,z+Math.cos(angle)*radius));if(attempt==0&&(wave%2==0||i%2==1)){Pillar p=pillars.get(random.nextInt(pillars.size()));e.x=p.x;e.z=p.z;}e.y=ArenaNavigation.height(e.x,e.z,pillars);boolean clear=true;for(net.minecraft.util.AxisAlignedBB box:ArenaPhysics.geometry(pillars))if(box.intersectsWith(e.box())){clear=false;break;}if(clear)break;if(attempt==31){e.x=0;e.z=4;e.y=0;}}e.previousX=e.x;e.previousY=e.y;e.previousZ=e.z;e.vy=-.0784000015258789;e.phase=random.nextDouble()*6.28;e.nextAttack=ticks+6+random.nextInt(8);enemies.add(e);}
+        wave++;int count=Math.min(5,(challenges.mode==PracticeChallenges.Mode.SWITCH?2:1)+(wave-1)/2);for(int i=0;i<count;i++){Enemy e=new Enemy();e.id=++idCounter;for(int attempt=0;attempt<32;attempt++){double angle=Math.toRadians(yaw+(i==0?random.nextDouble()*70-35:random.nextDouble()*360-180)),radius=6+random.nextDouble()*5;e.x=Math.max(-22,Math.min(22,x-Math.sin(angle)*radius));e.z=Math.max(-22,Math.min(22,z+Math.cos(angle)*radius));if(attempt==0&&(challenges.mode==PracticeChallenges.Mode.HEIGHT||wave%2==0||i%2==1)){Pillar p=pillars.get(random.nextInt(pillars.size()));e.x=p.x;e.z=p.z;}e.y=ArenaNavigation.height(e.x,e.z,pillars);boolean clear=true;for(net.minecraft.util.AxisAlignedBB box:ArenaPhysics.geometry(pillars))if(box.intersectsWith(e.box())){clear=false;break;}if(clear)break;if(attempt==31){e.x=0;e.z=4;e.y=0;}}e.previousX=e.x;e.previousY=e.y;e.previousZ=e.z;e.vy=-.0784000015258789;e.phase=random.nextDouble()*6.28;e.nextAttack=ticks+6+random.nextInt(8);enemies.add(e);}
     }
     private void moveEnemy(Enemy e){
         e.age++;if(e.hurtTicks>0)e.hurtTicks--;if(e.immuneTicks>0)e.immuneTicks--;if(e.swingTicks>0)e.swingTicks--;e.previousX=e.x;e.previousY=e.y;e.previousZ=e.z;e.previousYaw=e.yaw;if(e.health<=0){e.deadAge++;return;}

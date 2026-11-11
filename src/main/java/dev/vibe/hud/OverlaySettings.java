@@ -12,7 +12,7 @@ public abstract class OverlaySettings {
     public final ColorSetting background,accent,text;
     public final NumberSetting radius;
     public final BooleanSetting shadow,border;
-    private OverlaySettings(Function<Setting<?>,Setting<?>> register,String prefix){
+    protected OverlaySettings(Function<Setting<?>,Setting<?>> register,String prefix){
         this.register=register;this.prefix=prefix;
         background=color("Background",0xC4141B27);accent=color("Accent",0xFF79BFFF);text=color("Text",0xFFF0F3F9);
         radius=number("Corner Radius",6,0,16,1);shadow=bool("Text Shadow",true);border=bool("Border",true);
@@ -110,13 +110,14 @@ public abstract class OverlaySettings {
         }
     }
     public static final class Health extends OverlaySettings {
+        public final HealthColorGrading grading;
         public final BooleanSetting barGlow;public final NumberSetting barGlowStrength;
         public final ModeSetting mode;
         public final NumberSetting width,height;
         public final BooleanSetting numbers,absorption,armor,smooth;
         public final NumberSetting speed;
         public final ColorSetting high,low,shield,empty;
-        public Health(Function<Setting<?>,Setting<?>> r){super(r,"Custom Health");mode=super.add(new ModeSetting("Custom Health Mode","Fancy","Fancy","Recolor","Fortnite"));
+        public Health(Function<Setting<?>,Setting<?>> r){super(r,"Custom Health");grading=new HealthColorGrading(this::add);mode=super.add(new ModeSetting("Custom Health Mode","Fancy","Fancy","Recolor","Fortnite"));
             width=super.number("Width",182,90,360,1);height=super.number("Bar Height",8,5,20,1);numbers=super.bool("Show Values",false);absorption=super.bool("Absorption",true);armor=super.bool("Armor",true);
             smooth=super.bool("Smooth Bars",true);speed=super.number("Animation Speed",12,2,30,1);
             high=super.color("Full Health",0xFF6BE58A);low=super.color("Low Health",0xFFFF5968);shield=super.color("Absorption Color",0xFF65B6FF);empty=super.color("Empty Bar",0x90333B47);

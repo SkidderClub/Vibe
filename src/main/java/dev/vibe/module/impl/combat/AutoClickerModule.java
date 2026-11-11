@@ -178,7 +178,7 @@ public final class AutoClickerModule extends Module {
     }
 
     public static void prepareInputHook() {
-        if(AntiFireballModule.reserving())return;
+        if(AntiFireballModule.reserving()||PearlCatcherModule.reserving())return;
         dev.vibe.Vibe vibe = dev.vibe.Vibe.getInstance();
         if (vibe == null || vibe.getModuleManager() == null) return;
         AutoClickerModule clicker = vibe.getModuleManager().getModule(AutoClickerModule.class);
@@ -187,7 +187,7 @@ public final class AutoClickerModule extends Module {
     }
 
     public static int missCooldownHook(int vanilla) {
-        if(AntiFireballModule.reserving())return 0;
+        if(AntiFireballModule.reserving()||PearlCatcherModule.reserving())return 0;
         dev.vibe.Vibe vibe = dev.vibe.Vibe.getInstance();
         if (vibe == null || vibe.getModuleManager() == null) return vanilla;
         AutoClickerModule clicker = vibe.getModuleManager().getModule(AutoClickerModule.class);

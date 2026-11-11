@@ -21,6 +21,7 @@ public final class StatisticsGui extends GuiScreen {
     private int left, top, right, bottom, accountIndex;
 
     public StatisticsGui(StatisticsModule module) { this.module = module; }
+    public StatisticsGui forAccount(String name){scope=StatisticsService.Scope.ACCOUNT;StatisticsService s=Vibe.getInstance().getStatistics();if(s!=null){List<String> accounts=s.getAccounts();int i=accounts.indexOf(name);if(i>=0)accountIndex=i;}return this;}
 
     @Override public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         left = Math.max(8, (width - 690) / 2);

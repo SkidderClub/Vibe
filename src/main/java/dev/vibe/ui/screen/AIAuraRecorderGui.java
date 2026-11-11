@@ -22,6 +22,7 @@ public final class AIAuraRecorderGui extends GuiScreen {
     private final AuraArenaRenderer renderer=new AuraArenaRenderer();
     private RecorderArena arena;
     private boolean running,preview,attackDown;
+    private PracticeChallenges.Mode challenge=PracticeChallenges.Mode.FREE;
     private long lastTick;
     private float scale;private int left,top;
     private final List<Action> actions=new ArrayList<>();
@@ -30,8 +31,9 @@ public final class AIAuraRecorderGui extends GuiScreen {
     @Override public void initGui(){layout();}
     private void layout(){scale=Math.max(.2F,Math.min(1,Math.min((width-16)/780F,(height-16)/500F)));left=(Math.round(width/scale)-780)/2;top=(Math.round(height/scale)-500)/2;}
     public void start(boolean modelPreview){
+        // Practice measurements never alter the trained model's output or its evaluation data.
         if(learning.busy||modelPreview&&learning.model()==null)return;
-        try{preview=modelPreview;arena=new RecorderArena(learning,System.nanoTime());configure();arena.begin(preview);arena.perspective=0;arena.input(0,0,mc.gameSettings.invertMouse,Float.floatToIntBits(arena.sensitivity),Float.floatToIntBits(arena.fov),(int)Math.round(arena.reach*1000));arena.input(3,mc.gameSettings.keyBindTogglePerspective.getKeyCode(),true,arena.perspective,0,0);running=true;attackDown=false;lastTick=System.nanoTime();if(Mouse.isCreated()){Mouse.setGrabbed(true);Mouse.getDX();Mouse.getDY();}}catch(IOException e){learning.status=e.getMessage();}
+        try{preview=modelPreview;arena=new RecorderArena(learning,System.nanoTime());configure();arena.challenges.mode=challenge;arena.begin(preview);arena.perspective=0;arena.input(0,0,mc.gameSettings.invertMouse,Float.floatToIntBits(arena.sensitivity),Float.floatToIntBits(arena.fov),(int)Math.round(arena.reach*1000));arena.input(3,mc.gameSettings.keyBindTogglePerspective.getKeyCode(),true,arena.perspective,0,0);running=true;attackDown=false;lastTick=System.nanoTime();if(Mouse.isCreated()){Mouse.setGrabbed(true);Mouse.getDX();Mouse.getDY();}}catch(IOException e){learning.status=e.getMessage();}
     }
     private void configure(){arena.reach=3.0D;arena.sensitivity=mc.gameSettings.mouseSensitivity;arena.fov=mc.gameSettings.fovSetting;arena.aspect=mc.displayWidth/(double)Math.max(1,mc.displayHeight);}
     public void pause(){if(!running)return;running=false;attackDown=false;if(Mouse.isCreated())Mouse.setGrabbed(false);arena.finish();}
@@ -85,9 +87,11 @@ public final class AIAuraRecorderGui extends GuiScreen {
         card(left+18,top+260,744,112,"Statistics from manual play");
         metric("Recorded time",duration(stats.seconds),left+32,top+287);metric("Click rate",decimal(stats.cps," CPS"),left+207,top+287);metric("Aim reaction",decimal(stats.aimReactionMs," ms"),left+390,top+287);metric("Click reaction",decimal(stats.clickReactionMs," ms"),left+575,top+287);
         BODY.draw("Tracked aimpoints  "+stats.aimpoints,left+32,top+341,MUTED);BODY.draw(String.format(Locale.ROOT,"Mean aim error  %.1f°",stats.angularError),left+286,top+341,MUTED);BODY.draw("Height samples  "+stats.heightSamples,left+531,top+341,MUTED);
-        card(left+18,top+386,744,47,arena==null?"Practice arena":"Last practice");
+        card(left+18,top+386,744,57,arena==null?"Practice arena":"Last practice");
+        button(left+526,top+379,220,challenge.label,true,()->{challenge=PracticeChallenges.Mode.values()[(challenge.ordinal()+1)%PracticeChallenges.Mode.values().length];},mx,my,false);
         String practice=arena==null?"Nonlethal practice with climbable blocks and elevated opponents.":String.format(Locale.ROOT,"Wave %d    %d eliminations    %.0f%% hit accuracy    %.1f dealt    %.1f received",arena.wave,arena.kills,accuracy(),arena.damageDealt,arena.damageTaken);
         BODY.draw(BODY.fit(practice,712),left+32,top+410,INK);
+        if(arena!=null)BODY.draw((arena.preview?"Policy exercise score  ":"Player exercise score  ")+arena.challenges.score()+"%     Demonstration coverage  "+arena.challenges.coverage()+"%",left+32,top+427,MUTED);
         String status=!learning.busy&&model==null&&!learning.ready()?learning.requirement():learning.status;BODY.draw(BODY.fit(status,735),left+21,top+441,learning.status.toLowerCase(Locale.ROOT).contains("failed")?0xFFE7867B:MUTED);
         button(left+18,top+467,186,"Record manually",!learning.busy,()->start(false),mx,my,true);
         button(left+214,top+467,170,learning.busy?"Training…":"Train model",!learning.busy&&learning.ready(),()->learning.train(),mx,my,false);
@@ -98,6 +102,7 @@ public final class AIAuraRecorderGui extends GuiScreen {
         int originalWidth=width,originalHeight=height;float hudScale=Math.min(1,width/540F);GL11.glPushMatrix();GL11.glScalef(hudScale,hudScale,1);width=Math.round(width/hudScale);height=Math.round(height/hudScale);
         try{
             card(10,10,238,63,preview?"Model preview":"Manual recording");BODY.draw("Wave "+arena.wave+"    "+arena.kills+" eliminations",22,34,INK);BODY.draw(String.format(Locale.ROOT,"%.0f%% accuracy    %.1f damage",accuracy(),arena.damageDealt),22,53,MUTED);
+            card(10,82,238,63,arena.challenges.mode.label);BODY.draw((preview?"Policy score  ":"Player score  ")+arena.challenges.score()+"%",22,106,INK);BODY.draw("Demonstration coverage  "+arena.challenges.coverage()+"%",22,125,MUTED);
             int cx=width/2,cy=height/2,color=arena.selected!=null&&AuraFeatures.distance(arena.observation(arena.selected))<=arena.reach?ACCENT:0xFF9AA9B6;
             Gui.drawRect(cx-7,cy-1,cx-3,cy+1,color);Gui.drawRect(cx+3,cy-1,cx+7,cy+1,color);Gui.drawRect(cx-1,cy-7,cx+1,cy-3,color);Gui.drawRect(cx-1,cy+3,cx+1,cy+7,color);
             if(width>800){String text=preview?"Preview is excluded from your data":learning.frames()+" recorded frames";BODY.draw(text,width-BODY.width(text)-14,18,MUTED);}

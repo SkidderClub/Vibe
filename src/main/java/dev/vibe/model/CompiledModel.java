@@ -37,6 +37,7 @@ public final class CompiledModel {
     private final float[] alphaCutoffs;
     /** [lod][part][batch] display list ids, material indices and vertex colour flags. */
     private final int[][][] lists;
+    private final int[][][] glintLists;
     private final int[][][] listMaterials;
     private final boolean[][][] listColors;
     private final float[][] pivots;
@@ -74,20 +75,24 @@ public final class CompiledModel {
             textures[material] = texture;
         }
         lists = new int[prepared.lods.length][][];
+        glintLists = new int[prepared.lods.length][][];
         listMaterials = new int[prepared.lods.length][][];
         listColors = new boolean[prepared.lods.length][][];
         for (int lod = 0; lod < prepared.lods.length; lod++) {
             PreparedModel.Batch[][] parts = prepared.lods[lod].parts;
             lists[lod] = new int[parts.length][];
+            glintLists[lod] = new int[parts.length][];
             listMaterials[lod] = new int[parts.length][];
             listColors[lod] = new boolean[parts.length][];
             for (int part = 0; part < parts.length; part++) {
                 PreparedModel.Batch[] batches = sortOpaqueFirst(parts[part]);
                 lists[lod][part] = new int[batches.length];
+                glintLists[lod][part] = new int[batches.length];
                 listMaterials[lod][part] = new int[batches.length];
                 listColors[lod][part] = new boolean[batches.length];
                 for (int batch = 0; batch < batches.length; batch++) {
                     lists[lod][part][batch] = compile(batches[batch]);
+                    glintLists[lod][part][batch]=batches[batch].vertexColors?compile(batches[batch],false):lists[lod][part][batch];
                     listMaterials[lod][part][batch] = batches[batch].material;
                     listColors[lod][part][batch] = batches[batch].vertexColors;
                 }
@@ -152,7 +157,7 @@ public final class CompiledModel {
         for (int batch = 0; batch < ids.length; batch++) {
             int material = listMaterials[lod][part][batch];
             if (glint) {
-                GL11.glCallList(ids[batch]);
+                GL11.glCallList(glintLists[lod][part][batch]);
                 continue;
             }
             int texture = textures[material];
@@ -186,11 +191,15 @@ public final class CompiledModel {
         if (deleted) return;
         deleted = true;
         for (int[][] lod : lists) for (int[] part : lod) for (int list : part) GLAllocation.deleteDisplayLists(list);
+        for(int lod=0;lod<glintLists.length;lod++)for(int part=0;part<glintLists[lod].length;part++)for(int batch=0;batch<glintLists[lod][part].length;batch++)if(glintLists[lod][part][batch]!=lists[lod][part][batch])GLAllocation.deleteDisplayLists(glintLists[lod][part][batch]);
         Set<Integer> unique = new HashSet<Integer>();
         for (int texture : textures) if (texture != 0 && unique.add(texture)) GlStateManager.deleteTexture(texture);
     }
 
     private static int compile(PreparedModel.Batch batch) {
+        return compile(batch,true);
+    }
+    private static int compile(PreparedModel.Batch batch,boolean vertexColors) {
         float[] data = batch.vertices;
         if (scratch == null || scratch.capacity() < data.length) scratch = BufferUtils.createFloatBuffer(Math.max(data.length, 1 << 16));
         scratch.clear();
@@ -207,7 +216,7 @@ public final class CompiledModel {
         GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
         GL11.glEnableClientState(GL11.GL_NORMAL_ARRAY);
         GL11.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
-        if (batch.vertexColors) {
+        if (batch.vertexColors&&vertexColors) {
             scratch.position(8);
             GL11.glColorPointer(4, stride, scratch);
             GL11.glEnableClientState(GL11.GL_COLOR_ARRAY);
@@ -220,7 +229,7 @@ public final class CompiledModel {
         GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
         GL11.glDisableClientState(GL11.GL_NORMAL_ARRAY);
         GL11.glDisableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
-        if (batch.vertexColors) GL11.glDisableClientState(GL11.GL_COLOR_ARRAY);
+        if (batch.vertexColors&&vertexColors) GL11.glDisableClientState(GL11.GL_COLOR_ARRAY);
         return list;
     }
 

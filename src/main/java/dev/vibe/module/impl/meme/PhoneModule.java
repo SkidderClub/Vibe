@@ -21,11 +21,11 @@ import org.lwjgl.input.Keyboard;
 
 /** VibeOS controller. App state is independent of rendering and game movement. */
 public final class PhoneModule extends Module {
-    public enum App { HOME, SETTINGS, CAMERA, FLAPPY, PHOTOS, INTERNET, CONTACTS, TELEPHONE, MESSAGES, TETRIS }
+    public enum App { HOME, SETTINGS, CAMERA, FLAPPY, PHOTOS, INTERNET, CONTACTS, TELEPHONE, MESSAGES, TETRIS, MINESWEEPER, SUDOKU }
     public enum Action { HOME, UP, DOWN, LEFT, RIGHT, SELECT, BACK, DELETE }
     public static final String INTERNET_URL = "https://www.youtube.com/@heisthacksjp";
-    private static final String[] APP_NAMES = {"Settings", "Camera", "Flappy Bird", "Photos", "Internet", "Contacts", "Telephone", "Messages", "Tetris"};
-    private static final App[] HOME_APPS = {App.SETTINGS, App.CAMERA, App.FLAPPY, App.PHOTOS, App.INTERNET, App.CONTACTS, App.TELEPHONE, App.MESSAGES, App.TETRIS};
+    private static final String[] APP_NAMES = {"Settings", "Camera", "Flappy Bird", "Photos", "Internet", "Contacts", "Telephone", "Messages", "Tetris", "Minesweeper", "Sudoku"};
+    private static final App[] HOME_APPS = {App.SETTINGS, App.CAMERA, App.FLAPPY, App.PHOTOS, App.INTERNET, App.CONTACTS, App.TELEPHONE, App.MESSAGES, App.TETRIS, App.MINESWEEPER, App.SUDOKU};
     private static final int[] COLORS = {0xFFB5B1A8, 0xFF292B33, 0xFFEAE8E3, 0xFF5E95CC, 0xFFE6ACB6, 0xFF9778E5, 0xFF56C6B0};
     private static final String[] COLOR_NAMES = {"Titanium", "Midnight", "Starlight", "Ocean", "Rose", "Violet", "Mint"};
     private static final int[] BACKGROUNDS = {0xFF281446, 0xFF062D4E, 0xFF631E50, 0xFF102D30, 0xFF151722, 0xFF4330A1, 0xFF84254D, 0xFF0D6160};
@@ -43,6 +43,11 @@ public final class PhoneModule extends Module {
     public final NumberSetting callVolume = addSetting(new NumberSetting("Call Volume", 70, 0, 100, 5));
     public final NumberSetting bestScore = addSetting(new NumberSetting("Flappy Best", 0, 0, 1000000, 1));
     public final NumberSetting tetrisBest = addSetting(new NumberSetting("Tetris Best", 0, 0, 100000000, 1));
+    public final BooleanSetting sudokuHints=addSetting(new BooleanSetting("Sudoku Hints",true));
+    private final StringSetting sudokuProgress=addSetting(new StringSetting("Sudoku Progress","",12000,()->false));
+    private final NumberSetting[] mineBests={addSetting(new NumberSetting("Minesweeper Easy Best",0,0,86400,1,()->false)),addSetting(new NumberSetting("Minesweeper Normal Best",0,0,86400,1,()->false)),addSetting(new NumberSetting("Minesweeper Hard Best",0,0,86400,1,()->false))};
+    private final dev.vibe.phone.MinesweeperGame mines=new dev.vibe.phone.MinesweeperGame();
+    private final dev.vibe.phone.SudokuGame sudoku=new dev.vibe.phone.SudokuGame();private String loadedSudoku;
     private final StringSetting[] keys = new StringSetting[Action.values().length];
     private App app = App.HOME;
     private int homeSelection, settingSelection, photoSelection;
@@ -85,6 +90,7 @@ public final class PhoneModule extends Module {
         callContact = null; callConversation = null;
     }
     @Override protected void onDisable() {
+        saveSudoku();
         tetris.stopAutoplay(); saveTetrisBest();
         shutterRequested = false; binding = -1; confirmDelete = false; stopCommunications();
     }
@@ -112,12 +118,18 @@ public final class PhoneModule extends Module {
             } else if (action == Action.BACK || action == Action.DELETE) confirmDelete = false;
             return;
         }
+        if(action==Action.BACK&&app==App.SUDOKU&&!sudoku().menu){sudoku().back();saveSudoku();return;}
+        if(action==Action.BACK&&app==App.MINESWEEPER&&!mines.menu){mines.menu=true;return;}
         if (action == Action.BACK) {
             if (app == App.MESSAGES && messageOpen) { messageOpen = false; messageScroll = 0; }
             else if (app == App.PHOTOS && photoOpen) photoOpen = false; else open(App.HOME);
             return;
         }
         switch (app) {
+            case MINESWEEPER:
+                if(action==Action.LEFT)mines.move(-1,0);if(action==Action.RIGHT)mines.move(1,0);if(action==Action.UP)mines.move(0,-1);if(action==Action.DOWN)mines.move(0,1);if(action==Action.SELECT)mines.select();if(action==Action.DELETE)mines.flag();trackMineBest();break;
+            case SUDOKU:
+                dev.vibe.phone.SudokuGame puzzle=sudoku();puzzle.hintsEnabled=sudokuHints.isEnabled();if(action==Action.LEFT)puzzle.move(-1,0);if(action==Action.RIGHT)puzzle.move(1,0);if(action==Action.UP)puzzle.move(0,-1);if(action==Action.DOWN)puzzle.move(0,1);if(action==Action.SELECT)puzzle.select();if(action==Action.DELETE)puzzle.eraseOrPencil();saveSudoku();break;
             case HOME:
                 if (action == Action.LEFT) homeSelection = Math.max(0, homeSelection - 1);
                 if (action == Action.RIGHT) homeSelection = Math.min(HOME_APPS.length - 1, homeSelection + 1);
@@ -209,6 +221,7 @@ public final class PhoneModule extends Module {
         }
     }
     public void open(App next) {
+        if(app==App.SUDOKU)saveSudoku();if(next==App.SUDOKU)sudoku().menu=true;if(next==App.MINESWEEPER)mines.menu=true;
         if (app == App.TETRIS && next != App.TETRIS) saveTetrisBest();
         app = next; appAt = System.currentTimeMillis(); binding = -1; confirmDelete = false; messageOpen = false;
         if (next == App.PHOTOS) { photos().refresh(); photoOpen = false; }
@@ -220,6 +233,7 @@ public final class PhoneModule extends Module {
         open(App.MESSAGES); messageOpen = true; conversation().markRead();
     }
     public void advance(double seconds) {
+        if(app==App.MINESWEEPER){mines.advance(seconds);trackMineBest();}if(app==App.SUDOKU)sudoku().advance(seconds);
         if (library != null && !library.error().isEmpty() && !library.error().equals(reportedError)) {
             reportedError = library.error(); toast(library.error());
         }
@@ -469,6 +483,11 @@ public final class PhoneModule extends Module {
     public long flashAt() { return flashAt; }
     public FlappyGame game() { return flappy; }
     public TetrisGame tetris() { return tetris; }
+    public dev.vibe.phone.MinesweeperGame mines(){return mines;}
+    public int mineBest(int difficulty){return mineBests[difficulty].getInt();}
+    public dev.vibe.phone.SudokuGame sudoku(){String saved=sudokuProgress.getValue();if(!java.util.Objects.equals(saved,loadedSudoku)){sudoku.restore(saved);loadedSudoku=saved;}return sudoku;}
+    private void saveSudoku(){if(sudoku.hasGame()){String saved=sudoku.save();sudokuProgress.setValue(saved);loadedSudoku=saved;}}
+    private void trackMineBest(){if(mines.won){int seconds=Math.max(1,(int)Math.ceil(mines.seconds));NumberSetting best=mineBests[mines.difficulty.ordinal()];if(best.getInt()==0||seconds<best.getInt()){best.setValue((double)seconds);persist();}}}
     private void trackTetrisBest() { if(tetris.score()>tetrisBest.getInt()){tetrisBest.setValue((double)tetris.score());tetrisBestDirty=true;} }
     private void saveTetrisBest() { if (tetrisBestDirty) { persist(); tetrisBestDirty = false; } }
     public String notification() { return System.currentTimeMillis() < notificationUntil ? notification : ""; }

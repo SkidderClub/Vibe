@@ -105,7 +105,7 @@ public class SilentMurderPacketsTest implements Opcodes {
         assertSame(Items.stick,connection.attackItem.getItem());assertNull(player.getHeldItem());
     }
 
-    static PlayerControllerMP nativeController(Minecraft mc,NetHandlerPlayClient connection) throws Exception {
+    public static PlayerControllerMP nativeController(Minecraft mc,NetHandlerPlayClient connection) throws Exception {
         String parent="net/minecraft/client/multiplayer/PlayerControllerMP",name="dev/vibe/combat/NativeMurderController";
         ByteArrayOutputStream output=new ByteArrayOutputStream();
         try(InputStream input=PlayerControllerMP.class.getResourceAsStream("PlayerControllerMP.class")) {

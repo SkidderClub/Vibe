@@ -36,11 +36,14 @@ public final class HitParticleRenderer implements AutoCloseable {
                 GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE);draw(particles,settings,originX,originY,originZ,partial,true);
             }
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);draw(particles,settings,originX,originY,originZ,partial,false);
+            boolean materials=false;for(HitParticles.Particle p:particles)if(p.material!=null){materials=true;break;}
+            if(materials){GL11.glBindTexture(GL11.GL_TEXTURE_2D,Minecraft.getMinecraft().getTextureManager().getTexture(net.minecraft.client.renderer.texture.TextureMap.locationBlocksTexture).getGlTextureId());drawMaterials(particles,settings,originX,originY,originZ,partial);}
         }finally{GL11.glMatrixMode(matrixMode);}
     }
     private void draw(List<HitParticles.Particle> particles,HitParticleSettings settings,double ox,double oy,double oz,float partial,boolean glow){
         GL11.glBegin(GL11.GL_QUADS);
         for(HitParticles.Particle p:particles){
+            if(!glow&&p.material!=null)continue;
             float opacity=HitParticles.opacity(p,settings,partial);if(opacity<=0)continue;
             int color=HitParticles.color(p,settings,partial);float r=(color>>16&255)/255F,g=(color>>8&255)/255F,b=(color&255)/255F;
             double radius=p.radius*(glow?settings.glowRadius.getDouble():1);
@@ -54,6 +57,12 @@ public final class HitParticleRenderer implements AutoCloseable {
     }
     private void corner(double x,double y,double z,double right,double up,float u,float v){
         GL11.glTexCoord2f(u,v);GL11.glVertex3d(x+right*view.get(0)+up*view.get(1),y+right*view.get(4)+up*view.get(5),z+right*view.get(8)+up*view.get(9));
+    }
+    private void drawMaterials(List<HitParticles.Particle> particles,HitParticleSettings settings,double ox,double oy,double oz,float partial){
+        GL11.glBegin(GL11.GL_QUADS);for(HitParticles.Particle p:particles){if(p.material==null)continue;float opacity=HitParticles.opacity(p,settings,partial);int color=HitParticles.color(p,settings,partial);GL11.glColor4f((color>>16&255)/255F,(color>>8&255)/255F,(color&255)/255F,(color>>>24)/255F*opacity);
+            double x=p.previousX+(p.x-p.previousX)*partial-ox,y=p.previousY+(p.y-p.previousY)*partial-oy,z=p.previousZ+(p.z-p.previousZ)*partial-oz,r=p.radius;float u=p.material.getInterpolatedU(p.seed*12),v=p.material.getInterpolatedV((p.seed*29%1)*12),U=p.material.getInterpolatedU(p.seed*12+4),V=p.material.getInterpolatedV((p.seed*29%1)*12+4);
+            corner(x,y,z,-r,-r,u,V);corner(x,y,z,r,-r,U,V);corner(x,y,z,r,r,U,v);corner(x,y,z,-r,r,u,v);
+        }GL11.glEnd();
     }
     private static int sprite(){
         int size=64;ByteBuffer data=BufferUtils.createByteBuffer(size*size*4);

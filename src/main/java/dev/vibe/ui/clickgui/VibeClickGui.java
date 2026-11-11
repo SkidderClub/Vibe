@@ -857,6 +857,7 @@ public final class VibeClickGui extends GuiScreen {
             return;
         }
         if (target.type == TargetType.MODULE) {
+            if(Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class).getTheme().is("Wurst")&&(mouseButton==1||mouseButton==0&&mouseX>=target.right-13)&&hasVisibleSettings(target.module)){dropdown.openWurstSettings(target.module);return;}
             if (mouseButton == 1) {
                 if(isDropdownTheme())dropdown.closeMode();
                 if (hasVisibleSettings(target.module)) {
@@ -1375,7 +1376,7 @@ public final class VibeClickGui extends GuiScreen {
     }
     private boolean isDropdownTheme(){
         ClickGuiModule settings=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
-        return settings!=null&&(settings.getTheme().is("PacketV3")||settings.getTheme().is("Novoline")||settings.getTheme().is("SuizideX"));
+        return settings!=null&&(settings.getTheme().is("PacketV3")||settings.getTheme().is("Novoline")||settings.getTheme().is("SuizideX")||settings.getTheme().is("Wurst"));
     }
 
     private boolean isSkeetTheme() {

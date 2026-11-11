@@ -44,7 +44,7 @@ public final class ProjectileFixture implements AutoCloseable {
     }
     public static class TestWorld extends WorldClient{
         public Map<BlockPos,IBlockState> blocks;public boolean loaded;public int reads;Scoreboard scoreboard;
-        private TestWorld(){super(null,null,0,null,null);}
+        protected TestWorld(){super(null,null,0,null,null);}
         @Override public boolean isBlockLoaded(BlockPos p){return loaded;}@Override public boolean isBlockLoaded(BlockPos p,boolean empty){return loaded;}
         @Override protected boolean isChunkLoaded(int x,int z,boolean empty){return loaded;}@Override public boolean isAreaLoaded(BlockPos a,BlockPos b){return loaded;}@Override public boolean isAreaLoaded(BlockPos a,BlockPos b,boolean empty){return loaded;}
         @Override public IBlockState getBlockState(BlockPos p){if(!loaded)throw new AssertionError("Unloaded terrain read");reads++;return blocks.getOrDefault(p,Blocks.air.getDefaultState());}

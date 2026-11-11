@@ -64,6 +64,7 @@ public class InactiveMovementTest {
 
     @Test public void disablingRavenProducersImmediatelyEndsTheirPendingRotateBack() throws Exception {
         try(Fixture f=new Fixture()) {
+            f.fix.getSmoothBackRotate().setEnabled(false);
             for(Module producer:new Module[]{f.scaffold,f.aura}) {
                 producer.setEnabled(true);
                 f.fix.setFakeRotation(producer.getId(),120,60,"Silent");
@@ -77,6 +78,16 @@ public class InactiveMovementTest {
             }
             f.scaffold.setEnabled(true);f.fix.setFakeRotation("other",45,20,"Direct");f.scaffold.setEnabled(false);
             assertEquals("Disabling an unrelated module must preserve the actual owner",45F,f.fix.getRotationYaw(),0);
+        }
+    }
+    @Test public void enabledSmoothReturnSurvivesProducerDisableUntilItReachesTheCamera()throws Exception{
+        try(Fixture f=new Fixture()){
+            f.fix.getSmoothBackRotate().setEnabled(true);
+            for(Module producer:new Module[]{f.scaffold,f.aura}){
+                producer.setEnabled(true);f.fix.setFakeRotation(producer.getId(),120,60,"Silent");producer.setEnabled(false);
+                assertEquals(120,f.fix.getRotationYaw(),0);f.fix.tick();assertTrue(f.fix.getRotationYaw()>0&&f.fix.getRotationYaw()<120);
+                for(int tick=0;tick<100;tick++)f.fix.tick();assertEquals(0,f.fix.getRotationYaw(),0);assertEquals(0,f.fix.getRotationPitch(),0);assertEquals("Off",f.fix.getEffectiveCorrection());
+            }
         }
     }
 

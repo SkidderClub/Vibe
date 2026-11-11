@@ -11,6 +11,8 @@ public final class ChatterEngine {
         Object identity(); String name(); String server();
         void message(String value); void leave();
         default boolean interact(int hotbarSlot){return false;}
+        /** Reports an accepted trigger without exposing chat text or account passwords. */
+        default void matched(Source source,Action action){}
     }
     private final ChatterStore store;
     private final SecureRandom random=new SecureRandom();
@@ -53,6 +55,7 @@ public final class ChatterEngine {
             if(matches(rule.trigger,text,name)&&pending.size()<32) {
                 pending.add(new Pending(rule.copy(),now+rule.minimum+random.nextInt(rule.maximum-rule.minimum+1)));
                 lastMatch.put(rule.id,now);status="Action queued";
+                context.matched(source,rule.action);
             }
         }
     }
@@ -76,6 +79,13 @@ public final class ChatterEngine {
             } catch(IOException|IllegalArgumentException error){status="Message not sent: could not save or generate the account password.";}
             // One normal chat send per client tick, even when several rules match.
             return;
+        }
+    }
+    public void key(int key,Connection context,long now){
+        if(!available||key<=0||!bind(context))return;
+        for(Rule rule:data.rules){if(!rule.enabled||rule.source!=Source.HOTKEY||rule.hotkey!=key||rule.oncePerConnection&&completed.contains(rule.id)||pending.stream().anyMatch(p->p.rule.id.equals(rule.id)))continue;
+            Long previous=lastMatch.get(rule.id);if(previous!=null&&now-previous<rule.cooldown||pending.size()>=32)continue;
+            pending.add(new Pending(rule.copy(),now+rule.minimum+random.nextInt(rule.maximum-rule.minimum+1)));lastMatch.put(rule.id,now);status="Action queued";context.matched(Source.HOTKEY,rule.action);
         }
     }
     public static boolean matches(String pattern,String text,String name) {

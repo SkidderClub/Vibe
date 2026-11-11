@@ -43,6 +43,7 @@ public final class AuraArenaRenderer implements AutoCloseable {
                 }
                 GL11.glCallList(terrain);
                 for(RecorderArena.Enemy enemy:arena.enemies)enemy(arena,enemy,partial);
+                GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glLineWidth(3);GL11.glColor4f(.95F,.68F,.28F,1);GL11.glBegin(GL11.GL_LINES);for(dev.vibe.aiaura.PracticeChallenges.Arrow arrow:arena.challenges.arrows){double ax=arrow.px+(arrow.x-arrow.px)*partial,ay=arrow.py+(arrow.y-arrow.py)*partial,az=arrow.pz+(arrow.z-arrow.pz)*partial;GL11.glVertex3d(ax,ay,az);GL11.glVertex3d(ax-arrow.vx*.6,ay-arrow.vy*.6,az-arrow.vz*.6);}GL11.glEnd();
                 if(arena.perspective!=0)avatar(arena,ownRig,skin,partial);
                 if(arena.sparkTicks>0){GL11.glLineWidth(2);GL11.glColor4f(.08F,.69F,.78F,arena.sparkTicks/8F);GL11.glBegin(GL11.GL_LINES);for(int i=0;i<10;i++){double a=i*Math.PI*.2,length=(9-arena.sparkTicks)*.025;GL11.glVertex3d(arena.sparkX,arena.sparkY,arena.sparkZ);GL11.glVertex3d(arena.sparkX+Math.cos(a)*length,arena.sparkY+Math.sin(a)*length,arena.sparkZ+Math.sin(a*3)*length*.5);}GL11.glEnd();}
                 if(arena.perspective==0)hand(arena,ownRig,skin,partial);

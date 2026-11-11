@@ -25,7 +25,7 @@ public final class CustomCosmeticsModule extends Module {
 
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final MultiSelectSetting effects = addSetting(new MultiSelectSetting("Cosmetics",
-            Arrays.asList("China Hat", "Trail", "Jump Circle", "Killaura Circle"), Arrays.asList("China Hat")));
+            Arrays.asList("China Hat", "Trail", "Jump Circle", "Killaura Circle", "Footprints", "Landing Dust"), Arrays.asList("China Hat")));
     private final ColorSetting primaryColor = addSetting(new ColorSetting("Primary Color", 0xFFFF4FA3));
     private final ColorSetting secondaryColor = addSetting(new ColorSetting("Secondary Color", 0xFF6A5CFF));
     private final BooleanSetting rainbow = addSetting(new BooleanSetting("Rainbow", false));
@@ -82,6 +82,7 @@ public final class CustomCosmeticsModule extends Module {
     private final BooleanSetting auraFade = addSetting(new BooleanSetting("Killaura Circle Fade", true,
             () -> active("Killaura Circle")));
 
+    public final dev.vibe.features.GroundCosmetics ground=new dev.vibe.features.GroundCosmetics(this::addSetting,()->active("Footprints"),()->active("Landing Dust"));
     private final Deque<TimedPoint> trail = new ArrayDeque<TimedPoint>();
     private final Deque<TimedPoint> circles = new ArrayDeque<TimedPoint>();
     private boolean wasOnGround;
@@ -92,6 +93,7 @@ public final class CustomCosmeticsModule extends Module {
     }
 
     public void tick() {
+        ground.tick(isEnabled()&&!HypixelModule.visualsSuppressed(),active("Footprints"),active("Landing Dust"));
         if (HypixelModule.visualsSuppressed()) { clear(); return; }
         if (!isEnabled() || minecraft.thePlayer == null || minecraft.theWorld == null) { clear(); return; }
         long now = System.currentTimeMillis();
@@ -115,7 +117,7 @@ public final class CustomCosmeticsModule extends Module {
     }
 
     @Override protected void onDisable() { clear(); }
-    private void clear() { trail.clear(); circles.clear(); wasOnGround = false; lastJumpCircle = 0L; }
+    private void clear() { ground.clear(); trail.clear(); circles.clear(); wasOnGround = false; lastJumpCircle = 0L; }
     private boolean active(String effect) { return effects.isSelected(effect); }
     public boolean isActive(String effect) { return active(effect); }
     public MultiSelectSetting getEffects() { return effects; }

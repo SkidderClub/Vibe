@@ -22,6 +22,9 @@ public final class HitParticles {
     public List<Particle> particles(){return view;}
     public boolean isWorld(World current){return world==current;}
     public void emit(World world,HitParticleSettings s,Vec3 point,Vec3 look,long now){
+        emit(world,s,point,look,now,null,0,1);
+    }
+    public void emit(World world,HitParticleSettings s,Vec3 point,Vec3 look,long now,net.minecraft.client.renderer.texture.TextureAtlasSprite material,int tint,double strength){
         bind(world);if(space==null||lastEmission!=Long.MIN_VALUE&&now>=lastEmission&&now-lastEmission<s.delay.getInt())return;
         lastEmission=now;int count=Math.min(s.count.getInt(),s.limit.getInt());
         int excess=particles.size()+count-s.limit.getInt();if(excess>0)particles.subList(0,Math.min(excess,particles.size())).clear();
@@ -32,7 +35,7 @@ public final class HitParticles {
             if(!space.loaded(p.bounds())||!space.collisions(p.bounds()).isEmpty())continue;
             double angle=random.nextDouble()*Math.PI*2,speed=s.speed.getDouble()*(.3+random.nextDouble()*.7);
             p.vx=Math.cos(angle)*speed-look.xCoord*s.speed.getDouble()*.25;p.vz=Math.sin(angle)*speed-look.zCoord*s.speed.getDouble()*.25;
-            p.vy=s.lift.getDouble()*(.4+random.nextDouble()*.6);particles.add(p);
+            p.vy=s.lift.getDouble()*(.4+random.nextDouble()*.6);p.vx*=strength;p.vy*=strength;p.vz*=strength;p.material=material;p.materialColor=tint;particles.add(p);
         }
     }
     public void tick(World world,HitParticleSettings settings){
@@ -70,6 +73,7 @@ public final class HitParticles {
         return settings.easing.is("Smooth")?t*t*(3-2*t):settings.easing.is("Ease Out")?t*t:t;
     }
     public static int color(Particle p,HitParticleSettings settings,float partial){
+        if(p.materialColor!=0)return p.materialColor;
         float age=Math.max(0,Math.min(1,(p.age+partial*50)/p.lifetime));
         if(settings.colorMode.is("Rainbow"))return settings.color.getArgb()&0xFF000000|Color.HSBtoRGB((p.seed+age*.3F)%1,.65F,1)&0xFFFFFF;
         return settings.colorMode.is("Fade")?RenderUtils.blend(settings.color.getArgb(),settings.endColor.getArgb(),age):settings.color.getArgb();
@@ -81,6 +85,8 @@ public final class HitParticles {
         public final float seed;
         public int age;
         public boolean grounded;
+        public net.minecraft.client.renderer.texture.TextureAtlasSprite material;
+        public int materialColor;
         private Particle(double x,double y,double z,double radius,int lifetime,float seed){this.x=previousX=x;this.y=previousY=y;this.z=previousZ=z;this.radius=radius;this.lifetime=lifetime;this.seed=seed;}
         public AxisAlignedBB bounds(){return new AxisAlignedBB(x-radius,y-radius,z-radius,x+radius,y+radius,z+radius);}
     }
