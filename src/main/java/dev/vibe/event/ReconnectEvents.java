@@ -18,6 +18,8 @@ public final class ReconnectEvents {
     private static final int EXPLORE=0x564903;
     private ServerData lastServer;
     private String error = "";
+    private GuiScreen exploreScreen;
+    private GuiButton exploreButton;
 
     private void remember() {
         Minecraft mc = Minecraft.getMinecraft();
@@ -35,7 +37,12 @@ public final class ReconnectEvents {
         if (!(event.gui instanceof GuiDisconnected)) error = "";
     }
     @SubscribeEvent public void init(GuiScreenEvent.InitGuiEvent.Post event) {
-        if(event.gui instanceof GuiGameOver){event.buttonList.removeIf(b->b.id==EXPLORE);event.buttonList.add(new dev.vibe.ui.menu.VibeMenuButton(new GuiButton(EXPLORE,event.gui.width/2-100,event.gui.height/4+120,200,20,"Explore")));return;}
+        if(event.gui instanceof GuiGameOver){
+            event.buttonList.removeIf(b->b.id==EXPLORE);int w=Math.min(110,event.gui.width-16);exploreScreen=event.gui;
+            exploreButton=new dev.vibe.ui.menu.AccountScreenStyle.Button(EXPLORE,event.gui.width-w-8,8,w,20,"Explore","",false,false){
+                @Override public void drawButton(Minecraft mc,int x,int y){if(dev.vibe.ui.menu.MenuGlass.active())super.drawButton(mc,x,y);}
+            };event.buttonList.add(exploreButton);return;
+        }
         boolean pause=event.gui instanceof GuiIngameMenu;
         if (!(event.gui instanceof GuiDisconnected) && !pause) return;
         event.buttonList.removeIf(button->button.id==RECONNECT||button.id==RANDOM);
@@ -75,6 +82,13 @@ public final class ReconnectEvents {
     }
     private static boolean remoteWorld(){Minecraft mc=Minecraft.getMinecraft();return mc.theWorld!=null&&!mc.isIntegratedServerRunning()&&mc.getCurrentServerData()!=null;}
     @SubscribeEvent public void draw(GuiScreenEvent.DrawScreenEvent.Post event) {
+        if(event.gui instanceof GuiGameOver){
+            // Vanilla still draws the death screen and its controls. Composite only
+            // our corner action using the same glass material as the pause menu.
+            dev.vibe.ui.menu.MenuGlass.beginLavalamp(event.gui,event.gui.width,event.gui.height);
+            try{if(exploreScreen==event.gui&&exploreButton!=null)exploreButton.drawButton(Minecraft.getMinecraft(),event.mouseX,event.mouseY);}
+            finally{dev.vibe.ui.menu.MenuGlass.endOverlay();}return;
+        }
         if (!(event.gui instanceof GuiDisconnected) || error.isEmpty()) return;
         Minecraft.getMinecraft().fontRendererObj.drawSplitString(error, 8, event.gui.height - 80,
                 Math.max(40, event.gui.width - 164), 0xFFFF7777);

@@ -29,8 +29,21 @@ public final class LavaLampRenderer implements AutoCloseable {
     /** Bounds are in the caller's local GUI space, including editor, scale and pop animations. */
     public boolean draw(float x, float y, float width, float height, float radius,
                         float blur, float refraction, float opacity, int tint) {
+        return draw(x, y, width, height, radius, blur, refraction, opacity, tint, 0);
+    }
+
+    /** A stable surface identity keeps the animation independent while dragging or resizing it. */
+    public boolean draw(float x, float y, float width, float height, float radius,
+                        float blur, float refraction, float opacity, int tint, long identity) {
         return draw(x, y, width, height, radius, blur, refraction, opacity, tint,
-                (System.nanoTime() - EPOCH) / 1e9, MenuGlass.currentPalette());
+                (System.nanoTime() - EPOCH) / 1e9 + phase(identity), MenuGlass.currentPalette());
+    }
+
+    public static double phase(long identity) {
+        long mixed = identity + 0x9E3779B97F4A7C15L;
+        mixed = (mixed ^ (mixed >>> 30)) * 0xBF58476D1CE4E5B9L;
+        mixed = (mixed ^ (mixed >>> 27)) * 0x94D049BB133111EBL;
+        return ((mixed ^ (mixed >>> 31)) >>> 11) * 0x1.0p-53 * 997;
     }
 
     boolean draw(float x, float y, float width, float height, float radius, float blur, float refraction,

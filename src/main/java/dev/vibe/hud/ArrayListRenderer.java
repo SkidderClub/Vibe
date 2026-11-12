@@ -107,13 +107,13 @@ final float scale = s.scale.getFloat() * element.getScale();
             GlStateManager.resetColor();
             int background = alpha(hud.getBackground().getArgb(), s.opacity.getFloat());
             if (s.background.is("Rectangle")) {
-                if (lava) manager.drawLavaLamp(hud, left, top, w, h, s.radius.getFloat()*scale, s.opacity.getFloat());
+                if (lava) manager.drawLavaLamp(hud, left, top, w, h, s.radius.getFloat()*scale, s.opacity.getFloat(),"arraylist".hashCode());
                 else RenderUtils.roundedRect(left, top, left+w, top+h, s.radius.getFloat()*scale, background);
             } else if (s.background.is("Steps")) for (int index=0;index<rows.size();index++) {
                 Row row=rows.get(index);
                 // Shared rounded boundaries prevent one-pixel double alpha at fractional row scales.
                 int rowTop=Math.round(row.y),rowBottom=Math.round(row.y+rh);
-                if (lava) manager.drawLavaLamp(hud, row.x, rowTop, row.width, rowBottom-rowTop, s.radius.getFloat()*scale, s.opacity.getFloat());
+                if (lava) manager.drawLavaLamp(hud, row.x, rowTop, row.width, rowBottom-rowTop, s.radius.getFloat()*scale, s.opacity.getFloat(),"arraylist".hashCode()*31L+row.name.hashCode());
                 else RenderUtils.roundedRect(Math.round(row.x),rowTop,Math.round(row.x+row.width),rowBottom,
                             s.radius.getFloat()*scale,background);
             }

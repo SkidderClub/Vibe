@@ -8,6 +8,7 @@ import org.junit.rules.TemporaryFolder;
 import static org.junit.Assert.*;
 
 public class DropdownStyleTest {
+    @Test public void wurstAccentStaysOrangeAcrossCustomColoursAndAnimationTimes(){ClickGuiModule gui=new ClickGuiModule();gui.getTheme().setValue("Wurst");gui.getPacketAccent().setValue("Rainbow");gui.getPacketColor().setValue(0xFF00FF00);assertEquals(0xFFFF8800,DropdownStyle.accent(gui,0,0,0));assertEquals(0xFFFF8800,DropdownStyle.accent(gui,1,300,60000));}
     @Rule public TemporaryFolder temp=new TemporaryFolder();
     @Test public void moduleSortingKeepsRegistrationOrderAndPersistsThroughProfiles() throws Exception {
         try(PathTestFixture f=new PathTestFixture()){

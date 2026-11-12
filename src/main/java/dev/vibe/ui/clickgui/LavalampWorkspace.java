@@ -166,7 +166,7 @@ final class LavalampWorkspace {
         if(value instanceof ColorSetting){
             ColorSetting color=(ColorSetting)value;text(FONT,value.getName(),cx+1,row+10,cw-87,TEXT);
             int a=cx+cw-75;material("swatch:"+value.getRawName(),a,row+3,72,29,8,hover("swatch:"+value.getRawName(),a,row+3,72,29),open.contains(value));
-            checker(a+5,row+8,43,19);rect(a+5,row+8,43,19,4,color.getArgb());BreezeIcons.draw("chevrons",a+52,row+10,13,TEXT);
+            swatch(a+5,row+8,color.getArgb());BreezeIcons.draw("chevrons",a+52,row+10,13,TEXT);
             Hit hit=new Hit("color:"+value.getRawName(),a,row+3,72,29,()->{commit();if(!open.remove(value))open.add(value);hues.put(color,Color.RGBtoHSB(color.getRed(),color.getGreen(),color.getBlue(),null)[0]);});hit.setting=color;add(hit);
             row+=40;return open.contains(value)?picker(color,row):row;
         }
@@ -177,15 +177,20 @@ final class LavalampWorkspace {
             material("open:"+value.getRawName(),a,row+3,width,27,8,hover("open:"+value.getRawName(),a,row+3,width,27),open.contains(value));
             if(visible(a,row+3,width,27)){FONT.centered(FONT.fit(label,width-32),a+5,row+3,width-26,27,TEXT);BreezeIcons.draw("chevrons",a+width-19,row+10,13,TEXT);}
             add(new Hit("open:"+value.getRawName(),a,row+3,width,27,()->{commit();if(!open.remove(value))open.add(value);}));
-            row+=38;
+            row+=32;
             if(open.contains(value)){
-                List<String> options=value instanceof ModeSetting?((ModeSetting)value).getModes():((MultiSelectSetting)value).getOptions();int optionX=cx;
-                for(String option:options){int ow=Math.min(cw,(int)FONT.width(option)+24);if(optionX+ow>cx+cw){optionX=cx;row+=31;}
+                List<String> options=value instanceof ModeSetting?((ModeSetting)value).getModes():((MultiSelectSetting)value).getOptions();
+                material("choices:"+value.getRawName(),cx,row,cw,options.size()*29+8,8,0,false);row+=4;
+                for(String option:options){
                     boolean on=value instanceof ModeSetting?((ModeSetting)value).is(option):((MultiSelectSetting)value).isSelected(option);
-                    button("option:"+value.getRawName()+":"+option,optionX,row,ow,26,option,on,()->{if(value instanceof ModeSetting){((ModeSetting)value).setValue(option);open.remove(value);}else ((MultiSelectSetting)value).toggle(option);});optionX+=ow+5;}
-                if(!options.isEmpty())row+=34;
+                    String id="option:"+value.getRawName()+":"+option;float hot=hover(id,cx+4,row,cw-8,28);
+                    if(on||hot>.005F)rect(cx+4,row,cw-8,28,5,RenderUtils.alpha(accent,on?115:Math.round(30*hot)));
+                    if(on){glowDot(cx+15,row+14,3,1,accent);text(BOLD,option,cx+28,row+9,cw-63,TEXT);BreezeIcons.draw("check",cx+cw-23,row+8,13,TEXT);}
+                    else text(FONT,option,cx+28,row+9,cw-43,MUTED);
+                    add(new Hit(id,cx+4,row,cw-8,28,()->{if(value instanceof ModeSetting){((ModeSetting)value).setValue(option);open.remove(value);}else ((MultiSelectSetting)value).toggle(option);}));row+=29;}
+                row+=4;
             }
-            return row+1;
+            return row+9;
         }
         text(FONT,value.getName(),cx+1,row+4,cw-4,TEXT);row+=23;
         if(value instanceof NumberSetting||value instanceof RangeSetting){
@@ -213,6 +218,18 @@ final class LavalampWorkspace {
     private void checker(int a,int b,int width,int height){
         if(!visible(a,b,width,height))return;
         for(int i=0;i<width;i+=5)for(int j=0;j<height;j+=5)rect(a+i,b+j,Math.min(5,width-i),Math.min(5,height-j),0,((i/5+j/5)&1)==0?0xFFB9C3CF:0xFF657382);
+    }
+    private static net.minecraft.util.ResourceLocation swatchTexture;
+    private void swatch(int a,int b,int color){
+        if(!visible(a,b,43,19))return;
+        if(swatchTexture==null){
+            java.awt.image.BufferedImage image=new java.awt.image.BufferedImage(172,76,java.awt.image.BufferedImage.TYPE_INT_ARGB);java.awt.Graphics2D g=image.createGraphics();
+            g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,java.awt.RenderingHints.VALUE_ANTIALIAS_ON);g.setColor(java.awt.Color.WHITE);g.fillRoundRect(0,0,172,76,32,32);
+            g.setComposite(java.awt.AlphaComposite.SrcIn);for(int i=0;i<172;i+=20)for(int j=0;j<76;j+=20){g.setColor(new java.awt.Color(((i/20+j/20)&1)==0?0xB9C3CF:0x657382));g.fillRect(i,j,20,20);}g.dispose();
+            net.minecraft.client.renderer.texture.DynamicTexture texture=new net.minecraft.client.renderer.texture.DynamicTexture(image);texture.setBlurMipmap(true,false);swatchTexture=mc.getTextureManager().getDynamicTextureLocation("vibe_color_swatch",texture);
+        }
+        GlStateManager.enableBlend();GlStateManager.tryBlendFuncSeparate(770,771,1,771);GlStateManager.enableTexture2D();GlStateManager.disableAlpha();GlStateManager.color(1,1,1,1);mc.getTextureManager().bindTexture(swatchTexture);
+        Gui.drawScaledCustomSizeModalRect(a,b,0,0,172,76,43,19,172,76);rect(a,b,43,19,4,color);
     }
     private void valueBox(Setting<?> value,int a,int b,int width,String label){
         material("value:"+value.getRawName(),a,b,width,27,7,hover("value:"+value.getRawName(),a,b,width,27),editing==value);

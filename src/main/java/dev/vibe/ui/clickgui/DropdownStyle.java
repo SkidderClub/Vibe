@@ -28,7 +28,7 @@ final class DropdownStyle {
     }
     int accent(float x, int y) { return accent(settings, x, y, now); }
     static int accent(ClickGuiModule settings, float x, int y, long millis) {
-        if(settings.getTheme().is("Wurst"))return 0xFF40BA40;
+        if(settings.getTheme().is("Wurst"))return 0xFFFF8800;
         if (settings.getTheme().is("Novoline")) return settings.getNovolineColor().getArgb();
         if (settings.getTheme().is("SuizideX")) return RenderUtils.blend(settings.getSuizideColor().getArgb(), settings.getSuizideFadeColor().getArgb(), x);
         if (settings.getPacketAccent().is("Static")) return settings.getPacketColor().getArgb();

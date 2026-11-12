@@ -30,7 +30,7 @@ public final class ModuleManager {
     public ModuleManager() {
         register(new ProjectileDodgeModule());
         register(new PearlCatcherModule());
-        register(new BaverageNotificationModule());
+        register(new BeverageNotificationModule());
         register(new MovementPredictorModule());
         register(new CollisionPreviewModule());
         register(new EnchantmentGlintModule());
@@ -42,6 +42,7 @@ public final class ModuleManager {
         register(new AutoFishModule());
         register(new EmoteWheelModule());
         register(new BobbleheadModule());
+        register(new BigbrainModule());
         register(new PocketPetsModule());
         register(new EspModule());
         register(new EspEditorModule());

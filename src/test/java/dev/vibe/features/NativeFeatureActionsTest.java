@@ -4,7 +4,7 @@ import dev.vibe.combat.ProjectileFixture;
 import dev.vibe.combat.SilentMurderPacketsTest;
 import dev.vibe.inventory.*;
 import dev.vibe.module.impl.world.AutoFishModule;
-import dev.vibe.module.impl.visual.BaverageNotificationModule;
+import dev.vibe.module.impl.visual.BeverageNotificationModule;
 import dev.vibe.path.PathTestFixture;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;

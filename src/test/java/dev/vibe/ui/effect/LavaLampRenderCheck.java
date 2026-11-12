@@ -37,6 +37,9 @@ public final class LavaLampRenderCheck {
             }
             check(!GL11.glIsEnabled(GL11.GL_SCISSOR_TEST)&&GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM)==0,"Lava leaked GL state");
             save(output.resolve("lavalamp-hud-scaled-clipped.png"),transformed);
+            frame();lava.draw(70,50,220,140,10,0,0,1,0xFFFFFFFF,3+LavaLampRenderer.phase(1),MenuPalette.OCEAN);lava.draw(70,210,220,140,10,0,0,1,0xFFFFFFFF,3+LavaLampRenderer.phase(2),MenuPalette.OCEAN);
+            int[] independent=pixels();int changed=0;for(int y=0;y<140;y++)for(int x=0;x<220;x++)if(independent[(50+y)*1280+70+x]!=independent[(210+y)*1280+70+x])changed++;
+            check(changed>1000,"Separate lava panes are synchronized");save(output.resolve("lavalamp-independent-panes.png"),independent);
             for(int i=0;i<4;i++){frame();for(int j=0;j<8;j++)lava.draw(20+(j%4)*310,40+(j/4)*150,260,90,9,2,4,.72F,0xFFFFFFFF);}
             GL11.glFinish();long start=System.nanoTime();
             for(int i=0;i<20;i++){frame();for(int j=0;j<8;j++)lava.draw(20+(j%4)*310,40+(j/4)*150,260,90,9,2,4,.72F,0xFFFFFFFF);}

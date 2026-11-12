@@ -11,9 +11,9 @@ Rotation requests use MoveFix ownership. Pearl Catcher reserves its action befor
 
 ## World visuals
 
-- **Baverage Notification** (requested spelling) reports observed potion drinking, including its displayed potion name, and optionally golden apples. Chat and HUD notifications are independently selectable. A held item alone is not treated as consumption.
+- **Beverage Notification** reports observed potion drinking, including its displayed potion name, and optionally golden apples. Chat and HUD notifications are independently selectable. A held item alone is not treated as consumption.
 - **Movement Predictor** reuses Vibe's 1.8.9 simulated-player physics with current movement, sprint and jump input. Prediction length, line and Static/Rainbow/Fade colours are configurable.
-- **Collision Preview** incrementally collects actual collision boxes. Minimal mode removes internal flat seams and joins continuous edges; height changes and multipart collision geometry remain visible. Liquids and non-colliding decorations contribute no boxes.
+- **Collision Preview** incrementally collects actual collision boxes, retaining its last complete mesh until a replacement is ready. Minimal mode removes internal flat seams and joins continuous edges; height changes and multipart collision geometry remain visible. Liquids and non-colliding decorations contribute no boxes.
 - **Enchantment Glint** controls colour, colour animation, sheen speed and opacity in native item and armour passes, including GUI/HUD items. Custom-model glint uses a separate untinted geometry pass when a model has vertex colours.
 - **Block Debris** uses block-atlas fragments and the existing bounded, bouncing particle simulation. **Footprints** and **Landing Dust** are modes inside CustomCosmetics, with contact-height placement, fading/count limits and material-coloured landing bursts.
 - Teleport's existing cosmetic portals now use blue and orange. Horizontal surfaces determine portal placement and available span; the rim closes with the animation. Teleport success remains separate from its cosmetic finish.
@@ -28,8 +28,9 @@ The death screen's **Explore** button opens local camera exploration. Movement k
 
 ## Meme and VibeOS
 
-- **Emote Wheel** offers Dab, Sit and Stop with a skin preview. Its key opens the wheel. Optional sitting after two minutes of physical inactivity ends on renewed activity or movement. The existing no-settings, two-second automatic Dab module remains separate.
+- **Emote Wheel** offers Dab, Sit, Wave, Cheer, Dance, Bow, Facepalm and Stop with a skin preview. Its key opens a floating wheel over the unchanged world. Emotes continue through movement and turning; Sit ends on a physical movement or jump key. Optional sitting starts after two minutes of physical inactivity. The existing no-settings, two-second automatic Dab module remains separate.
 - **Bobblehead** adds a damped cosmetic spring to head turns and landing responses, without changing player rotations or collision.
+- **Bigbrain** gives all players an enlarged head and a smaller, grounded body. It has no settings, preserves Bobblehead poses, and scales native skin layers, armour and held-item attachments with the model.
 - **Pocket Pets** offers a ghost and rubber duck, collision-aware following, colour/size/speed/radius controls, idle behaviour and optional shoulder perching when space is clear.
 - VibeOS includes **Minesweeper** with three board sizes, first-click safety, flood reveal, flags and persistent best times. **Sudoku** includes difficulties, number selection, pencil notes, undo, optional hints and validated saved progress. The home screen pages automatically to keep all app icons visible.
 

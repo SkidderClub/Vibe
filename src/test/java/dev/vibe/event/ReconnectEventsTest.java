@@ -9,6 +9,11 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class ReconnectEventsTest {
+    @Test public void deathExploreLivesInTheTopRightAndKeepsVanillaActions()throws Exception{try(PathTestFixture f=new PathTestFixture()){
+        ReconnectEvents events=new ReconnectEvents();GuiGameOver screen=new GuiGameOver();screen.width=640;screen.height=360;List<GuiButton> buttons=new ArrayList<>();GuiButton respawn=new GuiButton(0,200,180,"Respawn");buttons.add(respawn);
+        events.init(new GuiScreenEvent.InitGuiEvent.Post(screen,buttons));assertSame(respawn,buttons.get(0));assertEquals(2,buttons.size());GuiButton explore=buttons.get(1);assertEquals("Explore",explore.displayString);assertEquals(8,explore.yPosition);assertEquals(632,explore.xPosition+explore.width);assertTrue(explore instanceof dev.vibe.ui.menu.AccountScreenStyle.Button);
+        events.init(new GuiScreenEvent.InitGuiEvent.Post(screen,buttons));assertEquals(2,buttons.size());
+    }}
     @Test public void pauseMenuReusesReconnectAndRandomUsernameAndKeepsVanillaButtons()throws Exception{
         try(PathTestFixture f=new PathTestFixture()){
             ReconnectEvents events=new ReconnectEvents();f.mc.setServerData(new ServerData("Test","example.invalid:25565",false));GuiIngameMenu menu=new GuiIngameMenu();menu.width=640;menu.height=360;

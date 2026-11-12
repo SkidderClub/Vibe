@@ -88,6 +88,12 @@ public final class MenuGlass {
         }catch(Exception failure){failed=true;org.apache.logging.log4j.LogManager.getLogger("Vibe").warn("Menu layer composition unavailable",failure);}
         finally{OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER,destination);screen=null;workspacePalette=null;}
     }
+    /** Composite floating controls without a root window or a menu transition. */
+    public static void endOverlay(){
+        try{if(!simple&&!failed&&content!=null){OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER,destination);drawLayer(content.framebufferTexture,content.framebufferTexture,1,0,true);}}
+        catch(Exception failure){org.apache.logging.log4j.LogManager.getLogger("Vibe").warn("Overlay glass unavailable",failure);}
+        finally{OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER,destination);screen=null;workspacePalette=null;}
+    }
     private static void drawLayer(int current,int previous,float weight,float oldWeight,boolean blend) throws Exception {
         Minecraft mc=Minecraft.getMinecraft();
         try(EffectState state=new EffectState()){

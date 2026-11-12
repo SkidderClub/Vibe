@@ -32,7 +32,7 @@ public final class LavalampRenderCheck {
         Object firstCategory=find(ws,"category:COMBAT"),lastCategory=find(ws,"category:SCRIPTS");
         check(integer(firstCategory,"x")==integer(ws,"x")+74&&integer(lastCategory,"x")+integer(lastCategory,"w")==integer(ws,"x")+integer(ws,"w")-47,"Categories do not fill the available top row");
         Object mode=find(ws,"open:Style");check(integer(mode,"x")>cx&&integer(mode,"w")<integer(ws,"cw"),"Mode selector is not beside its label");
-        click(ws,"open:Style",0);render(ws,960,540,"lavalamp-mode-options.png");click(ws,"option:Style:Sharp",0);check(example.style.is("Sharp"),"Expanded mode selection failed");render(ws,960,540,null);
+        click(ws,"open:Style",0);render(ws,960,540,"lavalamp-mode-options.png");Object soft=find(ws,"option:Style:Soft"),sharp=find(ws,"option:Style:Sharp");check(integer(soft,"x")==integer(sharp,"x")&&integer(sharp,"y")==integer(soft,"y")+29,"Modes are not one attached vertical list");click(ws,"option:Style:Sharp",0);check(example.style.is("Sharp"),"Expanded mode selection failed");render(ws,960,540,null);
         click(ws,"module:"+example.getId(),0);check(example.isEnabled()&&get(ws,"selected")==example,"Left-click must toggle and open settings");render(ws,960,540,null);
         Object second=find(ws,"module:combatmodule0");ws.click(integer(second,"x")+12,integer(second,"y")+12,1);check(get(ws,"selected")!=example&&!((Module)get(ws,"selected")).isEnabled(),"Right-click toggled instead of opening settings");
         click(ws,"module:"+example.getId(),1);render(ws,960,540,null);

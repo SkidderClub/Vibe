@@ -133,6 +133,8 @@ public final class HudManager {
     private long lastCpsSample;
     private boolean previewingHud;
     private boolean scalingHud;
+    private long lavaIdentity;
+    private int lavaSurface;
     private float hudTransformScale = 1.0F;
     private int hudTransformX, hudTransformY;
 
@@ -290,9 +292,11 @@ public final class HudManager {
 
     /** Scale around the element's anchor so right/bottom aligned widgets stay aligned. */
     private void renderScaled(HudElement element, ScaledResolution resolution, Runnable render) {
+        long previousIdentity=lavaIdentity;int previousSurface=lavaSurface;
+        lavaIdentity=element.id.hashCode();lavaSurface=0;
         try(HudFontFilter filter=HudFontFilter.begin(element.getScale()*resolution.getScaleFactor())){
             renderScaledContents(element,resolution,render);
-        }
+        }finally{lavaIdentity=previousIdentity;lavaSurface=previousSurface;}
     }
     private void renderScaledContents(HudElement element, ScaledResolution resolution, Runnable render) {
         float scale = element.getScale();
@@ -1220,10 +1224,13 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     void drawLavaLamp(HudModule hud, float x, float y, float width, float height, float radius, float opacity) {
+        drawLavaLamp(hud,x,y,width,height,radius,opacity,lavaIdentity==0?0:lavaIdentity*31+lavaSurface++);
+    }
+    void drawLavaLamp(HudModule hud, float x, float y, float width, float height, float radius, float opacity,long identity) {
         if (lavaLamp.draw(x, y, width, height, radius,
                 hud.getLiquidGlassBlur().isEnabled() ? hud.getLiquidGlassBlurStrength().getFloat() : 0,
                 hud.getLiquidGlassRefraction().getFloat(), hud.getLiquidGlassOpacity().getFloat() * opacity,
-                hud.getLiquidGlassTint().getArgb())) return;
+                hud.getLiquidGlassTint().getArgb(), identity)) return;
         HudShapes.round(x, y, width, height, radius,
                 RenderUtils.alpha(dev.vibe.ui.menu.MenuGlass.currentPalette().surface, Math.round(170 * opacity)));
     }

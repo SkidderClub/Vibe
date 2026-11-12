@@ -474,6 +474,7 @@ public final class VibeConfig {
         // v0.0.6 renamed BHop to Speed. Keep old profiles and keybinds alive
         // rather than silently discarding the module record.
         if ("bhop".equalsIgnoreCase(id)) id = "speed";
+        if ("baveragenotification".equalsIgnoreCase(id) || "Baverage Notification".equalsIgnoreCase(id)) id = "beveragenotification";
         if ("autocrafter".equalsIgnoreCase(id)) id = "crafter";
         if ("basicteleport".equalsIgnoreCase(id) || "Basic Teleport".equalsIgnoreCase(id)) id = "teleport";
         for (Module module : manager.getModules()) {

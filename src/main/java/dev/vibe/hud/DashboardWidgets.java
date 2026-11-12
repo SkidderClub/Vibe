@@ -33,11 +33,11 @@ public final class DashboardWidgets {
         HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         if(hud!=null&&hud.isEnabled()&&manager.isEnabled("radar")&&hud.dashboards.get("radar").mode.is("Map"))map.tick(hud.dashboards.get("radar").range.getDouble()/hud.dashboards.get("radar").zoom.getDouble()*2.9);else map.suspend();
     }
-    public void draw(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){DashboardSettings s=hud.dashboards.get(e.getId());if(s==null)return;String id=e.getId();int w=id.equals("candle")?60:s.width.getInt(),h=id.equals("candle")?88:id.equals("networkgraph")?s.height.getInt():id.equals("radar")?s.height.getInt():s.rows.getInt()*24+8;
+    public void draw(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){DashboardSettings s=hud.dashboards.get(e.getId());if(s==null)return;String id=e.getId(),theme=manager.theme(e,hud);int step=id.equals("killfeed")&&theme.equals("Fortnite")?17:24;int w=id.equals("candle")?60:s.width.getInt(),h=id.equals("candle")?88:id.equals("networkgraph")?s.height.getInt():id.equals("radar")?s.height.getInt():s.rows.getInt()*step+8;
         List<SessionJournal.Entry> entries=SessionJournal.INSTANCE.entries();long now=System.nanoTime()/1000000;
-        if(id.equals("killfeed")||id.equals("sessiontimeline")){entries.removeIf(v->id.equals("killfeed")?!(v.kind.equals("Kill")||v.kind.equals("Death"))||now-v.time>s.lifetime.getDouble()*1000:now-v.time>s.lifetime.getDouble()*1000);if(!preview&&entries.isEmpty()){e.setBounds(e.left(res,w),e.top(res,0),w,0);return;}h=Math.min(s.rows.getInt(),preview?3:entries.size())*24+8;}
+        if(id.equals("killfeed")||id.equals("sessiontimeline")){entries.removeIf(v->id.equals("killfeed")?!(v.kind.equals("Kill")||v.kind.equals("Death"))||now-v.time>s.lifetime.getDouble()*1000:now-v.time>s.lifetime.getDouble()*1000);if(!preview&&entries.isEmpty()){e.setBounds(e.left(res,w),e.top(res,0),w,0);return;}h=Math.min(s.rows.getInt(),preview?3:entries.size())*step+8;}
         e.ensureOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
-        String theme=manager.theme(e,hud);if(!id.equals("killfeed")||!theme.equals("CounterStrike")&&!theme.equals("Fortnite"))HudOverlayRenderer.panel(manager,hud,e,s,x,y,w,h);
+        if(!id.equals("killfeed")||!theme.equals("CounterStrike")&&!theme.equals("Fortnite"))HudOverlayRenderer.panel(manager,hud,e,s,x,y,w,h);
         if(id.equals("radar")){if(preview&&s.mode.is("Map")&&mc.theWorld!=null)map.tick(s.range.getDouble()/s.zoom.getDouble()*2.9);radar(s,x,y,w,h,preview);}
         else if(id.equals("networkgraph"))graph(s,x,y,w,h,preview);
         else if(id.equals("candle"))candle(s,x,y,w,h,preview);
@@ -67,9 +67,8 @@ public final class DashboardWidgets {
     }
     private static String number(double d,String suffix){return Double.isNaN(d)?"—":String.format(Locale.ROOT,"%.0f%s",d,suffix);}
     private void events(String theme,DashboardSettings s,int x,int y,int w,int h,List<SessionJournal.Entry> entries,boolean preview,boolean feed,long now){if(preview){entries=new ArrayList<>();entries.add(new SessionJournal.Entry("Kill","You","Opponent",null,null,null,true,"You → Opponent","You"));entries.add(new SessionJournal.Entry(feed?"Kill":"Bookmark",feed?"Friend":"",feed?"Opponent":"",null,null,null,false,feed?"Friend → Opponent":"Bookmark","You"));entries.add(new SessionJournal.Entry(feed?"Kill":"Profile","You","Target",null,null,null,true,feed?"You → Target":"Profile: Default","You"));}
-        for(int i=0;i<Math.min(s.rows.getInt(),entries.size());i++){SessionJournal.Entry e=entries.get(i);int yy=y+4+i*24;float alpha=preview?1:Math.max(0,Math.min(1,(float)((s.lifetime.getDouble()*1000-(now-e.time))/700.)));if(alpha<=0)continue;int ink=(s.text.getArgb()&0xFFFFFF)|((int)((s.text.getArgb()>>>24)*alpha)<<24),left=x+7;
-            if(theme.equals("CounterStrike")){HudShapes.round(x+4,yy,w-8,21,2,0xA515171C);Gui.drawRect(x+w-6,yy,x+w-4,yy+21,s.accent.getArgb());}
-            else if(theme.equals("Fortnite")){HudShapes.round(x+4,yy,w-8,21,3,0x9820293B);Gui.drawRect(x+4,yy,x+6,yy+21,s.accent.getArgb());}
+        for(int i=0;i<Math.min(s.rows.getInt(),entries.size());i++){SessionJournal.Entry e=entries.get(i);int yy=y+4+i*(feed&&theme.equals("Fortnite")?17:24);float alpha=preview?1:Math.max(0,Math.min(1,(float)((s.lifetime.getDouble()*1000-(now-e.time))/700.)));if(alpha<=0)continue;int ink=(s.text.getArgb()&0xFFFFFF)|((int)((s.text.getArgb()>>>24)*alpha)<<24),left=x+7;
+            if(feed&&(theme.equals("CounterStrike")||theme.equals("Fortnite"))){KillFeedRenderer.draw(theme,s,e,x+4,yy,w-8,alpha,preview);continue;}
             if(feed&&s.avatars.isEnabled()){face(e.actorId,left,yy+3,14);left+=18;}
             int right=x+w-7;if(feed&&s.weapons.isEnabled()&&e.weapon!=null){dev.vibe.ui.GuiRenderState.prepare(false);mc.getRenderItem().renderItemAndEffectIntoGUI(e.weapon,right-16,yy+2);right-=20;}
             String label=protect(e.label);if(feed&&!e.confirmed)label="~ "+label;if(!feed&&!label.startsWith(e.kind))label=e.kind+" · "+label;label=mc.fontRendererObj.trimStringToWidth(label,Math.max(10,right-left));text(s,label,left,yy+6,ink);
