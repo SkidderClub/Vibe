@@ -23,7 +23,7 @@ public final class AntiFireballModule extends dev.vibe.module.Module {
     public void prepare(){
         restore();prepared=false;threat=null;Minecraft mc=Minecraft.getMinecraft();
         if(!isEnabled()||mc.thePlayer==null||mc.theWorld==null||mc.playerController==null||mc.currentScreen!=null||!mc.inGameHasFocus||mc.thePlayer.isUsingItem()
-                ||dev.vibe.module.impl.world.ScaffoldModule.isActive()||AutoBuffModule.ownsUseInput()||dev.vibe.module.impl.world.BedAuraModule.ownsMiningInput()
+                ||dev.vibe.module.impl.world.ScaffoldModule.isActive()||dev.vibe.module.impl.world.AutoWaterModule.reserving()||AutoBuffModule.ownsUseInput()||dev.vibe.module.impl.world.BedAuraModule.ownsMiningInput()
                 ||dev.vibe.module.impl.movement.FreecamModule.cameraActiveHook()||mc.playerController.getIsHittingBlock()){releaseRotation();return;}
         Vec3 eye=mc.thePlayer.getPositionEyes(1);double nearest=range.getDouble()*range.getDouble();
         for(Entity e:mc.theWorld.loadedEntityList)if(e instanceof EntityLargeFireball&&!e.isDead){
@@ -44,7 +44,7 @@ public final class AntiFireballModule extends dev.vibe.module.Module {
         frameYaw=yaw;framePitch=pitch;
     }
     private void prepareInput(){
-        if(prepared||threat==null||threat.isDead)return;prepared=true;Minecraft mc=Minecraft.getMinecraft();if(mc.currentScreen!=null||mc.thePlayer==null||mc.thePlayer.isUsingItem()||AutoBuffModule.ownsUseInput())return;
+        if(prepared||threat==null||threat.isDead)return;prepared=true;Minecraft mc=Minecraft.getMinecraft();if(mc.currentScreen!=null||mc.thePlayer==null||mc.thePlayer.isUsingItem()||dev.vibe.module.impl.world.AutoWaterModule.reserving()||AutoBuffModule.ownsUseInput())return;
         Vec3 eye=mc.thePlayer.getPositionEyes(1);double ry=Math.toRadians(frameYaw),rp=Math.toRadians(framePitch);Vec3 end=eye.addVector(-Math.sin(ry)*Math.cos(rp)*range.getDouble(),-Math.sin(rp)*range.getDouble(),Math.cos(ry)*Math.cos(rp)*range.getDouble());
         MovingObjectPosition hit=threat.getEntityBoundingBox().expand(.1,.1,.1).calculateIntercept(eye,end);if(hit==null)return;
         oldHit=mc.objectMouseOver;oldPointed=mc.pointedEntity;mc.objectMouseOver=new MovingObjectPosition(threat,hit.hitVec);mc.pointedEntity=threat;input=true;

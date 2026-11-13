@@ -334,7 +334,7 @@ public class KillAuraModule extends Module {
     public void tickEnd() { restoreInput(); }
 
     protected boolean canOperate() {
-        if (AutoBuffModule.ownsUseInput() || dev.vibe.inventory.PlayerInventorySession.isBusy()) return false;
+          if (AutoBuffModule.ownsUseInput() || dev.vibe.module.impl.world.AutoWaterModule.reserving() || dev.vibe.inventory.PlayerInventorySession.isBusy()) return false;
         if (!isEnabled() || minecraft.thePlayer == null || minecraft.theWorld == null || minecraft.playerController == null
                 || !minecraft.thePlayer.isEntityAlive() || minecraft.thePlayer.isSpectator() || minecraft.isGamePaused()) return false;
         return minecraft.currentScreen == null || (!notInInv.isEnabled() && minecraft.currentScreen instanceof GuiContainer);

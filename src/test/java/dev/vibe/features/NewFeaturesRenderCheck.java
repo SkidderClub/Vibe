@@ -47,6 +47,7 @@ public final class NewFeaturesRenderCheck {
         dev.vibe.hud.PresentationRenderCheck.verify(mc,hud,out);
         companions(mc,modules,out);
         BigbrainRenderCheck.verify(mc,modules,out);
+        AspectRatioRenderCheck.verify(modules);
         System.out.println("Dashboard native rendering in four themes, isolated health grading and Original preview, and Wurst windows passed.");
     }
     private static Object read(Object o,String name)throws Exception{java.lang.reflect.Field f=o.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(o);}

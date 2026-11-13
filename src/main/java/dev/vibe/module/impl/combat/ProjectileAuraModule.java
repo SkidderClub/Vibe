@@ -138,7 +138,7 @@ public final class ProjectileAuraModule extends dev.vibe.module.Module {
         return isEnabled() && activationAvailable() && player != null && world != null && mc.thePlayer == player && mc.theWorld == world
                 && player.worldObj == world && player.isEntityAlive() && !player.isSpectator() && mc.playerController != null
                 && mc.currentScreen == null && mc.inGameHasFocus && !mc.isGamePaused() && !player.isUsingItem()
-                && !mc.playerController.getIsHittingBlock() && !AutoBuffModule.ownsUseInput()
+                && !mc.playerController.getIsHittingBlock() && !AutoBuffModule.ownsUseInput()&&!dev.vibe.module.impl.world.AutoWaterModule.reserving()
                 && !dev.vibe.module.impl.meme.HypixelModule.ownsSilentSlot()
                 && !dev.vibe.inventory.PlayerInventorySession.isBusy() && !AntiFireballModule.reserving() && !PearlCatcherModule.reserving() && !BowAimbotModule.drawing()
                 && !dev.vibe.module.impl.world.ScaffoldModule.isActive() && !dev.vibe.module.impl.world.BedAuraModule.ownsMiningInput()

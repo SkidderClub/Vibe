@@ -236,6 +236,15 @@ public final class MoveFixModule extends Module {
     }
     public boolean hasForcedMovement() { return forcedMovementOwner != null; }
 
+    /** A native use-item action may ray trace the player's fields (for example
+     * buckets). Use the already-sent rotation and restore the camera in finally. */
+    public boolean withActionRotation(String owner,java.util.function.BooleanSupplier action){
+        if(!ownsRotation(owner)||packetPlayer!=null)return false;
+        EntityPlayerSP player=Minecraft.getMinecraft().thePlayer;if(player==null)return false;
+        beginPacketRotation(player);
+        try{return action.getAsBoolean();}finally{endPacketRotation(player);}
+    }
+
     /** Advances an unowned fake rotation toward the local camera. */
     public void tick() {
         syncRotationPlayer();

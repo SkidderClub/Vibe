@@ -105,6 +105,9 @@ public final class PacketDelayService {
             CuteVisualsModule cuteVisuals = Vibe.getInstance().getModuleManager().getModule(CuteVisualsModule.class);
             if (cuteVisuals != null) cuteVisuals.onDigging((C07PacketPlayerDigging) packet);
         }
+        dev.vibe.module.impl.combat.CriticalsModule criticals=dev.vibe.features.FeatureModule.module(dev.vibe.module.impl.combat.CriticalsModule.class);
+        if(criticals!=null)criticals.outbound(packet);
+        // Explicit NoFall policies retain the final say over ground state.
         NoFallModule noFall = Vibe.getInstance() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(NoFallModule.class);
         if (noFall != null) noFall.handleOutbound(packet);

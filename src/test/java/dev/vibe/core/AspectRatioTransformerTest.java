@@ -1,0 +1,12 @@
+package dev.vibe.core;
+import java.io.*;
+import org.objectweb.asm.*;
+import org.objectweb.asm.tree.*;
+import org.junit.Test;
+import static org.junit.Assert.*;
+public class AspectRatioTransformerTest {
+    @Test public void optifineExtendedHandPassKeepsItsIndependentFlag(){ClassWriter source=new ClassWriter(0);source.visit(Opcodes.V1_8,Opcodes.ACC_PUBLIC,"net/minecraft/client/renderer/EntityRenderer",null,"java/lang/Object",null);MethodVisitor m=source.visitMethod(Opcodes.ACC_PUBLIC,"renderHand","(FIZZZ)V",null,null);m.visitCode();for(float value:new float[]{70,1.77F,.05F,128})m.visitLdcInsn(value);m.visitMethodInsn(Opcodes.INVOKESTATIC,"org/lwjgl/util/glu/Project","gluPerspective","(FFFF)V",false);m.visitInsn(Opcodes.RETURN);m.visitMaxs(4,6);m.visitEnd();source.visitEnd();byte[] bytes=new AspectRatioTransformer().transform("net.minecraft.client.renderer.EntityRenderer","net.minecraft.client.renderer.EntityRenderer",source.toByteArray());ClassNode c=new ClassNode();new ClassReader(bytes).accept(c,0);boolean found=false;for(Object method:c.methods)for(AbstractInsnNode i:((MethodNode)method).instructions.toArray())if(i instanceof MethodInsnNode&&((MethodInsnNode)i).owner.endsWith("AspectRatioModule")){assertEquals(Opcodes.ICONST_1,i.getPrevious().getOpcode());found=true;}assertTrue(found);}
+    @Test public void wrapsNativeWorldAndHandPerspectiveCallsExactlyOnce()throws Exception{String name="net.minecraft.client.renderer.EntityRenderer";byte[] original;try(InputStream in=getClass().getClassLoader().getResourceAsStream(name.replace('.','/')+".class");ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] b=new byte[8192];for(int n;(n=in.read(b))>0;)out.write(b,0,n);original=out.toByteArray();}
+        AspectRatioTransformer transformer=new AspectRatioTransformer();byte[] result=transformer.transform(name,name,original);ClassNode node=new ClassNode();new ClassReader(result).accept(node,0);int world=0,hand=0;for(Object o:node.methods)for(AbstractInsnNode instruction:((MethodNode)o).instructions.toArray())if(instruction instanceof MethodInsnNode&&((MethodInsnNode)instruction).owner.endsWith("AspectRatioModule")){if(instruction.getPrevious().getOpcode()==Opcodes.ICONST_1)hand++;else if(instruction.getPrevious().getOpcode()==Opcodes.ICONST_0)world++;}assertTrue(world>0);assertTrue(hand>0);assertArrayEquals(result,transformer.transform(name,name,result));
+    }
+}

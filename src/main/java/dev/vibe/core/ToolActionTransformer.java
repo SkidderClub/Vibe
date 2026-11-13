@@ -83,6 +83,8 @@ final class ToolActionTransformer implements Opcodes {
             if (!"()V".equals(call.desc) || !("syncCurrentPlayItem".equals(call.name) || "func_78750_j".equals(call.name) || "n".equals(call.name))) continue;
             InsnList hook = new InsnList();
             hook.add(new VarInsnNode(ALOAD, 2));
+            hook.add(new MethodInsnNode(INVOKESTATIC, "dev/vibe/module/impl/combat/CriticalsModule", "attackHook", "(Ljava/lang/Object;)V", false));
+            hook.add(new VarInsnNode(ALOAD, 2));
             hook.add(new MethodInsnNode(INVOKESTATIC, HYPIXEL, "beginAttackHook", "(Ljava/lang/Object;)I", false));
             hook.add(new InsnNode(POP));
             hook.add(new VarInsnNode(ALOAD, 2));

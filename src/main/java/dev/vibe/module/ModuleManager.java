@@ -29,6 +29,10 @@ public final class ModuleManager {
 
     public ModuleManager() {
         register(new ProjectileDodgeModule());
+        register(new CriticalsModule());
+        register(new AutoWaterModule());
+        register(new TargetStrafeModule());
+        register(new AspectRatioModule());
         register(new PearlCatcherModule());
         register(new BeverageNotificationModule());
         register(new MovementPredictorModule());
