@@ -1096,6 +1096,7 @@ public final class ScaffoldModule extends Module {
         finally { dev.vibe.inventory.HotbarSwitches.endActionHook(scope); }
     }
     public static boolean hypixelPacketHook(Object packet) {
+        if (dev.vibe.network.PacketDelayService.isUnmodified(packet)) return true;
         ScaffoldModule module = module();
         return module == null || !module.isEnabled() || !module.hypixelRotations()
                 || !(packet instanceof net.minecraft.network.Packet)

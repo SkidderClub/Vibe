@@ -84,6 +84,7 @@ public final class PacketDelayService {
     }
 
     private boolean delayOutbound(Packet<?> packet, ChannelHandlerContext ctx, ChannelPromise promise) {
+        if (UNMODIFIED.remove(packet) != null) return false;
         MoveFixModule moveFix = Vibe.getInstance() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
         if (moveFix != null) moveFix.applyToOutgoing(packet);
@@ -127,6 +128,18 @@ public final class PacketDelayService {
         queue(outbound, new Entry(Owner.LAG_RANGE, packet, ctx, promise, Long.MAX_VALUE));
         return true;
     }
+
+    // Like Exire PacketUtil.sendNoEvent: bypass mutation, scripts and packet
+    // delays for this exact packet only. Weak keys also cover closed queues.
+    private static final java.util.Map<Packet<?>, Boolean> UNMODIFIED =
+            java.util.Collections.synchronizedMap(new java.util.WeakHashMap<Packet<?>, Boolean>());
+    public static void sendUnmodified(net.minecraft.client.network.NetHandlerPlayClient connection, Packet<?> packet) {
+        if (connection == null) return;
+        UNMODIFIED.put(packet, Boolean.TRUE);
+        try { connection.addToSendQueue(packet); }
+        catch (RuntimeException | Error failure) { UNMODIFIED.remove(packet); throw failure; }
+    }
+    public static boolean isUnmodified(Object packet) { return UNMODIFIED.containsKey(packet); }
 
     private boolean delayInbound(Packet<?> packet, ChannelHandlerContext ctx) {
         if (packet instanceof S08PacketPlayerPosLook && Vibe.getInstance() != null) {

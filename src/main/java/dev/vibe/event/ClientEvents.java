@@ -235,6 +235,8 @@ public final class ClientEvents {
             if (phone != null) phone.tickCommunications();
         }
         if (event.phase == TickEvent.Phase.START) {
+            SpeedModule rewoundSpeed = Vibe.getInstance().getModuleManager().getModule(SpeedModule.class);
+            if (rewoundSpeed != null) rewoundSpeed.maintainRewound();
             dev.vibe.module.impl.movement.GuiMoveModule guiMove=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.GuiMoveModule.class);if(guiMove!=null)guiMove.tick();
             dev.vibe.module.impl.visual.FreeLookModule freeLook=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.FreeLookModule.class);if(freeLook!=null)freeLook.tick();
             if (Vibe.getInstance().getCommandManager() != null) Vibe.getInstance().getCommandManager().tick();

@@ -35,7 +35,7 @@ import org.lwjgl.input.Mouse;
 /** Selects rotations before movement; supplies clicks in vanilla's input pass. */
 public class KillAuraModule extends Module {
     private final RangeSetting reach = addSetting(new RangeSetting("Reach", 3.0D, 3.0D, 3.0D, 6.5D, 0.05D));
-    private final ModeSetting autoblock = addSetting(new ModeSetting("Autoblock Mode", "None", "None", "Vanilla", "Fake", "Legit", "AAC330", "Hypixel"));
+    private final ModeSetting autoblock = addSetting(new ModeSetting("Autoblock Mode", "None", "None", "Vanilla", "Fake", "Legit", "AAC330", "Hypixel", "Rewound"));
     private final BooleanSetting onlyRightClick = addSetting(new BooleanSetting("Only When Rightclicking", false,
             () -> realBlockMode()));
     private final NumberSetting blockingRange = addSetting(new NumberSetting("Blocking Range", 3.0D, 1.0D, 7.0D, 0.1D,
@@ -113,6 +113,7 @@ public class KillAuraModule extends Module {
     private long legitBlockUntil;
     private long nextLegitBlock;
     private final HypixelAutoblock hypixelBlock = new HypixelAutoblock(this);
+    private final RewoundAutoblock rewoundBlock = new RewoundAutoblock();
     private long hypixelNextAttack;
     private String previousBlockMode = "None";
     private String previousClickMode = "Normal";
@@ -127,6 +128,7 @@ public class KillAuraModule extends Module {
 
     public void tickStart() {
         restoreInput();
+        if (!autoblock.is("Rewound") || !rewoundBlock.blocking()) rewoundBlock.release();
         if (previousBlockMode.equals("Hypixel") && !autoblock.is("Hypixel")) {
             resetHypixelBlock(true);
             previousBlockMode = autoblock.getValue();
@@ -215,6 +217,15 @@ public class KillAuraModule extends Module {
             legitBlockUntil = nextLegitBlock = 0L;
             releaseOwnedBlock();
             previousBlockMode = autoblock.getValue();
+        }
+        if (autoblock.is("Rewound")) {
+            // ncp.json attacks in Post, after the rotated walking packet. Do
+            // not queue a second vanilla-input hit or force local item use.
+            KeyBinding attack = minecraft.gameSettings.keyBindAttack;
+            attackOwned = true;
+            VanillaClicks.discardPresses(attack);
+            KeyBinding.setKeyBindState(attack.getKeyCode(), false);
+            return;
         }
         boolean inClickRange = distanceTo(target) <= clickRange();
         if (!inClickRange) clicks.reset();
@@ -529,6 +540,7 @@ public class KillAuraModule extends Module {
     }
 
     private void clear() {
+        rewoundBlock.release();
         restoreInput();
         MoveFixModule fix = moveFix();
         if (fix != null) fix.clearFakeRotation(getId());
@@ -549,6 +561,34 @@ public class KillAuraModule extends Module {
     }
 
     public EntityLivingBase getTarget() { return target; }
+    public boolean isRewoundBlocking() { return isEnabled() && autoblock.is("Rewound") && rewoundBlock.blocking(); }
+
+    /** Native swing/controller order from Exire's Post attack branch, then its NCP block. */
+    public void rewoundAfterWalking(Object entity) {
+        if (!autoblock.is("Rewound") || entity != minecraft.thePlayer) return;
+        if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()
+                || AntiFireballModule.reserving() || ProjectileAuraModule.reserving() || ProjectileAuraModule.blocksRotations(this)
+                || PearlCatcherModule.reserving() || BowAimbotModule.drawing() || target == null || !validTarget(target)) {
+            rewoundBlock.release();
+            visualBlocking = false;
+            return;
+        }
+        boolean canBlock = swordHeld() && distanceTo(target) <= blockingRange.getDouble();
+        if (!canBlock) rewoundBlock.release();
+        long now = System.nanoTime() / 1000000L;
+        boolean inRange = distanceTo(target) <= clickRange();
+        if (!inRange) clicks.reset();
+        // Preserve Vibe's item-use ownership and ray/reach policy.
+        if (inRange && (!minecraft.thePlayer.isUsingItem() || minecraft.thePlayer.isBlocking()) && pollClicks(now) > 0) {
+            MovingObjectPosition hit = attackHit(attackReach());
+            if (hit.entityHit == target) {
+                minecraft.thePlayer.swingItem();
+                minecraft.playerController.attackEntity(minecraft.thePlayer, target);
+                if (canBlock) rewoundBlock.afterAttack();
+            }
+        }
+        visualBlocking = rewoundBlock.blocking();
+    }
     public double getReachRadius() { return reach.getMax(); }
     boolean isHypixelBlock() { return autoblock.is("Hypixel"); }
     void setHypixelVisual(boolean value) { visualBlocking = value; }

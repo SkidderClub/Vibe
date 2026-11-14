@@ -26,6 +26,8 @@ public final class FreecamProductionCheck {
         public static void main(String[] ignored) throws Exception {
             try {
                 LaunchClassLoader loader=Launch.classLoader;
+                RewoundProductionCheck.verify(loader);
+                OUTPUT.println("Rewound movement, walking, ground and main-thread correction hooks linked through production Forge/OptiFine.");
 
                 // A rebuild replaces the source JAR after the running loader has opened
                 // its client. Lazy Freecam loading must keep using the session copy.

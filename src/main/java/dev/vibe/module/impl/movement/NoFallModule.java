@@ -16,19 +16,21 @@ import org.lwjgl.input.Keyboard;
 /** Legacy LiquidBounce AAC no-fall modes with explicit ground spoof modes. */
 public final class NoFallModule extends Module {
     private final ModeSetting mode = addSetting(new ModeSetting("Mode", "No Ground", "No Ground", "Always On Ground",
-            "AAC", "LAAC", "AAC3.3.11", "AAC3.3.15"));
+            "AAC", "LAAC", "AAC3.3.11", "AAC3.3.15", "Rewound"));
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private int currentState;
     private boolean jumped;
     private boolean serverOnGround;
+    private EntityPlayerSP rewoundWalkingPlayer;
+    private boolean rewoundGround;
 
-    public NoFallModule() { super("NoFall", "Prevents fall damage using legacy AAC packet modes", Category.MOVEMENT, Keyboard.KEY_NONE); }
+    public NoFallModule() { super("NoFall", "Controls ground-spoof, AAC and Rewound fall-damage modes", Category.MOVEMENT, Keyboard.KEY_NONE); }
 
     public void tick() {
         if (!isEnabled() || minecraft.thePlayer == null || minecraft.currentScreen != null) return;
         EntityPlayerSP p = minecraft.thePlayer;
         if (AacMovementSupport.inLiquid(p)) return;
-        if (mode.is("No Ground") || mode.is("Always On Ground")) return;
+        if (mode.is("No Ground") || mode.is("Always On Ground") || mode.is("Rewound")) return;
         if (mode.is("AAC")) {
             if (p.fallDistance > 2.0F) { send(new C03PacketPlayer(true)); currentState = 2; }
             else if (currentState == 2 && p.fallDistance < 2.0F) { p.motionY = 0.1D; currentState = 3; return; }
@@ -85,5 +87,18 @@ public final class NoFallModule extends Module {
         throw new NoSuchFieldException("C03 onGround");
     }
 
-    @Override protected void onDisable() { currentState = 0; jumped = false; serverOnGround = false; }
+    public void beforeWalking(Object entity) {
+        rewoundWalkingPlayer = null;
+        rewoundGround = false;
+        if (isEnabled() && mode.is("Rewound") && entity == minecraft.thePlayer && minecraft.thePlayer != null) {
+            rewoundWalkingPlayer = minecraft.thePlayer;
+            rewoundGround = minecraft.thePlayer.fallDistance > 2F;
+            if (rewoundGround) minecraft.thePlayer.fallDistance = 0;
+        }
+    }
+    public boolean walkingGround(Object entity, boolean vanilla) {
+        return vanilla || entity == rewoundWalkingPlayer && rewoundGround && isEnabled() && mode.is("Rewound");
+    }
+    public void afterWalking() { rewoundWalkingPlayer = null; rewoundGround = false; }
+    @Override protected void onDisable() { currentState = 0; jumped = false; serverOnGround = false; afterWalking(); }
 }

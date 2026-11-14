@@ -5,6 +5,7 @@ import dev.vibe.combat.CombatTimerAccess;
 import dev.vibe.module.Category;
 import dev.vibe.module.Module;
 import dev.vibe.movement.AacMovementSupport;
+import dev.vibe.movement.RewoundSpeed;
 import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ModeSetting;
 import dev.vibe.setting.NumberSetting;
@@ -23,7 +24,13 @@ import org.lwjgl.input.Keyboard;
  */
 public final class SpeedModule extends Module {
     private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Legit", "Legit", "GroundStrafe", "Custom",
-            "AACYSpoof", "AACHop3.3.13", "AACHop3.5.0", "AACHop4", "AACHop5"));
+            "AACYSpoof", "AACHop3.3.13", "AACHop3.5.0", "AACHop4", "AACHop5", "Rewound"));
+    private final BooleanSetting rewoundTimer = addSetting(new BooleanSetting("Use timer", true, () -> mode.is("Rewound")));
+    private final ModeSetting rewoundFastFall = addSetting(new ModeSetting("Fast fall", "Off", () -> mode.is("Rewound"), "Off", "Snap", "Push"));
+    private final RewoundSpeed rewound = new RewoundSpeed();
+    private EntityPlayerSP rewoundPlayer;
+    private boolean rewoundActive;
+    private boolean rewoundStepPaused;
     private final NumberSetting customY = addSetting(new NumberSetting("Custom Y", 0.42D, 0.0D, 4.0D, 0.01D,
             () -> mode.is("Custom")));
     private final NumberSetting customGroundStrafe = addSetting(new NumberSetting("Ground Strafe", 1.6D, 0.0D, 2.0D, 0.01D,
@@ -45,11 +52,13 @@ public final class SpeedModule extends Module {
     private int aacYSpoofStage;
     private boolean aacYSpoofReset;
 
-    public SpeedModule() { super("Speed", "Controls hop and AAC movement speed", Category.MOVEMENT, Keyboard.KEY_NONE); }
+    public SpeedModule() { super("Speed", "Controls hop, AAC and Rewound movement speed", Category.MOVEMENT, Keyboard.KEY_NONE); }
 
     public void tick() {
-        if (!isEnabled() || minecraft.thePlayer == null || minecraft.currentScreen != null) return;
+        synchronizeRewound();
+        if (!isEnabled() || rewoundStepPaused || minecraft.thePlayer == null || minecraft.currentScreen != null) return;
         EntityPlayerSP p = minecraft.thePlayer;
+        if (mode.is("Rewound")) return; // Runs at moveEntity, never at tick end.
         if (mode.is("Custom")) { tickCustom(p); return; }
         if (mode.is("AACYSpoof")) { tickAacYSpoof(p); return; }
         if (mode.is("Legit") || mode.is("GroundStrafe")) {
@@ -180,6 +189,7 @@ public final class SpeedModule extends Module {
     }
 
     @Override protected void onEnable() {
+        rewound.reset(minecraft.thePlayer);
         aacYSpoofStage = 0;
         aacYSpoofReset = false;
         if (minecraft.thePlayer != null && mode.is("Custom")) {
@@ -189,9 +199,49 @@ public final class SpeedModule extends Module {
         if (minecraft.thePlayer != null && mode.is("AACHop3.5.0") && minecraft.thePlayer.onGround) AacMovementSupport.stopXZ(minecraft.thePlayer);
     }
     @Override protected void onDisable() {
+        rewoundStepPaused = false;
+        rewound.reset(null);
+        rewoundActive = false;
+        rewoundPlayer = null;
         CombatTimerAccess.setSpeed(1.0F);
         aacYSpoofStage = 0;
         aacYSpoofReset = false;
         if (minecraft.thePlayer != null) AacMovementSupport.speedInAir(minecraft.thePlayer, 0.02F);
+    }
+
+    private boolean synchronizeRewound() {
+        EntityPlayerSP p = minecraft.thePlayer;
+        boolean active = isEnabled() && !rewoundStepPaused && mode.is("Rewound") && p != null && p.worldObj != null && p.worldObj == minecraft.theWorld
+                && !p.isSpectator() && p.ridingEntity == null;
+        if (rewoundActive != active || rewoundPlayer != p) rewound.reset(p);
+        rewoundActive = active;
+        rewoundPlayer = p;
+        return active;
+    }
+    /** Also runs in menus, where ClientEvents skips the ordinary movement ticks. */
+    public void maintainRewound() { synchronizeRewound(); }
+    public boolean rewoundControlsJump() { return synchronizeRewound(); }
+    public void pauseForRewoundStep(boolean paused) {
+        if (rewoundStepPaused == paused) return;
+        rewoundStepPaused = paused;
+        if (!isEnabled()) return;
+        if (paused) {
+            rewound.reset(null);
+            CombatTimerAccess.setSpeed(1);
+        } else {
+            rewound.reset(minecraft.thePlayer);
+            aacYSpoofStage = 0;
+            aacYSpoofReset = false;
+        }
+    }
+    public double[] rewoundMove(Object entity, double x, double y, double z) {
+        return entity == minecraft.thePlayer && synchronizeRewound()
+                ? rewound.move(minecraft.thePlayer, x, y, z, rewoundTimer.isEnabled(), rewoundFastFall.getValue()) : null;
+    }
+    public void rewoundAfterMove(Object entity, double[] move) {
+        if (move != null && entity == minecraft.thePlayer && synchronizeRewound()) rewound.afterMove(minecraft.thePlayer, move);
+    }
+    public void rewoundCorrection(net.minecraft.network.play.server.S08PacketPlayerPosLook packet) {
+        if (synchronizeRewound()) rewound.correction(minecraft.thePlayer, packet);
     }
 }
