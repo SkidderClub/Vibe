@@ -88,6 +88,7 @@ public class CombatHooksTest {
     private void verifyInput(ClassNode node, boolean obfuscated) throws Exception {
         MethodNode wrapper = method(node, obfuscated ? "s" : "runTick", "()V");verify(node,wrapper);
         assertEquals(2,calls(wrapper,"finishInputHook","dev/vibe/inventory/HotbarSwitches"));
+        assertEquals(2,calls(wrapper,"finishInputHook","dev/vibe/module/impl/combat/AutoBuffModule"));
         MethodNode method = method(node, "vibe$hotbar$"+(obfuscated ? "s" : "runTick"), "()V");
         verify(node, method);
         assertEquals(2, calls(method, "prepareInputHook"));
@@ -107,6 +108,10 @@ public class CombatHooksTest {
         assertTrue(finish > callIndex(method, obfuscated ? "aw" : "clickMouse", node.name));
         assertTrue(finish > callIndex(method, obfuscated ? "b" : "sendClickBlockToController", node.name));
         AbstractInsnNode renderer = method.instructions.get(finish).getNext();
+        assertTrue(renderer instanceof MethodInsnNode);
+        assertEquals("dev/vibe/module/impl/combat/AutoBuffModule", ((MethodInsnNode) renderer).owner);
+        assertEquals("finishInputHook", ((MethodInsnNode) renderer).name);
+        renderer = renderer.getNext();
         assertTrue(renderer instanceof MethodInsnNode);
         assertEquals("dev/vibe/inventory/HotbarSwitches", ((MethodInsnNode) renderer).owner);
         assertEquals("finishInputHook", ((MethodInsnNode) renderer).name);

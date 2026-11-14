@@ -235,6 +235,7 @@ public final class MoveFixModule extends Module {
         }
     }
     public boolean hasForcedMovement() { return forcedMovementOwner != null; }
+    public boolean ownsForcedMovement(String owner) { return owner != null && owner.equals(forcedMovementOwner); }
 
     /** A native use-item action may ray trace the player's fields (for example
      * buckets). Use the already-sent rotation and restore the camera in finally. */

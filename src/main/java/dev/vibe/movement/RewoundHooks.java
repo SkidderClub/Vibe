@@ -98,6 +98,8 @@ public final class RewoundHooks {
     }
     /** Inserted after PacketThreadUtil, so the packet and state change exactly once on the client thread. */
     public static void correction(Object packet) {
+        dev.vibe.module.impl.world.ScaffoldModule scaffold = module(dev.vibe.module.impl.world.ScaffoldModule.class);
+        if (scaffold != null && packet instanceof S08PacketPlayerPosLook) scaffold.onTowerCorrection((S08PacketPlayerPosLook) packet);
         SpeedModule speed = module(SpeedModule.class);
         if (speed != null && packet instanceof S08PacketPlayerPosLook) speed.rewoundCorrection((S08PacketPlayerPosLook) packet);
     }

@@ -113,6 +113,7 @@ public final class ScaffoldModule extends Module {
             () -> mode.is("Normal") && rotations.is("Normal")));
     private final ModeSetting sprint = addSetting(new ModeSetting("Sprint", "Always", "Always", "Off", "Legit"));
     private final ModeSetting tower = addSetting(new ModeSetting("Tower", "None", "None", "NCP", "Timer", "Intave"));
+    private final BooleanSetting stopTowerOnFlag = addSetting(new BooleanSetting("Stop tower on flag", true, () -> tower.is("NCP")));
     private final BooleanSetting keepY = addSetting(new BooleanSetting("Keep Y", true, () -> !hypixelRotations()));
     private final BooleanSetting sneak = addSetting(new BooleanSetting("Sneak", false, () -> mode.is("Normal")));
     private final MultiSelectSetting startOptions = addSetting(new MultiSelectSetting("Start Options",
@@ -175,6 +176,8 @@ public final class ScaffoldModule extends Module {
     private boolean sprintOwned;
     private boolean timerOwned;
     private boolean starting;
+    private boolean ncpTowering;
+    private long ncpTowerBlockedUntil;
     private static Field rightClickDelay;
 
     public ScaffoldModule() {
@@ -183,6 +186,8 @@ public final class ScaffoldModule extends Module {
 
     @Override
     protected void onEnable() {
+        ncpTowering = false;
+        ncpTowerBlockedUntil = 0;
         starting = true;
         hypixel.reset();
         wasHypixel = hypixelRotations();
@@ -203,6 +208,8 @@ public final class ScaffoldModule extends Module {
 
     @Override
     protected void onDisable() {
+        ncpTowering = false;
+        ncpTowerBlockedUntil = 0;
         releaseRotation();
         hypixel.reset();
         restoreSwap();
@@ -225,6 +232,8 @@ public final class ScaffoldModule extends Module {
     public void tickStart() {
         EntityPlayerSP player = minecraft.thePlayer;
         if (player != owner) {
+            ncpTowering = false;
+            ncpTowerBlockedUntil = 0;
             // A respawn or world change starts from the new player's state.
             releaseRotation();
             owner = player;
@@ -944,11 +953,18 @@ public final class ScaffoldModule extends Module {
 
     /** Runs before the walking packet, where the tower may still adjust this tick's position. */
     public void beforeWalkingUpdate(Object entity) {
+        beforeWalkingUpdate(entity, System.nanoTime() / 1000000L);
+    }
+
+    void beforeWalkingUpdate(Object entity, long now) {
         EntityPlayerSP player = minecraft.thePlayer;
+        ncpTowering = false;
         if (!isEnabled() || player == null || entity != player || player != owner) return;
         offGroundTicks = player.onGround ? 0 : offGroundTicks + 1;
         boolean jumping = minecraft.gameSettings.keyBindJump.isKeyDown();
-        if (tower.is("NCP") && jumping) {
+        if (stationaryNcpTower() && (player.onGround || player.motionY > 0)
+                && (!stopTowerOnFlag.isEnabled() || now >= ncpTowerBlockedUntil)) {
+            ncpTowering = true;
             double fraction = player.posY % 1.0D;
             if (fraction <= 0.00153598D) {
                 player.setPosition(player.posX, Math.floor(player.posY), player.posZ);
@@ -958,6 +974,30 @@ public final class ScaffoldModule extends Module {
             }
         }
         setTowerTimer(tower.is("Timer") && jumping);
+    }
+
+    /** A flag while this tower is active yields to vanilla jump for three seconds. */
+    public void onTowerCorrection(net.minecraft.network.play.server.S08PacketPlayerPosLook packet) {
+        onTowerCorrection(packet, System.nanoTime() / 1000000L);
+    }
+    void onTowerCorrection(net.minecraft.network.play.server.S08PacketPlayerPosLook packet, long now) {
+        if (stopTowerOnFlag.isEnabled() && stationaryNcpTower() && owner == minecraft.thePlayer
+                && (ncpTowering || now < ncpTowerBlockedUntil)) {
+            ncpTowerBlockedUntil = now + 3000;
+            ncpTowering = false;
+        }
+    }
+    public boolean stationaryNcpTower() {
+        EntityPlayerSP p = minecraft.thePlayer;
+        return isEnabled() && tower.is("NCP") && p != null && minecraft.theWorld != null && p == owner
+                && minecraft.gameSettings.keyBindJump.isKeyDown() && !isMoving()
+                && p.moveForward == 0 && p.moveStrafing == 0
+                && (p.movementInput == null || p.movementInput.moveForward == 0 && p.movementInput.moveStrafe == 0)
+                && Math.hypot(p.motionX, p.motionZ) < .03;
+    }
+    public static boolean ownsStationaryNcpJump() {
+        ScaffoldModule module = module();
+        return module != null && module.stationaryNcpTower();
     }
 
     private void setTowerTimer(boolean fast) {

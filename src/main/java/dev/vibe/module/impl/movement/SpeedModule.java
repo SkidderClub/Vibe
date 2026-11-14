@@ -56,7 +56,7 @@ public final class SpeedModule extends Module {
 
     public void tick() {
         synchronizeRewound();
-        if (!isEnabled() || rewoundStepPaused || minecraft.thePlayer == null || minecraft.currentScreen != null) return;
+        if (!isEnabled() || rewoundStepPaused || dev.vibe.module.impl.world.ScaffoldModule.ownsStationaryNcpJump() || minecraft.thePlayer == null || minecraft.currentScreen != null) return;
         EntityPlayerSP p = minecraft.thePlayer;
         if (mode.is("Rewound")) return; // Runs at moveEntity, never at tick end.
         if (mode.is("Custom")) { tickCustom(p); return; }
@@ -211,7 +211,7 @@ public final class SpeedModule extends Module {
 
     private boolean synchronizeRewound() {
         EntityPlayerSP p = minecraft.thePlayer;
-        boolean active = isEnabled() && !rewoundStepPaused && mode.is("Rewound") && p != null && p.worldObj != null && p.worldObj == minecraft.theWorld
+        boolean active = isEnabled() && !rewoundStepPaused && !dev.vibe.module.impl.world.ScaffoldModule.ownsStationaryNcpJump() && mode.is("Rewound") && p != null && p.worldObj != null && p.worldObj == minecraft.theWorld
                 && !p.isSpectator() && p.ridingEntity == null;
         if (rewoundActive != active || rewoundPlayer != p) rewound.reset(p);
         rewoundActive = active;

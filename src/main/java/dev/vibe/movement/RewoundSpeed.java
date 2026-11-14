@@ -78,6 +78,8 @@ public final class RewoundSpeed {
             z = forward * speed * mz - strafe * speed * mx;
             stage++;
         }
+        double[] orbit = dev.vibe.module.impl.movement.TargetStrafeModule.speedDirection();
+        if (orbit != null) { x = orbit[0] * speed; z = orbit[1] * speed; }
         return new double[] {x, y, z, player.getEntityBoundingBox().minY};
     }
 

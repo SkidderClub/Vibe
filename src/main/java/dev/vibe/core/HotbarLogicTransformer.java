@@ -27,7 +27,10 @@ final class HotbarLogicTransformer implements Opcodes {
     }
     private static void finish(MethodVisitor visitor,boolean player){
         if(player){visitor.visitVarInsn(ILOAD,1);visitor.visitMethodInsn(INVOKESTATIC,HOOK,"endActionHook","(I)V",false);}
-        else visitor.visitMethodInsn(INVOKESTATIC,HOOK,"finishInputHook","()V",false);
+        else {
+            visitor.visitMethodInsn(INVOKESTATIC,"dev/vibe/module/impl/combat/AutoBuffModule","finishInputHook","()V",false);
+            visitor.visitMethodInsn(INVOKESTATIC,HOOK,"finishInputHook","()V",false);
+        }
     }
     private static boolean named(String name,String... names){for(String value:names)if(value.equals(name))return true;return false;}
 }

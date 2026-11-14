@@ -7,7 +7,7 @@ import net.minecraft.util.*;
 
 /** Uses Vibe's existing copy of 1.8.9 player physics, never changes the real player. */
 public final class MovementForecast {
-    public static final class Path {public final List<Vec3> points=new ArrayList<>();public final List<AxisAlignedBB> bodies=new ArrayList<>();public boolean loaded=true,safe=true;}
+    public static final class Path {public final List<Vec3> points=new ArrayList<>();public final List<AxisAlignedBB> bodies=new ArrayList<>();public boolean loaded=true,safe=true,collidedHorizontally;}
     private MovementForecast(){}
     public interface Controller {void beforeTick(RavenSimulatedPlayer player,int tick);}
     public static Path simulate(MovementInput input,int ticks,float yaw){return simulate(input,ticks,yaw,null);}
@@ -17,7 +17,7 @@ public final class MovementForecast {
         for(int i=0;i<Math.max(1,Math.min(100,ticks));i++){
             if(controller!=null)controller.beforeTick(sim,i);
             AxisAlignedBB probe=sim.box.expand(1,1,1).addCoord(sim.motionX,sim.motionY,sim.motionZ);
-            if(!loaded(probe)){path.loaded=path.safe=false;break;}sim.tick();path.points.add(sim.getPos());path.bodies.add(sim.box);
+            if(!loaded(probe)){path.loaded=path.safe=false;break;}sim.tick();path.points.add(sim.getPos());path.bodies.add(sim.box);path.collidedHorizontally|=sim.isCollidedHorizontally;
             if(!supported(sim.box,4)||sim.fallDistance>3)path.safe=false;
         }return path;
     }

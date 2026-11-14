@@ -19,6 +19,9 @@ final class ToolActionTransformer implements Opcodes {
             if (!action(original.name, original.desc)) continue;
             boolean attack = Type.getReturnType(original.desc).getSort() == Type.VOID;
             if (attack) injectPickenImmediatelyBeforeSlotSync(original);
+            if (original.name.equals("sendUseItem") || original.name.equals("func_78769_a")
+                    || original.name.equals("onPlayerRightClick") || original.name.equals("func_178890_a")
+                    || original.name.equals("a") && original.desc.contains("Lzx;")) markNativeUse(original);
             String name = original.name;
             original.name = "vibe$tool$" + name;
             MethodNode wrapper = new MethodNode(ASM5, original.access, name, original.desc, original.signature,
@@ -73,6 +76,17 @@ final class ToolActionTransformer implements Opcodes {
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         node.accept(writer);
         return writer.toByteArray();
+    }
+
+    private static void markNativeUse(MethodNode method) {
+        for (AbstractInsnNode instruction : method.instructions.toArray()) {
+            if (!(instruction instanceof MethodInsnNode)) continue;
+            MethodInsnNode call = (MethodInsnNode) instruction;
+            if ((call.owner.equals("net/minecraft/client/network/NetHandlerPlayClient") || call.owner.equals("bcy"))
+                    && (call.name.equals("addToSendQueue") || call.name.equals("func_147297_a") || call.name.equals("a"))
+                    && (call.desc.equals("(Lnet/minecraft/network/Packet;)V") || call.desc.equals("(Lff;)V")))
+                method.instructions.insert(call, new MethodInsnNode(INVOKESTATIC, "dev/vibe/module/impl/combat/AutoBuffModule", "headUseSentHook", "()V", false));
+        }
     }
 
     /** Select the utility item at the last possible instruction before vanilla's C09/C02 attack pair. */

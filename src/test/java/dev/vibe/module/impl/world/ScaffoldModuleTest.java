@@ -101,6 +101,40 @@ public class ScaffoldModuleTest {
         set(Vibe.class, null, "instance", previousVibe);
     }
 
+    @Test public void ncpTowerDoesNotAlterWalkingOrFallingMotion() throws Exception {
+        scaffold.getTower().setValue("NCP");standAt(.5,64,.5,0,0);scaffold.setEnabled(true);
+        KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindJump.getKeyCode(),true);
+        player.motionY=.1;keys(true,false,false,false);scaffold.beforeWalkingUpdate(player,1000);assertEquals(.1,player.motionY,0);
+        keys(false,false,false,false);player.onGround=false;player.motionY=-.1;
+        scaffold.beforeWalkingUpdate(player,1000);assertEquals(-.1,player.motionY,0);
+        player.motionY=.1;player.moveStrafing=1;scaffold.beforeWalkingUpdate(player,1000);assertEquals(.1,player.motionY,0);
+        player.moveStrafing=0;player.motionX=.1;scaffold.beforeWalkingUpdate(player,1000);assertEquals(.1,player.motionY,0);
+        player.motionX=0;scaffold.beforeWalkingUpdate(player,1000);assertEquals(.41998,player.motionY,0);
+        scaffold.setEnabled(false);
+    }
+    @Test public void ncpFlagUsesNormalJumpForExactlyThreeSecondsAndCanBeDisabled() throws Exception {
+        scaffold.getTower().setValue("NCP");standAt(.5,64,.5,0,0);scaffold.setEnabled(true);
+        KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindJump.getKeyCode(),true);
+        player.motionY=.42;scaffold.beforeWalkingUpdate(player,1000);assertEquals(.41998,player.motionY,0);
+        net.minecraft.network.play.server.S08PacketPlayerPosLook flag=new net.minecraft.network.play.server.S08PacketPlayerPosLook(.5,64,.5,0,0,java.util.Collections.emptySet());
+        scaffold.onTowerCorrection(flag,1000);
+        player.motionY=.42;scaffold.beforeWalkingUpdate(player,1001);assertEquals(.42,player.motionY,0);
+        scaffold.beforeWalkingUpdate(player,3999);assertEquals(.42,player.motionY,0);
+        scaffold.beforeWalkingUpdate(player,4000);assertEquals(.41998,player.motionY,0);
+        scaffold.onTowerCorrection(flag,4000);setting("Stop tower on flag").setValue(false);
+        player.motionY=.42;scaffold.beforeWalkingUpdate(player,4001);assertEquals(.41998,player.motionY,0);
+        scaffold.setEnabled(false);
+    }
+    @Test public void ncpFallbackKeepsRealJumpInputWhileRewoundSpeedIsEnabled() throws Exception {
+        dev.vibe.module.impl.movement.SpeedModule speed=new dev.vibe.module.impl.movement.SpeedModule();
+        Vibe.getInstance().getModuleManager().registerDynamic(speed);
+        for(Setting<?> s:speed.getSettings())if(s.getRawName().equals("Mode"))((ModeSetting)s).setValue("Rewound");
+        scaffold.getTower().setValue("NCP");standAt(.5,64,.5,0,0);scaffold.setEnabled(true);speed.setEnabled(true);
+        KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindJump.getKeyCode(),true);
+        MovementInput input=new MovementInput();input.jump=true;dev.vibe.movement.RewoundHooks.input(input);assertTrue(input.jump);
+        speed.setEnabled(false);scaffold.setEnabled(false);
+    }
+
     @Test public void bridgeEdgeRotatesThroughMoveFixAndPlacesAgainstTheSupportFace() throws Exception {
         world.blocks.put(new BlockPos(0, 63, 0), Blocks.stone.getDefaultState());
         // Walked east past the edge of the only block, camera still facing east.

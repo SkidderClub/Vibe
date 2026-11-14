@@ -1029,6 +1029,9 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onGuiOpen(GuiOpenEvent event) {
+        if (event.gui instanceof net.minecraft.client.gui.GuiIngameMenu && dev.vibe.module.impl.world.NoEscMenuModule.blocksMenuHook()) {
+            event.setCanceled(true); return;
+        }
         dev.vibe.module.impl.meme.PhoneModule phone = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.PhoneModule.class);
         if (phone != null && phone.isEnabled() && phone.binding() >= 0
                 && event.gui instanceof net.minecraft.client.gui.GuiIngameMenu) {

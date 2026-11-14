@@ -30,6 +30,7 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
             Arrays.asList("Auto Pot","Auto Soup","Auto Head","Auto Eat","Auto Gapple")));
     public final Map<Kind,NumberSetting> health = new EnumMap<Kind,NumberSetting>(Kind.class);
     public final Map<Kind,RangeSetting> delays = new EnumMap<Kind,RangeSetting>(Kind.class);
+    public final RangeSetting headPause;
     public final NumberSetting hunger = addSetting(new NumberSetting("Eat Below Hunger", 16, 1, 20, 1, () -> modes.isSelectedIgnoreCase("Auto Eat")));
     public final BooleanSetting eatWalkBackwards = addSetting(new BooleanSetting("Auto Eat Walk Backwards", false, () -> enabled(Kind.EAT)));
     public final BooleanSetting gappleWalkBackwards = addSetting(new BooleanSetting("Auto Gapple Walk Backwards", false, () -> enabled(Kind.GAPPLE)));
@@ -40,8 +41,8 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
     public final ModeSetting refillMode = addSetting(new ModeSetting("Refill Mode", "Open Inventory", () -> refill.isEnabled(), "Open Inventory", "Spoof", "Inventory Only"));
     public final RangeSetting refillDelay = addSetting(new RangeSetting("Refill Delay (ms)", 160, 240, 0, 3000, 10, () -> refill.isEnabled()));
     public final RangeSetting openDelay = addSetting(new RangeSetting("Inventory Open Delay (ms)", 180, 280, 0, 3000, 10, () -> refill.isEnabled()));
-    public final RangeSetting switchDelay = addSetting(new RangeSetting("Slot Switch Delay (ms)", 100, 160, 0, 2000, 10));
-    public final RangeSetting restoreDelay = addSetting(new RangeSetting("Slot Restore Delay (ms)", 100, 160, 0, 2000, 10));
+    public final RangeSetting switchDelay = addSetting(new RangeSetting("Slot Switch Delay (ms)", 100, 160, 0, 2000, 10, this::hasHeldUseModes));
+    public final RangeSetting restoreDelay = addSetting(new RangeSetting("Slot Restore Delay (ms)", 100, 160, 0, 2000, 10, this::hasHeldUseModes));
     public final NumberSetting timeout = addSetting(new NumberSetting("Use Timeout (ms)", 4000, 1000, 15000, 100));
     private final Minecraft mc = Minecraft.getMinecraft();
     private final Random random = new Random();
@@ -55,17 +56,21 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
     private ItemStack expected;
     private long due, candidateDue, cooldown, startedUse, refillAt;
     private final Map<Kind,Long> blockedUntil = new EnumMap<Kind,Long>(Kind.class);
-    private boolean pressed, refilling;
+    private boolean pressed, refilling, headInteracted;
     private static final Kind[] PRIORITY = {Kind.SOUP, Kind.POT, Kind.HEAD, Kind.GAPPLE, Kind.EAT};
 
     public AutoBuffModule() {
         super("AutoBuff", "Use healing items and food with delayed hotbar selection and layout-aware refill", Category.COMBAT, Keyboard.KEY_NONE);
+        RangeSetting pause = null;
         for (Kind kind : Kind.values()) {
             health.put(kind, addSetting(new NumberSetting(kind.label + " Health", kind.health, 1, 20, .5, () -> enabled(kind))));
             delays.put(kind, addSetting(new RangeSetting(kind.label + " Delay (ms)", 250, 450, 0, 5000, 10, () -> enabled(kind))));
+            if (kind == Kind.HEAD) pause = addSetting(new RangeSetting("Auto Head Pause (ms)", 500, 750, 0, 5000, 10, () -> enabled(Kind.HEAD)));
         }
+        headPause = pause;
     }
     public boolean enabled(Kind kind) { return modes.isSelectedIgnoreCase(kind.label); }
+    private boolean hasHeldUseModes() { for (Kind kind : Kind.values()) if (kind != Kind.HEAD && enabled(kind)) return true; return false; }
     public void tick() { tick(System.currentTimeMillis()); }
     public void tick(long now) {
         if (!isEnabled() || mc.thePlayer == null || mc.theWorld == null || mc.playerController == null
@@ -130,7 +135,10 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
                     slotLease=HotbarSwitches.acquire(this,switching,found,HotbarSwitches.BUFF);
                     if(slotLease==null||!slotLease.active()){if(slotLease!=null)slotLease.close(false,true);slotLease=null;return;}
                     selectedTick = mc.thePlayer.ticksExisted;
-                    phase = Phase.SELECTED; due = now + pick(switchDelay); pressed = false; candidate = null;
+                    phase = kind == Kind.HEAD ? Phase.USING : Phase.SELECTED;
+                    due = now + (kind == Kind.HEAD ? 0 : pick(switchDelay));
+                    if (kind == Kind.HEAD) startedUse = now;
+                    pressed = headInteracted = false; candidate = null;
                 }
                 return;
             }
@@ -219,8 +227,20 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
         return current == null || before == null || current.getItem() != before.getItem() || current.getMetadata() != before.getMetadata() || current.stackSize < before.stackSize;
     }
     private void finish(long now) {
+        if (active == Kind.HEAD) { finishHead(now); return; }
         releaseInput(); clearRotation(); cooldown = now + pick(delays.get(active));
         phase = Phase.RESTORE; due = now + pick(restoreDelay);
+    }
+    private void finishHead(long now) {
+        // Finish the native use first; restore in this input pass, without
+        // waiting for a server health/stack update or the shared restore delay.
+        releaseInput(); clearRotation();
+        if (mc.thePlayer != null && mc.thePlayer.isUsingItem() && Consumables.head(mc.thePlayer.getItemInUse()))
+            mc.playerController.onStoppedUsingItem(mc.thePlayer);
+        blockedUntil.put(Kind.HEAD, Math.max(blockedUntil.getOrDefault(Kind.HEAD, 0L), now + pick(headPause)));
+        if (slotLease != null) { slotLease.close(); slotLease = null; }
+        phase = Phase.IDLE; active = candidate = null; expected = null;
+        slot = previousSlot = -1; headInteracted = false;
     }
     private void releaseInput() {
         if (mc.gameSettings != null && (phase != Phase.IDLE || pressed)) {
@@ -237,13 +257,25 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
     private void cancel(boolean restoreSlot) {
         inventory.close(); refilling = false; releaseInput(); clearRotation();
         if(slotLease!=null){slotLease.close(true,restoreSlot);slotLease=null;}
-        phase = Phase.IDLE; active = candidate = null; expected = null; slot = previousSlot = -1; player = world = null;
+        phase = Phase.IDLE; active = candidate = null; expected = null; slot = previousSlot = -1; player = world = null; headInteracted = false;
     }
     @Override protected void onDisable() { cancel(true); }
     private long pick(RangeSetting s) { return s.getMinInt() + random.nextInt(s.getMaxInt() - s.getMinInt() + 1); }
     private ItemStack selectedStack(){return slotLease==null?null:slotLease.stack();}
     private static AutoBuffModule module() { return Vibe.getInstance() == null ? null : Vibe.getInstance().getModuleManager().getModule(AutoBuffModule.class); }
     public static boolean ownsUseInput() { AutoBuffModule m = module(); return m != null && m.isEnabled() && m.phase != Phase.IDLE; }
+    /** Mark only an actual C08 dispatched by the native use controller, on the client thread. */
+    public static void headUseSentHook() {
+        AutoBuffModule m = module();
+        if (m != null && m.isEnabled() && m.active == Kind.HEAD && m.phase == Phase.USING && m.pressed
+                && m.slotLease != null && m.slotLease.active() && m.player == m.mc.thePlayer && m.world == m.mc.theWorld)
+            m.headInteracted = true;
+    }
+    public static void finishInputHook() { finishInputHook(System.currentTimeMillis()); }
+    public static void finishInputHook(long now) {
+        AutoBuffModule m = module();
+        if (m != null && m.isEnabled() && m.headInteracted && m.active == Kind.HEAD && m.phase == Phase.USING) m.finishHead(now);
+    }
     /** Recomputed with vanilla movement each tick, before MoveFix corrects the camera-relative input. */
     public static void inputHook(net.minecraft.util.MovementInput input) {
         AutoBuffModule m = module();

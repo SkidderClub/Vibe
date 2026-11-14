@@ -187,6 +187,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
                     && ("updateRenderer".equals(name) || "func_78464_a".equals(name) || "e".equals(name))) {
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, SCAFFOLD_HOOK, "finishInputHook", "()V", false);
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, BED_AURA_HOOK, "finishInputHook", "()V", false);
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/module/impl/combat/AutoBuffModule", "finishInputHook", "()V", false);
                 super.visitMethodInsn(Opcodes.INVOKESTATIC, "dev/vibe/inventory/HotbarSwitches", "finishInputHook", "()V", false);
                 finished = true;
             }

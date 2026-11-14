@@ -12,6 +12,48 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AutoBuffTest {
+    @Test public void headUsesOneDelayAndRestoresInTheSameNativeInputPassWithoutServerConfirmation() throws Exception {
+        try (AutomationFixture f=new AutomationFixture()) {
+            AutoBuffModule m=new AutoBuffModule();f.base.modules.registerDynamic(m);
+            m.modes.setValue(java.util.Collections.singleton(Kind.HEAD.label));m.refill.setEnabled(false);
+            m.delays.get(Kind.HEAD).setRange(200,200);m.headPause.setRange(600,600);
+            m.switchDelay.setRange(500,500);m.restoreDelay.setRange(1000,1000);
+            assertFalse(m.switchDelay.isVisible());assertFalse(m.restoreDelay.isVisible());
+            f.player.inventory.mainInventory[0]=new ItemStack(Items.diamond_sword);
+            f.player.inventory.mainInventory[8]=new ItemStack(Items.skull,3,3);f.health(10);
+            f.mc.playerController=dev.vibe.combat.SilentMurderPacketsTest.nativeController(f.mc,f.queue);
+            f.mc.playerController.updateController();f.queue.packets.clear();m.setEnabled(true);
+            m.tick(1000);m.tick(1199);assertEquals(0,f.player.inventory.currentItem);
+            m.tick(1200);AutoBuffModule.prepareInputHook();assertTrue(f.mc.gameSettings.keyBindUseItem.isPressed());
+            // The unmodified stack returns false locally; the server still receives its C08.
+            f.mc.playerController.sendUseItem(f.player,f.mc.theWorld,f.player.getHeldItem());
+            assertEquals(8,f.player.inventory.currentItem);AutoBuffModule.finishInputHook(1200);
+            assertEquals(0,f.player.inventory.currentItem);assertFalse(AutoBuffModule.ownsUseInput());
+            assertEquals(3,f.player.inventory.mainInventory[8].stackSize);assertEquals(10,f.player.getHealth(),0);
+            assertEquals(3,f.queue.packets.size());assertEquals(8,((C09PacketHeldItemChange)f.queue.packets.get(0)).getSlotId());
+            assertTrue(f.queue.packets.get(1) instanceof C08PacketPlayerBlockPlacement);assertEquals(0,((C09PacketHeldItemChange)f.queue.packets.get(2)).getSlotId());
+            HotbarSwitches.finishInputHook();m.tick(1799);assertEquals(0,f.player.inventory.currentItem);
+            m.tick(1800);m.tick(1999);assertEquals(0,f.player.inventory.currentItem);m.tick(2000);assertTrue(AutoBuffModule.ownsUseInput());
+            m.setEnabled(false);assertEquals(0,f.player.inventory.currentItem);
+        }
+    }
+    @Test public void instantHeadRestoresThePreviousSilentToolAndEndsNamedFoodHeadUse() throws Exception {
+        for (boolean food : new boolean[]{false,true}) try (AutomationFixture f=new AutomationFixture()) {
+            AutoBuffModule m=new AutoBuffModule();dev.vibe.module.impl.world.AutoToolModule tool=new dev.vibe.module.impl.world.AutoToolModule();
+            f.base.modules.registerDynamic(m);f.base.modules.registerDynamic(tool);tool.setEnabled(true);tool.switching.mode.setValue("Silent");
+            m.switching.mode.setValue("Silent");m.modes.setValue(java.util.Collections.singleton(Kind.HEAD.label));m.refill.setEnabled(false);m.delays.get(Kind.HEAD).setRange(0,0);
+            f.player.inventory.mainInventory[0]=new ItemStack(Items.diamond_sword);f.player.inventory.mainInventory[2]=new ItemStack(Items.iron_pickaxe);
+            f.player.inventory.mainInventory[8]=food?new ItemStack(Items.golden_apple).setStackDisplayName("Golden Head"):new ItemStack(Items.skull,1,3);
+            f.health(10);f.mc.playerController=dev.vibe.combat.SilentMurderPacketsTest.nativeController(f.mc,f.queue);
+            HotbarSwitches.acquire(tool,tool.switching,2,HotbarSwitches.TOOL);m.setEnabled(true);m.tick(1000);m.tick(1000);AutoBuffModule.prepareInputHook();
+            f.mc.playerController.sendUseItem(f.player,f.mc.theWorld,f.player.getHeldItem());
+            AutoBuffModule.finishInputHook(1000);HotbarSwitches.finishInputHook();
+            assertEquals(0,f.player.inventory.currentItem);assertEquals(2,dev.vibe.module.impl.world.AutoToolModule.serverSlotHook(0));
+            assertFalse(f.player.isUsingItem());assertFalse(AutoBuffModule.ownsUseInput());
+            assertFalse(f.mc.gameSettings.keyBindUseItem.isKeyDown());
+            m.setEnabled(false);tool.setEnabled(false);
+        }
+    }
     @Test public void backwardEatingUsesNativeMovementAndRespectsIndependentOptionsAndCleanup() throws Exception {
         for (Kind kind : new Kind[]{Kind.EAT,Kind.GAPPLE}) try (AutomationFixture f=new AutomationFixture()) {
             AutoBuffModule m=new AutoBuffModule();MoveFixModule fix=new MoveFixModule();

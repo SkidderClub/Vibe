@@ -27,6 +27,8 @@ public final class FreecamProductionCheck {
             try {
                 LaunchClassLoader loader=Launch.classLoader;
                 RewoundProductionCheck.verify(loader);
+                GameplayProductionCheck.verify(loader);
+                OUTPUT.println("Native Escape classification and instant Auto Head completion linked through production Forge/OptiFine.");
                 OUTPUT.println("Rewound movement, walking, ground and main-thread correction hooks linked through production Forge/OptiFine.");
 
                 // A rebuild replaces the source JAR after the running loader has opened
