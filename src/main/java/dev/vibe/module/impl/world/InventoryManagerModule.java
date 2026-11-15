@@ -49,6 +49,8 @@ public final class InventoryManagerModule extends Module {
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final Random random = new Random();
     private final ContainerClickDispatcher clicks = new ContainerClickDispatcher();
+    private final dev.vibe.inventory.PlayerInventorySession session=new dev.vibe.inventory.PlayerInventorySession(clicks);
+    private long lastInterval;
     private PendingAction pendingAction;
     private long startedAt;
     private long nextAction;
@@ -60,15 +62,15 @@ public final class InventoryManagerModule extends Module {
     }
 
     public void tick() {
-        if (dev.vibe.inventory.PlayerInventorySession.isBusy()) return;
-        if (!isEnabled() || minecraft.thePlayer == null || !canManage()) {
+        if (dev.vibe.inventory.PlayerInventorySession.isBusy()&&!session.valid()) return;
+        if (!isEnabled() || minecraft.thePlayer == null || minecraft.theWorld==null || !canManage()) {
             resetRuntime();
             return;
         }
         // Never issue a player-inventory click while another container owns
         // the active window. This is the same live-window guard RavenBS uses
         // before every delayedClick call.
-        if (!(minecraft.currentScreen instanceof GuiInventory)
+        if ((minecraft.currentScreen!=null&&!(minecraft.currentScreen instanceof GuiInventory))
                 || minecraft.thePlayer.openContainer != minecraft.thePlayer.inventoryContainer
                 || !(minecraft.thePlayer.inventoryContainer instanceof ContainerPlayer)) {
             resetRuntime();
@@ -80,7 +82,6 @@ public final class InventoryManagerModule extends Module {
         if (startedAt == 0L) {
             startedAt = now;
             nextAction = now + pick(startDelay);
-            return;
         }
         if (now < nextAction) return;
 
@@ -92,16 +93,17 @@ public final class InventoryManagerModule extends Module {
             if (pendingAction == null) pendingAction = dropExcess(container, layout);
         }
         if (pendingAction == null) {
-            nextAction = now + Math.max(250L, pick(delay));
+            session.close();
+            nextAction = now + pick(delay);
             return;
         }
-
+        if(minecraft.currentScreen==null&&!session.open("Silent"))return;
         boolean sent = executePending(container, pendingAction, now);
         if (sent || pendingAction == null) {
             // The next step is delayed exactly like RavenBS's delayedClick;
             // no burst of pickup, put and return clicks is emitted in one
             // client tick.
-            nextAction = now + Math.max(125L, pick(delay));
+            nextAction = now + lastInterval;
         }
     }
 
@@ -146,6 +148,8 @@ public final class InventoryManagerModule extends Module {
                 if (assignment.getKey() >= 0 && assignment.getKey() <= 8) {
                     return PendingAction.hotbarSwap(source, assignment.getKey(), type);
                 }
+                if(existing==null&&best.getItem() instanceof ItemArmor&&target==5+((ItemArmor)best.getItem()).armorType)
+                    return new PendingAction(ActionKind.EQUIP,source,target,-1,type,null,0);
                 return PendingAction.pickup(source, target, type);
             }
         }
@@ -244,7 +248,7 @@ public final class InventoryManagerModule extends Module {
             pendingAction = null;
             return false;
         }
-        long interval = Math.max(125L, pick(delay));
+        long interval = pick(delay);lastInterval=interval;
         if (action.kind == ActionKind.DROP) {
             ItemStack stack = container.getSlot(action.slot).getStack();
             // Drops keep the exact original manager decision (including
@@ -259,6 +263,12 @@ public final class InventoryManagerModule extends Module {
             cursorUntil = now + 450L;
             pendingAction = null;
             return true;
+        }
+        if(action.kind==ActionKind.EQUIP){
+            ItemStack stack=container.getSlot(action.slot).getStack();
+            if(stack==null||!InventoryLayout.matches(action.type,stack)||container.getSlot(action.target).getHasStack()){pendingAction=null;return false;}
+            if(!clicks.click(container,action.slot,0,1,interval))return false;
+            pendingAction=null;cursorSlot=action.target;cursorUntil=now+450;return true;
         }
         if (action.kind == ActionKind.HOTBAR_SWAP) {
             ItemStack source = container.getSlot(action.slot).getStack();
@@ -308,9 +318,10 @@ public final class InventoryManagerModule extends Module {
 
     private boolean isUnique(Type type) {
         return type == Type.SWORD || type == Type.PICKAXE || type == Type.AXE || type == Type.SHOVEL || type == Type.HOE
-                || type == Type.HELMET || type == Type.CHESTPLATE || type == Type.LEGGINGS || type == Type.BOOTS;
+                || type == Type.HELMET || type == Type.CHESTPLATE || type == Type.LEGGINGS || type == Type.BOOTS||type==Type.BOW||type==Type.ROD;
     }
     public boolean hasPendingInteraction() { return pendingAction != null; }
+    public boolean ownsDispatcher(ContainerClickDispatcher dispatcher){return clicks==dispatcher;}
     public static boolean isReserved(InventoryLayout layout, int containerSlot, ItemStack stack) {
         for (Map.Entry<Integer,Type> entry : layout.assignments().entrySet())
             if (entry.getKey() < 40 && InventoryLayout.toContainerSlot(entry.getKey()) == containerSlot
@@ -331,6 +342,7 @@ public final class InventoryManagerModule extends Module {
     public int getCursorSlot() { return cursorSlot; }
 
     private void resetRuntime() {
+        session.close();
         startedAt = 0L;
         nextAction = 0L;
         pendingAction = null;
@@ -396,13 +408,20 @@ public final class InventoryManagerModule extends Module {
         } else if (stack.getItem() instanceof ItemArmor) {
             result += ((ItemArmor) stack.getItem()).damageReduceAmount
                     + EnchantmentHelper.getEnchantmentLevel(Enchantment.protection.effectId, stack) * 0.25D;
+        } else if(stack.getItem()==Items.bow){
+            result+=EnchantmentHelper.getEnchantmentLevel(Enchantment.power.effectId,stack)*2.5
+                    +EnchantmentHelper.getEnchantmentLevel(Enchantment.punch.effectId,stack)*.75
+                    +EnchantmentHelper.getEnchantmentLevel(Enchantment.flame.effectId,stack)*.6
+                    +EnchantmentHelper.getEnchantmentLevel(Enchantment.infinity.effectId,stack)*1.5;
+        } else if(stack.getItem()==Items.fishing_rod){
+            result+=EnchantmentHelper.getEnchantmentLevel(Enchantment.unbreaking.effectId,stack)*.15;
         } else {
             result += stack.stackSize * 0.1D;
         }
         return result - stack.getItemDamage() * 0.0001D;
     }
 
-    private enum ActionKind { DROP, HOTBAR_SWAP, PICKUP }
+    private enum ActionKind { DROP, HOTBAR_SWAP, PICKUP,EQUIP }
 
     private static final class PendingAction {
         private final ActionKind kind;

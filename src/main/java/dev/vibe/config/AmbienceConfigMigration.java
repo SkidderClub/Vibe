@@ -9,6 +9,11 @@ final class AmbienceConfigMigration {
     static void migrate(JsonArray modules){
         migrateFog(modules);
         migrateWeather(modules);
+        for(JsonElement value:modules)if(value.isJsonObject()){
+            JsonObject entry=value.getAsJsonObject();if(!"ambience".equalsIgnoreCase(text(entry,"id")))continue;
+            JsonObject settings=object(entry,"settings");
+            try{if(settings.has("Firefly Count")&&settings.has("Firefly Range")&&settings.get("Firefly Count").getAsDouble()==32&&settings.get("Firefly Range").getAsDouble()==14){settings.addProperty("Firefly Count",128);settings.addProperty("Firefly Range",36);}}catch(RuntimeException ignored){}
+        }
     }
     private static void migrateFog(JsonArray modules){
         JsonObject fog=null,ambience=null;

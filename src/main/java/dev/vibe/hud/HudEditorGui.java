@@ -428,6 +428,7 @@ public final class HudEditorGui extends GuiScreen {
         if(HudManager.CUSTOM_HEALTH.equals(element.getId()))return hud.customHealth.mode.getModes().toArray(new String[0]);
         if(HudManager.HOTBAR.equals(element.getId()))return new String[]{"Minecraft","Fortnite","Skeet","Vibe","LiquidGlass","Lavalamp"};
         if("radar".equals(element.getId()))return new String[]{"Vibe","Skeet","LiquidGlass","Lavalamp","Transparent"};
+        if("keybindlist".equals(element.getId()))return new String[]{"Vibe","Skeet","LiquidGlass","Lavalamp"};
         if("killfeed".equals(element.getId()))return new String[]{"Vibe","Skeet","LiquidGlass","Lavalamp","CounterStrike","Fortnite"};
         if("candle".equals(element.getId()))return new String[]{"Vibe","Skeet","LiquidGlass","Lavalamp","Transparent"};
         if(HudManager.CLOCK.equals(element.getId())||HudManager.CHAT.equals(element.getId()))return new String[]{"Vibe","Skeet","LiquidGlass","Lavalamp","Transparent"};

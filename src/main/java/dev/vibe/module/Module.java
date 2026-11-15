@@ -13,7 +13,8 @@ public abstract class Module {
     private final String description;
     private final Category category;
     private int key;
-    private boolean enabled;
+    private volatile boolean enabled;
+    private volatile boolean suspended;
     private int toggleDepth;
     private final List<Setting<?>> settings = new ArrayList<Setting<?>>();
 
@@ -42,9 +43,9 @@ public abstract class Module {
         this.enabled = enabled;
         toggleDepth++;
         try {
-            if (enabled) onEnable();
+            if (enabled) { if(!suspended)onEnable(); }
             else {
-                try { onDisable(); }
+                try { if(!suspended)onDisable(); }
                 finally { dev.vibe.module.impl.movement.MoveFixModule.producerDisabled(this); dev.vibe.inventory.HotbarSwitches.releaseOwner(this); }
             }
         }
@@ -94,7 +95,17 @@ public abstract class Module {
     }
 
     public boolean isEnabled() {
-        return enabled;
+        return enabled&&!suspended;
+    }
+    /** Temporary runtime pauses never rewrite the user's saved enable state. */
+    public boolean isConfiguredEnabled(){return enabled;}
+    public boolean isSuspended(){return suspended;}
+    public final void suspend(boolean value){
+        if(suspended==value)return;
+        suspended=value;
+        if(!enabled)return;
+        if(value){try{onDisable();}finally{dev.vibe.module.impl.movement.MoveFixModule.producerDisabled(this);dev.vibe.inventory.HotbarSwitches.releaseOwner(this);}}
+        else onEnable();
     }
 
     /** Modules such as Targets provide shared settings and must always run. */

@@ -30,13 +30,13 @@ public final class TargetsModule extends Module {
     private final Set<String> warnedTargets = new HashSet<String>();
     private Object warningWorld;
     public final BooleanSetting targetArea = addSetting(new BooleanSetting("Target Area", false));
-    public final BooleanSetting displayTargetArea = addSetting(new BooleanSetting("Display Target Area", false, () -> targetArea.isEnabled()));
-    public final BooleanSetting invertArea = addSetting(new BooleanSetting("Invert Target Area", false, () -> targetArea.isEnabled()));
+    public final BooleanSetting displayTargetArea = addSetting(new BooleanSetting("Display Target Area", false, this::isTargetAreaActive));
+    public final BooleanSetting invertArea = addSetting(new BooleanSetting("Invert Target Area", false, this::isTargetAreaActive));
     public final BlockCoordinateSetting pos1X = coordinate("Pos1 X", 0), pos1Y = coordinate("Pos1 Y", 0), pos1Z = coordinate("Pos1 Z", 0);
     public final BlockCoordinateSetting pos2X = coordinate("Pos2 X", 0), pos2Y = coordinate("Pos2 Y", 255), pos2Z = coordinate("Pos2 Z", 0);
 
     private BlockCoordinateSetting coordinate(String name, int value) {
-        return addSetting(new BlockCoordinateSetting(name, value, () -> targetArea.isEnabled()));
+        return addSetting(new BlockCoordinateSetting(name, value, this::isTargetAreaActive));
     }
     public void setCorner(int corner, net.minecraft.util.BlockPos pos) {
         (corner == 1 ? pos1X : pos2X).setInt(pos.getX());
@@ -51,10 +51,14 @@ public final class TargetsModule extends Module {
                 (double)Math.max(pos1Y.getInt(), pos2Y.getInt()) + 1,
                 (double)Math.max(pos1Z.getInt(), pos2Z.getInt()) + 1);
     }
-    public boolean shouldDisplayTargetArea() { return targetArea.isEnabled() && displayTargetArea.isEnabled(); }
+    public boolean isTargetAreaActive(){return targetArea.isEnabled()||dev.vibe.module.impl.meme.RewoundPitModule.forcesTargetArea();}
+    public boolean shouldDisplayTargetArea() { return isTargetAreaActive() && displayTargetArea.isEnabled(); }
 
     public boolean inTargetArea(double x, double y, double z) {
-        if (!targetArea.isEnabled()) return true;
+        return !isTargetAreaActive()||inConfiguredTargetArea(x,y,z);
+    }
+    /** The configured combat region, including inversion, even when filtering is temporarily disabled. */
+    public boolean inConfiguredTargetArea(double x,double y,double z){
         boolean inside = x >= Math.min(pos1X.getInt(), pos2X.getInt()) && x < (double)Math.max(pos1X.getInt(), pos2X.getInt()) + 1
                 && y >= Math.min(pos1Y.getInt(), pos2Y.getInt()) && y < (double)Math.max(pos1Y.getInt(), pos2Y.getInt()) + 1
                 && z >= Math.min(pos1Z.getInt(), pos2Z.getInt()) && z < (double)Math.max(pos1Z.getInt(), pos2Z.getInt()) + 1;
@@ -75,6 +79,7 @@ public final class TargetsModule extends Module {
         if (entity == null || !entity.isEntityAlive() || entity.isDead) {
             return false;
         }
+        if(dev.vibe.module.impl.meme.RewoundPitModule.reservesActions())return false;
         if (!inTargetArea(entity.posX, entity.posY, entity.posZ)) return false;
         if (!invisibles.isEnabled() && entity.isInvisible()) {
             return false;

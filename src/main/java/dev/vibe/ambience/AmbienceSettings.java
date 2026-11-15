@@ -13,8 +13,8 @@ public final class AmbienceSettings {
         public final ColorSetting color,trailColor;
         public final BooleanSetting nightOnly;
         public Fireflies(Consumer<Setting<?>> r,BooleanSupplier v){
-            count=add(r,new NumberSetting("Firefly Count",32,4,96,1,v));
-            radius=add(r,new NumberSetting("Firefly Range",14,4,32,1,v));
+            count=add(r,new NumberSetting("Firefly Count",128,4,512,1,v));
+            radius=add(r,new NumberSetting("Firefly Range",36,4,96,1,v));
             speed=add(r,new NumberSetting("Firefly Speed",1,.2,3,.05,v));
             size=add(r,new NumberSetting("Firefly Size",.045,.02,.12,.005,v));
             color=add(r,new ColorSetting("Firefly Color",0xFFFFE692,v));

@@ -15,13 +15,20 @@ final class RadarMapCache {
         int centerX=((int)Math.floor(mc.thePlayer.posX/4))*4,centerZ=((int)Math.floor(mc.thePlayer.posZ/4))*4;long now=System.nanoTime()/1000000;
         if(column>=SIZE){if(ready&&stride==requestedStride&&Math.abs(centerX-x)<4&&Math.abs(centerZ-z)<4&&now<refresh)return;buildX=centerX;buildZ=centerZ;buildStride=requestedStride;column=0;}
         for(int limit=Math.min(SIZE,column+4);column<limit;column++)for(int row=0;row<SIZE;row++){
-            BlockPos p=new BlockPos(buildX+(column-SIZE/2)*buildStride,0,buildZ+(row-SIZE/2)*buildStride);int c=0xFF222831;
-            if(world.isBlockLoaded(p)){int h=world.getHeight(p).getY()-1;p=new BlockPos(p.getX(),h,p.getZ());IBlockState s=world.getBlockState(p);c=s.getBlock().getMapColor(s).colorValue;int tint=s.getBlock().colorMultiplier(world,p,0);if(tint!=0xFFFFFF)c=tint;
-                double light=.82+Math.sin(h*.38)*.08;c=0xFF000000|((int)((c>>16&255)*light)<<16)|((int)((c>>8&255)*light)<<8)|(int)((c&255)*light);
-            }building[column+row*SIZE]=c;
+            BlockPos p=new BlockPos(buildX+(column-SIZE/2)*buildStride,0,buildZ+(row-SIZE/2)*buildStride);
+            building[column+row*SIZE]=sample(world,p);
         }
         if(column>=SIZE){if(texture==null){texture=new DynamicTexture(SIZE,SIZE);texture.setBlurMipmap(true,false);}System.arraycopy(building,0,texture.getTextureData(),0,building.length);texture.updateDynamicTexture();x=buildX;z=buildZ;stride=buildStride;ready=true;refresh=now+2000;}
     }
     int texture(){return texture==null?0:texture.getGlTextureId();}
+    static int sample(World world,BlockPos column){
+        if(!world.isBlockLoaded(column))return 0;
+        int h=world.getHeight(column).getY()-1;if(h<0)return 0;
+        BlockPos p=new BlockPos(column.getX(),h,column.getZ());IBlockState state=world.getBlockState(p);
+        if(state.getBlock().getMaterial()==net.minecraft.block.material.Material.air)return 0;
+        int c=state.getBlock().getMapColor(state).colorValue,tint=state.getBlock().colorMultiplier(world,p,0);if(tint!=0xFFFFFF)c=tint;
+        double light=.82+Math.sin(h*.38)*.08;
+        return 0xFF000000|((int)((c>>16&255)*light)<<16)|((int)((c>>8&255)*light)<<8)|(int)((c&255)*light);
+    }
     void suspend(){if(Minecraft.getMinecraft().theWorld==null){world=null;ready=false;column=SIZE;}}
 }

@@ -36,13 +36,13 @@ public final class ModuleFeedback {
         long now = System.nanoTime() / 1000000L;
         dev.vibe.module.impl.client.HudModule hud = vibe.getModuleManager().getModule(dev.vibe.module.impl.client.HudModule.class);
         if (hud != null) vibe.getFeedback().notifications.configure(hud.notifications.limit.getInt(), hud.notifications.durationMillis(), now);
-        vibe.getFeedback().notifications.add(module.getId(), module.getName(), module.isEnabled(), now);
+        vibe.getFeedback().notifications.add(module.getId(), module.getName(), module.isConfiguredEnabled(), now);
         ToggleSoundModule sound = vibe.getModuleManager().getModule(ToggleSoundModule.class);
         // Disabling ToggleSound still acknowledges that final toggle.
         if (sound == null || (!sound.isEnabled() && sound != module) || sound.volume.getDouble() <= 0) return;
         Minecraft minecraft = vibe.getMinecraft();
         if (minecraft == null || minecraft.getSoundHandler() == null) return;
-        net.minecraft.client.audio.ISound cue = sound.sound(module.isEnabled());
+        net.minecraft.client.audio.ISound cue = sound.sound(module.isConfiguredEnabled());
         Runnable playback = () -> {
             try { minecraft.getSoundHandler().playSound(cue); }
             catch (RuntimeException ignored) { /* An unavailable audio device must not prevent a module toggle. */ }

@@ -1,4 +1,16 @@
-# Targetstrafe, Auto Head, NCP tower and pause menus
+# Movement and gameplay controls
+
+## AutoWalk and water
+
+AutoWalk retains the approach waypoint before a raised block until the real
+player footprint clears the opening. It faces the jump before taking off and
+keeps the landing waypoint until the player reaches its top. Jump checks also
+include the launch headroom, including for nearby targets and Forward mode.
+
+Every Speed mode suspends its input, motion and timer changes in water or lava.
+Entering liquid releases only Speed's own timer and air-control settings;
+AutoWalk's normal swimming jump input remains active. Speed also yields while
+AutoWalk prepares and completes a terrain jump.
 
 ## Targetstrafe
 
@@ -6,7 +18,10 @@
   modules to be enabled. Both default off. The aura check includes AIAura,
   which uses the shared Killaura controller.
 - **Target Range** selects candidates; **Radius** controls where orbiting starts.
-  Targets outside the configured radius do not pull the player toward them.
+  With **Aggressive** off (the default), targets outside the configured radius
+  do not pull the player toward them. With it on, movement points straight at
+  the target until reaching the circle, then switches to orbiting. Dependencies,
+  target filters and void checks still apply while approaching.
   An existing orbit has a 0.35-block exit margin to avoid toggling at its edge.
 - Steering keeps a continuous radial correction instead of rounding it to eight
   keyboard directions. The same world vector is retained with silent rotations
@@ -62,6 +77,9 @@ void reversal, fractional steering through MoveFix and Rewound Speed, instant
 head C09/C08/restore ordering, unchanged server-side head stacks, named-food
 head cleanup, silent tool restoration, stationary/upward tower guards, the
 exact three-second fallback, and native pause-menu behavior.
+They also traverse a narrow raised passage using collision physics, check
+launch headroom, exercise Aggressive's approach/orbit transition, and verify
+that every Speed mode leaves swimming input and movement unchanged.
 
 Mapped and obfuscated Minecraft/controller bytecode is checked for input/use
 hook placement and valid frames. The production Forge/OptiFine probe verifies

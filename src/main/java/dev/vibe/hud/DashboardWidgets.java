@@ -18,10 +18,51 @@ import org.lwjgl.opengl.*;
 
 /** Passive instruments share the existing theme surfaces and HUD scaling path. */
 public final class DashboardWidgets {
-    public static final String[] IDS={"radar","networkgraph","killfeed","sessiontimeline","candle"};
-    public static String title(String id){switch(id){case "radar":return "Radar";case "networkgraph":return "Network Graph";case "killfeed":return "Kill Feed";case "sessiontimeline":return "Session Timeline";case "candle":return "Candle";default:return id;}}
+    static boolean insideMap(float px,float py,float x,float y,float w,float h,float radius,float margin){
+        double dx=Math.abs(px-x-w/2)-(w/2-radius),dy=Math.abs(py-y-h/2)-(h/2-radius);
+        return Math.hypot(Math.max(dx,0),Math.max(dy,0))+Math.min(Math.max(dx,dy),0)-radius<=-margin;
+    }
+    static List<dev.vibe.module.Module> binds(DashboardSettings s){
+        List<dev.vibe.module.Module> result=new ArrayList<>();
+        for(dev.vibe.module.Module module:Vibe.getInstance().getModuleManager().getModules())
+            if(module.getKey()!=0&&module.getKey()!=Integer.MIN_VALUE&&(!s.onlyEnabled.isEnabled()||module.isConfiguredEnabled()))result.add(module);
+        result.sort(Comparator.comparing(dev.vibe.module.Module::getName,String.CASE_INSENSITIVE_ORDER));return result;
+    }
+    private void keybinds(DashboardSettings s,int x,int y,int w,int h,String theme,boolean preview){
+        List<dev.vibe.module.Module> modules=binds(s);boolean square=theme.equals("Skeet");
+        text(s,"Keybinds",x+10,y+8,s.text.getArgb());String count=Integer.toString(modules.size());text(s,count,x+w-10-mc.fontRendererObj.getStringWidth(count),y+8,s.accent.getArgb());
+        Gui.drawRect(x+9,y+21,x+w-9,y+22,s.accent.getArgb()&0xFFFFFF|0x65000000);
+        if(modules.isEmpty()){text(s,preview?"Bound modules appear here":"No active keybinds",x+10,y+30,0xFF9CA9AB);return;}
+        for(int i=0;i<Math.min(s.bindLimit.getInt(),modules.size());i++){
+            dev.vibe.module.Module module=modules.get(i);int yy=y+28+i*19;
+            String key=module.getKey()<0?"M"+(module.getKey()+101):org.lwjgl.input.Keyboard.getKeyName(module.getKey());if(key==null)key="?";
+            String state=module.isSuspended()?"Paused":module.isConfiguredEnabled()?"On":"Off";
+            int ink=module.isConfiguredEnabled()?s.accent.getArgb():0xFF84909E,right=x+w-10;
+            if(s.bindStatus.isEnabled()){int sw=mc.fontRendererObj.getStringWidth(state);text(s,state,right-sw,yy+2,ink);right-=sw+10;}
+            int kw=mc.fontRendererObj.getStringWidth(key)+10;HudShapes.round(right-kw,yy-1,kw,14,square?1:4,0x403D4B60);
+            text(s,key,right-kw+5,yy+2,s.text.getArgb());
+            text(s,mc.fontRendererObj.trimStringToWidth(protect(module.getName()),Math.max(8,right-kw-x-20)),x+10,yy+2,s.text.getArgb());
+        }
+    }
+    private void mapShape(DashboardSettings s,float x,float y,float w,float h,float cx,float cy,float scale,float angle){
+        float radius=Math.min(w,h)*s.mapCorners.getFloat()/200,dx=(float)(map.x-mc.thePlayer.posX)*scale,dz=(float)(map.z-mc.thePlayer.posZ)*scale,span=RadarMapCache.SIZE*map.stride*scale;
+        try(EffectState state=new EffectState()){
+            GL11.glEnable(GL11.GL_SCISSOR_TEST);GL11.glEnable(GL11.GL_TEXTURE_2D);GL11.glBindTexture(GL11.GL_TEXTURE_2D,map.texture());GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);GL11.glColor4f(1,1,1,1);
+            GL11.glBegin(GL11.GL_TRIANGLE_FAN);mapVertex(cx,cy,cx,cy,angle,dx,dz,span);
+            for(int corner=0;corner<4;corner++){float centerX=corner==0||corner==3?x+radius:x+w-radius,centerY=corner<2?y+radius:y+h-radius;
+                for(int i=0;i<=20;i++){double a=Math.toRadians(180+corner*90+i*4.5);mapVertex(centerX+(float)Math.cos(a)*radius,centerY+(float)Math.sin(a)*radius,cx,cy,angle,dx,dz,span);}}
+            mapVertex(x,y+radius,cx,cy,angle,dx,dz,span);GL11.glEnd();
+        }
+    }
+    private static void mapVertex(float px,float py,float cx,float cy,float angle,float dx,float dz,float span){
+        double a=Math.toRadians(angle),vx=px-cx,vy=py-cy;
+        GL11.glTexCoord2d(.5+(vx*Math.cos(a)+vy*Math.sin(a)-dx)/span,.5+(-vx*Math.sin(a)+vy*Math.cos(a)-dz)/span);GL11.glVertex2f(px,py);
+    }
+    public static final String[] IDS={"radar","networkgraph","killfeed","sessiontimeline","candle","keybindlist"};
+    public static String title(String id){switch(id){case "keybindlist":return "Keybind List";case "radar":return "Radar";case "networkgraph":return "Network Graph";case "killfeed":return "Kill Feed";case "sessiontimeline":return "Session Timeline";case "candle":return "Candle";default:return id;}}
     public static boolean contains(String id){return Arrays.asList(IDS).contains(id);}
     private final Minecraft mc=Minecraft.getMinecraft();private final RadarMapCache map=new RadarMapCache();private final NetworkSamples network=new NetworkSamples();
+    private float mapLeft,mapTop,mapWidth,mapHeight,mapRadius;
     private Object world,connection;private long sampleAt,lastTick;private boolean stalled;private float lastYaw,lastPitch,bend,velocity;
     public void tick(HudManager manager){
         long now=System.nanoTime()/1000000;if(lastTick!=0&&now-lastTick>250)stalled=true;lastTick=now;
@@ -35,10 +76,16 @@ public final class DashboardWidgets {
     }
     public void draw(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){DashboardSettings s=hud.dashboards.get(e.getId());if(s==null)return;String id=e.getId(),theme=manager.theme(e,hud);int step=id.equals("killfeed")&&theme.equals("Fortnite")?17:24;int w=id.equals("candle")?60:s.width.getInt(),h=id.equals("candle")?88:id.equals("networkgraph")?s.height.getInt():id.equals("radar")?s.height.getInt():s.rows.getInt()*step+8;
         List<SessionJournal.Entry> entries=SessionJournal.INSTANCE.entries();long now=System.nanoTime()/1000000;
+        if(id.equals("keybindlist"))h=26+Math.max(1,Math.min(s.bindLimit.getInt(),binds(s).size()))*19;
+        if(id.equals("radar")&&s.mode.is("Map")&&s.mapCorners.getInt()==100)h=w;
         if(id.equals("killfeed")||id.equals("sessiontimeline")){entries.removeIf(v->id.equals("killfeed")?!(v.kind.equals("Kill")||v.kind.equals("Death"))||now-v.time>s.lifetime.getDouble()*1000:now-v.time>s.lifetime.getDouble()*1000);if(!preview&&entries.isEmpty()){e.setBounds(e.left(res,w),e.top(res,0),w,0);return;}h=Math.min(s.rows.getInt(),preview?3:entries.size())*step+8;}
         e.ensureOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
-        if(!id.equals("killfeed")||!theme.equals("CounterStrike")&&!theme.equals("Fortnite"))HudOverlayRenderer.panel(manager,hud,e,s,x,y,w,h);
+        if(id.equals("radar")&&s.mode.is("Map")){
+            // A filled panel would turn the map's transparent void pixels dark again.
+            if(s.border.isEnabled()&&!theme.equals("Transparent"))dev.vibe.ui.RenderUtils.roundedOutline(x,y,x+w,y+h,Math.min(w,h)*s.mapCorners.getFloat()/200,1,dev.vibe.ui.RenderUtils.alpha(s.accent.getArgb(),90));
+        }else if(!id.equals("killfeed")||!theme.equals("CounterStrike")&&!theme.equals("Fortnite"))HudOverlayRenderer.panel(manager,hud,e,s,x,y,w,h);
         if(id.equals("radar")){if(preview&&s.mode.is("Map")&&mc.theWorld!=null)map.tick(s.range.getDouble()/s.zoom.getDouble()*2.9);radar(s,x,y,w,h,preview);}
+        else if(id.equals("keybindlist"))keybinds(s,x,y,w,h,theme,preview);
         else if(id.equals("networkgraph"))graph(s,x,y,w,h,preview);
         else if(id.equals("candle"))candle(s,x,y,w,h,preview);
         else events(manager.theme(e,hud),s,x,y,w,h,entries,preview,id.equals("killfeed"),now);
@@ -46,8 +93,9 @@ public final class DashboardWidgets {
     private void text(DashboardSettings s,String text,float x,float y,int color){mc.fontRendererObj.drawString(text,x,y,color,s.shadow.isEnabled());}
     private String protect(String text){NameProtectModule n=Vibe.getInstance().getModuleManager().getModule(NameProtectModule.class);return n==null?text:n.protectText(text);}
     private void radar(DashboardSettings s,int x,int y,int w,int h,boolean preview){float cx=x+w/2F,cy=y+h/2F,scale=(float)(Math.min(w,h)/2./(s.range.getDouble()/s.zoom.getDouble())),angle=s.rotate.isEnabled()&&mc.thePlayer!=null?180-mc.thePlayer.rotationYaw:0;
+        mapLeft=x+3;mapTop=y+3;mapWidth=w-6;mapHeight=h-6;mapRadius=Math.min(mapWidth,mapHeight)*s.mapCorners.getFloat()/200;
         try(GuiClip clip=GuiClip.local(x+3,y+3,w-6,h-6)){
-            if(s.mode.is("Map")&&map.ready&&mc.thePlayer!=null){GL11.glPushMatrix();try{GL11.glTranslatef(cx,cy,0);GL11.glRotatef(angle,0,0,1);float dx=(float)(map.x-mc.thePlayer.posX)*scale,dz=(float)(map.z-mc.thePlayer.posZ)*scale,span=RadarMapCache.SIZE*map.stride*scale;try(EffectState state=new EffectState()){GL11.glEnable(GL11.GL_SCISSOR_TEST);GL11.glEnable(GL11.GL_TEXTURE_2D);GL11.glBindTexture(GL11.GL_TEXTURE_2D,map.texture());GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);GL11.glColor4f(1,1,1,.85F);GL11.glBegin(GL11.GL_QUADS);GL11.glTexCoord2f(0,0);GL11.glVertex2f(dx-span/2,dz-span/2);GL11.glTexCoord2f(1,0);GL11.glVertex2f(dx+span/2,dz-span/2);GL11.glTexCoord2f(1,1);GL11.glVertex2f(dx+span/2,dz+span/2);GL11.glTexCoord2f(0,1);GL11.glVertex2f(dx-span/2,dz+span/2);GL11.glEnd();}}finally{GL11.glPopMatrix();}}
+            if(s.mode.is("Map")&&map.ready&&mc.thePlayer!=null)mapShape(s,x+3,y+3,w-6,h-6,cx,cy,scale,angle);
             else if(s.mode.is("Map"))text(s,"Loading terrain…",x+9,cy-4,0xFF9CA9BB);
             else{for(int i=1;i<=3;i++)circle(cx,cy,Math.min(w,h)*.145F*i,0x383E607D);Gui.drawRect(x+4,(int)cy,x+w-4,(int)cy+1,0x253F607B);Gui.drawRect((int)cx,y+4,(int)cx+1,y+h-4,0x253F607B);
                 if(s.sweep.isEnabled()){double a=(System.nanoTime()/1E9*.8)%(Math.PI*2);try(EffectState st=new EffectState()){GL11.glEnable(GL11.GL_SCISSOR_TEST);GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE);GL11.glBegin(GL11.GL_TRIANGLE_FAN);WorldDraw.color(s.accent.getArgb()&0xFFFFFF|0x45000000);GL11.glVertex2f(cx,cy);for(int i=0;i<=32;i++){WorldDraw.color(s.accent.getArgb()&0xFFFFFF|((i*48/32)<<24));double b=a-.65+i*.65/32;GL11.glVertex2d(cx+Math.cos(b)*Math.min(w,h)*.47,cy+Math.sin(b)*Math.min(w,h)*.47);}GL11.glEnd();}}
@@ -58,7 +106,7 @@ public final class DashboardWidgets {
             marker(s,null,cx,cy,s.accent.getArgb(),s.rotate.isEnabled()?180:mc.thePlayer==null?180:mc.thePlayer.rotationYaw);
         }
     }
-    private void marker(DashboardSettings s,Entity entity,float x,float y,int color,float angle){float size=s.markerSize.getFloat();if(s.markers.is("Head")&&entity instanceof EntityPlayer){face(entity.getUniqueID(),(int)(x-size),(int)(y-size),(int)(size*2));return;}if(s.markers.is("Dot")||s.markers.is("Head")){HudShapes.round(x-size/2,y-size/2,size,size,size/2,color);return;}try(EffectState state=new EffectState()){GL11.glEnable(GL11.GL_SCISSOR_TEST);GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);WorldDraw.color(color);GL11.glPushMatrix();GL11.glTranslatef(x,y,0);GL11.glRotatef(angle,0,0,1);if(s.markers.is("Square")){GL11.glBegin(GL11.GL_QUADS);GL11.glVertex2f(-size/2,-size/2);GL11.glVertex2f(size/2,-size/2);GL11.glVertex2f(size/2,size/2);GL11.glVertex2f(-size/2,size/2);}else{GL11.glBegin(GL11.GL_TRIANGLES);GL11.glVertex2f(0,size);GL11.glVertex2f(-size*.65F,-size*.65F);GL11.glVertex2f(size*.65F,-size*.65F);}GL11.glEnd();GL11.glPopMatrix();}}
+    private void marker(DashboardSettings s,Entity entity,float x,float y,int color,float angle){float size=s.markerSize.getFloat();if(s.mode.is("Map")&&!insideMap(x,y,mapLeft,mapTop,mapWidth,mapHeight,mapRadius,size))return;if(s.markers.is("Head")&&entity instanceof EntityPlayer){face(entity.getUniqueID(),(int)(x-size),(int)(y-size),(int)(size*2));return;}if(s.markers.is("Dot")||s.markers.is("Head")){HudShapes.round(x-size/2,y-size/2,size,size,size/2,color);return;}try(EffectState state=new EffectState()){GL11.glEnable(GL11.GL_SCISSOR_TEST);GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);WorldDraw.color(color);GL11.glPushMatrix();GL11.glTranslatef(x,y,0);GL11.glRotatef(angle,0,0,1);if(s.markers.is("Square")){GL11.glBegin(GL11.GL_QUADS);GL11.glVertex2f(-size/2,-size/2);GL11.glVertex2f(size/2,-size/2);GL11.glVertex2f(size/2,size/2);GL11.glVertex2f(-size/2,size/2);}else{GL11.glBegin(GL11.GL_TRIANGLES);GL11.glVertex2f(0,size);GL11.glVertex2f(-size*.65F,-size*.65F);GL11.glVertex2f(size*.65F,-size*.65F);}GL11.glEnd();GL11.glPopMatrix();}}
     private static void circle(float x,float y,float radius,int color){try(EffectState state=new EffectState()){GL11.glEnable(GL11.GL_SCISSOR_TEST);GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);WorldDraw.color(color);GL11.glLineWidth(1);GL11.glBegin(GL11.GL_LINE_LOOP);for(int i=0;i<64;i++){double a=i*Math.PI/32;GL11.glVertex2d(x+Math.cos(a)*radius,y+Math.sin(a)*radius);}GL11.glEnd();}}
     private void graph(DashboardSettings s,int x,int y,int w,int h,boolean preview){double ping=network.count==0?Double.NaN:network.ping[network.at(network.count-1)],jitter=network.count==0?Double.NaN:network.jitter[network.at(network.count-1)];Object channel=mc.getNetHandler()==null?null:mc.getNetHandler().getNetworkManager().channel();double tps=ServerTickRate.value(channel,System.nanoTime()/1000000);String head="Ping "+number(ping," ms")+(s.jitter.isEnabled()?"   Jitter "+number(jitter," ms"):"");text(s,mc.fontRendererObj.trimStringToWidth(head,w-14),x+7,y+7,s.text.getArgb());text(s,"TPS estimate "+number(tps,""),x+7,y+h-13,0xFF9CAAB8);
         int left=x+7,top=y+22,bottom=y+h-20;double max=100;for(double n:network.ping)if(!Double.isNaN(n))max=Math.max(max,n*1.1);

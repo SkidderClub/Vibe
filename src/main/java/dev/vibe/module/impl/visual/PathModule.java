@@ -66,6 +66,9 @@ public final class PathModule extends Module {
     private long nextSelection;
     private int searchOptions;
     private boolean walkingRequested,walkingJumps=true,walkingLine;
+    private Object navigationOwner;
+    private EntityLivingBase navigationTarget;
+    private java.util.function.Predicate<BlockPos> navigationArea=p->true;
 
     public PathModule() {
         super("Path", "Draw a walking route to a nearby player or selected target", Category.VISUAL, Keyboard.KEY_NONE);
@@ -77,7 +80,7 @@ public final class PathModule extends Module {
 
     public void tick() {
         Minecraft mc = Minecraft.getMinecraft();
-        if ((!isEnabled() && !walkingRequested) || mc == null || mc.theWorld == null || mc.thePlayer == null || mc.thePlayer.isDead) {
+        if ((!isEnabled() && !walkingRequested && navigationOwner==null) || mc == null || mc.theWorld == null || mc.thePlayer == null || mc.thePlayer.isDead) {
             clear(); return;
         }
         if (world != mc.theWorld) { clear(); world = mc.theWorld; }
@@ -87,7 +90,8 @@ public final class PathModule extends Module {
         if (options != searchOptions) {
             mainPath.clear(); goldPath.clear(); nextSelection = 0; searchOptions = options;
         }
-        if (now >= nextSelection || targetMode.is("Combat Target") || target != null && !eligible(target, mc)
+        if(navigationOwner!=null){target=navigationTarget;goldTarget=null;}
+        else if (now >= nextSelection || targetMode.is("Combat Target") || target != null && !eligible(target, mc)
                 || goldTarget != null && !eligibleGold(goldTarget, mc)) {
             target = selectTarget(mc);
             goldTarget = selectGoldTarget(mc);
@@ -119,8 +123,8 @@ public final class PathModule extends Module {
             }
             if (routeSince != 0 && now - routeSince > 1_500_000_000L) route = PathRoute.EMPTY;
             if (search == null && now >= nextSearch) {
-                terrain = new PathTerrain(mc.theWorld, mc.thePlayer);
-                searchStart = terrain.grounded(feet); searchGoal = terrain.grounded(goal);
+                terrain = new PathTerrain(mc.theWorld, mc.thePlayer,navigationOwner==null?p->true:navigationArea);
+                searchStart = terrain.grounded(feet); searchGoal = navigationOwner==null?terrain.grounded(goal):terrain.interactionGoal(destination);
                 nextSearch = now + updateInterval.getInt() * 1_000_000L;
                 if (searchStart == null || searchGoal == null) {
                     // Neither void nor unloaded terrain is connected by a fictitious straight tracer.
@@ -249,6 +253,12 @@ public final class PathModule extends Module {
     }
 
     public PathRoute getRoute() { return mainPath.route; }
+    /** An explicit service destination bypasses combat filters, while retaining bounded search and collision checks. */
+    public void requestNavigation(Object owner,EntityLivingBase destination,java.util.function.Predicate<BlockPos> allowed){
+        if(navigationOwner!=owner||navigationTarget!=destination){mainPath.clear();goldPath.clear();target=destination;goldTarget=null;}
+        navigationOwner=owner;navigationTarget=destination;navigationArea=allowed;
+    }
+    public void releaseNavigation(Object owner){if(navigationOwner==owner){navigationOwner=null;navigationTarget=null;navigationArea=p->true;clear();}}
     /** Request a refresh without restarting an in-progress, bounded search. */
     public void refreshWalkingRoute() { if(walkingRequested && mainPath.search==null)mainPath.nextSearch=0; }
     public void requestWalking(boolean active,boolean jumpAllowed,boolean line) { walkingRequested=active;walkingJumps=jumpAllowed;walkingLine=line; }

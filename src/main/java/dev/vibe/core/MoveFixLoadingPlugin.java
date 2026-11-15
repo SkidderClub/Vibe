@@ -14,6 +14,8 @@ public final class MoveFixLoadingPlugin implements IFMLLoadingPlugin {
                 "dev.vibe.core.MoveFixTransformer",
                 "dev.vibe.core.NoEscMenuTransformer",
                 "dev.vibe.core.RewoundTransformer",
+                "dev.vibe.core.KeepSprintTransformer",
+                "dev.vibe.core.PhaseTransformer",
                 "dev.vibe.core.ChamsTransformer",
                 "dev.vibe.core.MemeAnimationTransformer",
                 "dev.vibe.core.BigbrainTransformer",

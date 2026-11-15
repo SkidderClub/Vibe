@@ -141,6 +141,7 @@ public final class HudManager {
     public HudManager(File minecraftConfigDirectory) {
         dashboardElements.put("radar",new HudElement("radar",12,60,false,false));dashboardElements.put("networkgraph",new HudElement("networkgraph",12,218,false,false));
         dashboardElements.put("killfeed",new HudElement("killfeed",12,65,true,false));dashboardElements.put("sessiontimeline",new HudElement("sessiontimeline",12,60,false,true));dashboardElements.put("candle",new HudElement("candle",12,190,true,false));
+        dashboardElements.put("keybindlist",new HudElement("keybindlist",12,290,false,false));
         layoutFile = new File(new File(minecraftConfigDirectory, "vibe"), "hud.json");
         load();
     }
@@ -1185,7 +1186,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     public String[] getElementIds() {
         return new String[] {WATERMARK, ARRAY_LIST, COORDINATES, SCOREBOARD, CLOCK, SESSION_INFO, MOTION_GRAPH, STALKER,
-                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, TARGET_HUD, NOTIFICATIONS, MUSIC, GHOSTS,CHAT,HOTBAR,CUSTOM_HEALTH,TAB,BLOCK_COUNTER,DYNAMIC_ISLAND,EFFECTS,CUSTOM_GUIS,KEYSTROKES,"radar","networkgraph","killfeed","sessiontimeline","candle"};
+                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, TARGET_HUD, NOTIFICATIONS, MUSIC, GHOSTS,CHAT,HOTBAR,CUSTOM_HEALTH,TAB,BLOCK_COUNTER,DYNAMIC_ISLAND,EFFECTS,CUSTOM_GUIS,KEYSTROKES,"radar","networkgraph","killfeed","sessiontimeline","candle","keybindlist"};
     }
 
     public boolean isEnabled(String id) {

@@ -31,10 +31,11 @@ public final class NewFeaturesRenderCheck {
         mc.displayWidth=1280;mc.displayHeight=720;mc.gameSettings.guiScale=1;
         PathTestFixture.set(Vibe.class,Vibe.getInstance(),"config",new dev.vibe.config.VibeConfig(out.resolve("new-features-profile").toFile()));
         HudModule hud=new HudModule();modules.registerDynamic(hud);HudManager manager=new HudManager(out.resolve("new-features-hud").toFile());PathTestFixture.set(Vibe.class,Vibe.getInstance(),"hudManager",manager);
-        int[] xs={28,215,465,715,970};for(String theme:new String[]{"Vibe","Skeet","LiquidGlass","Lavalamp"}){
-            ClientChangesRenderCheck.frame(1280,720);for(int i=0;i<DashboardWidgets.IDS.length;i++){String id=DashboardWidgets.IDS[i];HudManager.HudElement e=manager.getElement(id);e.setTheme(theme);manager.drawPreview(e,mc.fontRendererObj);e.moveTo(xs[i],150,new ScaledResolution(mc));manager.drawPreview(e,mc.fontRendererObj);mc.fontRendererObj.drawString(DashboardWidgets.title(id),xs[i],126,0xFFE7EAF1);}
+        for(String theme:new String[]{"Vibe","Skeet","LiquidGlass","Lavalamp"}){
+            ClientChangesRenderCheck.frame(1280,720);for(int i=0;i<DashboardWidgets.IDS.length;i++){int x=28+(i%3)*405,y=95+(i/3)*260;String id=DashboardWidgets.IDS[i];HudManager.HudElement e=manager.getElement(id);e.setTheme(theme);manager.drawPreview(e,mc.fontRendererObj);e.moveTo(x,y,new ScaledResolution(mc));manager.drawPreview(e,mc.fontRendererObj);mc.fontRendererObj.drawString(DashboardWidgets.title(id),x,y-24,0xFFE7EAF1);}
             if(GL11.glGetError()!=0)throw new AssertionError("Dashboard GL error: "+theme);save(out.resolve("dashboard-"+theme.toLowerCase(java.util.Locale.ROOT)+".png"));
         }
+        HudReviewRenderCheck.verify(mc,modules,manager,hud,out);
         HealthColorGrading grading=hud.customHealth.grading;grading.enabled.setEnabled(true);grading.exposure.setValue(1D);try(HealthGradePass pass=new HealthGradePass()){
             ClientChangesRenderCheck.frame(1280,720);Gui.drawRect(0,0,1280,720,0xFF243650);int outside=pixel(50,50);pass.render(grading,false,()->Gui.drawRect(100,100,220,180,0xFF406020));int actual=pixel(150,140);if(Math.abs((actual>>16&255)-128)>4||Math.abs((actual>>8&255)-192)>4)throw new AssertionError("Health grade exposure: "+Integer.toHexString(actual));if(pixel(50,50)!=outside)throw new AssertionError("Health grade affected the world outside its content");save(out.resolve("health-grading-isolation.png"));
             grading.preview.setValue("Original");pass.render(grading,true,()->Gui.drawRect(300,100,420,180,0xFF406020));if(pixel(350,140)!=0x406020)throw new AssertionError("Before/after Original preview was graded");

@@ -10,11 +10,17 @@ public final class DashboardSettings extends OverlaySettings {
     public final ModeSetting mode,markers;
     public final ColorSetting friends,targets,hostile,flame;
     public final BooleanSetting bookmark,history;
+    public final BooleanSetting onlyEnabled,bindStatus;
+    public final NumberSetting bindLimit,mapCorners;
     public DashboardSettings(Function<Setting<?>,Setting<?>> r,String id){super(r,id);
         boolean radar=id.equals("Radar"),network=id.equals("Network Graph"),candle=id.equals("Candle");
         width=add(new NumberSetting(id+" Width",radar?144:210,radar?96:120,radar?260:400,1,()->!candle));
         height=add(new NumberSetting(id+" Height",network?74:144,48,260,1,()->radar||network));
         mode=add(new ModeSetting(id+" View","Radar",()->radar,"Radar","Map"));
+        mapCorners=add(new NumberSetting(id+" Map Corner Radius",15,0,100,1,()->radar&&mode.is("Map")));
+        onlyEnabled=add(new BooleanSetting(id+" Only Enabled",true,()->id.equals("Keybind List")));
+        bindStatus=add(new BooleanSetting(id+" Show Status",true,()->id.equals("Keybind List")));
+        bindLimit=add(new NumberSetting(id+" Maximum Rows",12,1,40,1,()->id.equals("Keybind List")));
         range=add(new NumberSetting(id+" Range",48,8,128,1,()->radar));zoom=add(new NumberSetting(id+" Zoom",1,.5,4,.1,()->radar));
         rotate=add(new BooleanSetting(id+" Rotate",true,()->radar));sweep=add(new BooleanSetting(id+" Sweep",true,()->radar&&mode.is("Radar")));
         players=add(new BooleanSetting(id+" Players",true,()->radar));items=add(new BooleanSetting(id+" Dropped Items",false,()->radar));

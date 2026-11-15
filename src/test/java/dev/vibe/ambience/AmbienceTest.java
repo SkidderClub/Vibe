@@ -20,6 +20,12 @@ public class AmbienceTest {
         m.effects.setValue(new LinkedHashSet<>(m.effects.getOptions()));
         assertTrue(m.sun.color.isVisible());assertTrue(m.moon.phase.isVisible());assertTrue(m.aurora.lower.isVisible());assertTrue(m.stars.interval.isVisible());
     }
+    @Test public void defaultSwarmHasMoreFliesAndKeepsThemSpreadAcrossTheWorld(){
+        AmbienceModule module=new AmbienceModule();FireflySwarm swarm=new FireflySwarm();
+        for(int i=0;i<80;i++)swarm.tick(0,64,0,module.fireflies,AIR);
+        assertEquals(128,swarm.flies().size());long outer=swarm.flies().stream().filter(f->Math.hypot(f.x,f.z)>20).count();assertTrue(outer>40);
+        double low=swarm.flies().stream().mapToDouble(f->f.y).min().getAsDouble(),high=swarm.flies().stream().mapToDouble(f->f.y).max().getAsDouble();assertTrue(high-low>9);
+    }
     @Test public void sweptCollisionStopsFastFliesAtWallsAndFloors(){
         final AxisAlignedBB wall=new AxisAlignedBB(0,-10,-10,1,10,10),floor=new AxisAlignedBB(-10,-1,-10,10,0,10);
         FireflySwarm.Space space=new FireflySwarm.Space(){

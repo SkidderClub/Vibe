@@ -123,13 +123,15 @@ tasks.register('verifyFreecamProduction', JavaExec) {
     jvmArgs '-XX:-OmitStackTraceInFastThrow', '-Dfml.coreMods.load=dev.vibe.core.MoveFixLoadingPlugin'
     systemProperty 'legacy.debugClassLoading', 'true'
     systemProperty 'legacy.debugClassLoadingSave', 'true'
-    args layout.buildDirectory.dir('freecam-production-check').get().asFile.absolutePath, (optifine.isFile() ? 'optifine' : 'forge')
     File frozenClient = null
     File mutableClient = null
     doFirst {
         File builtClient = tasks.named('remapJar').get().archiveFile.get().asFile.canonicalFile
         def checkDirectory = layout.buildDirectory.dir('freecam-production-check').get().asFile.toPath()
         java.nio.file.Files.createDirectories(checkDirectory)
+        // LaunchWrapper stops saving transformed classes after ten runs in the same game directory.
+        setArgs([java.nio.file.Files.createTempDirectory(checkDirectory, 'game-').toFile().absolutePath,
+                 optifine.isFile() ? 'optifine' : 'forge'])
         File fixture = java.nio.file.Files.createTempDirectory(checkDirectory, 'fixture-').toFile()
         mutableClient = new File(fixture, builtClient.name)
         java.nio.file.Files.copy(builtClient.toPath(), mutableClient.toPath())

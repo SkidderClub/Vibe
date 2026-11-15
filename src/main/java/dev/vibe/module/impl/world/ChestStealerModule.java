@@ -37,6 +37,7 @@ public final class ChestStealerModule extends Module {
     private long openedAt;
     private long nextAction;
     private long emptySince;
+    private long closeAt;
     private float cursorX;
     private float cursorY;
     private float lastCursorTravel;
@@ -48,6 +49,7 @@ public final class ChestStealerModule extends Module {
     }
 
     public void tick() {
+        if(dev.vibe.module.impl.meme.RewoundPitModule.reservesActions()){reset();return;}
         ContainerChest chest = activeChest();
         if (!isEnabled() || chest == null || minecraft.thePlayer == null) {
             reset();
@@ -60,12 +62,12 @@ public final class ChestStealerModule extends Module {
             nextAction = now + pick(startDelay);
             emptySince = 0L;
             cursorReady = false;
-            return;
         }
+        if(now<nextAction)return;
         List<Slot> candidates = usefulSlots(chest);
         if (candidates.isEmpty()) {
-            if (emptySince == 0L) emptySince = now;
-            if (autoClose.isEnabled() && now - emptySince >= pick(closeDelay)) {
+            if (emptySince == 0L) {emptySince = now;closeAt=now+pick(closeDelay);}
+            if (autoClose.isEnabled() && now >= closeAt) {
                 minecraft.thePlayer.closeScreen();
                 reset();
             }
@@ -75,7 +77,7 @@ public final class ChestStealerModule extends Module {
         if (now < nextAction) return;
         Slot selected = mode.is("Advanced") ? advanceCursor(candidates) : selectDefault(candidates);
         if (selected == null) return;
-        long interval = Math.max(125L, mode.is("Advanced") ? advancedDelay(selected) : pick(stealDelay));
+        long interval = mode.is("Advanced") ? advancedDelay(selected) : pick(stealDelay);
         if (!clicks.click(chest, selected.slotNumber, 0, 1, interval)) return;
         // One shift-click per dispatched vanilla input interval prevents a
         // chest transaction burst under strict click-window validation.

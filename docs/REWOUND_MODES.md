@@ -101,7 +101,59 @@ Exire executable and decompiler output remain in ignored local directories.
 - Relevant helpers: `MovementUtil.strafe`, `PlayerUtil.isOnGround`,
   `Stopwatch`, and the pre/post network, move and post-step event sites.
 
-## Verification
+## Additional Exire modules
+
+**Jesus** (Movement) and **Disabler** (Client) expose only **Rewound**, ported
+from Exire's Watchdog branches. Jesus changes the native move vector while in
+water, airborne, with neither jump nor sneak held: Y is `(double) 1E-5F`, and
+horizontal speed is 0.12 scaled by speed/slowness potions. Ground, jump and sneak
+retain native movement. Disabler queues C0F confirmations and replays them FIFO
+immediately before the next C03, bypassing interception of the replay. Keepalive
+packets are unchanged. Disabling flushes pending confirmations; a new
+player/world or the source's zero-tick reset discards the old queue.
+
+**KeepSprint** (Combat) ports the native successful-hit slowdown and sprint-reset
+controls, both enabled by default. The source's optional setting named "Only in
+air" actually returns while airborne. Vibe labels that behavior **Only on
+ground**, retaining the source condition and its default off. Hooks affect only
+the local player's native attack; other entities and disabled behavior retain
+the original factors and sprint-reset call.
+
+**Killaura → Target Amount** defaults to **1**, retaining the single-target ray
+and native click path. Values 2–20 extend that same controller attack into a
+burst of distinct eligible targets, including those outside the look direction.
+Target filters, configured reach/clicking range, line-of-sight policy and target
+priority still apply. The burst stays inside the original hotbar action scope,
+so native attack events, utility switching and autoblock order remain in use.
+
+Speed suspends every mode for **four player ticks after exiting liquid**, in
+addition to its existing liquid suspension. Repeated hooks during the same
+tick do not consume the delay. Enabling Custom Speed during that interval also
+leaves velocity alone.
+
+**Flag Detector → Stop Movement** defaults off. With it on, **Ticks** (default
+20) suspends Movement-category modules and Scaffold after a detected nearby
+correction. Their owned rotations, timers, input and leases are released, then
+their runtime state is initialized again when the interval expires. Saved
+enable states remain intact; manually disabling a paused module keeps it off.
+The flag is observed once after the native packet thread gate. Repeated flags
+restart the interval; disabling the detector/option or changing worlds releases
+the pause.
+
+Radar **Map** mode now draws terrain with full alpha. Void, air and unloaded
+columns have zero-alpha pixels, and the map omits the filled theme underlay so
+those pixels remain transparent. Its optional outline and entity markers remain.
+
+## Additional verification
+
+Tests exercise source water vectors/potion scaling and manual-key guards, the
+four-tick exit boundary for every Speed mode, Netty transaction FIFO/reset/flush,
+exact flag suspension/resume and user disable, and a native 20-target controller
+burst with a single-target fallback. KeepSprint bytecode tests check the real
+mapped and official Forge attack sites, stack verification and idempotence.
+The production probe verifies KeepSprint and multi-aura hooks in the packaged
+Forge/OptiFine classes. Radar sampling tests check opaque terrain and transparent
+void/unloaded columns.
 
 `RewoundModesTest` exercises reference hop values, potion boosts, setback
 cooldowns, relative look flags, optional fast fall, collision/stair handling,

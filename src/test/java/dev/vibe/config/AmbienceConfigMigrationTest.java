@@ -5,6 +5,10 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AmbienceConfigMigrationTest {
+    @Test public void previousFireflyDefaultsExpandWithoutChangingCustomDensities(){
+        JsonArray old=parse("[{id:'ambience',settings:{'Firefly Count':32,'Firefly Range':14}}]");AmbienceConfigMigration.migrate(old);JsonObject settings=old.get(0).getAsJsonObject().getAsJsonObject("settings");assertEquals(128,settings.get("Firefly Count").getAsInt());assertEquals(36,settings.get("Firefly Range").getAsInt());
+        JsonArray custom=parse("[{id:'ambience',settings:{'Firefly Count':60,'Firefly Range':20}}]");AmbienceConfigMigration.migrate(custom);assertEquals(60,custom.get(0).getAsJsonObject().getAsJsonObject("settings").get("Firefly Count").getAsInt());
+    }
     @Test public void standaloneFogPreservesItsEnabledStatePaletteAndKey(){
         JsonArray modules=parse("[{id:'fog',enabled:true,key:45,settings:{'Color Mode':'Rainbow','Fog Color':-65536,'Start Distance':27}}]");
         AmbienceConfigMigration.migrate(modules);JsonObject ambience=modules.get(1).getAsJsonObject(),settings=ambience.getAsJsonObject("settings");

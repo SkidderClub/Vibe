@@ -85,6 +85,10 @@ public final class ModuleManager {
         register(new AnimationsModule());
         register(new AmbienceModule());
         register(new TargetsModule());
+        register(new KeepSprintModule());
+        register(new DisablerModule());
+        register(new JesusModule());
+        register(new PhaseModule());
         register(new AimAssistModule());
         register(new AntiFireballModule());
         register(new BowAimbotModule());
@@ -126,6 +130,7 @@ public final class ModuleManager {
         register(new SlotsModule());
         register(new dev.vibe.module.impl.meme.PhoneModule());
         register(new HypixelModule());
+        register(new RewoundPitModule());
         register(new StatisticsModule());
         register(new FlagDetectorModule());
         register(new ParticlesModule());

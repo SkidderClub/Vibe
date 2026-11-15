@@ -24,6 +24,9 @@ public final class AutoWalkModule extends Module {
     public final NumberSetting pitchSpeed=addSetting(new NumberSetting("Pitch Speed",90,10,360,5,()->mode.is("Path")&&rotatePitch.isEnabled()));
     public final BooleanSetting showPath=addSetting(new BooleanSetting("Show Path",true,()->mode.is("Path")));
     private boolean driving,jump,rotated,ownedSprint;
+    private boolean preparingJump,aligningApproach,navigationJump;
+    private int jumpTick;
+    private double jumpX,jumpY,jumpZ;
     private float wantedYaw,wantedPitch;
     private World world;
     private EntityPlayerSP player;
@@ -33,32 +36,53 @@ public final class AutoWalkModule extends Module {
     private int waypoint;
     private PathModule path;
     private String status="Idle";
+    private Object navigationOwner;
+    private EntityLivingBase navigationTarget;
+    private java.util.function.Predicate<BlockPos> navigationArea=p->true;
+
+    /** A service can temporarily navigate/hold without toggling the user's AutoWalk setting. */
+    public void requestNavigation(Object owner,EntityLivingBase destination,java.util.function.Predicate<BlockPos> allowed){
+        if(navigationOwner!=owner||navigationTarget!=destination){route=null;routeTarget=null;waypoint=0;driving=false;}
+        navigationOwner=owner;navigationTarget=destination;navigationArea=allowed;
+        PathModule shared=dev.vibe.features.FeatureModule.module(PathModule.class);
+        if(shared!=null)shared.requestNavigation(owner,destination,allowed);
+    }
+    public void releaseNavigation(Object owner){if(navigationOwner==owner){
+        PathModule shared=dev.vibe.features.FeatureModule.module(PathModule.class);if(shared!=null)shared.releaseNavigation(owner);
+        navigationOwner=null;navigationTarget=null;navigationArea=p->true;release();
+    }}
+    public boolean ownsNavigation(Object owner){return navigationOwner==owner;}
 
     public AutoWalkModule(){super("AutoWalk","Walk forward or follow Path to a filtered opponent",Category.MOVEMENT,Keyboard.KEY_NONE);}
     @Override protected void onDisable(){release();}
     public void tick(){
-        Minecraft mc=Minecraft.getMinecraft(); driving=false;jump=false;rotated=false;
+        Minecraft mc=Minecraft.getMinecraft(); driving=false;jump=false;rotated=false;preparingJump=aligningApproach=false;
         path=Vibe.getInstance()==null?null:Vibe.getInstance().getModuleManager().getModule(PathModule.class);
         FreecamModule freecam=Vibe.getInstance()==null?null:Vibe.getInstance().getModuleManager().getModule(FreecamModule.class);
         MoveFixModule fix=Vibe.getInstance()==null?null:Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
-        if(!isEnabled()||mc==null||mc.thePlayer==null||mc.theWorld==null||mc.thePlayer.isDead||mc.currentScreen!=null
+        if(isSuspended()||(!isEnabled()&&navigationOwner==null)||mc==null||mc.thePlayer==null||mc.theWorld==null||mc.thePlayer.isDead||mc.currentScreen!=null
                 ||mc.isGamePaused()||mc.thePlayer.isRiding()||freecam!=null&&freecam.isEnabled()||fix!=null&&fix.hasForcedMovement()){
             release();status=isEnabled()?"Paused":"Idle";return;
         }
         if(world!=mc.theWorld||player!=mc.thePlayer){release();world=mc.theWorld;player=mc.thePlayer;terrain=new WorldWalkTerrain(world,player,true);}
-        if(path!=null)path.requestWalking(mode.is("Path"),autoJump.isEnabled(),showPath.isEnabled());
-        if(mode.is("Forward")){
+        if(player.isInWater()||player.onGround&&player.ticksExisted>jumpTick)navigationJump=false;
+        if(path!=null)path.requestWalking(navigationOwner!=null||mode.is("Path"),autoJump.isEnabled(),showPath.isEnabled());
+        if(navigationOwner!=null&&navigationTarget==null){stop("Waiting for service");return;}
+        if(navigationOwner==null&&mode.is("Forward")){
             route=null;driving=true;status="Walking forward";jump=player.isInWater();
             if(!jump&&autoJump.isEnabled()&&player.onGround&&player.isCollidedHorizontally){
                 double angle=Math.toRadians(player.rotationYaw);
                 BlockPos feet=new BlockPos(player.posX,player.posY+.05,player.posZ);
                 BlockPos ahead=new BlockPos(player.posX-Math.sin(angle)*.8,player.posY+.05,player.posZ+Math.cos(angle)*.8);
-                jump=terrain.canStand(ahead.up())&&terrain.canMove(feet,ahead.up());
+                double y=terrain.standingY(ahead.up());
+                jump=terrain.canStand(ahead.up())&&terrain.canMove(feet,ahead.up())
+                        &&terrain.canJumpFrom(player.getEntityBoundingBox(),ahead.getX()+.5,y,ahead.getZ()+.5);
+                preparingJump=jump;
             }
             return;
         }
         if(path==null){stop("Path module is unavailable");return;}
-        EntityLivingBase target=path.getTarget();
+        EntityLivingBase target=navigationOwner==null?path.getTarget():navigationTarget;
         if(target==null||target.worldObj!=world||target.isDead||!target.isEntityAlive()||world.getEntityByID(target.getEntityId())!=target){stop("Looking for an opponent");return;}
         if(routeTarget!=target){route=null;waypoint=0;routeTarget=target;}
         BlockPos feet=new BlockPos(player.posX,player.posY+.05,player.posZ);
@@ -66,8 +90,11 @@ public final class AutoWalkModule extends Module {
         // Follow the actual player within the final cells, including a one-node
         // route. A block-centre endpoint must not become a stopping distance.
         double targetX=target.posX-player.posX,targetZ=target.posZ-player.posZ;
-        if(targetX*targetX+targetZ*targetZ<=4&&terrain.canStand(targetFeet)&&terrain.canMove(feet,targetFeet)){
-            steer(target.posX,target.posZ,terrain.standingY(targetFeet),target);return;
+        double targetY=terrain.standingY(targetFeet);
+        boolean raisedTarget=!player.isInWater()&&targetY-player.getEntityBoundingBox().minY>player.stepHeight+.05;
+        if(navigationOwner==null&&targetX*targetX+targetZ*targetZ<=4&&terrain.canStand(targetFeet)&&terrain.canMove(feet,targetFeet)
+                &&(!raisedTarget||terrain.canJumpFrom(player.getEntityBoundingBox(),target.posX,targetY,target.posZ))){
+            steer(target.posX,target.posZ,targetY,target);return;
         }
         PathRoute nextRoute=path.getRoute();
         if(nextRoute.nodes.isEmpty() && route==null){followTarget(target);return;}
@@ -84,6 +111,7 @@ public final class AutoWalkModule extends Module {
             // Look ahead through a bend instead of requiring the player to
             // touch each block centre. A small departure from the line is fine.
             boolean reached=dx*dx+dz*dz<=1;
+            if(navigationOwner!=null&&waypoint==route.nodes.size()-1)reached=player.getDistanceSqToEntity(target)<=6.25;
             if(!reached&&waypoint+1<route.nodes.size()){
                 BlockPos after=route.nodes.get(waypoint+1);double ex=after.getX()-node.getX(),ez=after.getZ()-node.getZ(),length=ex*ex+ez*ez;
                 double along=-dx*ex-dz*ez,cross=dx*ez-dz*ex;
@@ -92,6 +120,27 @@ public final class AutoWalkModule extends Module {
                 reached=length>0&&along>0&&along<=length*1.5&&cross*cross<=length;
             }
             boolean level=Math.abs(node.getY()-player.posY)<1 || player.isInWater()&&node.getY()<player.posY+1;
+            double standing=terrain.standingY(node);
+            if(!player.isInWater()&&waypoint>0&&standing>terrain.standingY(route.nodes.get(waypoint-1))+.65){
+                // Do not turn away from a landing while still below its top or
+                // merely within one block of its centre during take-off.
+                reached=dx*dx+dz*dz<=.16;
+                level=player.getEntityBoundingBox().minY>=standing-.05;
+            }
+            if(reached&&level&&!player.isInWater()&&autoJump.isEnabled()&&waypoint+1<route.nodes.size()){
+                BlockPos after=route.nodes.get(waypoint+1);double landing=terrain.standingY(after);
+                if(landing-player.getEntityBoundingBox().minY>player.stepHeight+.05
+                        &&!terrain.canJumpFrom(player.getEntityBoundingBox(),after.getX()+.5,landing,after.getZ()+.5))reached=false;
+            }
+            if(reached&&navigationOwner!=null&&waypoint+1<route.nodes.size()){
+                BlockPos after=route.nodes.get(waypoint+1);
+                AxisAlignedBB body=player.getEntityBoundingBox();
+                AxisAlignedBB end=body.offset(after.getX()+.5-player.posX,0,after.getZ()+.5-player.posZ);
+                // Retain the corner's approach until skipping it would stay inside the service area.
+                AxisAlignedBB sweep=body.union(end);
+                for(BlockPos cell:BlockPos.getAllInBox(new BlockPos(sweep.minX,sweep.minY+.05,sweep.minZ),new BlockPos(sweep.maxX,sweep.minY+.05,sweep.maxZ)))
+                    if(!navigationArea.test(cell))reached=false;
+            }
             if(!reached||!level)break;waypoint++;
         }
         if(waypoint>=route.nodes.size()){path.refreshWalkingRoute();followTarget(target);return;}
@@ -102,9 +151,21 @@ public final class AutoWalkModule extends Module {
         // block-centre sweep from an off-line player caused the corner stops.
         // Real player collision handles the curve while a fresh route catches up.
         if(!terrain.canStand(next)){path.refreshWalkingRoute();followTarget(target);return;}
-        steer(next.getX()+.5,next.getZ()+.5,terrain.standingY(next),target);
+        double landing=terrain.standingY(next);
+        if(!player.isInWater()&&autoJump.isEnabled()&&landing-player.getEntityBoundingBox().minY>player.stepHeight+.05
+                &&!terrain.canJumpFrom(player.getEntityBoundingBox(),next.getX()+.5,landing,next.getZ()+.5)){
+            BlockPos approach=waypoint>0?route.nodes.get(waypoint-1):feet;
+            double approachY=terrain.standingY(approach);
+            if(!Double.isNaN(approachY)&&Math.abs(approachY-player.getEntityBoundingBox().minY)<=.65){
+                steer(approach.getX()+.5,approach.getZ()+.5,approachY,target);
+                preparingJump=aligningApproach=true;jump=false;return;
+            }
+            path.refreshWalkingRoute();
+        }
+        steer(next.getX()+.5,next.getZ()+.5,landing,target);
     }
     private void followTarget(EntityLivingBase target){
+        if(navigationOwner!=null){stop("Waiting for a safe service route");return;}
         BlockPos feet=new BlockPos(target.posX,target.posY+.05,target.posZ);
         double y=terrain.standingY(feet);
         steer(target.posX,target.posZ,Double.isNaN(y)?player.posY:y,target);
@@ -114,20 +175,22 @@ public final class AutoWalkModule extends Module {
         double dx=x-player.posX,dz=z-player.posZ;
         wantedYaw=dx*dx+dz*dz<.0001?player.rotationYaw:(float)(Math.toDegrees(Math.atan2(dz,dx))-90);
         wantedPitch=(float)Math.max(-35,Math.min(35,-Math.toDegrees(Math.atan2(nextY-player.posY,Math.hypot(dx,dz)))));
-        jump=player.isInWater() || autoJump.isEnabled()&&player.onGround
-                &&(rise>player.stepHeight+.05||player.isCollidedHorizontally)&&dx*dx+dz*dz<4;
+        jumpX=x;jumpY=nextY;jumpZ=z;
+        preparingJump=!player.isInWater()&&autoJump.isEnabled()&&rise>player.stepHeight+.05;
+        jump=player.isInWater() || preparingJump&&player.onGround&&dx*dx+dz*dz<=1.44
+                &&terrain.canJumpFrom(player.getEntityBoundingBox(),x,nextY,z);
         driving=true;status="Following "+target.getName();
     }
     /** The input wrapper calls this before silent movement correction and normal player physics. */
     public void apply(MovementInput input){
-        if(!isEnabled()||player==null)return;
+        if(isSuspended()||(!isEnabled()&&navigationOwner==null)||player==null)return;
         Minecraft mc=Minecraft.getMinecraft();
         if(mc.thePlayer!=player||mc.currentScreen!=null)return;
         // Surfacing is independent of a completed route or a selected target.
         if(player.isInWater())input.jump=true;
-        if(!driving)return;
+        if(!driving){if(navigationOwner!=null)input.moveForward=input.moveStrafe=0;return;}
         float scale=input.sneak?.3F:1F;
-        if(mode.is("Path")){
+        if(navigationOwner!=null||mode.is("Path")){
             if(!rotated){
                 player.rotationYaw=turn(player.rotationYaw,wantedYaw,yawSpeed.getFloat()/20);
                 if(rotatePitch.isEnabled())player.rotationPitch=turn(player.rotationPitch,wantedPitch,pitchSpeed.getFloat()/20);
@@ -138,10 +201,29 @@ public final class AutoWalkModule extends Module {
             float angle=MathHelper.wrapAngleTo180_float(wantedYaw-player.rotationYaw);
             input.moveForward=scale;
             input.moveStrafe=Math.abs(angle)>25?-Math.signum(angle)*scale:0;
-            input.jump|=jump;
+            if(navigationOwner!=null){
+                input.moveForward=(float)Math.cos(Math.toRadians(angle))*scale;
+                input.moveStrafe=-(float)Math.sin(Math.toRadians(angle))*scale;
+                double yaw=Math.toRadians(player.rotationYaw);
+                double dx=(-Math.sin(yaw)*input.moveForward+Math.cos(yaw)*input.moveStrafe)*.45;
+                double dz=(Math.cos(yaw)*input.moveForward+Math.sin(yaw)*input.moveStrafe)*.45;
+                AxisAlignedBB ahead=player.getEntityBoundingBox().offset(dx,0,dz);
+                for(double x:new double[]{ahead.minX,ahead.maxX})for(double z:new double[]{ahead.minZ,ahead.maxZ})
+                    if(!navigationArea.test(new BlockPos(x,ahead.minY+.05,z))){input.moveForward=input.moveStrafe=0;path.refreshWalkingRoute();return;}
+            }
+            boolean launch=jump;
+            if(preparingJump&&!aligningApproach&&player.onGround){
+                // Face the opening before launching. Continuing around a bend
+                // while already jumping clips the walls beside narrow steps.
+                if(Math.abs(angle)>12){input.moveForward=input.moveStrafe=0;launch=false;}
+                else launch&=terrain.canJumpFrom(player.getEntityBoundingBox(),jumpX,jumpY,jumpZ);
+            }
+            input.jump|=launch;
+            if(launch&&player.onGround&&!player.isInWater()){navigationJump=true;jumpTick=player.ticksExisted;}
         }else{
             if(!mc.gameSettings.keyBindForward.isKeyDown())input.moveForward=Math.min(scale,input.moveForward+scale);
             input.jump|=jump;
+            if(jump&&player.onGround&&!player.isInWater()){navigationJump=true;jumpTick=player.ticksExisted;}
         }
         boolean canSprint=sprint.isEnabled()&&input.moveForward>.8F&&!input.sneak&&!player.isUsingItem()&&!player.isInWater()
                 &&!player.isCollidedHorizontally&&player.getFoodStats().getFoodLevel()>6;
@@ -153,6 +235,13 @@ public final class AutoWalkModule extends Module {
         AutoWalkModule module=vibe==null||vibe.getModuleManager()==null?null:vibe.getModuleManager().getModule(AutoWalkModule.class);
         if(module!=null)module.apply(input);
     }
+    /** Terrain jumps own their native input/trajectory until landing. */
+    public static boolean reservesJump(){
+        Vibe vibe=Vibe.getInstance();AutoWalkModule module=vibe==null||vibe.getModuleManager()==null?null:vibe.getModuleManager().getModule(AutoWalkModule.class);
+        Minecraft mc=Minecraft.getMinecraft();
+        return module!=null&&(module.navigationOwner!=null||module.isEnabled()&&module.driving&&(module.preparingJump||module.navigationJump))
+                &&mc!=null&&mc.thePlayer==module.player&&mc.theWorld==module.world&&mc.currentScreen==null;
+    }
     public static float turn(float current,float target,float limit){return current+Math.max(-limit,Math.min(limit,MathHelper.wrapAngleTo180_float(target-current)));}
     private void stop(String reason){driving=false;jump=false;releaseSprint();status=reason;}
     private void releaseSprint(){
@@ -162,7 +251,7 @@ public final class AutoWalkModule extends Module {
     }
     private void release(){
         if(path!=null)path.requestWalking(false,true,false);
-        releaseSprint();driving=jump=rotated=false;world=null;player=null;terrain=null;route=null;routeTarget=null;waypoint=0;
+        releaseSprint();driving=jump=rotated=preparingJump=aligningApproach=navigationJump=false;world=null;player=null;terrain=null;route=null;routeTarget=null;waypoint=0;
     }
     public boolean isDriving(){return driving;}
     public String getStatus(){return status;}

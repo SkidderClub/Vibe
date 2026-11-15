@@ -14,6 +14,7 @@ public final class RewoundSpeed {
     private int stage = 2;
     private double less, stair;
     private boolean collided, lessSlow, shouldSlow, timerOwned;
+    private float timerBefore,lastTimer;
 
     public RewoundSpeed() { this(() -> System.nanoTime() / 1000000L); }
     public RewoundSpeed(LongSupplier clock) { this.clock = clock; lastSetback = clock.getAsLong(); }
@@ -27,11 +28,15 @@ public final class RewoundSpeed {
     }
 
     public void releaseTimer() {
-        if (timerOwned) CombatTimerAccess.setSpeed(1.0F);
+        if (timerOwned && Float.compare(CombatTimerAccess.getSpeed(),lastTimer)==0) CombatTimerAccess.setSpeed(timerBefore);
         timerOwned = false;
     }
 
     public double[] move(EntityPlayerSP player, double x, double y, double z, boolean timer, String fastFall) {
+        if (AacMovementSupport.inLiquid(player)) {
+            releaseTimer();
+            return new double[] {x,y,z,player.getEntityBoundingBox().minY};
+        }
         if (timer) setTimer(1.2F); else releaseTimer();
         if (player.isCollidedHorizontally) collided = true;
         if (collided) { setTimer(1.0F); stage = -1; }
@@ -44,7 +49,7 @@ public final class RewoundSpeed {
             if (stage >= 0 || collided) {
                 stage = 0;
                 if (stair == 0) {
-                    player.jump();
+                    AacMovementSupport.jump(player);
                     y = player.motionY = .407 + boost(player, Potion.jump) * .1;
                 }
                 less += 1;
@@ -61,21 +66,11 @@ public final class RewoundSpeed {
         if (stair > 0) speed *= .7 - speedBoost * .1;
         if (stage < 0) speed = defaultSpeed(speedBoost);
         if (lessSlow) speed *= .95;
-        if (player.isInWater() || player.isInLava()) speed = .12;
-        if (player.moveForward != 0 || player.moveStrafing != 0) {
+        if (AacMovementSupport.moving(player)) {
             // MovementUtil.strafe(event, speed) changes the requested move, not motionX/Z.
-            double forward = player.movementInput.moveForward, strafe = player.moveStrafing;
-            float yaw = player.rotationYaw;
-            if (forward != 0) {
-                if (strafe > 0) yaw += forward > 0 ? -45 : 45;
-                else if (strafe < 0) yaw += forward > 0 ? 45 : -45;
-                strafe = 0;
-                forward = forward > 0 ? 1 : -1;
-            }
-            strafe = Math.signum(strafe);
-            double mx = Math.cos(Math.toRadians(yaw + 90F)), mz = Math.sin(Math.toRadians(yaw + 90F));
-            x = forward * speed * mx + strafe * speed * mz;
-            z = forward * speed * mz - strafe * speed * mx;
+            double yaw = Math.toRadians(AacMovementSupport.directionYaw(player));
+            x = -Math.sin(yaw) * speed;
+            z = Math.cos(yaw) * speed;
             stage++;
         }
         double[] orbit = dev.vibe.module.impl.movement.TargetStrafeModule.speedDirection();
@@ -116,7 +111,10 @@ public final class RewoundSpeed {
         lastSetback = clock.getAsLong();
     }
 
-    private void setTimer(float speed) { CombatTimerAccess.setSpeed(speed); timerOwned = true; }
+    private void setTimer(float speed) {
+        if (!timerOwned) timerBefore=CombatTimerAccess.getSpeed();
+        CombatTimerAccess.setSpeed(speed);timerOwned=true;lastTimer=speed;
+    }
     private static int boost(EntityPlayerSP p, Potion potion) {
         return p.isPotionActive(potion) ? p.getActivePotionEffect(potion).getAmplifier() + 1 : 0;
     }

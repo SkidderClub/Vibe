@@ -58,15 +58,15 @@ public final class ContainerClickDispatcher {
             reset();
         }
         if (now < nextAllowed || lastDispatchTick == tick || tick < settleUntilTick
-                || now < sharedNext || sharedTick == tick || tick < sharedSettle) return false;
+                || sharedTick == tick || tick < sharedSettle) return false;
         activeWindow = container.windowId;
         minecraft.playerController.windowClick(container.windowId, slot, button, mode, minecraft.thePlayer);
         lastDispatchTick = tick;
         // Let the normal GUI/container state settle before a subsequent
         // click. This does not synthesize packets: it simply spaces calls to
         // the same PlayerController method vanilla uses for UI interaction.
-        nextAllowed = now + Math.max(125L, delayMs);
-        settleUntilTick = tick + 2;
+        nextAllowed = now + Math.max(0L, delayMs);
+        settleUntilTick = tick + 1;
         sharedNext = nextAllowed; sharedTick = tick; sharedSettle = settleUntilTick;
         return true;
     }

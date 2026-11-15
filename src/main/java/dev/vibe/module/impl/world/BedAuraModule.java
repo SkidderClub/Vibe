@@ -32,6 +32,7 @@ public final class BedAuraModule extends Module {
     private final NumberSetting fov = addSetting(new NumberSetting("FOV", 180, 30, 360, 1));
     private final NumberSetting scanRate = addSetting(new NumberSetting("Scan Rate (ms)", 250, 50, 2000, 25));
     private final BooleanSetting switchBack = addSetting(new BooleanSetting("Switch Back", true));
+    public final BooleanSetting ownBed=addSetting(new BooleanSetting("Own Bed",false));
     private final BooleanSetting renderTarget = addSetting(new BooleanSetting("Render Target", true));
     private final ColorSetting targetColor = addSetting(new ColorSetting("Target Color", 0x78FF4F6D, () -> renderTarget.isEnabled()));
     private final Minecraft minecraft = Minecraft.getMinecraft();
@@ -81,7 +82,7 @@ public final class BedAuraModule extends Module {
     private void prepareInput() {
         if (inputPrepared) return;
         inputPrepared = true;
-        if (!ready || !isEnabled() || owner == null || owner != minecraft.thePlayer || !minecraft.inGameHasFocus
+        if (!ready || !isEnabled() || owner == null || owner != minecraft.thePlayer || !validBed(bed) || !minecraft.inGameHasFocus
                 || minecraft.currentScreen != null || minecraft.playerController == null || !breakable(target)
                 || owner.isUsingItem() || minecraft.gameSettings.keyBindUseItem.isKeyDown()
                 || VanillaClicks.physicallyDown(minecraft.gameSettings.keyBindAttack) || ScaffoldModule.isActive()) {
@@ -149,7 +150,16 @@ public final class BedAuraModule extends Module {
 
     private boolean validBed(BlockPos pos) {
         return pos != null && minecraft.theWorld != null && minecraft.theWorld.getBlockState(pos).getBlock() instanceof BlockBed
+                &&!isOwnBed(pos)
                 && owner.getPositionEyes(1).squareDistanceTo(center(pos)) <= range.getDouble() * range.getDouble();
+    }
+    private boolean isOwnBed(BlockPos pos){
+        if(!ownBed.isEnabled()||minecraft.thePlayer==null)return false;
+        int color=dev.vibe.esp.BedWoolColors.fromName(minecraft.thePlayer.getDisplayName().getFormattedText(),minecraft.thePlayer.getName());
+        if(color<0)return false;
+        net.minecraft.block.state.IBlockState state=minecraft.theWorld.getBlockState(pos);
+        BlockPos foot=state.getBlock() instanceof BlockBed&&state.getValue(BlockBed.PART)==BlockBed.EnumPartType.HEAD?pos.offset(state.getValue(BlockBed.FACING).getOpposite()):pos;
+        return dev.vibe.esp.BedWoolColors.nearest(minecraft.theWorld,foot)==color;
     }
 
     private MovingObjectPosition selectHit(BlockPos bedPos) {

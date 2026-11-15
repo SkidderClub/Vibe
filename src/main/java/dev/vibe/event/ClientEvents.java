@@ -235,6 +235,7 @@ public final class ClientEvents {
             if (phone != null) phone.tickCommunications();
         }
         if (event.phase == TickEvent.Phase.START) {
+            FlagDetectorModule movementGuard=dev.vibe.features.FeatureModule.module(FlagDetectorModule.class);if(movementGuard!=null)movementGuard.maintainPause();
             SpeedModule rewoundSpeed = Vibe.getInstance().getModuleManager().getModule(SpeedModule.class);
             if (rewoundSpeed != null) rewoundSpeed.maintainRewound();
             dev.vibe.module.impl.movement.GuiMoveModule guiMove=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.GuiMoveModule.class);if(guiMove!=null)guiMove.tick();
@@ -977,6 +978,8 @@ public final class ClientEvents {
     @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.LOWEST)
     public void onTargetHudAttack(AttackEntityEvent event) {
         if (event.isCanceled() || event.entityPlayer != minecraft.thePlayer || !(event.target instanceof EntityPlayer)) return;
+        dev.vibe.module.impl.meme.RewoundPitModule pit=dev.vibe.features.FeatureModule.module(dev.vibe.module.impl.meme.RewoundPitModule.class);
+        if(pit!=null)pit.fought(event.target);
         if (Vibe.getInstance().getHudManager() != null) Vibe.getInstance().getHudManager().recordTarget((EntityLivingBase) event.target);
     }
 
@@ -1070,6 +1073,8 @@ public final class ClientEvents {
             return;
         }
         NameProtectModule protect = Vibe.getInstance().getModuleManager().getModule(NameProtectModule.class);
+        dev.vibe.module.impl.meme.RewoundPitModule pit=dev.vibe.features.FeatureModule.module(dev.vibe.module.impl.meme.RewoundPitModule.class);
+        if(pit!=null&&event.type!=2&&event.message!=null&&pit.filterMessage(event.message.getUnformattedText())){event.setCanceled(true);return;}
         if (protect != null && protect.isEnabled() && event.message != null) {
             // Do not flatten a received component to a plain string.  Doing
             // so discards ChatStyle, including click and hover events used by

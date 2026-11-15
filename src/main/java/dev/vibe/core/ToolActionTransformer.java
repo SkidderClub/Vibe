@@ -52,6 +52,10 @@ final class ToolActionTransformer implements Opcodes {
                 index += argument.getSize();
             }
             wrapper.visitMethodInsn(INVOKESPECIAL, node.name, original.name, original.desc, false);
+            if(attack){
+                wrapper.visitVarInsn(ALOAD,1);wrapper.visitVarInsn(ALOAD,2);
+                wrapper.visitMethodInsn(INVOKESTATIC,"dev/vibe/module/impl/combat/KillAuraModule","multiAttackHook","(Ljava/lang/Object;Ljava/lang/Object;)V",false);
+            }
             wrapper.visitLabel(end);
             if (attack) {
                 wrapper.visitInsn(ICONST_M1); wrapper.visitMethodInsn(INVOKESTATIC, PICKEN, "endAttackHook", "(I)V", false);

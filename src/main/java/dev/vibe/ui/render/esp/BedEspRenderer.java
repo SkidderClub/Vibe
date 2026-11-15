@@ -81,14 +81,8 @@ public final class BedEspRenderer {
      * for every bed in every frame.
      */
     private int nearestWoolColor(BlockPos origin) {
-        for (int i = 0; i < WOOL_SEARCH_X.length; i++) {
-            woolCursor.set(origin.getX() + WOOL_SEARCH_X[i], origin.getY() + WOOL_SEARCH_Y[i], origin.getZ() + WOOL_SEARCH_Z[i]);
-            IBlockState state = minecraft.theWorld.getBlockState(woolCursor);
-            if (state.getBlock() != Blocks.wool) continue;
-            int meta = Blocks.wool.getMetaFromState(state);
-            return WOOL_COLORS[Math.max(0, Math.min(WOOL_COLORS.length - 1, meta))];
-        }
-        return 0xFF4FA3FF;
+        int meta=dev.vibe.esp.BedWoolColors.nearest(minecraft.theWorld,origin);
+        return meta<0?0xFF4FA3FF:dev.vibe.esp.BedWoolColors.COLORS[meta];
     }
 
     private static final int[] WOOL_COLORS = {0xFFF9F9F9,0xFFF9801D,0xFFC74EBD,0xFF3AB3DA,0xFFFED83D,0xFF80C71F,0xFFF38BAA,0xFF474F52,0xFF9D9D97,0xFF169C9C,0xFF8932B8,0xFF3C44AA,0xFF835432,0xFF5E7C16,0xFFB02E26,0xFF1D1D21};

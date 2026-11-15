@@ -19,7 +19,18 @@ public final class AacMovementSupport {
         return p != null && (p.movementInput.moveForward != 0.0F || p.movementInput.moveStrafe != 0.0F);
     }
 
-    public static void jump(EntityPlayerSP p) { if (p != null) p.jump(); }
+    public static void jump(EntityPlayerSP p) {
+        if (p == null) return;
+        boolean steer = dev.vibe.module.impl.world.ScaffoldModule.isActive() && moving(p) && p.isSprinting();
+        float nativeYaw = steer ? dev.vibe.module.impl.movement.MoveFixModule.movementYawHook(p, p.rotationYaw) * .017453292F : 0;
+        float travelYaw = steer ? directionYaw(p) * .017453292F : 0;
+        p.jump();
+        if (steer) {
+            // Preserve the native jump/events; redirect only its 0.2 sprint impulse.
+            p.motionX += net.minecraft.util.MathHelper.sin(nativeYaw) * .2F - net.minecraft.util.MathHelper.sin(travelYaw) * .2F;
+            p.motionZ += net.minecraft.util.MathHelper.cos(travelYaw) * .2F - net.minecraft.util.MathHelper.cos(nativeYaw) * .2F;
+        }
+    }
 
     public static void stopXZ(EntityPlayer p) { if (p != null) { p.motionX = 0.0D; p.motionZ = 0.0D; } }
     public static void stopY(EntityPlayer p) { if (p != null) p.motionY = 0.0D; }
@@ -27,12 +38,20 @@ public final class AacMovementSupport {
     public static void speedInAir(EntityPlayer p, float value) {
         if (p == null) return;
         try {
-            if (SPEED_IN_AIR == null) {
-                SPEED_IN_AIR = EntityPlayer.class.getDeclaredField("speedInAir");
-                SPEED_IN_AIR.setAccessible(true);
-            }
-            SPEED_IN_AIR.setFloat(p, value);
+            airField().setFloat(p, value);
         } catch (Throwable ignored) { }
+    }
+    public static float speedInAir(EntityPlayer p) {
+        try { return p == null ? .02F : airField().getFloat(p); }
+        catch (ReflectiveOperationException ignored) { return .02F; }
+    }
+    private static Field airField() throws NoSuchFieldException {
+        if (SPEED_IN_AIR == null) {
+            try { SPEED_IN_AIR = EntityPlayer.class.getDeclaredField("speedInAir"); }
+            catch (NoSuchFieldException ignored) { SPEED_IN_AIR = EntityPlayer.class.getDeclaredField("field_71102_ce"); }
+            SPEED_IN_AIR.setAccessible(true);
+        }
+        return SPEED_IN_AIR;
     }
     private static Field SPEED_IN_AIR;
 
@@ -44,17 +63,22 @@ public final class AacMovementSupport {
      * velocity alone, which is important for AAC1.9.10's second strafe call. */
     public static void strafe(EntityPlayerSP p, double speed) {
         if (p == null || !moving(p)) return;
+        double radians = Math.toRadians(directionYaw(p));
+        p.motionX = -Math.sin(radians) * speed;
+        p.motionZ = Math.cos(radians) * speed;
+    }
+
+    /** Finalized input is expressed at MoveFix's movement yaw, not the camera yaw. */
+    public static float directionYaw(EntityPlayerSP p) {
         float forward = p.movementInput.moveForward;
         float side = p.movementInput.moveStrafe;
-        float yaw = p.rotationYaw;
+        float yaw = dev.vibe.module.impl.movement.MoveFixModule.movementYawHook(p, p.rotationYaw);
         if (forward < 0.0F) { yaw += 180.0F; forward = -0.5F; }
         else if (forward > 0.0F) forward = 0.5F;
         else forward = 1.0F;
         if (side > 0.0F) yaw -= 90.0F * forward;
         else if (side < 0.0F) yaw += 90.0F * forward;
-        double radians = Math.toRadians(yaw);
-        p.motionX = -Math.sin(radians) * speed;
-        p.motionZ = Math.cos(radians) * speed;
+        return yaw;
     }
 
     public static boolean inLiquid(EntityPlayer p) { return p != null && (p.isInWater() || p.isInLava()); }
@@ -74,7 +98,7 @@ public final class AacMovementSupport {
         double mx = player.motionX, my = player.motionY, mz = player.motionZ;
         float strafe = player.movementInput.moveStrafe;
         float forward = player.movementInput.moveForward;
-        float yaw = player.rotationYaw;
+        float yaw = dev.vibe.module.impl.movement.MoveFixModule.movementYawHook(player, player.rotationYaw);
         for (int i = 0; i < ticks; i++) {
             Vec3 start = new Vec3(x, y, z);
             strafe *= 0.98F;

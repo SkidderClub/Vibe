@@ -68,7 +68,10 @@ public final class NotificationRenderer {
             float centerY = y + (height - (settings.progress.isEnabled() ? 2 : 0)) / 2F;
             if (settings.icons.isEnabled()) {
                 int iconY = Math.round(centerY - 11);
-                if (!square) rounded(x + 10, iconY, 22, 22, 11, 0xFF2A323C, glass ? 160 : 235, opacity);
+                if (!square) {
+                    int iconBackground = RenderUtils.blend(background, accent, glass ? .08F : .12F);
+                    rounded(x + 10, iconY, 22, 22, 11, iconBackground, glass ? 145 : 235, opacity);
+                }
                 drawIcon(entry.message ? 2 : entry.enabled ? 1 : 0, x + 10, iconY, tint(accent, opacity));
             }
 
@@ -77,12 +80,17 @@ public final class NotificationRenderer {
             int textLeft = x + (settings.icons.isEnabled() ? 42 : 12);
             int textRight = x + width - 12;
             if (settings.status.isEnabled() && !entry.message) {
-                String label = LanguageManager.translate(entry.enabled ? "Enabled" : "Disabled");
-                int pillWidth = Math.round(stateFont.width(label)) + (square ? 0 : 14);
+                String label = LanguageManager.translate(entry.enabled ? "On" : "Off");
+                int pillWidth = Math.round(stateFont.width(label)) + (square ? 10 : 14);
                 int pillX = x + width - 10 - pillWidth;
-                if (!square) {
+                if (!square&&!glass) {
                     int pillColor = RenderUtils.blend(background, accent, .22F);
                     rounded(pillX, Math.round(centerY - 8), pillWidth, 16, 8, pillColor, glass ? 215 : 200, opacity);
+                }else if(square){
+                    rounded(pillX,Math.round(centerY-7),pillWidth,14,0,accent,24,opacity);
+                }else{
+                    rounded(pillX,Math.round(centerY-7),pillWidth,14,4,accent,20,opacity);
+                    RenderUtils.roundedOutline(pillX,Math.round(centerY-7),pillX+pillWidth,Math.round(centerY+7),4,.5F,tint(RenderUtils.alpha(accent,70),opacity));
                 }
                 centered(stateFont, label, pillX + (pillWidth - stateFont.width(label)) / 2F, centerY, tint(accent, opacity));
                 textRight = pillX - 8;

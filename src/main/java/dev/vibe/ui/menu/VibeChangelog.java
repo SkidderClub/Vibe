@@ -3,6 +3,26 @@ package dev.vibe.ui.menu;
 /** Static release notes used by the expandable main-menu changelog. */
 public final class VibeChangelog {
     private static final Entry[] ENTRIES = {
+            new Entry("15.11.2026", new String[] {
+                    "~ Inventory and chest delays honor low values; faster empty-slot armor equips",
+                    "~ Vanilla Inventory Manager works with the inventory closed; duplicate bows and rods are cleaned",
+                    "~ Rewound Pit reads more sidebar formats and walks to reachable NPC interaction spots",
+                    "+ Own Bed protection in BedAura using name and nearest wool colors",
+                    "~ Speed works with Scaffold's corrected direction; fireflies are more numerous and spread farther",
+                    "+ Keybind List HUD with four themes and enabled-only filtering",
+                    "+ Radar Map Corner Radius from square to circular; refreshed notification icons and status tags",
+                    "+ Phase in Movement with Exire Watchdog and NCP modes"
+            }),
+            new Entry("14.11.2026", new String[] {
+                    "+ Rewound Jesus and Disabler modes, plus KeepSprint from Exire",
+                    "+ Killaura Target Amount for up to 20 simultaneous targets",
+                    "+ Flag Detector can temporarily pause movement modules",
+                    "~ Speed waits four ticks after leaving water; radar terrain is opaque with transparent void",
+                    "+ Rewound Pit with spawn-only perks, prestige, chat filtering and automatic unstuck",
+                    "~ AutoWalk lines up with narrow raised passages before jumping",
+                    "~ Speed leaves swimming input and movement alone in every mode",
+                    "+ Aggressive Targetstrafe approaches targets before starting its orbit"
+            }),
             new Entry("11.11.2026", new String[] {
                     "+ Projectile Dodge and Pearl Catcher (Combat)",
                     "+ Beverage Notification for observed potion drinking and golden apples (Visual)",

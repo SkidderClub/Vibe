@@ -48,8 +48,16 @@ public final class WorldWalkTerrain implements WalkPathfinder.Terrain {
         // Sweep at the raised height when jumping and check the entire descent.
         AxisAlignedBB start = body(from,height);
         AxisAlignedBB end = body(to,height);
-        return (!swimming || clear(body(from,fromY).union(start)))
+        return clear(body(from,fromY).union(start))
                 && clear(start.union(end)) && clear(end.union(body(to,toY)));
+    }
+    /** Check the real launch footprint, not the centre of the current grid cell. */
+    public boolean canJumpFrom(AxisAlignedBB from,double x,double y,double z) {
+        double rise=y-from.minY;
+        if(!Double.isFinite(rise)||rise<=0||rise>1.25)return false;
+        AxisAlignedBB raised=from.offset(0,rise+.001,0);
+        AxisAlignedBB landing=raised.offset(x-(from.minX+from.maxX)*.5,0,z-(from.minZ+from.maxZ)*.5);
+        return clear(from.union(raised))&&clear(raised.union(landing));
     }
     /** Nodes denote the block containing the feet; slabs may lift them by half a block. */
     public double standingY(BlockPos pos) {

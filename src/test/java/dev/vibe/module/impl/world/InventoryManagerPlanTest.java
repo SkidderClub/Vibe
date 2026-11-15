@@ -68,6 +68,15 @@ public class InventoryManagerPlanTest {
         field(net.minecraft.inventory.ContainerChest.class,"lowerChestInventory").set(chest,new InventoryBasic("Shop",true,27));
         assertFalse((Boolean)check.invoke(stealer,chest));
     }
+    @Test public void bowsAndRodsKeepOnlyTheirBestCopy()throws Exception{
+        InventoryLayout layout=new InventoryLayout();
+        ItemStack strong=new ItemStack(Items.bow);strong.addEnchantment(net.minecraft.enchantment.Enchantment.power,3);
+        inventory.items.setInventorySlotContents(10,new ItemStack(Items.bow));inventory.items.setInventorySlotContents(11,strong);
+        assertEquals(10,integer(plan("dropOneDuplicate",layout),"slot"));inventory.items.setInventorySlotContents(10,null);
+        ItemStack worn=new ItemStack(Items.fishing_rod);worn.setItemDamage(30);
+        inventory.items.setInventorySlotContents(12,worn);inventory.items.setInventorySlotContents(13,new ItemStack(Items.fishing_rod));
+        assertEquals(12,integer(plan("dropOneDuplicate",layout),"slot"));
+    }
     @Test public void repeatedSoupSlotsFillWithoutStealingOrDroppingOtherReservedStacks() throws Exception {
         InventoryLayout layout=new InventoryLayout();layout.set(0,Type.SWORD);
         inventory.items.setInventorySlotContents(36,new ItemStack(Items.diamond_sword));

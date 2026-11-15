@@ -24,17 +24,17 @@ public final class FireflySwarm {
             if(dx*dx+dy*dy+dz*dz>range*range*3.2||fly.age>fly.lifetime||!space.available(fly.x,fly.y,fly.z)||!space.collisions(fly.box()).isEmpty()){it.remove();continue;}
             fly.previousX=fly.x;fly.previousY=fly.y;fly.previousZ=fly.z;
             double t=fly.age*.028+fly.seed;
-            double home=Math.max(0,Math.sqrt(dx*dx+dz*dz)/range-.45);
+            double home=Math.max(0,Math.sqrt(dx*dx+dz*dz)/range-.9);
             fly.vx=fly.vx*.91+(Math.sin(t*.91)+Math.cos(t*1.57)*.45+dx*home*.12)*speed*.09;
-            fly.vy=fly.vy*.91+(Math.sin(t*1.13)*.35+dy*.09)*speed*.09;
+            fly.vy=fly.vy*.91+(Math.sin(t*1.13)*.35+(fly.homeY-fly.y)*.04)*speed*.09;
             fly.vz=fly.vz*.91+(Math.cos(t*.83)+Math.sin(t*1.41)*.45+dz*home*.12)*speed*.09;
             fly.move(space);
             fly.record();fly.age++;
         }
         // Bound spawning attempts, including indoors and in unloaded chunks.
-        for(int attempt=0;attempt<8&&flies.size()<count;attempt++){
+        for(int attempt=0;attempt<24&&flies.size()<count;attempt++){
             double angle=random.nextDouble()*Math.PI*2,r=Math.sqrt(random.nextDouble())*range;
-            Fly fly=new Fly(x+Math.cos(angle)*r,y-2+random.nextDouble()*5,z+Math.sin(angle)*r,random.nextDouble()*100,400+random.nextInt(400));
+            Fly fly=new Fly(x+Math.cos(angle)*r,y-5+random.nextDouble()*14,z+Math.sin(angle)*r,random.nextDouble()*100,800+random.nextInt(800));
             if(space.available(fly.x,fly.y,fly.z)&&space.collisions(fly.box()).isEmpty())flies.add(fly);
         }
     }
@@ -42,10 +42,11 @@ public final class FireflySwarm {
         private static final double RADIUS=.07;
         public double x,y,z,previousX,previousY,previousZ,vx,vy,vz;
         public final double seed;
+        public final double homeY;
         public final int lifetime;
         public int age,head,samples;
         public final double[] trailX=new double[HISTORY],trailY=new double[HISTORY],trailZ=new double[HISTORY];
-        public Fly(double x,double y,double z,double seed,int lifetime){this.x=previousX=x;this.y=previousY=y;this.z=previousZ=z;this.seed=seed;this.lifetime=lifetime;record();}
+        public Fly(double x,double y,double z,double seed,int lifetime){this.x=previousX=x;this.y=previousY=homeY=y;this.z=previousZ=z;this.seed=seed;this.lifetime=lifetime;record();}
         public AxisAlignedBB box(){return new AxisAlignedBB(x-RADIUS,y-RADIUS,z-RADIUS,x+RADIUS,y+RADIUS,z+RADIUS);}
         public void move(Space space){
             AxisAlignedBB box=box();double dx=vx,dy=vy,dz=vz;

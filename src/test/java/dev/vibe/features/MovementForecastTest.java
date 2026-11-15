@@ -29,6 +29,7 @@ public class MovementForecastTest {
     }
     public static class PredictionWorld extends ProjectileFixture.TestWorld {
         Chunk chunk;private PredictionWorld(){super();}
+        @Override public Entity getEntityByID(int id){for(Entity entity:loadedEntityList)if(entity.getEntityId()==id)return entity;return null;}
         @Override public Chunk getChunkFromChunkCoords(int x,int z){return chunk;}
         @Override public boolean isFlammableWithin(AxisAlignedBB box){return false;}
         @Override public boolean isAnyLiquid(AxisAlignedBB box){return false;}

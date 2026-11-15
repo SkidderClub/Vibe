@@ -35,6 +35,8 @@ import org.lwjgl.input.Mouse;
 /** Selects rotations before movement; supplies clicks in vanilla's input pass. */
 public class KillAuraModule extends Module {
     private final RangeSetting reach = addSetting(new RangeSetting("Reach", 3.0D, 3.0D, 3.0D, 6.5D, 0.05D));
+    public final NumberSetting targetAmount=addSetting(new NumberSetting("Target Amount",1,1,20,1));
+    private boolean multiAttacking;
     private final ModeSetting autoblock = addSetting(new ModeSetting("Autoblock Mode", "None", "None", "Vanilla", "Fake", "Legit", "AAC330", "Hypixel", "Rewound"));
     private final BooleanSetting onlyRightClick = addSetting(new BooleanSetting("Only When Rightclicking", false,
             () -> realBlockMode()));
@@ -398,7 +400,7 @@ public class KillAuraModule extends Module {
         double range = selectionRange();
         if (distanceTo(entity) > range && !ProjectileAuraModule.extendsTargetRange(this, entity)) return false;
         float[] desired = rotationsTo(entity);
-        if (!RotationMath.withinAngle(desired[0], desired[1], minecraft.thePlayer.rotationYaw,
+        if (targetAmount.getInt()==1&&!RotationMath.withinAngle(desired[0], desired[1], minecraft.thePlayer.rotationYaw,
                 minecraft.thePlayer.rotationPitch, maxAngle.getFloat())) return false;
         return aimThroughWalls.isEnabled() || piercing.isEnabled()
                 || minecraft.theWorld.rayTraceBlocks(eyes(), aimPoint(entity), false, true, false) == null;
@@ -428,6 +430,8 @@ public class KillAuraModule extends Module {
 
     /** The rotated ray must intersect the target within reach; otherwise swing air. */
     private MovingObjectPosition attackHit(double attackReach) {
+        if(targetAmount.getInt()>1&&target!=null&&validTarget(target)&&distanceTo(target)<=Math.min(attackReach,clickRange()))
+            return new MovingObjectPosition(target,aimPoint(target));
         Vec3 eye = eyes();
         double yaw = Math.toRadians(rotation.getYaw());
         double pitch = Math.toRadians(rotation.getPitch());
@@ -561,6 +565,25 @@ public class KillAuraModule extends Module {
     }
 
     public EntityLivingBase getTarget() { return target; }
+    /** Fan out only an aura-produced native primary hit, inside its existing hotbar/controller scope. */
+    public static void multiAttackHook(Object player,Object attacked){
+        KillAuraModule aura=module();
+        if(aura==null||aura.multiAttacking||aura.targetAmount.getInt()<=1||player!=aura.minecraft.thePlayer
+                ||attacked!=aura.target||!aura.canOperate()||!aura.validTarget(aura.target))return;
+        double range=Math.min(aura.clickRange(),aura.attackReach());
+        java.util.List<EntityLivingBase> extra=new java.util.ArrayList<>();
+        for(Object object:aura.minecraft.theWorld.loadedEntityList)if(object instanceof EntityLivingBase){
+            EntityLivingBase candidate=(EntityLivingBase)object;
+            if(candidate!=attacked&&aura.validTarget(candidate)&&aura.distanceTo(candidate)<=range)extra.add(candidate);
+        }
+        extra.sort(aura::compare);java.util.Set<Integer> hit=new java.util.HashSet<>();hit.add(((Entity)attacked).getEntityId());
+        aura.multiAttacking=true;
+        try{for(EntityLivingBase candidate:extra){
+            if(hit.size()>=aura.targetAmount.getInt())break;
+            if(!hit.add(candidate.getEntityId())||!aura.validTarget(candidate)||aura.distanceTo(candidate)>range)continue;
+            aura.minecraft.playerController.attackEntity(aura.minecraft.thePlayer,candidate);
+        }}finally{aura.multiAttacking=false;}
+    }
     public boolean isRewoundBlocking() { return isEnabled() && autoblock.is("Rewound") && rewoundBlock.blocking(); }
 
     /** Native swing/controller order from Exire's Post attack branch, then its NCP block. */

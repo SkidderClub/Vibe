@@ -10,6 +10,29 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TargetStrafeSettingsTest {
+    @Test public void aggressiveApproachesStraightThenOrbitsWithoutChatteringAtTheRadius() throws Exception {
+        try (MovementForecastTest.Fixture f=new MovementForecastTest.Fixture()) {
+            MoveFixModule fix=new MoveFixModule();TargetStrafeModule m=new TargetStrafeModule();
+            f.base.base.modules.registerDynamic(fix);f.base.base.modules.registerDynamic(m);
+            net.minecraft.entity.EntityLivingBase target=f.base.player("Enemy",.5,64,6.5);target.worldObj=f.world;
+            m.targetMode.setValue("Nearest Target");m.setEnabled(true);assertFalse(m.aggressive.isEnabled());
+            m.input(new MovementInput());assertFalse(fix.hasForcedMovement());
+            m.aggressive.setEnabled(true);MovementInput input=new MovementInput();m.input(input);
+            assertEquals(1,input.moveForward,1E-6);assertEquals(0,input.moveStrafe,1E-6);
+            target.setPosition(.5,64,3);input=new MovementInput();m.input(input);assertTrue(input.moveStrafe>.9);
+            target.setPosition(.5,64,3.1);input=new MovementInput();m.input(input);assertTrue("Remain in orbit across a small radius correction",input.moveStrafe>.9);
+            target.setPosition(.5,64,3.5);input=new MovementInput();m.input(input);assertEquals(1,input.moveForward,1E-6);assertEquals(0,input.moveStrafe,1E-6);
+            m.aggressive.setEnabled(false);m.input(new MovementInput());assertFalse(fix.hasForcedMovement());m.setEnabled(false);
+        }
+    }
+    @Test public void aggressiveStillHonorsDependenciesAndVoidSafety() throws Exception {
+        try (MovementForecastTest.Fixture f=new MovementForecastTest.Fixture()) {
+            MoveFixModule fix=new MoveFixModule();TargetStrafeModule m=module(f,fix,6);m.aggressive.setEnabled(true);m.onlySpeed.setEnabled(true);
+            MovementInput input=new MovementInput();input.moveForward=.5F;m.input(input);assertFalse(fix.hasForcedMovement());assertEquals(.5F,input.moveForward,0);
+            m.onlySpeed.setEnabled(false);f.world.blocks.clear();input=new MovementInput();m.input(input);
+            assertEquals(0,input.moveForward,0);assertEquals(0,input.moveStrafe,0);m.setEnabled(false);
+        }
+    }
     @Test public void targetRangeDoesNotPullThePlayerIntoDistantOrbitsAndRadiusChangesApplyImmediately() throws Exception {
         try (MovementForecastTest.Fixture f=new MovementForecastTest.Fixture()) {
             MoveFixModule fix=new MoveFixModule();TargetStrafeModule m=module(f,fix,6);

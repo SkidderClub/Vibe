@@ -306,7 +306,8 @@ public class RewoundModesTest implements Opcodes {
         final Minecraft mc; final FixtureWorld world; final Player player; final Connection queue;
         final SpeedModule speed; final NoFallModule fall; final NoSlowModule slow; final KillAuraModule aura;
         Fixture() throws Exception { this(true); }
-        Fixture(boolean hooked) throws Exception {
+        Fixture(boolean hooked) throws Exception { this(hooked, false); }
+        Fixture(boolean hooked, boolean nativeJump) throws Exception {
             dev.vibe.camera.DroneCollisionsTest.registerBlocks();
             mc = PathTestFixture.allocate(Minecraft.class); PathTestFixture.set(Minecraft.class, null, "theMinecraft", mc);
             mc.gameSettings = new GameSettings();
@@ -314,7 +315,7 @@ public class RewoundModesTest implements Opcodes {
             PathTestFixture.set(Minecraft.class, mc, "timer", timer);
             world = PathTestFixture.allocate(FixtureWorld.class); mc.theWorld = world;
             world.loaded = true; world.underBlock = net.minecraft.init.Blocks.stone.getDefaultState(); world.obstacles = new ArrayList<>();
-            player = nativePlayer(hooked); mc.thePlayer = player; player.worldObj = world; player.effects = new HashMap<>();
+            player = nativePlayer(hooked, nativeJump); mc.thePlayer = player; player.worldObj = world; player.effects = new HashMap<>();
             health(player);
             player.movementInput = new MovementInput(); player.movementInput.moveForward = player.moveForward = 1;
             player.inventory = new InventoryPlayer(player); player.inventory.mainInventory[0] = new ItemStack(Items.iron_sword);
@@ -343,7 +344,7 @@ public class RewoundModesTest implements Opcodes {
     }
 
     /** Keep the actual transformed walking bytecode, inheriting deterministic test-only entity responses. */
-    private static Player nativePlayer(boolean hooked) throws Exception {
+    private static Player nativePlayer(boolean hooked, boolean nativeJump) throws Exception {
         String original = "net/minecraft/client/entity/EntityPlayerSP", name = "dev/vibe/movement/NativeRewoundPlayer";
         byte[] bytes;
         try (InputStream in = EntityPlayerSP.class.getResourceAsStream("EntityPlayerSP.class"); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -368,15 +369,34 @@ public class RewoundModesTest implements Opcodes {
                 }
             }
         }
+        if (nativeJump) {
+            byte[] livingBytes;
+            try (InputStream in = EntityLivingBase.class.getResourceAsStream("EntityLivingBase.class"); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                byte[] buffer = new byte[8192]; for (int n; (n = in.read(buffer)) != -1;) out.write(buffer, 0, n); livingBytes = out.toByteArray();
+            }
+            ClassNode living = new ClassNode();
+            new ClassReader(new dev.vibe.core.MoveFixTransformer().transform("net.minecraft.entity.EntityLivingBase", "net.minecraft.entity.EntityLivingBase", livingBytes)).accept(living, 0);
+            for (Object value : living.methods) {
+                MethodNode method = (MethodNode) value;
+                if (!method.name.equals("jump")) continue;
+                for (AbstractInsnNode instruction : method.instructions.toArray()) if (instruction instanceof FrameNode) {
+                    FrameNode frame = (FrameNode) instruction;
+                    if (frame.local != null) Collections.replaceAll(frame.local, "net/minecraft/entity/EntityLivingBase", name);
+                    if (frame.stack != null) Collections.replaceAll(frame.stack, "net/minecraft/entity/EntityLivingBase", name);
+                }
+                node.methods.add(method);
+            }
+        }
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS); node.accept(writer); final byte[] result = writer.toByteArray();
         Class<?> type = new ClassLoader(RewoundModesTest.class.getClassLoader()) { Class<?> define() { return defineClass(name.replace('/', '.'), result, 0, result.length); } }.define();
         return (Player) PathTestFixture.allocate(type);
     }
 
     public static class Player extends EntityPlayerSP {
-        Map<Integer, PotionEffect> effects; boolean using, blocking; int jumps; double[] lastMove;
+        Map<Integer, PotionEffect> effects; boolean using, blocking, sprinting; int jumps; double[] lastMove;
         protected Player() { super(null, null, null, null); }
-        @Override public boolean isSprinting() { return false; }
+        @Override public boolean isSprinting() { return sprinting; }
+        @Override public void addChatMessage(net.minecraft.util.IChatComponent message) { }
         @Override public boolean isSneaking() { return false; }
         @Override public boolean isSpectator() { return false; }
         @Override public boolean isInLava() { return false; }

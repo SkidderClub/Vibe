@@ -120,6 +120,11 @@ public final class PacketDelayService {
             return true;
         }
         if (scripts != null) scripts.dispatched(packet);
+        dev.vibe.module.impl.movement.PhaseModule phase=dev.vibe.features.FeatureModule.module(dev.vibe.module.impl.movement.PhaseModule.class);
+        if(phase!=null)phase.mutate(packet);
+        dev.vibe.module.impl.client.DisablerModule disabler=dev.vibe.features.FeatureModule.module(dev.vibe.module.impl.client.DisablerModule.class);
+        if(disabler!=null&&disabler.outbound(packet,ctx,promise))return true;
+        if(phase!=null&&phase.outbound(packet,ctx,promise))return true;
         LagRangeModule lagRange = Vibe.getInstance() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(LagRangeModule.class);
         if (lagRange == null || !lagRange.shouldBlink(packet)) return false;
@@ -142,15 +147,7 @@ public final class PacketDelayService {
     public static boolean isUnmodified(Object packet) { return UNMODIFIED.containsKey(packet); }
 
     private boolean delayInbound(Packet<?> packet, ChannelHandlerContext ctx) {
-        if (packet instanceof S08PacketPlayerPosLook && Vibe.getInstance() != null) {
-            final S08PacketPlayerPosLook correction = (S08PacketPlayerPosLook) packet;
-            minecraft.addScheduledTask(new Runnable() {
-                @Override public void run() {
-                    dev.vibe.module.impl.client.FlagDetectorModule module = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.FlagDetectorModule.class);
-                    if (module != null) module.observe(correction);
-                }
-            });
-        }
+        dev.vibe.module.impl.movement.PhaseModule phase=dev.vibe.features.FeatureModule.module(dev.vibe.module.impl.movement.PhaseModule.class);if(phase!=null)phase.receive(packet);
         VelocityModule velocity = Vibe.getInstance() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
         if (velocity != null && velocity.handleInbound(packet)) return true;

@@ -243,7 +243,7 @@ public final class VibeConfig {
         for (Module module : manager.getModules()) {
             JsonObject data = new JsonObject();
             data.addProperty("id", module.getId());
-            data.addProperty("enabled", module.isEnabled());
+            data.addProperty("enabled", module.isConfiguredEnabled());
             data.addProperty("key", module.getKey());
             JsonObject settings = new JsonObject();
             for (Setting<?> setting : module.getSettings()) {
@@ -594,7 +594,7 @@ public final class VibeConfig {
                         elements.add("notifications"); ((HudModule) module).getHudElements().setValue(elements);
                     }
                 }
-                if (data.has("enabled")) module.setEnabled(getBoolean(data, "enabled", module.isEnabled()));
+                if (data.has("enabled")) module.setEnabled(getBoolean(data, "enabled", module.isConfiguredEnabled()));
             }
             return true;
         } finally {

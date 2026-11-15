@@ -22,6 +22,7 @@ public final class RewoundHooks {
 
     public static void preUpdate(Object entity) {
         if (entity != Minecraft.getMinecraft().thePlayer) return;
+        dev.vibe.module.impl.movement.PhaseModule phase=module(dev.vibe.module.impl.movement.PhaseModule.class);if(phase!=null)phase.preUpdate(entity);
         StepModule step = module(StepModule.class);
         if (step != null) step.rewoundPreUpdate(entity);
         AntiVoidModule antiVoid = module(AntiVoidModule.class);
@@ -45,7 +46,10 @@ public final class RewoundHooks {
     public static double[] move(Object entity, double x, double y, double z) {
         if (entity != Minecraft.getMinecraft().thePlayer) return null;
         SpeedModule speed = module(SpeedModule.class);
-        return speed == null ? null : speed.rewoundMove(entity, x, y, z);
+        double[] result=speed==null?null:speed.rewoundMove(entity,x,y,z);
+        dev.vibe.module.impl.movement.JesusModule jesus=module(dev.vibe.module.impl.movement.JesusModule.class);
+        double[] water=jesus==null?null:jesus.move(entity,result==null?x:result[0],result==null?y:result[1],result==null?z:result[2]);
+        return water==null?result:water;
     }
     public static void input(net.minecraft.util.MovementInput input) {
         SpeedModule speed = module(SpeedModule.class);
@@ -58,6 +62,7 @@ public final class RewoundHooks {
     }
     public static void beforeWalking(Object entity) {
         if (entity != Minecraft.getMinecraft().thePlayer) return;
+        dev.vibe.module.impl.movement.PhaseModule phase=module(dev.vibe.module.impl.movement.PhaseModule.class);if(phase!=null)phase.beforeWalking(entity);
         CriticalsModule criticals = module(CriticalsModule.class);
         if (criticals != null) criticals.rewoundBeforeWalking(entity);
         NoFallModule fall = module(NoFallModule.class);
@@ -98,6 +103,9 @@ public final class RewoundHooks {
     }
     /** Inserted after PacketThreadUtil, so the packet and state change exactly once on the client thread. */
     public static void correction(Object packet) {
+        dev.vibe.module.impl.movement.PhaseModule phase=module(dev.vibe.module.impl.movement.PhaseModule.class);if(phase!=null&&packet instanceof S08PacketPlayerPosLook)phase.correction();
+        dev.vibe.module.impl.client.FlagDetectorModule flags=module(dev.vibe.module.impl.client.FlagDetectorModule.class);
+        if(flags!=null&&packet instanceof S08PacketPlayerPosLook)flags.observe((S08PacketPlayerPosLook)packet);
         dev.vibe.module.impl.world.ScaffoldModule scaffold = module(dev.vibe.module.impl.world.ScaffoldModule.class);
         if (scaffold != null && packet instanceof S08PacketPlayerPosLook) scaffold.onTowerCorrection((S08PacketPlayerPosLook) packet);
         SpeedModule speed = module(SpeedModule.class);
