@@ -184,7 +184,7 @@ public class RewoundModesTest implements Opcodes {
             select(f.aura, "Autoblock Mode", "Rewound");
             for (Module m : new Module[] {f.speed, f.slow, f.fall}) select(m, "Mode", "Rewound");
             select(f.speed, "Fast fall", "Snap");
-            File directory = java.nio.file.Files.createTempDirectory(java.nio.file.Paths.get("build/exire-port"), "config-").toFile();
+            File directory = java.nio.file.Files.createTempDirectory(java.nio.file.Files.createDirectories(java.nio.file.Paths.get("build/exire-port")), "config-").toFile();
             dev.vibe.config.VibeConfig config = new dev.vibe.config.VibeConfig(directory);
             ModuleManager modules = Vibe.getInstance().getModuleManager();
             assertTrue(config.save("rewound", modules));

@@ -53,7 +53,7 @@ public final class RewoundHooks {
     }
     public static void input(net.minecraft.util.MovementInput input) {
         SpeedModule speed = module(SpeedModule.class);
-        if (speed != null && speed.rewoundControlsJump()) input.jump = false;
+        if (speed != null && speed.rewoundControlsJump() || dev.vibe.module.impl.world.ScaffoldModule.ownsNovolineJump()) input.jump = false;
     }
     public static void afterMove(Object entity, double[] move) {
         if (move == null) return;
@@ -65,6 +65,10 @@ public final class RewoundHooks {
         dev.vibe.module.impl.movement.PhaseModule phase=module(dev.vibe.module.impl.movement.PhaseModule.class);if(phase!=null)phase.beforeWalking(entity);
         CriticalsModule criticals = module(CriticalsModule.class);
         if (criticals != null) criticals.rewoundBeforeWalking(entity);
+        dev.vibe.module.impl.movement.JesusModule jesus=module(dev.vibe.module.impl.movement.JesusModule.class);
+        if(jesus!=null)jesus.novolinePreUpdate(entity);
+        KillAuraModule aura = KillAuraModule.activeController();
+        if(aura!=null)aura.novolineBeforeWalking(entity);
         NoFallModule fall = module(NoFallModule.class);
         if (fall != null) fall.beforeWalking(entity);
         NoSlowModule slow = module(NoSlowModule.class);
@@ -74,7 +78,9 @@ public final class RewoundHooks {
         CriticalsModule criticals = module(CriticalsModule.class);
         if (criticals != null) vanilla = criticals.rewoundGround(entity, vanilla);
         NoFallModule fall = module(NoFallModule.class);
-        return fall == null ? vanilla : fall.walkingGround(entity, vanilla);
+        vanilla = fall == null ? vanilla : fall.walkingGround(entity, vanilla);
+        dev.vibe.module.impl.world.ScaffoldModule scaffold=module(dev.vibe.module.impl.world.ScaffoldModule.class);
+        return scaffold==null?vanilla:scaffold.novolineGround(entity,vanilla);
     }
     public static double walkingY(double vanilla) {
         CriticalsModule criticals = module(CriticalsModule.class);
@@ -89,8 +95,10 @@ public final class RewoundHooks {
         try {
             NoSlowModule slow = module(NoSlowModule.class);
             if (slow != null) slow.afterWalking(entity);
+            dev.vibe.module.impl.world.ScaffoldModule scaffold=module(dev.vibe.module.impl.world.ScaffoldModule.class);
+            if(scaffold!=null)scaffold.novolineAfterWalking();
             KillAuraModule aura = KillAuraModule.activeController();
-            if (aura != null) aura.rewoundAfterWalking(entity);
+            if (aura != null) {aura.rewoundAfterWalking(entity);aura.novolineAfterWalking(entity);}
         } finally { endWalking(); }
     }
     public static void endWalking() {
@@ -108,6 +116,7 @@ public final class RewoundHooks {
         if(flags!=null&&packet instanceof S08PacketPlayerPosLook)flags.observe((S08PacketPlayerPosLook)packet);
         dev.vibe.module.impl.world.ScaffoldModule scaffold = module(dev.vibe.module.impl.world.ScaffoldModule.class);
         if (scaffold != null && packet instanceof S08PacketPlayerPosLook) scaffold.onTowerCorrection((S08PacketPlayerPosLook) packet);
+        KillAuraModule aura=KillAuraModule.activeController();if(aura!=null&&packet instanceof S08PacketPlayerPosLook)aura.novolineCorrection();
         SpeedModule speed = module(SpeedModule.class);
         if (speed != null && packet instanceof S08PacketPlayerPosLook) speed.rewoundCorrection((S08PacketPlayerPosLook) packet);
     }

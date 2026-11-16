@@ -177,7 +177,8 @@ public final class HudRefreshRenderCheck {
                 if(GL11.glGetError()!=GL11.GL_NO_ERROR)throw new AssertionError("Target stack graphics state: "+mode);
             }
         }
-        // Alternating cards must not reset each other's interpolated health every frame.
+        // The supplied Novoline design changes current health immediately and
+        // eases the darker lost-health segment. Each target owns that trail.
         TargetHudRenderer renderer=new TargetHudRenderer();
         try {
             hud.targetHud.mode.setValue("Novoline");hud.targetHud.smoothing.setEnabled(true);hud.targetHud.health.setValue(0xFF11E050);
@@ -190,10 +191,11 @@ public final class HudRefreshRenderCheck {
             renderer.draw(hud.targetHud,damaged,mc.fontRendererObj,24,40,180,()->{},false,1016);
             renderer.draw(hud.targetHud,players.get(1),mc.fontRendererObj,24,90,180,()->{},false,1016);
             BufferedImage image=read();
-            if((image.getRGB((24+44+60)*2,(40+22)*2)&0xFFFFFF)!=0x11E050)
-                throw new AssertionError("Switching cards reset the first target's health interpolation");
-            if((image.getRGB((24+44+60)*2,(90+22)*2)&0xFFFFFF)==0x11E050)
-                throw new AssertionError("The second card used the first target's health");
+            int trail=new java.awt.Color(0x11E050).darker().getRGB()&0xFFFFFF;
+            if((image.getRGB((24+44+60)*2,(40+28)*2)&0xFFFFFF)!=trail)
+                throw new AssertionError("Switching cards reset the first target's Novoline damage trail");
+            if((image.getRGB((24+44+60)*2,(90+28)*2)&0xFFFFFF)==trail)
+                throw new AssertionError("The second card used the first target's Novoline damage trail");
             save("target-independent-health.png");
         } finally {renderer.close();}
         System.out.println("Three simultaneous target cards: five styles, pop in/out, animated glass coordinates and independent health state passed.");

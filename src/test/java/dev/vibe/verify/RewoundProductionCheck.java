@@ -25,6 +25,13 @@ public final class RewoundProductionCheck {
         for (String hook : new String[] {"move", "afterMove", "beforeWalking", "afterWalking", "endWalking", "ground", "correction", "preUpdate", "preStepHeight", "stepHeight", "postStep", "walkingY", "positionTicks"}) {
             if (!hooks.contains(hook)) throw new AssertionError("Missing production Rewound hook: " + hook + " in " + hooks);
         }
+        Class.forName("net.minecraft.client.renderer.ItemRenderer",false,loader).getDeclaredMethods();
+        File itemDump=new File(dumps,"net/minecraft/client/renderer/ItemRenderer.class");
+        ClassNode itemNode=new ClassNode();new ClassReader(Files.readAllBytes(itemDump.toPath())).accept(itemNode,0);
+        Set<String> poses=new HashSet<>();for(Object value:itemNode.methods)for(AbstractInsnNode i:((MethodNode)value).instructions.toArray())
+            if(i instanceof MethodInsnNode&&((MethodInsnNode)i).owner.equals("dev/vibe/ui/render/NovolineAnimations"))poses.add(((MethodInsnNode)i).name);
+        if(!poses.containsAll(Arrays.asList("transform","active")))throw new AssertionError("Missing final Novoline item pose hooks: "+poses);
+        for(String name:new String[]{"dev.vibe.ui.render.NovolineAnimations","dev.vibe.module.impl.combat.NovolineAutoblock","dev.vibe.movement.NovolineStep","dev.vibe.ui.novoline.NovolineFonts"})Class.forName(name,false,loader).getDeclaredMethods();
         for (String name : new String[] {"dev.vibe.movement.RewoundHooks", "dev.vibe.movement.RewoundSpeed",
                 "dev.vibe.module.impl.combat.RewoundAutoblock", "dev.vibe.module.impl.movement.SpeedModule",
                 "dev.vibe.module.impl.movement.NoSlowModule", "dev.vibe.module.impl.movement.NoFallModule", "dev.vibe.module.impl.movement.StepModule",

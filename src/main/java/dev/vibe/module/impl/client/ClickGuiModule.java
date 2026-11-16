@@ -29,7 +29,7 @@ public final class ClickGuiModule extends Module {
     private final ColorSetting packetFadeColor = addSetting(new ColorSetting("Packet Fade Color", 0xFF4149CE, () -> theme.is("PacketV3") && packetAccent.is("Fade")));
     private final NumberSetting packetFadeSpeed = addSetting(new NumberSetting("Packet Fade Speed", .6, .1, 3, .1, () -> theme.is("PacketV3") && !packetAccent.is("Static")));
     private final ColorSetting novolineColor = addSetting(new ColorSetting("Novoline Color", 0xFF8A76FA, () -> theme.is("Novoline")));
-    private final BooleanSetting novolineGlow = addSetting(new BooleanSetting("Novoline Glow", true, () -> theme.is("Novoline")));
+    private final BooleanSetting novolineGlow = addSetting(new BooleanSetting("Novoline Glow", false, () -> theme.is("Novoline")));
     private final BooleanSetting suizideDarkMode = addSetting(new BooleanSetting("SuizideX Dark Mode", false, () -> theme.is("SuizideX")));
     private final ColorSetting suizideColor = addSetting(new ColorSetting("SuizideX Color", 0xFFFF5038, () -> theme.is("SuizideX")));
     private final ColorSetting suizideFadeColor = addSetting(new ColorSetting("SuizideX Fade Color", 0xFFE91476, () -> theme.is("SuizideX")));

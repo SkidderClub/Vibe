@@ -22,8 +22,9 @@ public final class TargetHudRenderer {
     private State state;
     private final UpstreamTargetHuds upstream=new UpstreamTargetHuds();
 
-    public int height(TargetHudSettings s) { return UpstreamTargetHuds.supports(s.mode.getValue())?UpstreamTargetHuds.height(s):s.mode.is("Zeroday")?76:(s.mode.is("LiquidGlass")||s.mode.is("Lavalamp")||s.mode.is("Rise"))?46:42; }
+    public int height(TargetHudSettings s) { if(s.mode.is("Novoline"))return 40; return UpstreamTargetHuds.supports(s.mode.getValue())?UpstreamTargetHuds.height(s):s.mode.is("Zeroday")?76:(s.mode.is("LiquidGlass")||s.mode.is("Lavalamp")||s.mode.is("Rise"))?46:42; }
     public int width(TargetHudSettings s,TargetHudData d,FontRenderer font) {
+        if(s.mode.is("Novoline"))return 69+dev.vibe.ui.novoline.NovolineFonts.pixel().getStringWidth(d.name);
         if(UpstreamTargetHuds.supports(s.mode.getValue()))return upstream.width(s,d);
         return Math.max(s.mode.is("Zeroday")?184:130,s.width.getInt());
     }
@@ -46,6 +47,7 @@ public final class TargetHudRenderer {
         int color=s.health.getArgb(),end=s.gradient.isEnabled()?s.healthEnd.getArgb():color;
         float hurt=s.damageTint.isEnabled()?Math.min(1,d.hurtTicks/10F):0;
         if(UpstreamTargetHuds.supports(s.mode.getValue())){upstream.draw(s,d,x,y,w,state.displayed,hurt);if(s.mode.is("ThunderHack"))drawParticles(s,x+24,y+24,now);return;}
+        if(s.mode.is("Novoline")){drawNovoline(s,d,x,y,w,fresh);return;}
         if(s.mode.is("LiquidGlass")||s.mode.is("Lavalamp"))glass.run();
         else HudShapes.round(x,y,w,h,s.mode.is("Novoline")||s.mode.is("Zeroday")?0:s.radius.getFloat(),s.background.getArgb());
         if(s.mode.is("Novoline")) {
@@ -89,6 +91,25 @@ public final class TargetHudRenderer {
             drawParticles(s,x+23,y+23,now);
         }
         GlStateManager.color(1,1,1,1);
+    }
+    private void drawNovoline(TargetHudSettings s,TargetHudData d,int x,int y,int w,boolean fresh){
+        FontRenderer font=dev.vibe.ui.novoline.NovolineFonts.pixel();
+        float max=Math.max(.001F,d.maxHealth+d.absorption-.05F);
+        float health=Math.min(max,Math.round((d.health+d.absorption)*100F)/100F),percent=health*100/max;
+        if(fresh)state.novolinePercent=percent;
+        if(percent<state.novolinePercent)state.novolineTail=state.novolinePercent-percent;
+        state.novolinePercent=percent;
+        state.novolineTail=Math.max(0,Math.min(100-percent,state.novolineTail*.95F));
+        HudShapes.round(x,y,w,40,0,0xFF1D1D1D);
+        HudShapes.round(x+1,y+1.5F,w-2,36,0,0xFF282828);
+        HudShapes.face(d.skin,x+1.5F,y+1.7F,35.2F,0,0);
+        float track=w-44,top=y+18F;
+        HudShapes.round(x+40,top,track,10.8F,0,0x32000000);
+        HudShapes.round(x+40,top,track*percent/100,10.8F,0,s.health.getArgb());
+        HudShapes.round(x+40+track*percent/100,top,track*state.novolineTail/100,10.8F,0,new java.awt.Color(s.health.getArgb()).darker().getRGB());
+        String value=String.format(Locale.ROOT,"%.1f%%",percent);
+        font.drawString(value,x+40+(track-font.getStringWidth(value))/2,y+19.5F,0xFFFFFFFF,true);
+        font.drawString(d.name,x+40,y+5.5F,0xFFFFFFFF,true);
     }
     private void bar(TargetHudSettings s,TargetHudData d,float x,float y,float w,float h,int a,int b) {
         HudShapes.round(x,y,w,h,h/2,0x66222732);
@@ -156,7 +177,7 @@ public final class TargetHudRenderer {
     private static final class State {
         final List<Particle> sparks=new ArrayList<Particle>();
         UUID targetId;
-        float displayed,previousHealth;
+        float displayed,previousHealth,novolinePercent,novolineTail;
         int previousHurt;
         long lastFrame,lastDemoBurst=-1;
     }

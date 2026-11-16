@@ -37,7 +37,7 @@ public class KillAuraModule extends Module {
     private final RangeSetting reach = addSetting(new RangeSetting("Reach", 3.0D, 3.0D, 3.0D, 6.5D, 0.05D));
     public final NumberSetting targetAmount=addSetting(new NumberSetting("Target Amount",1,1,20,1));
     private boolean multiAttacking;
-    private final ModeSetting autoblock = addSetting(new ModeSetting("Autoblock Mode", "None", "None", "Vanilla", "Fake", "Legit", "AAC330", "Hypixel", "Rewound"));
+    private final ModeSetting autoblock = addSetting(new ModeSetting("Autoblock Mode", "None", "None", "Vanilla", "Fake", "Legit", "AAC330", "Hypixel", "Rewound", "RewoundNovoline"));
     private final BooleanSetting onlyRightClick = addSetting(new BooleanSetting("Only When Rightclicking", false,
             () -> realBlockMode()));
     private final NumberSetting blockingRange = addSetting(new NumberSetting("Blocking Range", 3.0D, 1.0D, 7.0D, 0.1D,
@@ -116,6 +116,8 @@ public class KillAuraModule extends Module {
     private long nextLegitBlock;
     private final HypixelAutoblock hypixelBlock = new HypixelAutoblock(this);
     private final RewoundAutoblock rewoundBlock = new RewoundAutoblock();
+    private final NovolineAutoblock novolineBlock = new NovolineAutoblock();
+    private volatile boolean novolineWantsBlock;
     private long hypixelNextAttack;
     private String previousBlockMode = "None";
     private String previousClickMode = "Normal";
@@ -130,6 +132,7 @@ public class KillAuraModule extends Module {
 
     public void tickStart() {
         restoreInput();
+        if(!autoblock.is("RewoundNovoline")) {novolineWantsBlock=false;novolineBlock.release();} else novolineBlock.validate();
         if (!autoblock.is("Rewound") || !rewoundBlock.blocking()) rewoundBlock.release();
         if (previousBlockMode.equals("Hypixel") && !autoblock.is("Hypixel")) {
             resetHypixelBlock(true);
@@ -220,7 +223,7 @@ public class KillAuraModule extends Module {
             releaseOwnedBlock();
             previousBlockMode = autoblock.getValue();
         }
-        if (autoblock.is("Rewound")) {
+        if (autoblock.is("Rewound") || autoblock.is("RewoundNovoline")) {
             // ncp.json attacks in Post, after the rotated walking packet. Do
             // not queue a second vanilla-input hit or force local item use.
             KeyBinding attack = minecraft.gameSettings.keyBindAttack;
@@ -488,6 +491,7 @@ public class KillAuraModule extends Module {
     }
 
     private void releaseOwnedBlock() {
+        novolineWantsBlock=false;novolineBlock.release();
         if (!blockOwned || minecraft.thePlayer == null) return;
         if (minecraft.thePlayer.isBlocking()) setUseKey(false);
         else blockOwned = false;
@@ -544,6 +548,7 @@ public class KillAuraModule extends Module {
     }
 
     private void clear() {
+        novolineWantsBlock=false;novolineBlock.release();
         rewoundBlock.release();
         restoreInput();
         MoveFixModule fix = moveFix();
@@ -613,6 +618,48 @@ public class KillAuraModule extends Module {
         visualBlocking = rewoundBlock.blocking();
     }
     public double getReachRadius() { return reach.getMax(); }
+    private boolean novolineCanOperate(){
+        return isEnabled()&&autoblock.is("RewoundNovoline")&&canOperate()&&!isBreakingBlock()&&!ScaffoldModule.isActive()
+                &&!BedAuraModule.ownsMiningInput()&&!AntiFireballModule.reserving()&&!ProjectileAuraModule.reserving()
+                &&!ProjectileAuraModule.blocksRotations(this)&&!PearlCatcherModule.reserving()&&!BowAimbotModule.drawing()
+                &&target!=null&&validTarget(target);
+    }
+    public void novolineBeforeWalking(Object entity){
+        if(entity!=minecraft.thePlayer)return;
+        if(!novolineCanOperate()){novolineWantsBlock=false;novolineBlock.release();return;}
+        novolineBlock.validate();
+        novolineWantsBlock=swordHeld()&&minecraft.thePlayer.getDistanceToEntity(target)<=blockingRange.getDouble();
+        net.minecraft.client.entity.EntityPlayerSP p=minecraft.thePlayer;
+        if(!novolineWantsBlock||p.movementInput.moveForward!=0||p.movementInput.moveStrafe!=0)novolineBlock.release();
+        long now=System.nanoTime()/1000000L;
+        if(distanceTo(target)<=clickRange()&&(!p.isUsingItem()||p.isBlocking())&&pollClicks(now)>0){
+            MovingObjectPosition hit=attackHit(attackReach());
+            if(hit.entityHit==target){
+                if(dev.vibe.movement.NovolineSupport.hypixel()&&novolineWantsBlock)
+                    p.sendQueue.addToSendQueue(new net.minecraft.network.play.client.C02PacketUseEntity(target,net.minecraft.network.play.client.C02PacketUseEntity.Action.INTERACT));
+                p.swingItem();minecraft.playerController.attackEntity(p,target);
+            }
+        }
+    }
+    public void novolineAfterWalking(Object entity){
+        if(entity!=minecraft.thePlayer||!autoblock.is("RewoundNovoline"))return;
+        if(!novolineCanOperate()||!novolineWantsBlock){novolineBlock.release();visualBlocking=false;return;}
+        // Source interactAutoBlock only runs for a physical use key.
+        MovingObjectPosition hit=minecraft.objectMouseOver;
+        if(minecraft.gameSettings.keyBindUseItem.isKeyDown()&&hit!=null){
+            if(hit.entityHit!=null)minecraft.thePlayer.sendQueue.addToSendQueue(new net.minecraft.network.play.client.C02PacketUseEntity(hit.entityHit,net.minecraft.network.play.client.C02PacketUseEntity.Action.INTERACT));
+            else if(hit.typeOfHit==MovingObjectPosition.MovingObjectType.BLOCK){
+                net.minecraft.block.Block b=minecraft.theWorld.getBlockState(hit.getBlockPos()).getBlock();
+                if(b instanceof net.minecraft.block.BlockChest||b instanceof net.minecraft.block.BlockWorkbench||b instanceof net.minecraft.block.BlockFurnace||b instanceof net.minecraft.block.BlockEnderChest||b instanceof net.minecraft.block.BlockEnchantmentTable)
+                    minecraft.playerController.onPlayerRightClick(minecraft.thePlayer,minecraft.theWorld,minecraft.thePlayer.getHeldItem(),hit.getBlockPos(),hit.sideHit,hit.hitVec);
+            }
+        }
+        novolineBlock.block();visualBlocking=novolineBlock.blocking();
+    }
+    public boolean novolineVeto(net.minecraft.network.Packet<?> packet){return isEnabled()&&autoblock.is("RewoundNovoline")&&novolineBlock.veto(packet,novolineWantsBlock);}
+    public boolean isNovolineBlocking(){return isEnabled()&&autoblock.is("RewoundNovoline")&&novolineBlock.blocking();}
+    public boolean novolineNoSlow(){return novolineCanOperate()&&swordHeld()&&minecraft.thePlayer.getDistanceToEntity(target)<=blockingRange.getDouble();}
+    public void novolineCorrection(){novolineBlock.release();}
     boolean isHypixelBlock() { return autoblock.is("Hypixel"); }
     void setHypixelVisual(boolean value) { visualBlocking = value; }
     public void hypixelFrame() { if (isEnabled() && autoblock.is("Hypixel")) hypixelBlock.frame(); }

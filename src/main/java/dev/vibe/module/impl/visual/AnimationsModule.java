@@ -12,13 +12,13 @@ import org.lwjgl.input.Keyboard;
 public final class AnimationsModule extends Module {
 
     private final ModeSetting blockingStyle = addSetting(new ModeSetting("Blocking Style", "Vanilla",
-            "Vanilla", "Slide", "Reverse", "Reverse Spin", "Spin", "Orbit"));
+            "Vanilla", "Reverse", "Reverse Spin", "Spin", "Orbit", "Swank", "Swing", "Swang", "Swong", "Swaing", "Punch", "Stella", "Styles", "Slide", "Interia", "Ethereal", "1.7", "Sigma", "Exhibition", "Smooth", "Spinning"));
     private final MultiSelectSetting itemTypes = addSetting(new MultiSelectSetting("Items",
             Arrays.asList("Swords", "Bow", "Consumables", "Food", "Potions", "Other"), Arrays.asList("Swords")));
     private final NumberSetting animationSpeed = addSetting(new NumberSetting("Animation Speed", 1.0D, 0.1D, 4.0D, 0.1D,
-            () -> !blockingStyle.is("Vanilla")));
+            () -> !blockingStyle.is("Vanilla") && !dev.vibe.ui.render.NovolineAnimations.supports(blockingStyle.getValue())));
     private final NumberSetting rotation = addSetting(new NumberSetting("Rotation", 35.0D, 0.0D, 180.0D, 1.0D,
-            () -> !blockingStyle.is("Vanilla")));
+            () -> !blockingStyle.is("Vanilla") && !dev.vibe.ui.render.NovolineAnimations.supports(blockingStyle.getValue())));
     private final NumberSetting offsetX = addSetting(new NumberSetting("X Offset", 0.0D, -1.0D, 1.0D, 0.01D,
             () -> !blockingStyle.is("Vanilla")));
     private final NumberSetting offsetY = addSetting(new NumberSetting("Y Offset", 0.0D, -1.0D, 1.0D, 0.01D,

@@ -7,11 +7,11 @@ import java.util.function.Consumer;
 /** Registered on HUD so profiles and every ClickGUI share the same controls. */
 public final class ArrayListSettings {
     public final ModeSetting preset = new ModeSetting("Array Preset", "Custom", "Custom", "Rose Cards", "Purple Rail", "Rounded White", "Green Fade", "Pixel Outline", "Dark Teal");
-    public final ModeSetting font = new ModeSetting("Array Font", "Minecraft", "Minecraft", "Smooth", "Smooth Bold");
+    public final ModeSetting font = new ModeSetting("Array Font", "Minecraft", "Minecraft", "Smooth", "Smooth Bold", "Novoline Client", "Novoline Vanilla");
     public final NumberSetting scale = new NumberSetting("Array Text Scale", 1, .6, 2, .05);
     public final ModeSetting casing = new ModeSetting("Array Name Case", "Original", "Original", "Lowercase", "Uppercase");
     public final BooleanSetting spaces = new BooleanSetting("Array Name Spaces", true);
-    public final BooleanSetting bold = new BooleanSetting("Array Bold", false, () -> font.is("Minecraft"));
+    public final BooleanSetting bold = new BooleanSetting("Array Bold", false, () -> font.is("Minecraft") || font.is("Novoline Vanilla"));
     public final BooleanSetting shadow = new BooleanSetting("Array Text Shadow", true);
     public final ModeSetting suffix = new ModeSetting("Array Suffix", "Mode", "None", "Mode", "All Modes");
     public final ModeSetting separator = new ModeSetting("Array Suffix Separator", "Space", () -> !suffix.is("None"), "Space", "Dash", "Brackets", "Parentheses");

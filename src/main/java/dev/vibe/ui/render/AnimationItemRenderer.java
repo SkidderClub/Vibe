@@ -50,19 +50,26 @@ public final class AnimationItemRenderer extends ItemRenderer {
 
     @Override
     public void renderItemInFirstPerson(float partialTicks) {
+        AnimationsModule module = Vibe.getInstance() == null ? null
+                : Vibe.getInstance().getModuleManager().getModule(AnimationsModule.class);
+        // Glow may draw the item several times; the source animation advances once per frame.
+        NovolineAnimations.frame(module);
         EntityPlayerSP visualPlayer = AuraBlockVisual.begin();
         try {
-            ItemGlowRenderer.held(() -> renderWithAnimation(partialTicks));
+            ItemGlowRenderer.held(() -> renderWithAnimation(partialTicks, module));
         } finally {
             AuraBlockVisual.end(visualPlayer);
         }
     }
 
-    private void renderWithAnimation(float partialTicks) {
-        AnimationsModule module = Vibe.getInstance() == null ? null
-                : Vibe.getInstance().getModuleManager().getModule(AnimationsModule.class);
+    private void renderWithAnimation(float partialTicks, AnimationsModule module) {
         if (module == null || !module.isEnabled() || module.getBlockingStyle().is("Vanilla") || !isSelectedUse(module)) {
             vanilla.renderItemInFirstPerson(partialTicks);
+            return;
+        }
+        if(NovolineAnimations.supports(module.getBlockingStyle().getValue()) && Minecraft.getMinecraft().thePlayer.isBlocking()){
+            NovolineAnimations.begin(module,partialTicks);
+            try{vanilla.renderItemInFirstPerson(partialTicks);}finally{NovolineAnimations.end();}
             return;
         }
         GL11.glPushMatrix();

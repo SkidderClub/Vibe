@@ -153,6 +153,8 @@ final class HypixelScaffold {
    private Vec3 lastPlacementHit;
    private long lastPlacementTime;
 
+   boolean hasPlacementTarget() { return neededBlock != null; }
+
 
    HypixelScaffold(ScaffoldModule owner) {
       this.owner = owner;
@@ -2375,6 +2377,7 @@ final class HypixelScaffold {
                      placed = placed && RavenBlockAccess.check(target, item.getBlock());
                      this.heldBlockCount = this.getBlockCount(player.getHeldItem());
                      if (placed) {
+                        owner.recordNovolinePath(target);
                         this.placedThisTick = true;
                         this.lastPlacementHit = exactHit;
                         this.lastPlacementTime = System.currentTimeMillis();

@@ -49,7 +49,7 @@ final float scale = s.scale.getFloat() * element.getScale();
         Comparator<Row> width = Comparator.comparingDouble((Row r) -> -r.width).thenComparing(r -> r.name);
         Collections.sort(rows,s.sorting.is("Width") ? width : s.sorting.is("Category")
                 ? Comparator.comparingInt((Row r) -> r.category).thenComparing(width) : Comparator.comparing(r -> r.name));
-        float textHeight = s.font.is("Minecraft") ? mc.fontRendererObj.FONT_HEIGHT : font(s).inkHeight("Agjpqy");
+        float textHeight = (s.font.is("Minecraft")||s.font.is("Novoline Vanilla")) ? mc.fontRendererObj.FONT_HEIGHT : font(s).inkHeight("Agjpqy");
         float rh = Math.max(textHeight + 2 * (hud.getArrayOutline().isEnabled() ? s.outlineWidth.getFloat() + 1 : 1),s.rowHeight.getFloat())*scale;
         float gap = s.gap.getFloat()*scale;
         int maxRows = Math.max(1,(int)(screen.getScaledHeight()/(rh+gap)));
@@ -136,7 +136,7 @@ final float scale = s.scale.getFloat() * element.getScale();
                 float textWidth=textWidth(r.name+r.suffix,s)*scale;
                 float x=right?r.x+r.width-inset*scale-textWidth:r.x+inset*scale;
                 float y=r.y+(rh-textHeight*scale)/2;
-                if (!s.font.is("Minecraft")) y -= (font(s).inkTop("Agjpqy") - 1)*scale;
+                if (!(s.font.is("Minecraft")||s.font.is("Novoline Vanilla"))) y -= (font(s).inkTop("Agjpqy") - 1)*scale;
 drawText(r.name,x,y,s,hud,i,rows.size(),now,false,element.getScale());
 drawText(r.suffix,x+textWidth(r.name,s)*scale,y,s,hud,i,rows.size(),now,true,element.getScale());
             }
@@ -180,19 +180,19 @@ drawText(r.suffix,x+textWidth(r.name,s)*scale,y,s,hud,i,rows.size(),now,true,ele
         if(s.casing.is("Uppercase"))value=value.toUpperCase(Locale.ROOT);
         return s.separator.is("Dash")?" - "+value:s.separator.is("Brackets")?" ["+value+"]":s.separator.is("Parentheses")?" ("+value+")":" "+value;
     }
-    private NeverLoseFont font(ArrayListSettings s){return s.font.is("Smooth Bold")?bold:smooth;}
-    private float textWidth(String text,ArrayListSettings s){return s.font.is("Minecraft")?mc.fontRendererObj.getStringWidth((s.bold.isEnabled()?"§l":"")+text):font(s).width(text);}
+    private NeverLoseFont font(ArrayListSettings s){return s.font.is("Novoline Client")?dev.vibe.ui.novoline.NovolineFonts.ARRAY:s.font.is("Smooth Bold")?bold:smooth;}
+    private float textWidth(String text,ArrayListSettings s){return (s.font.is("Minecraft")||s.font.is("Novoline Vanilla"))?mc.fontRendererObj.getStringWidth((s.bold.isEnabled()?"§l":"")+text):font(s).width(text);}
     private void text(String text,float x,float y,int color,ArrayListSettings s){
         // Vanilla treats alpha 0..3 as an unspecified alpha and makes it fully
         // opaque. A faint glow/faded row must never turn into solid copies.
-        if((color>>>24)<(s.font.is("Minecraft")?4:1))return;
-        if(s.font.is("Minecraft"))mc.fontRendererObj.drawString((s.bold.isEnabled()?"§l":"")+text,x,y,color,false);
+        if((color>>>24)<((s.font.is("Minecraft")||s.font.is("Novoline Vanilla"))?4:1))return;
+        if((s.font.is("Minecraft")||s.font.is("Novoline Vanilla")))mc.fontRendererObj.drawString((s.bold.isEnabled()?"§l":"")+text,x,y,color,false);
         else font(s).draw(text,x,y-1,color);
     }
     private void drawText(String text,float x,float y,ArrayListSettings s,HudModule hud,int index,int count,long now,boolean suffix,float elementScale){
         if(text.isEmpty())return;
         // Only glyph draws happen until the end of this label, so one alpha-test query serves them all.
-        NeverLoseFont run=s.font.is("Minecraft")?null:font(s);
+        NeverLoseFont run=(s.font.is("Minecraft")||s.font.is("Novoline Vanilla"))?null:font(s);
         if(run!=null)run.beginRun();
         GlStateManager.pushMatrix();
         try {

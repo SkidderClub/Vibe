@@ -33,6 +33,7 @@ public final class NotificationRenderer {
         boolean alphaTest = GL11.glIsEnabled(GL11.GL_ALPHA_TEST);
         GlStateManager.disableAlpha();
         try {
+            if("Novoline".equalsIgnoreCase(theme)){drawNovoline(entry,x,y,width,opacity,now,settings);return;}
             int height = settings.height.getInt();
             boolean square = "Skeet".equalsIgnoreCase(theme);
             boolean glass = "LiquidGlass".equalsIgnoreCase(theme) || "Lavalamp".equalsIgnoreCase(theme);
@@ -119,6 +120,22 @@ public final class NotificationRenderer {
         }
     }
 
+    private void drawNovoline(ModuleNotifications.Entry entry,int x,int y,int width,float opacity,long now,NotificationSettings settings){
+        int accent=entry.message?0xFFFFFFFF:entry.enabled?0xFF87E331:0xFFFF5050;
+        Gui.drawRect(x,y,x+width,y+24,color(0xFF000000,110,opacity*settings.opacity.getFloat()));
+        if(settings.icons.isEnabled()){
+            String glyph=entry.message?"K":entry.enabled?"H":"I";
+            dev.vibe.ui.novoline.NovolineFonts.NOTICE.draw(glyph,x+(entry.message?0:entry.enabled?-1:1.5F),y-1,tint(accent,opacity));
+        }
+        net.minecraft.client.gui.FontRenderer font=dev.vibe.ui.novoline.NovolineFonts.pixel();
+        int left=x+(settings.icons.isEnabled()?25:3),available=width-(left-x)-3;
+        font.drawString(font.trimStringToWidth(entry.name,available),left,y+2,color(0xFFFFFFFF,255,opacity),true);
+        String detail=entry.message?entry.detail:LanguageManager.translate(entry.enabled?"Enabled":"Disabled");
+        String timer=String.format(java.util.Locale.ROOT," (%.1fs)",entry.remaining(now)*entry.duration/1000F);
+        detail=font.trimStringToWidth(detail,Math.max(0,available-font.getStringWidth(timer)))+timer;
+        font.drawString(detail,left,y+12.5F,color(0xFFC8C8C8,255,opacity),true);
+        if(settings.progress.isEnabled())Gui.drawRect(x,y+23,x+Math.round(width*(1-entry.remaining(now))),y+24,tint(accent,opacity));
+    }
     private static void centered(NeverLoseFont font, String text, float x, float centerY, int color) {
         font.draw(text, x, centerY - font.inkHeight(text) / 2F - font.inkTop(text), color);
     }

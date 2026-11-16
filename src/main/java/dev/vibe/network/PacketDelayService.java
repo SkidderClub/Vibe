@@ -90,7 +90,7 @@ public final class PacketDelayService {
         if (moveFix != null) moveFix.applyToOutgoing(packet);
         KillAuraModule aura = Vibe.getInstance() == null ? null
                 : KillAuraModule.activeController();
-        if (aura != null && aura.deferAacRelease(packet)) {
+        if (aura != null && (aura.novolineVeto(packet) || aura.deferAacRelease(packet))) {
             promise.trySuccess();
             return true;
         }
@@ -108,6 +108,8 @@ public final class PacketDelayService {
         }
         dev.vibe.module.impl.combat.CriticalsModule criticals=dev.vibe.features.FeatureModule.module(dev.vibe.module.impl.combat.CriticalsModule.class);
         if(criticals!=null)criticals.outbound(packet);
+        dev.vibe.module.impl.world.ScaffoldModule scaffold=dev.vibe.features.FeatureModule.module(dev.vibe.module.impl.world.ScaffoldModule.class);
+        if(scaffold!=null&&scaffold.novolineOutbound(packet,ctx,promise))return true;
         // Explicit NoFall policies retain the final say over ground state.
         NoFallModule noFall = Vibe.getInstance() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(NoFallModule.class);

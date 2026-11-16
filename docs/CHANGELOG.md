@@ -2,10 +2,14 @@
 
 ## 0.0.7
 
-11 November 2026
+16 November 2026
 
 ### New
 
+- Added source-based Novoline watermark and notification themes, plus Client and Vanilla arraylist font choices.
+- Added RewoundNovoline modes to Killaura autoblock, Scaffold tower, Step and Jesus.
+- Added all 16 blocking animation styles from the supplied Novoline source.
+- Added Scaffold's Line and Line Color settings to display the path of placed blocks.
 - Projectile Dodge (Combat).
 - Pearl Catcher (Combat).
 - Beverage Notification (Visual).
@@ -22,6 +26,7 @@
 
 ### Improved
 
+- Reworked the Novoline dropdown ClickGUI and TargetHUD using the supplied client's designs, while retaining Vibe's categories and shared movement, rotation and item-switching services. Added Novoline to the credits.
 - AIAura recording has spacing, height-change, target-switch and projectile practice challenges.
 - Freecam supports saved routes and camera poses, playback and an F5 drone view.
 - Teleport uses blue and orange portal effects fitted to the terrain.
@@ -29,6 +34,8 @@
 
 ### Fixed
 
+- Fixed release builds failing on clean GitHub runners: the Rewound config tests now create their temporary parent directory before creating test folders.
+- Kept Novoline animation timing consistent when ItemGlow renders an item in multiple passes.
 - Replaced Projectile Dodge's all-or-nothing direction search with LiquidBounce's trajectory danger zones, perpendicular escape planning, momentum adjustment and obstacle rays, adapted to 1.8.9. It can act while movement keys are held, excludes embedded arrows, and validates both escape sides against voids and loaded terrain. MoveFix correction is included in the prediction.
 
 ## Unreleased

@@ -40,6 +40,8 @@ public final class NoSlowModule extends Module {
 
     public boolean applies() {
         Minecraft minecraft = Minecraft.getMinecraft();
+        KillAuraModule aura=KillAuraModule.activeController();
+        if(aura!=null&&aura.novolineNoSlow()&&minecraft.thePlayer.isUsingItem())return true;
         if (!isEnabled() || minecraft.thePlayer == null || minecraft.thePlayer.isRiding() || !minecraft.thePlayer.isUsingItem()
                 || minecraft.thePlayer.getItemInUse() == null) {
             return false;
@@ -61,6 +63,7 @@ public final class NoSlowModule extends Module {
         if (entity != p || !isEnabled() || !mode.is("Rewound") || p == null || p.sendQueue == null
                 || !items.isSelected("Swords") || p.getHeldItem() == null || !(p.getHeldItem().getItem() instanceof ItemSword)) return;
         KillAuraModule aura = KillAuraModule.activeController();
+        if(aura!=null&&aura.isNovolineBlocking())return;
         if (!p.isBlocking() && (aura == null || !aura.isRewoundBlocking())) return;
         releasedPlayer = p;
         releasedStack = p.getHeldItem();

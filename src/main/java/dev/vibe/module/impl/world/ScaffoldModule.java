@@ -112,7 +112,7 @@ public final class ScaffoldModule extends Module {
     private final BooleanSetting sideways = addSetting(new BooleanSetting("Sideways", false,
             () -> mode.is("Normal") && rotations.is("Normal")));
     private final ModeSetting sprint = addSetting(new ModeSetting("Sprint", "Always", "Always", "Off", "Legit"));
-    private final ModeSetting tower = addSetting(new ModeSetting("Tower", "None", "None", "NCP", "Timer", "Intave"));
+    private final ModeSetting tower = addSetting(new ModeSetting("Tower", "None", "None", "NCP", "Timer", "Intave", "RewoundNovoline"));
     private final BooleanSetting stopTowerOnFlag = addSetting(new BooleanSetting("Stop tower on flag", true, () -> tower.is("NCP")));
     private final BooleanSetting keepY = addSetting(new BooleanSetting("Keep Y", true, () -> !hypixelRotations()));
     private final BooleanSetting sneak = addSetting(new BooleanSetting("Sneak", false, () -> mode.is("Normal")));
@@ -141,6 +141,12 @@ public final class ScaffoldModule extends Module {
     private final BooleanSetting dragClick = addSetting(new BooleanSetting("Drag Click", false));
     private final BooleanSetting renderCount = addSetting(new BooleanSetting("Render Count", false));
 
+    public final BooleanSetting line = addSetting(new BooleanSetting("Line", false));
+    public final dev.vibe.setting.ColorSetting lineColor = addSetting(new dev.vibe.setting.ColorSetting("Line Color", 0xFF00AAFF, line::isEnabled));
+    private final java.util.LinkedHashSet<BlockPos> linePath = new java.util.LinkedHashSet<>();
+    private net.minecraft.world.World lineWorld;
+    private volatile boolean novolineTowerPackets;
+    private boolean novolineTowering;
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final Random random = new Random();
     private final AuraRotation rotation = new AuraRotation();
@@ -208,6 +214,7 @@ public final class ScaffoldModule extends Module {
 
     @Override
     protected void onDisable() {
+        linePath.clear();novolineTowerPackets=novolineTowering=false;
         ncpTowering = false;
         ncpTowerBlockedUntil = 0;
         releaseRotation();
@@ -231,6 +238,8 @@ public final class ScaffoldModule extends Module {
     /** Runs at client tick start: selects the block, its face and this tick's server rotation. */
     public void tickStart() {
         EntityPlayerSP player = minecraft.thePlayer;
+        if(lineWorld!=minecraft.theWorld){linePath.clear();lineWorld=minecraft.theWorld;}
+        if(!line.isEnabled())linePath.clear();
         if (player != owner) {
             ncpTowering = false;
             ncpTowerBlockedUntil = 0;
@@ -889,6 +898,7 @@ public final class ScaffoldModule extends Module {
             clearEmptyStack(player, held);
             return false;
         }
+        recordNovolinePath(hit.getBlockPos().offset(hit.sideHit));
         clearEmptyStack(player, held);
         if (swing.isEnabled()) {
             player.swingItem();
@@ -903,6 +913,7 @@ public final class ScaffoldModule extends Module {
         ItemStack held = player.getHeldItem();
         if (!interactCancelled(player, hit)
                 && minecraft.playerController.onPlayerRightClick(player, minecraft.theWorld, held, hit.getBlockPos(), hit.sideHit, hit.hitVec)) {
+            recordNovolinePath(hit.getBlockPos().offset(hit.sideHit));
             player.swingItem();
             clearEmptyStack(player, held);
             return;
@@ -959,7 +970,9 @@ public final class ScaffoldModule extends Module {
     void beforeWalkingUpdate(Object entity, long now) {
         EntityPlayerSP player = minecraft.thePlayer;
         ncpTowering = false;
+        novolineTowerPackets=novolineTowering=false;
         if (!isEnabled() || player == null || entity != player || player != owner) return;
+        if(tower.is("RewoundNovoline"))novolineTower(player);
         offGroundTicks = player.onGround ? 0 : offGroundTicks + 1;
         boolean jumping = minecraft.gameSettings.keyBindJump.isKeyDown();
         if (stationaryNcpTower() && (player.onGround || player.motionY > 0)
@@ -974,6 +987,69 @@ public final class ScaffoldModule extends Module {
             }
         }
         setTowerTimer(tower.is("Timer") && jumping);
+    }
+
+    private boolean novolineTowerEligible(){
+        EntityPlayerSP p=minecraft.thePlayer;
+        return isEnabled()&&tower.is("RewoundNovoline")&&p!=null&&p==owner&&minecraft.theWorld!=null
+                &&minecraft.currentScreen==null&&minecraft.gameSettings.keyBindJump.isKeyDown()
+                &&!p.isInWater()&&!p.isInLava()&&!p.isOnLadder()&&getBlockStack()!=null
+                &&(isMoving()||!p.isPotionActive(net.minecraft.potion.Potion.jump)||p.getActivePotionEffect(net.minecraft.potion.Potion.jump).getAmplifier()+1<3);
+    }
+    private void novolineTower(EntityPlayerSP p){
+        if(!novolineTowerEligible())return;
+        novolineTowering=true;
+        if(!isMoving())p.motionX=p.motionZ=0;
+        if(groundBelow(p,.76)&&!groundBelow(p,.75)&&p.motionY>.23&&p.motionY<.25)p.motionY=Math.round(p.posY)-p.posY;
+        if(groundBelow(p,.0001)){p.motionY=.41999998688698;p.motionX*=.9;p.motionZ*=.9;}
+        else if(Math.abs(p.posY-Math.round(p.posY))<=.0001&&!minecraft.gameSettings.keyBindSneak.isKeyDown())p.motionY=0;
+        p.cameraPitch=p.cameraYaw=0;
+        novolineTowerPackets=!isMoving()&&(blockPos!=null||hypixelRotations()&&hypixel.hasPlacementTarget())&&dev.vibe.movement.NovolineSupport.hypixel();
+    }
+    private boolean groundBelow(EntityPlayerSP p,double distance){return !minecraft.theWorld.getCollidingBoundingBoxes(p,p.getEntityBoundingBox().offset(0,-distance,0)).isEmpty();}
+    public boolean novolineGround(Object entity,boolean vanilla){return entity==minecraft.thePlayer&&novolineTowering?minecraft.thePlayer.posY%.125==0:vanilla;}
+    public static boolean ownsNovolineJump(){ScaffoldModule s=module();return s!=null&&s.novolineTowerEligible();}
+    public boolean novolineOutbound(net.minecraft.network.Packet<?> packet,io.netty.channel.ChannelHandlerContext ctx,io.netty.channel.ChannelPromise promise){
+        if(!novolineTowerPackets||!(packet instanceof net.minecraft.network.play.client.C03PacketPlayer))return false;
+        net.minecraft.network.play.client.C03PacketPlayer p=(net.minecraft.network.play.client.C03PacketPlayer)packet;
+        if(!p.isMoving())return false;
+        ctx.write(new net.minecraft.network.play.client.C03PacketPlayer.C04PacketPlayerPosition(p.getPositionX(),p.getPositionY()+.00133597911214,p.getPositionZ(),false));
+        ctx.write(new net.minecraft.network.play.client.C03PacketPlayer.C04PacketPlayerPosition(p.getPositionX(),p.getPositionY()+.12633597911214,p.getPositionZ(),false));
+        ctx.write(new net.minecraft.network.play.client.C03PacketPlayer.C04PacketPlayerPosition(p.getPositionX(),p.getPositionY(),p.getPositionZ(),true),promise);
+        return true;
+    }
+    public void novolineAfterWalking(){
+        // Vibe retains the native placement controller and its shared silent/basic slot lease.
+        if(novolineTowerPackets&&!hypixelRotations()&&slotLease!=null&&slotLease.active()&&moveFix()!=null){
+            int token=dev.vibe.inventory.HotbarSwitches.beginActionHook();
+            try{place(minecraft.thePlayer,moveFix());}finally{dev.vibe.inventory.HotbarSwitches.endActionHook(token);}
+        }
+    }
+    public void recordNovolinePath(BlockPos pos){
+        if(line.isEnabled()&&pos!=null)linePath.add(new BlockPos(pos));
+    }
+    public void renderNovolinePath(){
+        if(!isEnabled()||!line.isEnabled()||minecraft.thePlayer==null||linePath.size()<2)return;
+        try(dev.vibe.ui.effect.EffectState state=new dev.vibe.ui.effect.EffectState()){
+            org.lwjgl.opengl.GL20.glUseProgram(0);
+            org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_TEXTURE_2D);
+            org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_DEPTH_TEST);
+            org.lwjgl.opengl.GL11.glDepthMask(false);
+            org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_BLEND);
+            org.lwjgl.opengl.GL11.glBlendFunc(770,771);
+            org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_LINE_SMOOTH);
+            org.lwjgl.opengl.GL11.glLineWidth(2);
+            long phase=System.currentTimeMillis();int c=lineColor.getArgb();float[] hsb=java.awt.Color.RGBtoHSB(c>>16&255,c>>8&255,c&255,null);
+            org.lwjgl.opengl.GL11.glBegin(org.lwjgl.opengl.GL11.GL_LINE_STRIP);
+            for(BlockPos pos:linePath){
+                float brightness=1-Math.abs((float)Math.sin(phase%6000F/6000F*Math.PI*2)*.6F);
+                int tint=java.awt.Color.HSBtoRGB(hsb[0],hsb[1],brightness);
+                org.lwjgl.opengl.GL11.glColor4f((tint>>16&255)/255F,(tint>>8&255)/255F,(tint&255)/255F,(c>>>24)/255F);
+                org.lwjgl.opengl.GL11.glVertex3d(pos.getX()+.5-minecraft.getRenderManager().viewerPosX,pos.getY()+1-minecraft.getRenderManager().viewerPosY,pos.getZ()+.5-minecraft.getRenderManager().viewerPosZ);
+                phase-=300;
+            }
+            org.lwjgl.opengl.GL11.glEnd();
+        }
     }
 
     /** A flag while this tower is active yields to vanilla jump for three seconds. */

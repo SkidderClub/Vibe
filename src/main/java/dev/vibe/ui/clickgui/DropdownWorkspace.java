@@ -42,8 +42,8 @@ final class DropdownWorkspace {
         long now=System.nanoTime();float dt=previous==0?1/60F:Math.min(.05F,(now-previous)/1e9F);previous=now;
         float ease=1-(float)Math.exp(-20*dt);style=new DropdownStyle(settings,System.currentTimeMillis());
         int count=Category.values().length;
-        panelWidth=Math.max(116,Math.min(style.wurst?126:style.novo?136:148,(width-24-12*(count-1))/count));
-        int gap=12;
+        panelWidth=style.novo?100:Math.max(116,Math.min(style.wurst?126:148,(width-24-12*(count-1))/count));
+        int gap=style.novo?10:12;
         if(panels.isEmpty()) {
             Map<String,int[]> saved=SAVED.get(theme);
             horizontal=targetHorizontal=SAVED_HORIZONTAL.getOrDefault(theme,0F);
@@ -51,7 +51,7 @@ final class DropdownWorkspace {
             boolean reflow=savedSize!=null&&(savedSize[0]!=width||savedSize[1]!=height);
             for(int i=0;i<count;i++) {
                 Category category=Category.values()[i];
-                int x=12+i*(panelWidth+gap),y=style.packet?36:style.suizide?20:8;
+                int x=(style.novo?75:12)+i*(panelWidth+gap),y=style.novo?10:style.packet?36:style.suizide?20:8;
                 int[] old=saved==null?null:saved.get(category.name());Panel panel=new Panel(category,i,old==null||reflow?x:old[0],clamp(old==null||reflow?y:old[1],4,height-54));
                 panel.collapsed=old!=null&&old[2]!=0;panels.add(panel);categories.put(category,panel);
                 if(old!=null&&old.length>3)panel.scroll=panel.target=Math.max(0,old[3]);
@@ -84,7 +84,7 @@ final class DropdownWorkspace {
     private void drawPanelGlow(Panel p){
         if(style.wurst)return;
         int x=screenX(p);if(x+panelWidth<0||x>width)return;
-        if(style.novo){SoftPanelGlow.draw(x,p.y,panelWidth,p.h,2,12,0x8A000000);
+        if(style.novo){
             if(style.settings.getNovolineGlow().isEnabled())SoftPanelGlow.draw(x,p.y,panelWidth,p.h,2,9,RenderUtils.alpha(style.accent(.5F,p.y),24));}
         else SoftPanelGlow.draw(x,p.y,panelWidth,p.h,style.radius,12,RenderUtils.alpha(style.accent(.5F,p.y),style.light?42:53));
     }
@@ -95,8 +95,8 @@ final class DropdownWorkspace {
         int radius=style.radius;
         float intro=Math.min(1,(now-opened)/160e6F);
         // Entrance changes the surface tint, leaving input and text precisely aligned.
-        int body=RenderUtils.blend(style.body,style.light?0xFFF2F9F3:0xFF24242A,(1-intro)*.15F);
-        rect(x,y,panelWidth,p.h,radius,body);
+        int body=style.novo?style.body:RenderUtils.blend(style.body,style.light?0xFFF2F9F3:0xFF24242A,(1-intro)*.15F);
+        rect(x-(style.novo?1:0),y,panelWidth+(style.novo?2:0),p.h,radius,body);
         if(style.suizide&&style.light&&!p.collapsed) {
             // Subtle mint at the base of the translucent light panels in the reference.
             dev.vibe.ui.MenuRoundedRenderer.verticalGradient(x,y,panelWidth,p.h,radius,body,0xE5C7FFE6);
@@ -104,18 +104,22 @@ final class DropdownWorkspace {
         if(style.suizide) {
             try(GuiClip clip=GuiClip.local(x,y,panelWidth,style.headerHeight)){roundedGradient(x,y,panelWidth,style.headerHeight+(p.collapsed?0:radius),radius,style.accent(0,y),style.accent(1,y));}
         } else {
-            try(GuiClip clip=GuiClip.local(x,y,panelWidth,style.headerHeight)){rect(x,y,panelWidth,style.headerHeight+(p.collapsed?0:radius),radius,style.novo?0xF20D0D13:0xF7111113);}
+            try(GuiClip clip=GuiClip.local(x,y,panelWidth,style.headerHeight)){rect(x,y,panelWidth,style.headerHeight+(p.collapsed?0:radius),radius,style.novo?0xFF1D1D1D:0xF7111113);}
         }
         String title=p.detail==null?p.category.getLabel():p.detail.getName();
         if(style.wurst){net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.drawString(title,x+4,y+3,0xFFF0F0F0);net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.drawString(p.detail==null?(p.collapsed?"+":"-"):"x",x+panelWidth-10,y+3,0xFFF0F0F0);}
-        else if(style.novo){NeverLoseStyle.icon(p.category,x+8,y+7,0xFFD3D2DF);label(title,x+25,y+4,panelWidth-38,0xFFE8E7ED);}
+        else if(style.novo){
+            dev.vibe.ui.novoline.NovolineFonts.text(dev.vibe.ui.novoline.NovolineFonts.HEADER,title,x+4,y+4,panelWidth-19,0xFFFFFFFF);
+            String icon=p.category==Category.COMBAT?"D":p.category==Category.MOVEMENT?"A":p.category==Category.VISUAL?"C":p.category==Category.WORLD?"B":p.category==Category.MEME?"F":"G";
+            dev.vibe.ui.novoline.NovolineFonts.ICON.draw(icon,x+88,y+1,0xFFFFFFFF);
+        }
         else ScrollingText.draw(HEADER,title,x+9,y+4,panelWidth-(p.collapsed?30:18),0xFFF7F7F9,ScrollingText.Alignment.CENTER);
-        if(p.collapsed){if(!style.wurst)NeverLoseStyle.chevron(x+panelWidth-12,y+11,false,0xFFAAAAAE);return;}
+        if(p.collapsed){if(!style.wurst&&!style.novo)NeverLoseStyle.chevron(x+panelWidth-12,y+11,false,0xFFAAAAAE);return;}
         int top=y+style.headerHeight,bottom=y+p.h-style.footerHeight();
         host.dropdownClip(p.name,top,bottom);
         try(GuiClip clip=GuiClip.local(x,top,panelWidth,bottom-top)) {
             if(p.detail!=null)host.drawDropdownSettings(p.detail,x+4,top+2-Math.round(p.scroll),panelWidth-8,style,p.name);
-            int rowY=top+2-Math.round(p.scroll);
+            int rowY=top+(style.novo?0:2)-Math.round(p.scroll);
             for(Module module:p.modules) {
                 boolean expanded=!style.wurst&&host.dropdownExpanded(module),over=accepts(p.name,mx,my)&&my>=rowY&&my<rowY+style.rowHeight;
                 float on=enabled.getOrDefault(module,module.isEnabled()?1F:0F);on+=((module.isEnabled()?1:0)-on)*ease;enabled.put(module,on);
@@ -130,13 +134,15 @@ final class DropdownWorkspace {
                     } else if(style.suizide) {
                         int inactive=RenderUtils.blend(style.row,style.light?0xFFFFFFFF:0xFF30303A,hover*.6F);
                         roundedGradient(rx,rowY+1,rw,style.rowHeight-3,5,RenderUtils.blend(inactive,style.accent(0,rowY),on),RenderUtils.blend(inactive,style.accent(1,rowY),on));
+                    } else if(style.novo){Gui.drawRect(rx,rowY,rx+rw,rowY+style.rowHeight,RenderUtils.blend(RenderUtils.blend(0xFF282828,0xFF1D1D1D,hover),style.accent(0,rowY),on));
                     } else if(hover>.01F)Gui.drawRect(rx,rowY,rx+rw,rowY+style.rowHeight,RenderUtils.alpha(0xFFFFFFFF,Math.round(hover*9)));
-                    int color=style.novo?RenderUtils.blend(style.text,style.accent(0,rowY),on):module.isEnabled()?0xFFFFFFFF:style.text;
+                    int color=style.novo?0xFFFFFFFF:module.isEnabled()?0xFFFFFFFF:style.text;
                     String name=host.dropdownBinding(module)?"Press a key...":module.getName();
                     int arrowSpace=!style.packet&&host.dropdownHasSettings(module)?13:0;
                     int leftReserve=style.novo?arrowSpace:0;
                     // One text pass: the optional glow belongs behind the panel, never offset glyphs.
                     if(style.wurst){Gui.drawRect(rx,rowY,rx+rw,rowY+style.rowHeight, module.isEnabled()?0xB040AA40:over?0xB0606060:0x70404040);Gui.drawRect(rx,rowY,rx+rw,rowY+1,0x80101010);net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.drawString(net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.trimStringToWidth(name,rw-17),rx+3,rowY+4,0xFFF0F0F0);}
+                    else if(style.novo)dev.vibe.ui.novoline.NovolineFonts.text(dev.vibe.ui.novoline.NovolineFonts.LABEL,name,rx+2,rowY+4,rw-arrowSpace-4,color);
                     else center(name,rx+leftReserve,rowY+(style.rowHeight-14)/2,rw-arrowSpace-leftReserve,color);
                     if(arrowSpace>0)NeverLoseStyle.chevron(rx+rw-11,rowY+style.rowHeight/2-1,expanded,color);
                     host.dropdownModuleTarget(module,x,rowY,x+panelWidth,rowY+style.rowHeight,p.name);
@@ -145,14 +151,10 @@ final class DropdownWorkspace {
                 rowY+=style.rowHeight;
                 if(expanded) {
                     int settingH=host.dropdownSettingsHeight(module);
-                    if(rowY+settingH>=top&&rowY<bottom)host.drawDropdownSettings(module,x+(style.suizide?5:4),rowY,panelWidth-(style.suizide?10:8),style,p.name);
+                    if(rowY+settingH>=top&&rowY<bottom)host.drawDropdownSettings(module,x+(style.novo?0:style.suizide?5:4),rowY,panelWidth-(style.novo?0:style.suizide?10:8),style,p.name);
                     rowY+=settingH;
                 }
             }
-        }
-        if(style.novo) {
-            int color=style.accent(0,y);Gui.drawRect(x,y+p.h-3,x+panelWidth,y+p.h-1,color);
-            Gui.drawRect(x,y+p.h-1,x+panelWidth,y+p.h,RenderUtils.alpha(color,100));
         }
         if(p.max>0){int track=bottom-top,thumb=ScrollbarDrag.thumb(track,p.max,15),sy=top+Math.round((track-thumb)*p.scroll/p.max);
             rect(x+panelWidth-3,sy,2,thumb,1,RenderUtils.alpha(style.muted,150));}

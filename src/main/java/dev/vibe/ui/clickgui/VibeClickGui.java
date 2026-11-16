@@ -166,7 +166,7 @@ public final class VibeClickGui extends GuiScreen {
             KawaseBlur.drawBackdrop(width,height,blur.getStrength().getInt(),partialTicks);
         ClickGuiModule settings=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
         if(mc.theWorld==null)Gui.drawRect(0,0,width,height,0xFF171923);
-        Gui.drawRect(0,0,width,height,settings.getTheme().is("Novoline")?0x66170D34:settings.getTheme().is("PacketV3")?0x36000000:0x16000000);
+        Gui.drawRect(0,0,width,height,settings.getTheme().is("Novoline")?0x78000000:settings.getTheme().is("PacketV3")?0x36000000:0x16000000);
         clickGuiParticles.draw(this);targets.clear();
         if(draggingSlider!=null&&!draggingSlider.setting.isVisible()){draggingSlider=null;rangeDrag=null;}
         if(colorPopup!=null&&!colorPopup.setting.isVisible()){colorPopup=null;draggingColor=null;editing=null;}
@@ -189,6 +189,11 @@ public final class VibeClickGui extends GuiScreen {
         Target target=new Target(type,left,top,right,bottom,module,setting,channel);target.dropdownPanel=panel;targets.add(target);
     }
     private int dropdownSettingHeight(Setting<?> setting){
+        if(Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class).getTheme().is("Novoline")){
+            if(setting instanceof MultiSelectSetting&&openSelections.contains(setting))return 17+((MultiSelectSetting)setting).getOptions().size()*17;
+            if(setting instanceof ModeSetting)return 15+dropdown.inlineHeight((ModeSetting)setting);
+            return setting instanceof StringSetting?22:15;
+        }
         if(setting instanceof ModeSetting)return 22+dropdown.inlineHeight((ModeSetting)setting);
         if(setting instanceof NumberSetting||setting instanceof RangeSetting||setting instanceof StringSetting)return 32;
         if(setting instanceof MultiSelectSetting&&openSelections.contains(setting))return 22+((MultiSelectSetting)setting).getOptions().size()*18;
@@ -200,10 +205,11 @@ public final class VibeClickGui extends GuiScreen {
         if(style.suizide)DropdownStyle.roundedGradient(x,y,w,h,6,
                 style.light?style.accent(0,y):RenderUtils.blend(style.body,style.accent(0,y),.16F),
                 style.light?style.accent(1,y):RenderUtils.blend(style.body,style.accent(1,y),.16F));
-        else DropdownStyle.rect(x,y,w,h,style.packet?5:0,style.novo?0xD50D0D14:0xD5111114);
+        else DropdownStyle.rect(x,y,w,h,style.packet?5:0,style.novo?0xFF282828:0xD5111114);
         for(Setting<?> setting:module.getSettings())if(setting.isVisible()){drawDropdownSetting(setting,x,y,w,style,owner);y+=dropdownSettingHeight(setting);}
     }
     private void drawDropdownSetting(Setting<?> setting,int x,int y,int w,DropdownStyle style,String owner){
+        if(style.novo){drawNovolineSetting(setting,x,y,w,style,owner);return;}
         int text=style.suizide&&style.light?0xFFFFFFFF:style.text;
         int muted=style.suizide&&style.light?0xFFEDE8E9:style.muted;
         int accent=style.suizide&&style.light?0xFFFFFFFF:style.accent(.4F,y);
@@ -256,6 +262,59 @@ public final class VibeClickGui extends GuiScreen {
                 DropdownStyle.label(LanguageManager.translate(option),x+19,rowY+1,w-26,selected?text:muted);
                 dropdownTarget(TargetType.MULTI_OPTION,x+4,rowY,x+w-4,rowY+18,null,setting,i,owner);rowY+=18;
             }}
+        }
+    }
+    private void drawNovolineSetting(Setting<?> setting,int x,int y,int w,DropdownStyle style,String owner){
+        int accent=style.accent(0,y);dev.vibe.ui.NeverLoseFont font=dev.vibe.ui.novoline.NovolineFonts.LABEL;
+        if(setting instanceof NumberSetting||setting instanceof RangeSetting){
+            double min,max,lo,hi;String value;
+            if(setting instanceof NumberSetting){NumberSetting n=(NumberSetting)setting;min=n.getMinimum();max=n.getMaximum();lo=min;hi=n.getDouble();value=compact(hi);}
+            else{RangeSetting r=(RangeSetting)setting;min=r.getMinimum();max=r.getMaximum();lo=r.getMin();hi=r.getMax();value=compact(lo)+" - "+compact(hi);}
+            Gui.drawRect(x+1,y+3,x+w-1,y+14,0x32000000);
+            float a=max<=min?0:(float)((lo-min)/(max-min)),b=max<=min?0:(float)((hi-min)/(max-min));
+            Gui.drawRect(x+1+Math.round((w-2)*a),y+3,x+1+Math.round((w-2)*b),y+14,accent);
+            dev.vibe.ui.novoline.NovolineFonts.text(font,setting.getName()+" "+value,x+4,y+5.5F,w-7,0xFFFFFFFF);
+            dropdownTarget(setting instanceof RangeSetting?TargetType.RANGE:TargetType.NUMBER,x+1,y,x+w-1,y+15,null,setting,-1,owner);return;
+        }
+        if(setting instanceof BooleanSetting){
+            Gui.drawRect(x+w-11,y+4,x+w-1,y+14,0x32000000);
+            if(((BooleanSetting)setting).isEnabled()){
+                org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_TEXTURE_2D);org.lwjgl.opengl.GL11.glLineWidth(1.5F);
+                org.lwjgl.opengl.GL11.glColor4f((accent>>16&255)/255F,(accent>>8&255)/255F,(accent&255)/255F,1);
+                org.lwjgl.opengl.GL11.glBegin(org.lwjgl.opengl.GL11.GL_LINE_STRIP);org.lwjgl.opengl.GL11.glVertex2f(x+w-9,y+8.5F);org.lwjgl.opengl.GL11.glVertex2f(x+w-6.5F,y+11);org.lwjgl.opengl.GL11.glVertex2f(x+w-2,y+6);org.lwjgl.opengl.GL11.glEnd();
+                org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_TEXTURE_2D);net.minecraft.client.renderer.GlStateManager.color(1,1,1,1);
+            }
+            dev.vibe.ui.novoline.NovolineFonts.text(font,setting.getName(),x+4,y+5.5F,w-18,0xFFE3E3E3);
+            dropdownTarget(TargetType.BOOLEAN,x,y,x+w,y+15,null,setting,-1,owner);return;
+        }
+        if(setting instanceof ModeSetting){
+            ModeSetting mode=(ModeSetting)setting;String value=mode.getValue();int valueWidth=Math.min(w/2,Math.round(font.width(value)));
+            dev.vibe.ui.novoline.NovolineFonts.text(font,setting.getName(),x+3,y+6,w-valueWidth-8,0xFFFFFFFF);
+            dev.vibe.ui.novoline.NovolineFonts.text(font,value,x+w-valueWidth-3,y+6,valueWidth,0xFFFFFFFF);
+            dropdownTarget(TargetType.MODE,x,y,x+w,y+15,null,setting,-1,owner);dropdown.drawInlineMode(this,mode,x,y+15,w,owner);return;
+        }
+        if(setting instanceof MultiSelectSetting){
+            MultiSelectSetting multi=(MultiSelectSetting)setting;boolean open=openSelections.contains(multi);
+            Gui.drawRect(x+1,y+3,x+w-1,y+(open?17+multi.getOptions().size()*17:14),0x32000000);
+            dev.vibe.ui.novoline.NovolineFonts.text(font,setting.getName(),x+4,y+5.5F,w-8,0xFFFFFFFF);
+            dropdownTarget(TargetType.MULTI_TOGGLE,x,y,x+w,y+15,null,setting,-1,owner);
+            if(open)for(int i=0;i<multi.getOptions().size();i++){
+                String option=multi.getOptions().get(i);int oy=y+17+i*17;boolean selected=multi.isSelected(option);
+                dev.vibe.ui.novoline.NovolineFonts.text(font,(selected?"• ":"  ")+LanguageManager.translate(option),x+9,oy+6,w-15,selected?0xFFFFFFFF:0x96AEAEAE);
+                dropdownTarget(TargetType.MULTI_OPTION,x+1,oy,x+w-1,oy+17,null,setting,i,owner);
+            }return;
+        }
+        if(setting instanceof ColorSetting){
+            dev.vibe.ui.novoline.NovolineFonts.text(font,setting.getName(),x+4,y+5.5F,w-22,0xFFE3E3E3);
+            Gui.drawRect(x+w-17,y+4,x+w-2,y+13,((ColorSetting)setting).getArgb());
+            dropdownTarget(TargetType.COLOR_TOGGLE,x,y,x+w,y+15,null,setting,-1,owner);return;
+        }
+        if(setting instanceof StringSetting){
+            dev.vibe.ui.novoline.NovolineFonts.text(font,setting.getName(),x+4,y+2,w-8,0xFFE3E3E3);
+            Gui.drawRect(x+4,y+19,x+w-4,y+20,0xDCC3C3C3);
+            if(editing==setting&&textEditor!=null){textEditor.xPosition=x+4;textEditor.yPosition=y+11;textEditor.width=w-8;textEditor.drawTextBox();}
+            else dev.vibe.ui.novoline.NovolineFonts.text(font,((StringSetting)setting).getValue(),x+4,y+11,w-8,0xFFFFFFFF);
+            dropdownTarget(TargetType.TEXT,x+2,y+9,x+w-2,y+22,null,setting,-1,owner);
         }
     }
     void dropdownTooltip(Module module,int mx,int my){

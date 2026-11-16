@@ -227,7 +227,9 @@ public final class HudManager {
         long now = previewingHud ? settings.durationMillis() / 3 : System.nanoTime() / 1000000L;
         float scale = notifications.getScale();
         int width = Math.min(settings.width.getInt(), (int) ((resolution.getScaledWidth() - 16) / scale));
-        int capacity = Math.max(1, ((int) ((resolution.getScaledHeight() - 16) / scale) + settings.gap.getInt()) / settings.stride());
+        int cardHeight="Novoline".equalsIgnoreCase(theme(notifications,hud))?24:settings.height.getInt();
+        int stride=cardHeight+settings.gap.getInt();
+        int capacity = Math.max(1, ((int) ((resolution.getScaledHeight() - 16) / scale) + settings.gap.getInt()) / stride);
         int visibleCount = Math.min(settings.limit.getInt(), capacity);
         ModuleNotifications queue = previewingHud ? notificationSamples : feedback == null ? null : feedback.notifications();
         if (queue == null) return;
@@ -240,7 +242,7 @@ public final class HudManager {
         List<ModuleNotifications.Entry> all = queue.active(now);
         List<ModuleNotifications.Entry> entries = all.subList(Math.max(0, all.size() - visibleCount), all.size());
         if (entries.isEmpty()) return;
-        int height = entries.size() * settings.stride() - settings.gap.getInt();
+        int height = entries.size() * stride - settings.gap.getInt();
         // Clamp before applying the widget transform, including large stacks and HUD scale changes.
         notifications.ensureScaledOnScreen(resolution, width, height);
         renderScaled(notifications, resolution, () -> drawNotificationContents(hud, resolution, entries, now, width, height));
@@ -252,12 +254,14 @@ public final class HudManager {
         int left = notifications.left(resolution, width), top = notifications.top(resolution, height);
         if (hideForDebug(notifications, left, top, width, height, 0)) return;
         String style = theme(notifications, hud);
+        int cardHeight="Novoline".equalsIgnoreCase(style)?24:settings.height.getInt();
+        int stride=cardHeight+settings.gap.getInt();
         for (int i = 0; i < entries.size(); i++) {
             ModuleNotifications.Entry entry = entries.get(i);
             float opacity = previewingHud || !settings.animation.isEnabled() ? 1 : entry.visibility(now);
             float slot = previewingHud || !settings.animation.isEnabled() ? entries.size() - 1 - i : entry.slot(now);
             int x = left + Math.round((1 - opacity) * 12);
-            int y = top + height - settings.height.getInt() - Math.round(slot * settings.stride());
+            int y = top + height - cardHeight - Math.round(slot * stride);
             notificationRenderer.draw(entry, x, y, width, opacity, now, style, settings,
                     ("LiquidGlass".equalsIgnoreCase(style) || "Lavalamp".equalsIgnoreCase(style))
                             ? () -> drawNotificationGlass(hud, x, y, width, opacity) : null);
@@ -358,6 +362,7 @@ public final class HudManager {
     }
 
     private void drawWatermark(HudModule hud, ScaledResolution resolution, FontRenderer font) {
+        if("Novoline".equalsIgnoreCase(theme(watermark,hud))){drawNovolineWatermark(hud,resolution);return;}
         List<String> tags=watermarkRenderer.tags(hud,previewingHud);
         WatermarkRenderer.Layout layout=watermarkRenderer.layout(hud,font,tags,(int)((resolution.getScaledWidth()-18)/watermark.getScale())-20);
         int width=layout.width+20,height=layout.height;
@@ -380,6 +385,28 @@ public final class HudManager {
         watermark.setBounds(left, top, width, height);
     }
 
+    private void drawNovolineWatermark(HudModule hud,ScaledResolution resolution){
+        dev.vibe.ui.NeverLoseFont font=dev.vibe.ui.novoline.NovolineFonts.HEADER;
+        String name=hud.getWatermarkText().getValue();String clock=java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+        boolean showTime=hud.getWatermarkDetails().isSelected("Time");
+        int width=(int)Math.ceil(font.width(name)+(showTime?font.width(" ("+clock+")")+2:0))+2,height=14;
+        watermark.ensureOnScreen(resolution,width,height);int left=watermark.left(resolution,width),top=watermark.getY();
+        if(hideForDebug(watermark,left,top,width,height,0))return;
+        long phase=System.currentTimeMillis();int base=hud.watermark.client.color.getArgb();
+        float[] hsb=java.awt.Color.RGBtoHSB(base>>16&255,base>>8&255,base&255,null);float cursor=left+1;
+        for(int i=0;i<name.length();i++){
+            String ch=name.substring(i,i+1);float brightness=1-Math.abs((float)Math.sin(phase%6000F/6000F*Math.PI*2)*.6F);
+            int c=java.awt.Color.HSBtoRGB(hsb[0],hsb[1],brightness);
+            dev.vibe.ui.novoline.NovolineFonts.text(font,ch,cursor,top+4.5F,width,c);
+            cursor+=font.width(ch);phase-=300;
+        }
+        if(showTime){
+            cursor+=2;dev.vibe.ui.novoline.NovolineFonts.text(font,"(",cursor,top+4,width,0xFFAAAAAA);cursor+=font.width("(");
+            dev.vibe.ui.novoline.NovolineFonts.text(font,clock,cursor,top+4,width,0xFFFFFFFF);cursor+=font.width(clock);
+            dev.vibe.ui.novoline.NovolineFonts.text(font,")",cursor,top+4,width,0xFFAAAAAA);
+        }
+        watermark.setBounds(left,top,width,height);
+    }
     private final dev.vibe.hud.ArrayListRenderer arrayRenderer = new dev.vibe.hud.ArrayListRenderer();
     private void drawArrayList(HudModule hud, ScaledResolution resolution, FontRenderer font) {
         arrayRenderer.draw(hud,arrayList,resolution,false);
@@ -1576,6 +1603,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         public void setTheme(String value) {
             if (value == null) theme = null;
             else if ("Vibe".equalsIgnoreCase(value)) theme = "Vibe";
+            else if ("Novoline".equalsIgnoreCase(value)) theme = "Novoline";
             else if ("Skeet".equalsIgnoreCase(value)) theme = "Skeet";
             else if ("LiquidGlass".equalsIgnoreCase(value)) theme = "LiquidGlass";
             else if ("Lavalamp".equalsIgnoreCase(value)) theme = "Lavalamp";

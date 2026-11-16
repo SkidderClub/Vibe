@@ -882,6 +882,7 @@ public final class ClientEvents {
         fogRenderer.renderMinecraft();
         companionRenderer.render(event.partialTicks);
         teleportPortalRenderer.render();
+        ScaffoldModule scaffoldPath=Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);if(scaffoldPath!=null)scaffoldPath.renderNovolinePath();
         dev.vibe.ambience.AmbienceRenderer.INSTANCE.fireflies(event.partialTicks);
         ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
         if (scripts != null) scripts.renderWorld(event.partialTicks);

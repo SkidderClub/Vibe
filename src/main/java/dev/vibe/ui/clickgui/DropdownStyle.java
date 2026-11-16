@@ -22,9 +22,9 @@ final class DropdownStyle {
         packet = settings.getTheme().is("PacketV3"); novo = settings.getTheme().is("Novoline"); suizide = settings.getTheme().is("SuizideX");wurst=settings.getTheme().is("Wurst");
         light = suizide && !settings.getSuizideDarkMode().isEnabled();
         text = light ? 0xFF20272B : 0xFFF0F1F5; muted = light ? 0xFF5B686E : 0xFFB0B0BA;
-        body = wurst?0xFF404040:light ? 0xEBEDF5F0 : novo ? 0xEC191820 : suizide ? 0xF20C0C11 : 0xEF1B1B1D;
-        row = light ? 0xF4F0F3F3 : suizide ? 0xEF202027 : body;
-        headerHeight = wurst?15:novo ? 23 : 25; rowHeight = wurst?16:novo ? 18 : 22; radius = wurst||novo ? 0 : 4;
+        body = wurst?0xFF404040:light ? 0xEBEDF5F0 : novo ? 0xFF1D1D1D : suizide ? 0xF20C0C11 : 0xEF1B1B1D;
+        row = novo ? 0xFF282828 : light ? 0xF4F0F3F3 : suizide ? 0xEF202027 : body;
+        headerHeight = wurst?15:novo ? 15 : 25; rowHeight = wurst?16:novo ? 14 : 22; radius = wurst||novo ? 0 : 4;
     }
     int accent(float x, int y) { return accent(settings, x, y, now); }
     static int accent(ClickGuiModule settings, float x, int y, long millis) {
@@ -56,7 +56,7 @@ final class DropdownStyle {
         GL11.glShadeModel(GL11.GL_FLAT);GlStateManager.enableAlpha();GlStateManager.enableTexture2D();GlStateManager.resetColor();GlStateManager.color(1,1,1,1);
     }
     private static void color(int c){GL11.glColor4f((c>>16&255)/255F,(c>>8&255)/255F,(c&255)/255F,(c>>>24)/255F);}
-    int footerHeight() { return novo ? 4 : 5; }
+    int footerHeight() { return novo ? 1 : 5; }
     static void label(String s,float x,float y,float width,int color){ScrollingText.draw(LABEL,s,x,y,width,color,ScrollingText.Alignment.LEFT);}
     static void center(String s,int x,int y,int w,int color){ScrollingText.draw(LABEL,s,x+6,y,w-12,color,ScrollingText.Alignment.CENTER);}
 }

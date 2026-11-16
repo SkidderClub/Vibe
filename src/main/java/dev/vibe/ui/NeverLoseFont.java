@@ -18,7 +18,7 @@ import org.lwjgl.opengl.GL11;
 public final class NeverLoseFont {
     public static final NeverLoseFont REGULAR = new NeverLoseFont(Font.PLAIN);
     public static final NeverLoseFont BOLD = new NeverLoseFont(Font.BOLD);
-    private static final int CELL = 32, SIZE = CELL * 16;
+    private final int CELL, SIZE;
     private final Font font;
     private Font activeFont;
     private FontMetrics metrics;
@@ -39,7 +39,12 @@ public final class NeverLoseFont {
     }
 
     public NeverLoseFont(String family, int style, int rasterSize) {
-        font = new Font(family, style, rasterSize);
+        this(new Font(family, style, rasterSize));
+    }
+
+    public NeverLoseFont(Font face) {
+        font = face;
+        CELL = face.getSize() > 26 ? 64 : 32; SIZE = CELL * 16;
         activeFont = font;
         metrics = metrics(font);
     }

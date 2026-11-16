@@ -101,6 +101,45 @@ public class ScaffoldModuleTest {
         set(Vibe.class, null, "instance", previousVibe);
     }
 
+    @Test public void novolineTowerJumpsOnSupportAndDoesNotTouchOtherTowerModes() throws Exception {
+        set(net.minecraft.entity.EntityLivingBase.class,player,"activePotionsMap",new java.util.HashMap<>());
+        set(EntityPlayer.class,player,"gameProfile",new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(),"TowerTest"));
+        world.blocks.put(new BlockPos(0,63,0),Blocks.stone.getDefaultState());
+        scaffold.getTower().setValue("RewoundNovoline");standAt(.5,64,.5,0,0);scaffold.setEnabled(true);
+        KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindJump.getKeyCode(),true);
+        scaffold.beforeWalkingUpdate(player,1000);assertEquals(.41999998688698,player.motionY,0);
+        assertTrue(ScaffoldModule.ownsNovolineJump());assertTrue(scaffold.novolineGround(player,false));
+        scaffold.getTower().setValue("None");player.motionY=-.08;scaffold.beforeWalkingUpdate(player,1050);
+        assertEquals(-.08,player.motionY,0);assertFalse(ScaffoldModule.ownsNovolineJump());assertFalse(scaffold.novolineGround(player,false));scaffold.setEnabled(false);
+    }
+    @Test public void novolineHypixelTowerReplacesMovingPacketsWithItsExactTriplet() throws Exception {
+        set(net.minecraft.entity.EntityLivingBase.class,player,"activePotionsMap",new java.util.HashMap<>());
+        world.blocks.put(new BlockPos(0,63,0),Blocks.stone.getDefaultState());
+        scaffold.getTower().setValue("RewoundNovoline");standAt(.5,64,.5,0,0);scaffold.setEnabled(true);
+        set(ScaffoldModule.class,scaffold,"blockPos",new BlockPos(0,63,0));
+        set(Minecraft.class,minecraft,"currentServerData",new net.minecraft.client.multiplayer.ServerData("Hypixel","mc.hypixel.net",false));
+        KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindJump.getKeyCode(),true);scaffold.beforeWalkingUpdate(player,1000);
+        io.netty.channel.embedded.EmbeddedChannel channel=new io.netty.channel.embedded.EmbeddedChannel(new io.netty.channel.ChannelOutboundHandlerAdapter(){
+            @Override public void write(io.netty.channel.ChannelHandlerContext ctx,Object value,io.netty.channel.ChannelPromise promise){
+                if(!(value instanceof net.minecraft.network.Packet)||!scaffold.novolineOutbound((net.minecraft.network.Packet<?>)value,ctx,promise))ctx.write(value,promise);
+            }
+        });
+        try{
+            channel.writeOutbound(new net.minecraft.network.play.client.C03PacketPlayer.C06PacketPlayerPosLook(.5,64,.5,170,83,false));
+            for(double offset:new double[]{.00133597911214,.12633597911214,0}){
+                net.minecraft.network.play.client.C03PacketPlayer packet=(net.minecraft.network.play.client.C03PacketPlayer)channel.readOutbound();assertNotNull(packet);assertFalse(packet.getRotating());assertEquals(64+offset,packet.getPositionY(),0);assertEquals(offset==0,packet.isOnGround());
+            }
+            assertNull(channel.readOutbound());
+            set(Minecraft.class,minecraft,"currentServerData",new net.minecraft.client.multiplayer.ServerData("Local","localhost",false));scaffold.beforeWalkingUpdate(player,1050);
+            net.minecraft.network.play.client.C03PacketPlayer original=new net.minecraft.network.play.client.C03PacketPlayer.C04PacketPlayerPosition(.5,64,.5,false);channel.writeOutbound(original);assertSame(original,channel.readOutbound());assertNull(channel.readOutbound());
+        }finally{channel.finish();scaffold.setEnabled(false);}
+    }
+    @Test public void novolinePathRecordsUniqueSuccessfulBlocksAndClearsOnDisable() throws Exception {
+        scaffold.setEnabled(true);scaffold.line.setEnabled(true);
+        scaffold.recordNovolinePath(new BlockPos(1,63,0));scaffold.recordNovolinePath(new BlockPos(1,63,0));scaffold.recordNovolinePath(new BlockPos(2,63,0));
+        Field field=ScaffoldModule.class.getDeclaredField("linePath");field.setAccessible(true);assertEquals(2,((java.util.Set<?>)field.get(scaffold)).size());
+        scaffold.setEnabled(false);assertTrue(((java.util.Set<?>)field.get(scaffold)).isEmpty());
+    }
     @Test public void ncpTowerDoesNotAlterWalkingOrFallingMotion() throws Exception {
         scaffold.getTower().setValue("NCP");standAt(.5,64,.5,0,0);scaffold.setEnabled(true);
         KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindJump.getKeyCode(),true);
@@ -725,6 +764,7 @@ public class ScaffoldModuleTest {
 
     public static final class Player extends EntityPlayerSP {
         private Player() { super(null, null, null, null); }
+        @Override public boolean isSpectator() { return false; }
         @Override public Vec3 getPositionEyes(float partialTicks) { return new Vec3(posX, posY + 1.62D, posZ); }
         @Override public ItemStack getHeldItem() { return inventory.getCurrentItem(); }
     }

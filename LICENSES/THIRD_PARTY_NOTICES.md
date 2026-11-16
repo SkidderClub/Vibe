@@ -293,3 +293,7 @@ independent client mod.
 
 Vibe bundles Colin M. L. Burnett's cburnett pieces from Lichess under GPL-2.0-or-later;
 see [source and conversion details](LICHESS-PIECES.md).
+
+## Novoline Client
+
+Vibe includes designs, blocking animations, fonts and RewoundNovoline modes adapted from the user-supplied Novoline source checkout. See NOVOLINE_PORT.md for the source-to-port map, assets and available licensing information.

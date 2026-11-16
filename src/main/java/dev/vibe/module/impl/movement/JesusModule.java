@@ -7,10 +7,18 @@ import net.minecraft.potion.Potion;
 
 /** Exire WatchdogJesus at PlayerMoveEvent, exposed as Rewound. */
 public final class JesusModule extends FeatureModule {
-    public final ModeSetting mode=addSetting(new ModeSetting("Mode","Rewound","Rewound"));
+    public final ModeSetting mode=addSetting(new ModeSetting("Mode","Rewound","Rewound","RewoundNovoline"));
     public JesusModule(){super("Jesus","Maintain the Rewound water movement vector",Category.MOVEMENT);}
+    public void novolinePreUpdate(Object entity){
+        if(!isEnabled()||!mode.is("RewoundNovoline")||entity!=mc.thePlayer||!playing()||mc.thePlayer.isSpectator()||mc.thePlayer.isRiding()
+                ||mc.thePlayer.movementInput.sneak||!(mc.thePlayer.isInWater()||mc.thePlayer.isInLava()))return;
+        net.minecraft.block.state.IBlockState state=mc.theWorld.getBlockState(new net.minecraft.util.BlockPos(mc.thePlayer));
+        if(!(state.getBlock() instanceof net.minecraft.block.BlockLiquid))return;
+        SpeedModule speed=module(SpeedModule.class);
+        if(state.getValue(net.minecraft.block.BlockLiquid.LEVEL)<(speed!=null&&speed.isEnabled()?2:4))mc.thePlayer.motionY=.12;
+    }
     public double[] move(Object entity,double x,double y,double z){
-        if(!isEnabled()||entity!=mc.thePlayer||!playing()||mc.thePlayer.isSpectator()||mc.thePlayer.isRiding()
+        if(!mode.is("Rewound")||!isEnabled()||entity!=mc.thePlayer||!playing()||mc.thePlayer.isSpectator()||mc.thePlayer.isRiding()
                 ||!mc.thePlayer.isInWater()||mc.thePlayer.onGround||mc.gameSettings.keyBindJump.isKeyDown()||mc.gameSettings.keyBindSneak.isKeyDown())return null;
         double speed=.12;
         if(mc.thePlayer.isPotionActive(Potion.moveSpeed))speed*=1+.2*(mc.thePlayer.getActivePotionEffect(Potion.moveSpeed).getAmplifier()+1);

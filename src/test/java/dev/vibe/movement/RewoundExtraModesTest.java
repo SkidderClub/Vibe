@@ -184,7 +184,7 @@ public class RewoundExtraModesTest {
             StepModule step = register(new StepModule()); step.mode.setValue("Rewound"); step.timer.setEnabled(true); step.delay.setValue(250D); step.speedCheck.setEnabled(true);
             AntiVoidModule antiVoid = register(new AntiVoidModule()); antiVoid.fallDistance.setValue(7.25);
             CriticalsModule criticals = register(new CriticalsModule()); criticals.mode.setValue("Rewound");
-            java.io.File folder = java.nio.file.Files.createTempDirectory(java.nio.file.Paths.get("build/exire-port"), "extra-config-").toFile();
+            java.io.File folder = java.nio.file.Files.createTempDirectory(java.nio.file.Files.createDirectories(java.nio.file.Paths.get("build/exire-port")), "extra-config-").toFile();
             dev.vibe.config.VibeConfig config = new dev.vibe.config.VibeConfig(folder);
             assertTrue(config.save("rewound", Vibe.getInstance().getModuleManager()));
             step.mode.setValue("Jump"); step.timer.setEnabled(false); step.delay.setValue(0D); step.speedCheck.setEnabled(false);

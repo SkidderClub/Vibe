@@ -423,6 +423,7 @@ public final class HudEditorGui extends GuiScreen {
 
     private String[] themeOptions(HudManager.HudElement element) {
         HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);
+        if(HudManager.WATERMARK.equals(element.getId())||HudManager.NOTIFICATIONS.equals(element.getId()))return new String[]{"Vibe","Skeet","LiquidGlass","Lavalamp","Novoline"};
         if(HudManager.GHOSTS.equals(element.getId()))return hud.ghosts.mode.getModes().toArray(new String[0]);
         if(HudManager.TARGET_HUD.equals(element.getId()))return hud.targetHud.mode.getModes().toArray(new String[0]);
         if(HudManager.CUSTOM_HEALTH.equals(element.getId()))return hud.customHealth.mode.getModes().toArray(new String[0]);
