@@ -160,6 +160,7 @@ public final class ModuleManager {
         register(new FriendEditorModule());
         register(new ConfigEditorModule());
         register(new ChatterModule());
+        register(new KillsayModule());
         register(new KeybindEditorModule());
         register(new ScriptsModule());
         register(new ClickGuiModule());

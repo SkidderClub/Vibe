@@ -16,7 +16,7 @@ public final class TargetHudSettings {
     public final BooleanSetting barGlow;public final NumberSetting barGlowStrength;
 
     public TargetHudSettings(Function<Setting<?>,Setting<?>> register) {
-        mode=add(register,new ModeSetting("Target HUD Mode","Novoline","Novoline","Tenacity","Zeroday","Rise","LiquidGlass","Lavalamp","ThunderHack","NurikZapen","NurikZapen Mini","CelkaPasta","LiquidBounce"));
+        mode=add(register,new ModeSetting("Target HUD Mode","Novoline","Diablo","Novoline","Tenacity","Zeroday","Rise","LiquidGlass","Lavalamp","ThunderHack","NurikZapen","NurikZapen Mini","CelkaPasta","LiquidBounce"));
         originalColours=add(register,new BooleanSetting("Target HUD Original Theme Colours",true,()->UpstreamTargetHuds.supports(mode.getValue())));
         thunderImage=add(register,new BooleanSetting("Target HUD ThunderHack Image",true,()->mode.is("ThunderHack")));
         upstreamHealth=add(register,new ModeSetting("Target HUD Health Display","HP",()->UpstreamTargetHuds.supports(mode.getValue())&&!mode.is("LiquidBounce"),"HP","Percent"));
@@ -36,6 +36,7 @@ public final class TargetHudSettings {
         absorption=add(register,new BooleanSetting("Target HUD Absorption",true));
         ping=add(register,new BooleanSetting("Target HUD Ping",true,()->mode.is("Zeroday")||mode.is("LiquidGlass")||mode.is("Lavalamp")));
         smoothing=add(register,new BooleanSetting("Target HUD Smooth Health",true));
+        diabloColor=add(register,new ColorSetting("Target HUD Diablo Accent",0xFF9000C4,()->mode.is("Diablo")));
         damageTint=add(register,new BooleanSetting("Target HUD Damage Tint",true));
         particles=add(register,new BooleanSetting("Target HUD Particles",true,this::supportsParticles));
         particleColor=add(register,new ColorSetting("Target HUD Particle Color",0xFFB9AEFF,()->supportsParticles()&&particles.isEnabled()));
@@ -43,6 +44,7 @@ public final class TargetHudSettings {
         particleSize=add(register,new NumberSetting("Target HUD Particle Size",2,1,4,.25,()->supportsParticles()&&particles.isEnabled()));
         particleLifetime=add(register,new NumberSetting("Target HUD Particle Lifetime",750,250,1500,50,()->supportsParticles()&&particles.isEnabled()));
     }
+    public final ColorSetting diabloColor;
     public boolean supportsParticles() {return mode.is("Rise")||mode.is("LiquidGlass")||mode.is("Lavalamp")||mode.is("ThunderHack");}
     private <T extends Setting<?>> T add(Function<Setting<?>,Setting<?>> register,T setting) {
         register.apply(setting);all.add(setting);return setting;

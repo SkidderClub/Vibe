@@ -14,3 +14,7 @@ downloaded by the client at runtime.
 ## Novoline fonts
 
 The Novoline Client arraylist option uses the supplied SF.ttf. Dropdown and notification icons use stylesicons.ttf. Novoline Vanilla uses Minecraft's bitmap font. See NOVOLINE_PORT.md for provenance and licensing information supplied with the checkout.
+
+## Diablo fonts
+
+The supplied sfregular.ttf, guiicons.ttf and checkmark.ttf are used by the Diablo ClickGUI and TargetHUD. See DIABLO_PORT.md for the source paths and available licensing information.

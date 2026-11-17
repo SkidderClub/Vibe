@@ -22,8 +22,9 @@ public final class TargetHudRenderer {
     private State state;
     private final UpstreamTargetHuds upstream=new UpstreamTargetHuds();
 
-    public int height(TargetHudSettings s) { if(s.mode.is("Novoline"))return 40; return UpstreamTargetHuds.supports(s.mode.getValue())?UpstreamTargetHuds.height(s):s.mode.is("Zeroday")?76:(s.mode.is("LiquidGlass")||s.mode.is("Lavalamp")||s.mode.is("Rise"))?46:42; }
+    public int height(TargetHudSettings s) { if(s.mode.is("Diablo"))return 45;if(s.mode.is("Novoline"))return 40; return UpstreamTargetHuds.supports(s.mode.getValue())?UpstreamTargetHuds.height(s):s.mode.is("Zeroday")?76:(s.mode.is("LiquidGlass")||s.mode.is("Lavalamp")||s.mode.is("Rise"))?46:42; }
     public int width(TargetHudSettings s,TargetHudData d,FontRenderer font) {
+        if(s.mode.is("Diablo"))return 150;
         if(s.mode.is("Novoline"))return 69+dev.vibe.ui.novoline.NovolineFonts.pixel().getStringWidth(d.name);
         if(UpstreamTargetHuds.supports(s.mode.getValue()))return upstream.width(s,d);
         return Math.max(s.mode.is("Zeroday")?184:130,s.width.getInt());
@@ -47,6 +48,7 @@ public final class TargetHudRenderer {
         int color=s.health.getArgb(),end=s.gradient.isEnabled()?s.healthEnd.getArgb():color;
         float hurt=s.damageTint.isEnabled()?Math.min(1,d.hurtTicks/10F):0;
         if(UpstreamTargetHuds.supports(s.mode.getValue())){upstream.draw(s,d,x,y,w,state.displayed,hurt);if(s.mode.is("ThunderHack"))drawParticles(s,x+24,y+24,now);return;}
+        if(s.mode.is("Diablo")){drawDiablo(s,d,x,y);return;}
         if(s.mode.is("Novoline")){drawNovoline(s,d,x,y,w,fresh);return;}
         if(s.mode.is("LiquidGlass")||s.mode.is("Lavalamp"))glass.run();
         else HudShapes.round(x,y,w,h,s.mode.is("Novoline")||s.mode.is("Zeroday")?0:s.radius.getFloat(),s.background.getArgb());
@@ -91,6 +93,16 @@ public final class TargetHudRenderer {
             drawParticles(s,x+23,y+23,now);
         }
         GlStateManager.color(1,1,1,1);
+    }
+    private void drawDiablo(TargetHudSettings s,TargetHudData d,int x,int y){
+        HudShapes.round(x,y,150,45,2,0x901C1C1C);HudShapes.face(d.skin,x+5,y+5,35,0,0,1,false);
+        dev.vibe.ui.diablo.DiabloFonts.text(dev.vibe.ui.diablo.DiabloFonts.TITLE,d.name,x+50,y+10,95,0xFFFFFFFF);
+        Minecraft mc=Minecraft.getMinecraft();double distance=d.entity!=null&&mc.thePlayer!=null?mc.thePlayer.getDistanceToEntity(d.entity):3.4;
+        dev.vibe.ui.diablo.DiabloFonts.text(dev.vibe.ui.diablo.DiabloFonts.LABEL,Double.toString(Math.floor(distance*10)/10)+" Blocks",x+50,y+21,95,0xFFBABABA);
+        float percent=d.health*100/d.maxHealth;
+        HudShapes.round(x+50,y+30,95,10,0,0xFF292929);HudShapes.round(x+50,y+30,95*percent/100,10,0,s.diabloColor.getArgb());
+        String percentage=(int)percent+"%";dev.vibe.ui.NeverLoseFont font=dev.vibe.ui.diablo.DiabloFonts.LABEL;
+        dev.vibe.ui.diablo.DiabloFonts.text(font,percentage,x+97.5F-font.width(percentage)/2,y+36-dev.vibe.ui.diablo.DiabloFonts.height(font)/2F,95,0xFFFFFFFF);
     }
     private void drawNovoline(TargetHudSettings s,TargetHudData d,int x,int y,int w,boolean fresh){
         FontRenderer font=dev.vibe.ui.novoline.NovolineFonts.pixel();

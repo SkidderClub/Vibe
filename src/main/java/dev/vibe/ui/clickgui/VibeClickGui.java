@@ -166,13 +166,15 @@ public final class VibeClickGui extends GuiScreen {
             KawaseBlur.drawBackdrop(width,height,blur.getStrength().getInt(),partialTicks);
         ClickGuiModule settings=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
         if(mc.theWorld==null)Gui.drawRect(0,0,width,height,0xFF171923);
-        Gui.drawRect(0,0,width,height,settings.getTheme().is("Novoline")?0x78000000:settings.getTheme().is("PacketV3")?0x36000000:0x16000000);
+        if(settings.getTheme().is("Diablo"))DropdownStyle.verticalGradient(0,0,width,height,0x990E0E0E,0x00000000);
+        else Gui.drawRect(0,0,width,height,settings.getTheme().is("Novoline")?0x78000000:settings.getTheme().is("PacketV3")?0x36000000:0x16000000);
         clickGuiParticles.draw(this);targets.clear();
         if(draggingSlider!=null&&!draggingSlider.setting.isVisible()){draggingSlider=null;rangeDrag=null;}
         if(colorPopup!=null&&!colorPopup.setting.isVisible()){colorPopup=null;draggingColor=null;editing=null;}
         if(draggingSlider!=null)updateSlider(draggingSlider,mx);
         if(draggingColor!=null&&colorPopup!=null)updateColorPopup(mx,my);
         dropdown.draw(this,width,height,mx,my,settings);
+        if(settings.getTheme().is("Diablo")){diabloConfigButton.xPosition=width-205;diabloConfigButton.yPosition=height-25;diabloConfigButton.drawButton(mc,mx,my);}
         if(colorPopup!=null)drawColorPopup(colorPopup);
     }
 
@@ -183,12 +185,21 @@ public final class VibeClickGui extends GuiScreen {
     void dropdownModuleTarget(Module module,int left,int top,int right,int bottom,String panel){dropdownTarget(TargetType.MODULE,left,top,right,bottom,module,null,-1,panel);}
     void dropdownModeOption(ModeSetting setting,int left,int top,int right,int bottom,int option,String panel){dropdownTarget(TargetType.MODE_OPTION,left,top,right,bottom,null,setting,option,panel);}
     boolean dropdownVisible(int y,int h){return y+h>=dropdownTop&&y<dropdownBottom;}
+    private boolean dropdownInput=true;
+    void dropdownInput(boolean enabled){dropdownInput=enabled;}
     private void dropdownTarget(TargetType type,int left,int top,int right,int bottom,Module module,Setting<?> setting,int channel,String panel){
+        if(!dropdownInput)return;
         top=Math.max(top,dropdownTop);bottom=Math.min(bottom,dropdownBottom);
         if(bottom<=top)return;
         Target target=new Target(type,left,top,right,bottom,module,setting,channel);target.dropdownPanel=panel;targets.add(target);
     }
     private int dropdownSettingHeight(Setting<?> setting){
+        if(Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class).getTheme().is("Diablo")){
+            if(setting instanceof NumberSetting||setting instanceof RangeSetting)return 12;
+            if(setting instanceof StringSetting)return 24;
+            if(setting instanceof MultiSelectSetting&&openSelections.contains(setting))return 15+((MultiSelectSetting)setting).getOptions().size()*17;
+            return 15;
+        }
         if(Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class).getTheme().is("Novoline")){
             if(setting instanceof MultiSelectSetting&&openSelections.contains(setting))return 17+((MultiSelectSetting)setting).getOptions().size()*17;
             if(setting instanceof ModeSetting)return 15+dropdown.inlineHeight((ModeSetting)setting);
@@ -205,10 +216,11 @@ public final class VibeClickGui extends GuiScreen {
         if(style.suizide)DropdownStyle.roundedGradient(x,y,w,h,6,
                 style.light?style.accent(0,y):RenderUtils.blend(style.body,style.accent(0,y),.16F),
                 style.light?style.accent(1,y):RenderUtils.blend(style.body,style.accent(1,y),.16F));
-        else DropdownStyle.rect(x,y,w,h,style.packet?5:0,style.novo?0xFF282828:0xD5111114);
+        else DropdownStyle.rect(x,y,w,h,style.packet?5:0,style.diablo?0xFF252525:style.novo?0xFF282828:0xD5111114);
         for(Setting<?> setting:module.getSettings())if(setting.isVisible()){drawDropdownSetting(setting,x,y,w,style,owner);y+=dropdownSettingHeight(setting);}
     }
     private void drawDropdownSetting(Setting<?> setting,int x,int y,int w,DropdownStyle style,String owner){
+        if(style.diablo){drawDiabloSetting(setting,x,y,w,style,owner);return;}
         if(style.novo){drawNovolineSetting(setting,x,y,w,style,owner);return;}
         int text=style.suizide&&style.light?0xFFFFFFFF:style.text;
         int muted=style.suizide&&style.light?0xFFEDE8E9:style.muted;
@@ -262,6 +274,46 @@ public final class VibeClickGui extends GuiScreen {
                 DropdownStyle.label(LanguageManager.translate(option),x+19,rowY+1,w-26,selected?text:muted);
                 dropdownTarget(TargetType.MULTI_OPTION,x+4,rowY,x+w-4,rowY+18,null,setting,i,owner);rowY+=18;
             }}
+        }
+    }
+    private void drawDiabloSetting(Setting<?> setting,int x,int y,int w,DropdownStyle style,String owner){
+        dev.vibe.ui.NeverLoseFont font=dev.vibe.ui.diablo.DiabloFonts.LABEL;int color=style.accent(0,y);
+        float labelY=y+.5F+(dropdownSettingHeight(setting)-dev.vibe.ui.diablo.DiabloFonts.height(font))/2F;
+        if(setting instanceof NumberSetting||setting instanceof RangeSetting){
+            double min,max,lo,hi;String value;
+            if(setting instanceof NumberSetting){NumberSetting n=(NumberSetting)setting;min=n.getMinimum();max=n.getMaximum();lo=min;hi=n.getDouble();value=compact(hi);}
+            else{RangeSetting r=(RangeSetting)setting;min=r.getMinimum();max=r.getMaximum();lo=r.getMin();hi=r.getMax();value=compact(lo)+" - "+compact(hi);}
+            Gui.drawRect(x,y,x+w,y+12,0xFF252525);double a=max<=min?0:(lo-min)/(max-min),b=max<=min?0:(hi-min)/(max-min);
+            Gui.drawRect(x+(int)(w*a),y,x+(int)(w*b),y+12,new java.awt.Color(color).darker().getRGB());
+            float vw=Math.min(w*.45F,font.width(value));dev.vibe.ui.diablo.DiabloFonts.text(font,setting.getName(),x+3,labelY,w-vw-8,0xFFFFFFFF);
+            dev.vibe.ui.diablo.DiabloFonts.text(font,value,x+w-3-vw,labelY,vw,0xFFFFFFFF);
+            dropdownTarget(setting instanceof RangeSetting?TargetType.RANGE:TargetType.NUMBER,x,y,x+w,y+12,null,setting,-1,owner);return;
+        }
+        Gui.drawRect(x,y,x+w,y+dropdownSettingHeight(setting),0xFF252525);
+        int reserve=setting instanceof BooleanSetting||setting instanceof ColorSetting?20:setting instanceof ModeSetting?w/2:3;
+        dev.vibe.ui.diablo.DiabloFonts.text(font,setting.getName(),x+3,y+.5F+(15-dev.vibe.ui.diablo.DiabloFonts.height(font))/2F,w-reserve-5,0xFFFFFFFF);
+        if(setting instanceof BooleanSetting){
+            Gui.drawRect(x+w-14,y+2,x+w-3,y+13,0xFF434343);Gui.drawRect(x+w-13,y+3,x+w-4,y+12,0xFF232323);
+            if(((BooleanSetting)setting).isEnabled())dev.vibe.ui.diablo.DiabloFonts.text(dev.vibe.ui.diablo.DiabloFonts.CHECK,"a",x+w-14.5F,y+5,13,0xFFFFFFFF);
+            dropdownTarget(TargetType.BOOLEAN,x,y,x+w,y+15,null,setting,-1,owner);
+        }else if(setting instanceof ModeSetting){
+            String value=((ModeSetting)setting).getValue();float vw=Math.min(w/2F,font.width(value));
+            dev.vibe.ui.diablo.DiabloFonts.text(font,value,x+w-3-vw,labelY,vw,0xFFFFFFFF);
+            dropdownTarget(TargetType.MODE,x,y,x+w,y+15,null,setting,-1,owner);
+        }else if(setting instanceof ColorSetting){
+            RenderUtils.transparencyGrid(x+w-18,y+3,x+w-3,y+12,2);Gui.drawRect(x+w-18,y+3,x+w-3,y+12,((ColorSetting)setting).getArgb());
+            dropdownTarget(TargetType.COLOR_TOGGLE,x,y,x+w,y+15,null,setting,-1,owner);
+        }else if(setting instanceof MultiSelectSetting){
+            MultiSelectSetting multi=(MultiSelectSetting)setting;dropdownTarget(TargetType.MULTI_TOGGLE,x,y,x+w,y+15,null,setting,-1,owner);
+            if(openSelections.contains(multi))for(int i=0;i<multi.getOptions().size();i++){
+                String value=multi.getOptions().get(i);int oy=y+15+i*17;boolean selected=multi.isSelected(value);if(selected)Gui.drawRect(x+1,oy,x+w-1,oy+17,new java.awt.Color(color).darker().getRGB());
+                dev.vibe.ui.diablo.DiabloFonts.text(font,value,x+6,oy+4,w-12,selected?0xFFFFFFFF:0x80FFFFFF);
+                dropdownTarget(TargetType.MULTI_OPTION,x,oy,x+w,oy+17,null,setting,i,owner);
+            }
+        }else if(setting instanceof StringSetting){
+            if(editing==setting&&textEditor!=null){textEditor.xPosition=x+4;textEditor.yPosition=y+14;textEditor.width=w-8;textEditor.drawTextBox();}
+            else dev.vibe.ui.diablo.DiabloFonts.text(font,((StringSetting)setting).getValue(),x+4,y+14,w-8,0xFFBABABA);
+            dropdownTarget(TargetType.TEXT,x,y+10,x+w,y+24,null,setting,-1,owner);
         }
     }
     private void drawNovolineSetting(Setting<?> setting,int x,int y,int w,DropdownStyle style,String owner){
@@ -858,6 +910,9 @@ public final class VibeClickGui extends GuiScreen {
         }
         if(isDropdownTheme()){
             if(colorPopup!=null){colorPopup=null;draggingColor=null;editing=null;return;}
+            if(Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class).getTheme().is("Diablo")&&mouseButton==0&&diabloConfigButton.mousePressed(mc,mouseX,mouseY)){
+                dev.vibe.module.impl.client.ConfigEditorModule editor=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.ConfigEditorModule.class);if(editor!=null)editor.setEnabled(true);return;
+            }
             if(dropdown.click(mouseX,mouseY,mouseButton))return;
         }
         if (isSkeetTheme()) {
@@ -949,7 +1004,8 @@ public final class VibeClickGui extends GuiScreen {
             rangeDrag=range.beginDrag(range.getMinimum()+(range.getMaximum()-range.getMinimum())*(mouseX-target.left)/(double)Math.max(1,target.right-target.left));
             updateSlider(target, mouseX);
         } else if (target.type == TargetType.MODE) {
-            if(isDropdownTheme())dropdown.openMode((ModeSetting)setting,target.left,target.bottom,Math.max(116,target.right-target.left));
+            if(Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class).getTheme().is("Diablo"))((ModeSetting)setting).cycle(mouseButton==1);
+            else if(isDropdownTheme())dropdown.openMode((ModeSetting)setting,target.left,target.bottom,Math.max(116,target.right-target.left));
             else ((ModeSetting) setting).cycle(mouseButton == 1);
         } else if(target.type==TargetType.MODE_OPTION){
             ModeSetting mode=(ModeSetting)setting;
@@ -1435,7 +1491,7 @@ public final class VibeClickGui extends GuiScreen {
     }
     private boolean isDropdownTheme(){
         ClickGuiModule settings=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
-        return settings!=null&&(settings.getTheme().is("PacketV3")||settings.getTheme().is("Novoline")||settings.getTheme().is("SuizideX")||settings.getTheme().is("Wurst"));
+        return settings!=null&&(settings.getTheme().is("Diablo")||settings.getTheme().is("PacketV3")||settings.getTheme().is("Novoline")||settings.getTheme().is("SuizideX")||settings.getTheme().is("Wurst"));
     }
 
     private boolean isSkeetTheme() {
@@ -1443,6 +1499,7 @@ public final class VibeClickGui extends GuiScreen {
         return clickGui == null || clickGui.getTheme().is("Skeet");
     }
 
+    private final net.minecraft.client.gui.GuiButton diabloConfigButton=new net.minecraft.client.gui.GuiButton(90417,0,0,"Config Menu");
     private boolean isBreezeTheme(){ClickGuiModule clickGui=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);return clickGui!=null&&clickGui.getTheme().is("Breeze");}
     private boolean isLavalampTheme(){ClickGuiModule clickGui=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);return clickGui!=null&&clickGui.getTheme().is("Lavalamp");}
     public boolean isTypingForMovement(){

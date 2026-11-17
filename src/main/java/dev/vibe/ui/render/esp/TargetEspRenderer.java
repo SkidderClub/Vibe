@@ -16,6 +16,7 @@ import org.lwjgl.opengl.GL11;
 /** Animated combat target markers rendered independently of regular ESP. */
 public final class TargetEspRenderer {
 
+    private final dev.vibe.ui.render.DiabloTargetMarker diablo=new dev.vibe.ui.render.DiabloTargetMarker();
     private final Minecraft minecraft = Minecraft.getMinecraft();
     public void render(RenderWorldLastEvent event) {
         TargetEspModule module = Vibe.getInstance().getModuleManager().getModule(TargetEspModule.class);
@@ -27,6 +28,7 @@ public final class TargetEspRenderer {
         double y = interpolate(target.lastTickPosY, target.posY, event.partialTicks) - minecraft.getRenderManager().viewerPosY;
         double z = interpolate(target.lastTickPosZ, target.posZ, event.partialTicks) - minecraft.getRenderManager().viewerPosZ;
         float time = (System.currentTimeMillis() % 9000L) / 1000.0F * module.getSpeed().getFloat();
+        if(module.getModes().isSelected(TargetEspModule.DIABLO))diablo.draw(x,y,z,target.height,module.getPrimaryColor(TargetEspModule.DIABLO).getArgb(),module.getSecondaryColor(TargetEspModule.DIABLO).getArgb(),System.currentTimeMillis());
         WorldRenderUtils.begin(false);
         GL11.glEnable(GL11.GL_LINE_SMOOTH);
         GL11.glLineWidth(module.getLineWidth().getFloat());

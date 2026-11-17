@@ -11,6 +11,7 @@ import org.lwjgl.input.Keyboard;
 /** Per-mode combat target markers with independently tuneable gradients. */
 public final class TargetEspModule extends Module {
 
+    public static final String DIABLO="Diablo";
     public static final String HELIX = "Helix";
     public static final String SIMS = "Sims";
     public static final String CIRCLE = "Circle";
@@ -20,7 +21,7 @@ public final class TargetEspModule extends Module {
     public static final String HIZZY = "Hizzy";
 
     private final MultiSelectSetting modes = addSetting(new MultiSelectSetting("Modes",
-            Arrays.asList(HELIX, SIMS, CIRCLE, SIGMA, TIRE, TRACER, HIZZY), Arrays.asList(CIRCLE)));
+            Arrays.asList(HELIX, SIMS, CIRCLE, SIGMA, TIRE, TRACER, HIZZY, DIABLO), Arrays.asList(CIRCLE)));
     private final ColorSetting helixPrimary = color("Helix Color 1", HELIX, 0xFF2DE2C2);
     private final ColorSetting helixSecondary = color("Helix Color 2", HELIX, 0xFFA855F7);
     private final ColorSetting simsPrimary = color("Sims Color 1", SIMS, 0xFF68FF9B);
@@ -35,6 +36,8 @@ public final class TargetEspModule extends Module {
     private final ColorSetting tracerSecondary = color("Tracer Color 2", TRACER, 0xFFFFFFFF);
     private final ColorSetting hizzyPrimary = color("Hizzy Color 1", HIZZY, 0xFFFF3BD4);
     private final ColorSetting hizzySecondary = color("Hizzy Color 2", HIZZY, 0xFF3BE7FF);
+    private final ColorSetting diabloPrimary=color("Diablo Color 1",DIABLO,0xFF9000C4);
+    private final ColorSetting diabloSecondary=color("Diablo Color 2",DIABLO,0xFF9000C4);
     private final NumberSetting lineWidth = addSetting(new NumberSetting("Line Width", 2.0D, 1.0D, 5.0D, 0.5D));
     private final NumberSetting speed = addSetting(new NumberSetting("Animation Speed", 1.0D, 0.1D, 4.0D, 0.1D));
 
@@ -51,6 +54,7 @@ public final class TargetEspModule extends Module {
     public NumberSetting getSpeed() { return speed; }
 
     public ColorSetting getPrimaryColor(String mode) {
+        if (DIABLO.equals(mode)) return diabloPrimary;
         if (HELIX.equals(mode)) return helixPrimary;
         if (SIMS.equals(mode)) return simsPrimary;
         if (SIGMA.equals(mode)) return sigmaPrimary;
@@ -61,6 +65,7 @@ public final class TargetEspModule extends Module {
     }
 
     public ColorSetting getSecondaryColor(String mode) {
+        if (DIABLO.equals(mode)) return diabloSecondary;
         if (HELIX.equals(mode)) return helixSecondary;
         if (SIMS.equals(mode)) return simsSecondary;
         if (SIGMA.equals(mode)) return sigmaSecondary;

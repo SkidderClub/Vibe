@@ -61,6 +61,7 @@ public final class RewoundHooks {
         if (speed != null) speed.rewoundAfterMove(entity, move);
     }
     public static void beforeWalking(Object entity) {
+        dev.vibe.module.impl.movement.LongJumpModule longJump=module(dev.vibe.module.impl.movement.LongJumpModule.class);if(longJump!=null)longJump.diabloBeforeWalking(entity);
         if (entity != Minecraft.getMinecraft().thePlayer) return;
         dev.vibe.module.impl.movement.PhaseModule phase=module(dev.vibe.module.impl.movement.PhaseModule.class);if(phase!=null)phase.beforeWalking(entity);
         CriticalsModule criticals = module(CriticalsModule.class);
@@ -93,6 +94,7 @@ public final class RewoundHooks {
     public static void afterWalking(Object entity) {
         if (entity != Minecraft.getMinecraft().thePlayer) return;
         try {
+            dev.vibe.module.impl.movement.LongJumpModule longJump=module(dev.vibe.module.impl.movement.LongJumpModule.class);if(longJump!=null)longJump.diabloAfterWalking(entity);
             NoSlowModule slow = module(NoSlowModule.class);
             if (slow != null) slow.afterWalking(entity);
             dev.vibe.module.impl.world.ScaffoldModule scaffold=module(dev.vibe.module.impl.world.ScaffoldModule.class);

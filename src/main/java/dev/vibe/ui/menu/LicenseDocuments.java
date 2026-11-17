@@ -49,6 +49,7 @@ public final class LicenseDocuments {
                 + "\n\nMinecraftAuth / LGPLv3+\nRK_01/RaphiMC and contributors\n" + tr("Authentication protocol and application configuration reference; no library bundled.")
                 + "\n\nLiquidBounce / GPLv3+\nCCBlueX and contributors\n" + tr("Nextgen TargetHUD layout and icons, AutoDodge trajectory/planner port, and login configuration reference. Shader provenance details are in Notices.")
                 + "\n\nThunderHack Recode / GPLv3\nThunderHack contributors\n" + tr("TargetHUD layouts and artwork. Pinned sources and port details are in Notices.")
+                + "\n\nDiablo Client\n" + tr("Diablo ClickGUI, TargetHUD, target visualization, blocking animations, Killsay messages and RewoundDiablo modes adapted from the supplied Diablo 2.1 source.")
                 + "\n\nNovoline Client\n" + tr("Dropdown ClickGUI, TargetHUD, watermark, notifications, arraylist fonts, blocking animations and RewoundNovoline modes adapted from the supplied Novoline source.")
                 + "\n\nAugustus Client\n" + tr("Vibe's Augustus ClickGUI theme is inspired by the Augustus Client.")
                 + "\nhttps://electriclauncher.de/\nhttps://discord.electriclauncher.de"

@@ -27,12 +27,12 @@ public final class ClickGuiReopenRenderCheck {
         ClickGuiModule theme=new ClickGuiModule();modules.registerDynamic(theme);
         for(int i=0;i<36;i++)modules.registerDynamic(new Fixture("Combat test "+i,i==0?24:3));
         VibeClickGui cached=null;
-        for(String name:new String[]{"Novoline","PacketV3","SuizideX","NeverLose","Xanax","Skeet","Futuristic","Breeze","Lavalamp"}){
+        for(String name:new String[]{"Diablo","Novoline","PacketV3","SuizideX","NeverLose","Xanax","Skeet","Futuristic","Breeze","Lavalamp"}){
             theme.getTheme().setValue(name);Vibe.getInstance().openClickGui();
             VibeClickGui gui=(VibeClickGui)mc.currentScreen;
             if(cached==null)cached=gui;else check(cached==gui,"Opening "+name+" discarded the shared screen");
             render(gui);render(gui);
-            if(name.equals("Novoline")||name.equals("PacketV3")||name.equals("SuizideX")){
+            if(name.equals("Diablo")||name.equals("Novoline")||name.equals("PacketV3")||name.equals("SuizideX")){
                 Object workspace=get(gui,"dropdown"),panel=((List<?>)get(workspace,"panels")).get(0);
                 int x=(Integer)get(panel,"x")-Math.round((Float)get(workspace,"horizontal"))+12,y=(Integer)get(panel,"y")+55;
                 for(int i=0;i<4;i++)gui.wheel(x,y,-120);
@@ -60,7 +60,7 @@ public final class ClickGuiReopenRenderCheck {
             Vibe.getInstance().openClickGui();check(mc.currentScreen==gui,name+" created a fresh workspace");render(gui);
             compare(before,snapshot(gui,name),.001,name+" changed position after reopening");
             mc.displayGuiScreen(null);
-            if(name.equals("Novoline")||name.equals("PacketV3")||name.equals("SuizideX")){
+            if(name.equals("Diablo")||name.equals("Novoline")||name.equals("PacketV3")||name.equals("SuizideX")){
                 // The dropdown fallback also restores offsets when a fresh screen is explicitly created.
                 VibeClickGui fresh=new VibeClickGui();mc.displayGuiScreen(fresh);render(fresh);
                 compare(before,snapshot(fresh,name),.51,name+" omitted saved panel/horizontal scroll");mc.displayGuiScreen(null);
@@ -74,7 +74,7 @@ public final class ClickGuiReopenRenderCheck {
     private static void render(VibeClickGui gui)throws Exception{ClientChangesRenderCheck.frame(520,420);gui.drawScreen(-1,-1,0);}
     private static Map<String,Double> snapshot(VibeClickGui gui,String name)throws Exception{
         Map<String,Double> values=new LinkedHashMap<>();
-        if(name.equals("Novoline")||name.equals("PacketV3")||name.equals("SuizideX")){
+        if(name.equals("Diablo")||name.equals("Novoline")||name.equals("PacketV3")||name.equals("SuizideX")){
             Object workspace=get(gui,"dropdown");values.put("horizontal",((Number)get(workspace,"horizontal")).doubleValue());
             for(Object panel:(List<?>)get(workspace,"panels"))values.put((String)get(panel,"name"),((Number)get(panel,"scroll")).doubleValue());
         }else if(name.equals("NeverLose"))values.put("scroll",((Number)get(get(gui,"neverLose"),"scroll")).doubleValue());

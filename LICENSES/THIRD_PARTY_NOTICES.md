@@ -206,7 +206,7 @@ source comments. Explicit whole-shader notices include:
 | [`rings.frag`](../src/main/resources/assets/vibe/shader/rings.frag) | SHAU | CC-BY-NC-SA-3.0 |
 | [`purplewater.frag`](../src/main/resources/assets/vibe/shader/purplewater.frag) | Alexander Alekseev (TDM), "Seascape", 2014 | CC-BY-NC-SA-3.0 |
 | [`panorama.frag`](../src/main/resources/assets/vibe/shader/panorama.frag) | Antoine Clappier, "Toon Cloud", March 2015 | CC-BY-NC-SA-4.0 |
-| [`sandstorm.frag`](../src/main/resources/assets/vibe/shader/sandstorm.frag) | Jan Mróz (jaszunio15) | CC-BY-3.0 |
+| [`sandstorm.frag`](../src/main/resources/assets/vibe/shader/sandstorm.frag) | Jan MrÃ³z (jaszunio15) | CC-BY-3.0 |
 
 [`rickandmortylike.frag`](../src/main/resources/assets/vibe/shader/rickandmortylike.frag) also contains Hazel
 Quantock's 2018 humanoid SDF notice under CC-BY-NC-SA-4.0; that notice alone does
@@ -297,3 +297,7 @@ see [source and conversion details](LICHESS-PIECES.md).
 ## Novoline Client
 
 Vibe includes designs, blocking animations, fonts and RewoundNovoline modes adapted from the user-supplied Novoline source checkout. See NOVOLINE_PORT.md for the source-to-port map, assets and available licensing information.
+
+## Diablo Client
+
+The Diablo ClickGUI and TargetHUD designs, target visualization, two blocking poses, seven Killsay messages and RewoundDiablo modes are adapted from the user-supplied Diablo 2.1 checkout. See DIABLO_PORT.md for provenance and port details.

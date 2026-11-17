@@ -13,7 +13,7 @@ public final class NovolineAnimations {
     private static float partialTicks, height;
     private static int i;
     private NovolineAnimations(){}
-    public static boolean supports(String mode){return java.util.Arrays.asList(MODES).contains(mode);}
+    public static boolean supports(String mode){return java.util.Arrays.asList(MODES).contains(mode)||DiabloAnimations.supports(mode);}
     public static void frame(AnimationsModule selected){
         i++;
         if(selected!=null&&selected.isEnabled()){
@@ -26,6 +26,7 @@ public final class NovolineAnimations {
     public static boolean active(){return module!=null;}
     public static boolean transform(float equip,float ignoredSwing){
         if(module==null)return false;
+        if(DiabloAnimations.supports(module.getBlockingStyle().getValue()))return DiabloAnimations.transform(module,partialTicks);
         float f=equip-.2F+height/100F;
         float f1=Minecraft.getMinecraft().thePlayer.getSwingProgress(partialTicks);
         float var9=MathHelper.sin(MathHelper.sqrt_float(f1)*(float)Math.PI);
@@ -143,7 +144,7 @@ public final class NovolineAnimations {
 
         return true;
     }
-    private static void transformFirstPersonItem(float equipProgress, float swingProgress) {
+    static void transformFirstPersonItem(float equipProgress, float swingProgress) {
         GlStateManager.translate(0.56F, -0.52F, -0.71999997F);
         GlStateManager.translate(0.0F, equipProgress * -0.6F, 0.0F);
         GlStateManager.rotate(45.0F, 0.0F, 1.0F, 0.0F);
@@ -155,7 +156,7 @@ public final class NovolineAnimations {
         GlStateManager.scale(0.4F, 0.4F, 0.4F);
     }
 
-    private static void func_178103_d(float qq) {
+    static void func_178103_d(float qq) {
         GlStateManager.translate(-0.5F, qq, 0.0F);
         GlStateManager.rotate(30.0F, 0.0F, 1.0F, 0.0F);
         GlStateManager.rotate(-80.0F, 1.0F, 0.0F, 0.0F);

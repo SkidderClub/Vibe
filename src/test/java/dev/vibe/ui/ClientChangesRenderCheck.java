@@ -89,6 +89,7 @@ public final class ClientChangesRenderCheck {
             ModuleManager modules = instance(ModuleManager.class);
             set(ModuleManager.class,modules,"modules",new ArrayList<Module>()); set(Vibe.class,vibe,"moduleManager",modules);
             if(args.length>0&&args[0].equals("novoline")){NovolineRenderCheck.verify(mc,modules,OUTPUT);return;}
+            if(args.length>0&&args[0].equals("diablo")){DiabloRenderCheck.verify(mc,modules,OUTPUT);return;}
             if(args.length>0&&args[0].equals("new-features")){dev.vibe.features.NewFeaturesRenderCheck.verify(mc,modules,OUTPUT);return;}
             if(args.length>0&&args[0].equals("visual-additions")){dev.vibe.hud.VisualAdditionsRenderCheck.verify(mc,OUTPUT);return;}
             if(args.length>0&&args[0].equals("companion")){dev.vibe.companion.CompanionRenderCheck.verify(mc,OUTPUT);return;}

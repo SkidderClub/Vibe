@@ -32,6 +32,7 @@ public final class RewoundProductionCheck {
             if(i instanceof MethodInsnNode&&((MethodInsnNode)i).owner.equals("dev/vibe/ui/render/NovolineAnimations"))poses.add(((MethodInsnNode)i).name);
         if(!poses.containsAll(Arrays.asList("transform","active")))throw new AssertionError("Missing final Novoline item pose hooks: "+poses);
         for(String name:new String[]{"dev.vibe.ui.render.NovolineAnimations","dev.vibe.module.impl.combat.NovolineAutoblock","dev.vibe.movement.NovolineStep","dev.vibe.ui.novoline.NovolineFonts"})Class.forName(name,false,loader).getDeclaredMethods();
+        for(String name:new String[]{"dev.vibe.movement.DiabloCriticals","dev.vibe.movement.DiabloLongJump","dev.vibe.ui.render.DiabloAnimations","dev.vibe.ui.render.DiabloTargetMarker","dev.vibe.ui.diablo.DiabloFonts","dev.vibe.module.impl.client.KillsayModule"})Class.forName(name,false,loader).getDeclaredMethods();
         for (String name : new String[] {"dev.vibe.movement.RewoundHooks", "dev.vibe.movement.RewoundSpeed",
                 "dev.vibe.module.impl.combat.RewoundAutoblock", "dev.vibe.module.impl.movement.SpeedModule",
                 "dev.vibe.module.impl.movement.NoSlowModule", "dev.vibe.module.impl.movement.NoFallModule", "dev.vibe.module.impl.movement.StepModule",

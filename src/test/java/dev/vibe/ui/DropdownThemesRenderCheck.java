@@ -51,7 +51,7 @@ public final class DropdownThemesRenderCheck {
                 if(name.equals("SuizideX")&&(Integer)get(panel,"max")==0)check((Integer)get(panel,"h")<=(Integer)get(panel,"content")+36,"An empty SuizideX panel did not shrink");
             }
             check(mapped.size()==manager.getModules().size(),"A module was omitted from "+name);
-            if(name.equals("Novoline")) verifyNovolineLabelCenter(hit(gui,"MODULE",main));
+            if(name.equals("Novoline")) verifyNovolineLabelAlignment(hit(gui,"MODULE",main));
             verifyFooter(gui,longModule,name);
             Object row=hit(gui,"MODULE",main);click(gui,row,0);check(main.isEnabled(),name+" did not toggle a module");
             click(gui,row,1);render(gui,name.toLowerCase(Locale.ROOT)+"-settings.png");check(main.isEnabled(),"Right click toggled module");
@@ -133,7 +133,7 @@ public final class DropdownThemesRenderCheck {
         check(GL11.glGetError()==0,"The gradient/glow check leaked GL errors");save("theme-glow-gradient-pixels.png");
     }
     private static int pixel(int x,int y){ByteBuffer b=BufferUtils.createByteBuffer(4);GL11.glReadPixels(x,mc.displayHeight-y-1,1,1,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,b);return (b.get(0)&255)<<16|(b.get(1)&255)<<8|b.get(2)&255;}
-    private static void verifyNovolineLabelCenter(Object row)throws Exception {
+    private static void verifyNovolineLabelAlignment(Object row)throws Exception {
         int left=num(row,"left"),top=num(row,"top"),width=num(row,"right")-left;
         int textArea=width-16; // Exclude the chevron from the glyph bounds.
         int[] pixels=region(left,top,textArea,num(row,"bottom")-top);
@@ -144,13 +144,14 @@ public final class DropdownThemesRenderCheck {
             first=Math.min(first,x);
             last=Math.max(last,x);
         }
-        check(last>first&&Math.abs((first+last+1)/2.0-width/2.0)<=2,"Novoline label was not centered across the full row");
+        // The supplied-source port uses SF labels at x + 2, replacing the earlier centered design.
+        check(last>first&&first>=1&&first<=5,"Novoline source label lost its left margin: "+first);
     }
     private static void verifyFooter(VibeClickGui gui,Module module,String theme)throws Exception {
         Object workspace=get(gui,"dropdown"),panel=((Map<?,?>)get(workspace,"categories")).get(Category.SCRIPTS);
         PathTestFixture.set(workspace.getClass(),workspace,"opened",System.nanoTime()-1000000000L);
         PathTestFixture.set(Module.class,module,"enabled",false);render(gui,null);
-        int x=num(panel,"x"),bottom=num(panel,"y")+num(panel,"h"),w=num(workspace,"panelWidth"),footer=theme.equals("Novoline")?4:5;
+        int x=num(panel,"x"),bottom=num(panel,"y")+num(panel,"h"),w=num(workspace,"panelWidth"),footer=theme.equals("Novoline")?1:5;
         int[] baseline=region(x,bottom-footer,w,footer);
         PathTestFixture.set(Module.class,module,"enabled",true);render(gui,null);
         check(Arrays.equals(baseline,region(x,bottom-footer,w,footer)),"Module background painted over the "+theme+" footer/corners");
@@ -163,7 +164,7 @@ public final class DropdownThemesRenderCheck {
         PathTestFixture.set(panel.getClass(),panel,"scroll",10000F);PathTestFixture.set(panel.getClass(),panel,"target",10000F);
         render(gui,null);check((Float)get(panel,"scroll")<=(Integer)get(panel,"max"),"Collapsing settings left the scroll thumb outside the panel");
         GuiInput.mouseClicked(gui,x+8,num(panel,"y")+5,1);render(gui,null);
-        int corner=pixel(x,num(panel,"y")+(theme.equals("Novoline")?23:25)-1),outside=pixel(x-1,num(panel,"y")+(theme.equals("Novoline")?23:25)-1);
+        int corner=pixel(x,num(panel,"y")+(theme.equals("Novoline")?15:25)-1),outside=pixel(x-1,num(panel,"y")+(theme.equals("Novoline")?15:25)-1);
         if(!theme.equals("Novoline"))check(rgbDifference(corner,outside)<12,"Collapsed header painted a square bottom corner");
         GuiInput.mouseClicked(gui,x+8,num(panel,"y")+5,1);render(gui,null);
     }

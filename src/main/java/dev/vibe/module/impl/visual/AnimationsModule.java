@@ -12,7 +12,7 @@ import org.lwjgl.input.Keyboard;
 public final class AnimationsModule extends Module {
 
     private final ModeSetting blockingStyle = addSetting(new ModeSetting("Blocking Style", "Vanilla",
-            "Vanilla", "Reverse", "Reverse Spin", "Spin", "Orbit", "Swank", "Swing", "Swang", "Swong", "Swaing", "Punch", "Stella", "Styles", "Slide", "Interia", "Ethereal", "1.7", "Sigma", "Exhibition", "Smooth", "Spinning"));
+            "Vanilla", "Reverse", "Reverse Spin", "Spin", "Orbit", "Swank", "Swing", "Swang", "Swong", "Swaing", "Punch", "Stella", "Styles", "Slide", "Interia", "Ethereal", "1.7", "Sigma", "Exhibition", "Smooth", "Spinning", "Diablo", "ExihiDiablo"));
     private final MultiSelectSetting itemTypes = addSetting(new MultiSelectSetting("Items",
             Arrays.asList("Swords", "Bow", "Consumables", "Food", "Potions", "Other"), Arrays.asList("Swords")));
     private final NumberSetting animationSpeed = addSetting(new NumberSetting("Animation Speed", 1.0D, 0.1D, 4.0D, 0.1D,

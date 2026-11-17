@@ -11,23 +11,37 @@ import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.util.EnumFacing;
 import org.lwjgl.input.Keyboard;
 
-/** LiquidBounce legacy LongJump AAC modes plus a tunable Vibe custom mode. */
+/** Legacy AAC modes, a tunable Vibe mode and Diablo's Watchdog sequence. */
 public final class LongJumpModule extends Module {
-    private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Custom", "Custom", "AACv1", "AACv2", "AACv3"));
+    private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Custom", "Custom", "AACv1", "AACv2", "AACv3", "RewoundDiablo"));
     private final NumberSetting customMotionY = addSetting(new NumberSetting("Custom Motion Y", 0.05999D, 0.0D, 1.0D, 0.00001D,
             () -> mode.is("Custom")));
     private final NumberSetting customSpeed = addSetting(new NumberSetting("Custom Speed", 1.08D, 0.1D, 3.0D, 0.01D,
             () -> mode.is("Custom")));
     private final NumberSetting customAirControl = addSetting(new NumberSetting("Custom Air Control", 0.08D, 0.0D, 1.0D, 0.01D,
             () -> mode.is("Custom")));
-    private final BooleanSetting autoJump = addSetting(new BooleanSetting("Auto Jump", true));
+    private final BooleanSetting autoJump = addSetting(new BooleanSetting("Auto Jump", true, () -> !mode.is("RewoundDiablo")));
     private final Minecraft minecraft = Minecraft.getMinecraft();
+    private final dev.vibe.movement.DiabloLongJump diablo=new dev.vibe.movement.DiabloLongJump();
     private boolean jumped;
     private boolean teleported;
 
-    public LongJumpModule() { super("LongJump", "Legacy AAC long-jump modes", Category.MOVEMENT, Keyboard.KEY_NONE); }
+    public LongJumpModule() { super("LongJump", "Custom, legacy AAC and RewoundDiablo long-jump modes", Category.MOVEMENT, Keyboard.KEY_NONE); }
 
+    private boolean diabloReady(){return isEnabled()&&mode.is("RewoundDiablo")&&minecraft.thePlayer!=null&&minecraft.theWorld!=null
+        &&minecraft.thePlayer.worldObj==minecraft.theWorld&&minecraft.thePlayer.sendQueue!=null&&!minecraft.thePlayer.isDead&&!FreecamModule.cameraActiveHook();}
+    private boolean prepareDiablo(){
+        if(!diabloReady()){diablo.reset();return false;}
+        if(!diablo.owns(minecraft.thePlayer,minecraft.theWorld)){diablo.reset();diablo.begin(minecraft.thePlayer,minecraft.theWorld);}
+        return true;
+    }
+    @Override protected void onEnable(){if(mode.is("RewoundDiablo"))prepareDiablo();}
+    public void diabloBeforeWalking(Object entity){if(entity==minecraft.thePlayer&&minecraft.currentScreen==null&&prepareDiablo()&&diablo.pre())setEnabled(false);}
+    public void diabloAfterWalking(Object entity){if(entity==minecraft.thePlayer&&minecraft.currentScreen==null&&diabloReady()&&diablo.owns(minecraft.thePlayer,minecraft.theWorld))diablo.post();}
+    public ModeSetting getMode(){return mode;}
     public void tick() {
+        if(mode.is("RewoundDiablo")){if(minecraft.currentScreen==null)prepareDiablo();return;}
+        diablo.reset();
         if (!isEnabled() || minecraft.thePlayer == null || minecraft.currentScreen != null) return;
         EntityPlayerSP p = minecraft.thePlayer;
         if (jumped) {
@@ -67,5 +81,5 @@ public final class LongJumpModule extends Module {
         }
     }
 
-    @Override protected void onDisable() { jumped = false; teleported = false; }
+    @Override protected void onDisable() { diablo.reset();jumped = false; teleported = false; }
 }

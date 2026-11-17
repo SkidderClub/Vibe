@@ -13,20 +13,22 @@ import org.lwjgl.opengl.GL11;
 final class DropdownStyle {
     static final NeverLoseFont LABEL = new NeverLoseFont(java.awt.Font.PLAIN, 22);
     static final NeverLoseFont HEADER = new NeverLoseFont(java.awt.Font.BOLD, 23);
-    final boolean packet, novo, suizide, light,wurst;
+    final boolean packet, novo, suizide, light,wurst,diablo;
+    dev.vibe.module.Category category=dev.vibe.module.Category.COMBAT;
     final int text, muted, body, row, headerHeight, rowHeight, radius;
     final ClickGuiModule settings;
     final long now;
     DropdownStyle(ClickGuiModule settings, long now) {
         this.settings = settings; this.now = now;
+        diablo=settings.getTheme().is("Diablo");
         packet = settings.getTheme().is("PacketV3"); novo = settings.getTheme().is("Novoline"); suizide = settings.getTheme().is("SuizideX");wurst=settings.getTheme().is("Wurst");
         light = suizide && !settings.getSuizideDarkMode().isEnabled();
         text = light ? 0xFF20272B : 0xFFF0F1F5; muted = light ? 0xFF5B686E : 0xFFB0B0BA;
-        body = wurst?0xFF404040:light ? 0xEBEDF5F0 : novo ? 0xFF1D1D1D : suizide ? 0xF20C0C11 : 0xEF1B1B1D;
-        row = novo ? 0xFF282828 : light ? 0xF4F0F3F3 : suizide ? 0xEF202027 : body;
-        headerHeight = wurst?15:novo ? 15 : 25; rowHeight = wurst?16:novo ? 14 : 22; radius = wurst||novo ? 0 : 4;
+        body = diablo?0xFF131313:wurst?0xFF404040:light ? 0xEBEDF5F0 : novo ? 0xFF1D1D1D : suizide ? 0xF20C0C11 : 0xEF1B1B1D;
+        row = diablo?0xFF1A1A1A:novo ? 0xFF282828 : light ? 0xF4F0F3F3 : suizide ? 0xEF202027 : body;
+        headerHeight = diablo?15:wurst?15:novo ? 15 : 25; rowHeight = diablo?17:wurst?16:novo ? 14 : 22; radius = diablo?5:wurst||novo ? 0 : 4;
     }
-    int accent(float x, int y) { return accent(settings, x, y, now); }
+    int accent(float x, int y) { return diablo?DiabloStyle.color(category):accent(settings, x, y, now); }
     static int accent(ClickGuiModule settings, float x, int y, long millis) {
         if(settings.getTheme().is("Wurst"))return 0xFFFF8800;
         if (settings.getTheme().is("Novoline")) return settings.getNovolineColor().getArgb();
@@ -56,7 +58,7 @@ final class DropdownStyle {
         GL11.glShadeModel(GL11.GL_FLAT);GlStateManager.enableAlpha();GlStateManager.enableTexture2D();GlStateManager.resetColor();GlStateManager.color(1,1,1,1);
     }
     private static void color(int c){GL11.glColor4f((c>>16&255)/255F,(c>>8&255)/255F,(c&255)/255F,(c>>>24)/255F);}
-    int footerHeight() { return novo ? 1 : 5; }
+    int footerHeight() { return diablo?2:novo ? 1 : 5; }
     static void label(String s,float x,float y,float width,int color){ScrollingText.draw(LABEL,s,x,y,width,color,ScrollingText.Alignment.LEFT);}
     static void center(String s,int x,int y,int w,int color){ScrollingText.draw(LABEL,s,x+6,y,w-12,color,ScrollingText.Alignment.CENTER);}
 }
