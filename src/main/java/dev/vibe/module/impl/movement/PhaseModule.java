@@ -2,6 +2,8 @@ package dev.vibe.module.impl.movement;
 
 import dev.vibe.features.FeatureModule;
 import dev.vibe.module.Category;
+import dev.vibe.movement.AdjustPhase;
+import dev.vibe.setting.NumberSetting;
 import dev.vibe.setting.ModeSetting;
 import io.netty.channel.*;
 import java.util.*;
@@ -17,7 +19,9 @@ import net.minecraftforge.fml.relauncher.ReflectionHelper;
 
 /** Exire's NcpPhase and WatchdogBlinkPhase, with per-module packet/state ownership. */
 public final class PhaseModule extends FeatureModule {
-    public final ModeSetting mode=addSetting(new ModeSetting("Mode","Watchdog","Watchdog","NCP"));
+    public final ModeSetting mode=addSetting(new ModeSetting("Mode","Watchdog","Watchdog","NCP","Blink","Vertical","Packetless"));
+    public final NumberSetting blinkPhaseAt = addSetting(new NumberSetting("Blink phase at", 1.25, 1, 2, 0.25, () -> mode.is("Blink")));
+    private final AdjustPhase adjust = new AdjustPhase(this);
     private EntityPlayerSP owner;private Object world;private String activeMode;
     private boolean claimed,oldClip,shouldSpeed;private float oldJump;
     private volatile boolean cage,blinking;
@@ -28,7 +32,7 @@ public final class PhaseModule extends FeatureModule {
     private final ConcurrentLinkedDeque<Pending> packets=new ConcurrentLinkedDeque<>();
     private static final java.lang.reflect.Field REPORT_Y=ReflectionHelper.findField(EntityPlayerSP.class,"lastReportedPosY","field_175166_bJ"),REPORT_PITCH=ReflectionHelper.findField(EntityPlayerSP.class,"lastReportedPitch","field_175165_bM");
     private static final java.lang.reflect.Field PX=ReflectionHelper.findField(C03PacketPlayer.class,"x","field_149479_a"),PY=ReflectionHelper.findField(C03PacketPlayer.class,"y","field_149477_b"),PZ=ReflectionHelper.findField(C03PacketPlayer.class,"z","field_149478_c");
-    public PhaseModule(){super("Phase","Exire Watchdog cage blink and NCP block phasing",Category.MOVEMENT);}
+    public PhaseModule(){super("Phase","Watchdog, NCP and Adjust Blink, Vertical and Packetless phasing",Category.MOVEMENT);}
     @Override protected void onEnable(){initialize();}
     @Override protected void onDisable(){reset(true);}
     private void initialize(){
@@ -39,6 +43,7 @@ public final class PhaseModule extends FeatureModule {
     }
     private void claim(){if(!claimed){oldClip=owner.noClip;oldJump=owner.jumpMovementFactor;claimed=true;}owner.noClip=true;owner.jumpMovementFactor=0;}
     private void reset(boolean flush){
+        adjust.reset();
         blinking=cage=packetShift=false;if(flush)release();else packets.clear();signals.clear();
         if(claimed&&owner!=null){if(owner.noClip&&!FreecamModule.cameraActiveHook())owner.noClip=oldClip;if(owner.jumpMovementFactor==0)owner.jumpMovementFactor=oldJump;}
         claimed=false;owner=null;world=null;activeMode=null;ticks=delay=0;shouldSpeed=false;
@@ -51,10 +56,39 @@ public final class PhaseModule extends FeatureModule {
             if(packet instanceof S02PacketChat){S02PacketChat chat=(S02PacketChat)packet;if(chat.getChatComponent()!=null&&dev.vibe.pit.PitStatus.plain(chat.getChatComponent().getUnformattedText()).startsWith("▬▬▬▬▬▬▬▬▬▬▬")){cage=false;blinking=false;release();}}
         }
     }
-    public void receive(Packet<?> packet){if(isEnabled()&&mode.is("Watchdog")&&(packet instanceof S45PacketTitle||packet instanceof S02PacketChat))signals.add(packet);}
-    public void preUpdate(Object entity){if(entity==mc.thePlayer&&isEnabled()&&playing()&&mode.is("Watchdog"))blinking=cage&&mc.thePlayer.ticksExisted>30;}
+    public void receive(final Packet<?> packet) {
+        adjust.receive(packet);
+        if (isEnabled() && mode.is("Watchdog") && (packet instanceof S45PacketTitle || packet instanceof S02PacketChat))
+            signals.add(packet);
+    }
+
+    public void maintainAdjust() {
+        adjust.maintain();
+    }
+
+    public boolean holdAdjust(final Packet<?> packet) {
+        return adjust.hold(packet);
+    }
+
+    public boolean adjustGround(final Object entity, final boolean vanilla) {
+        return isEnabled() && adjust.selected() && entity == mc.thePlayer ? adjust.ground(vanilla) : vanilla;
+    }
+
+    public void preUpdate(final Object entity) {
+        if (entity == mc.thePlayer)
+            adjust.preUpdate();
+
+        if (entity == mc.thePlayer && isEnabled() && playing() && mode.is("Watchdog"))
+            blinking = cage && mc.thePlayer.ticksExisted > 30;
+    }
+
     public void correction(){if(isEnabled()&&mode.is("NCP"))shouldSpeed=true;}
     public void beforeWalking(Object entity){
+        if (isEnabled() && entity == mc.thePlayer && playing() && adjust.selected()) {
+            adjust.maintain();
+            adjust.beforeWalking(inside(mc.thePlayer.getEntityBoundingBox()));
+            return;
+        }
         if(!isEnabled()||entity!=mc.thePlayer||!playing()||mc.thePlayer.isSpectator()||!mode.is("NCP"))return;
         if(owner!=mc.thePlayer||world!=mc.theWorld||!mode.getValue().equals(activeMode))initialize();
         boolean in=inside(owner.getEntityBoundingBox());
@@ -101,7 +135,9 @@ public final class PhaseModule extends FeatureModule {
     public static List<AxisAlignedBB> collisions(List<AxisAlignedBB> boxes,Object entity){
         PhaseModule phase=module(PhaseModule.class);if(phase==null||!phase.isEnabled()||phase.mc.thePlayer==null||entity!=phase.mc.thePlayer||phase.mc.theWorld==null)return boxes;
         List<AxisAlignedBB> result=new ArrayList<>(boxes);
-        if(phase.mode.is("NCP"))result.removeIf(box->box.maxY>phase.mc.thePlayer.getEntityBoundingBox().minY);
+        if (phase.adjust.selected())
+            phase.adjust.collisions(result);
+        else if(phase.mode.is("NCP"))result.removeIf(box->box.maxY>phase.mc.thePlayer.getEntityBoundingBox().minY);
         else if(phase.cage&&phase.mc.thePlayer.ticksExisted>30)result.removeIf(box->{BlockPos p=new BlockPos(box.minX+.001,box.minY+.001,box.minZ+.001);return phase.mc.theWorld.isBlockLoaded(p)&&phase.mc.theWorld.getBlockState(p).getBlock()==Blocks.glass;});
         return result;
     }

@@ -5,6 +5,8 @@ import dev.vibe.module.Module;
 import dev.vibe.module.impl.combat.KillAuraModule;
 import dev.vibe.module.impl.combat.CriticalsModule;
 import dev.vibe.module.impl.movement.StepModule;
+import dev.vibe.module.impl.movement.FlyModule;
+import dev.vibe.module.impl.movement.PhaseModule;
 import dev.vibe.module.impl.movement.AntiVoidModule;
 import dev.vibe.module.impl.movement.NoFallModule;
 import dev.vibe.module.impl.movement.NoSlowModule;
@@ -22,7 +24,9 @@ public final class RewoundHooks {
 
     public static void preUpdate(Object entity) {
         if (entity != Minecraft.getMinecraft().thePlayer) return;
-        dev.vibe.module.impl.movement.PhaseModule phase=module(dev.vibe.module.impl.movement.PhaseModule.class);if(phase!=null)phase.preUpdate(entity);
+        final FlyModule fly = module(FlyModule.class);
+        if (fly != null) fly.rewoundPreUpdate();
+        PhaseModule phase=module(PhaseModule.class);if(phase!=null)phase.preUpdate(entity);
         StepModule step = module(StepModule.class);
         if (step != null) step.rewoundPreUpdate(entity);
         AntiVoidModule antiVoid = module(AntiVoidModule.class);
@@ -45,6 +49,9 @@ public final class RewoundHooks {
 
     public static double[] move(Object entity, double x, double y, double z) {
         if (entity != Minecraft.getMinecraft().thePlayer) return null;
+        final FlyModule fly = module(FlyModule.class);
+        final double[] flight = fly == null ? null : fly.rewoundMove(entity);
+        if (flight != null) return flight;
         SpeedModule speed = module(SpeedModule.class);
         double[] result=speed==null?null:speed.rewoundMove(entity,x,y,z);
         dev.vibe.module.impl.movement.JesusModule jesus=module(dev.vibe.module.impl.movement.JesusModule.class);
@@ -63,7 +70,9 @@ public final class RewoundHooks {
     public static void beforeWalking(Object entity) {
         dev.vibe.module.impl.movement.LongJumpModule longJump=module(dev.vibe.module.impl.movement.LongJumpModule.class);if(longJump!=null)longJump.diabloBeforeWalking(entity);
         if (entity != Minecraft.getMinecraft().thePlayer) return;
-        dev.vibe.module.impl.movement.PhaseModule phase=module(dev.vibe.module.impl.movement.PhaseModule.class);if(phase!=null)phase.beforeWalking(entity);
+        PhaseModule phase=module(PhaseModule.class);if(phase!=null)phase.beforeWalking(entity);
+        final FlyModule fly = module(FlyModule.class);
+        if (fly != null) fly.rewoundBeforeWalking(entity);
         CriticalsModule criticals = module(CriticalsModule.class);
         if (criticals != null) criticals.rewoundBeforeWalking(entity);
         dev.vibe.module.impl.movement.JesusModule jesus=module(dev.vibe.module.impl.movement.JesusModule.class);
@@ -76,6 +85,8 @@ public final class RewoundHooks {
         if (slow != null) slow.beforeWalking(entity);
     }
     public static boolean ground(Object entity, boolean vanilla) {
+        PhaseModule phase = module(PhaseModule.class);
+        if (phase != null) vanilla = phase.adjustGround(entity, vanilla);
         CriticalsModule criticals = module(CriticalsModule.class);
         if (criticals != null) vanilla = criticals.rewoundGround(entity, vanilla);
         NoFallModule fall = module(NoFallModule.class);
@@ -94,6 +105,10 @@ public final class RewoundHooks {
     public static void afterWalking(Object entity) {
         if (entity != Minecraft.getMinecraft().thePlayer) return;
         try {
+            final FlyModule fly = module(FlyModule.class);
+            if (fly != null) fly.rewoundAfterWalking();
+            CriticalsModule criticals = module(CriticalsModule.class);
+            if (criticals != null) criticals.adjustAfterWalking();
             dev.vibe.module.impl.movement.LongJumpModule longJump=module(dev.vibe.module.impl.movement.LongJumpModule.class);if(longJump!=null)longJump.diabloAfterWalking(entity);
             NoSlowModule slow = module(NoSlowModule.class);
             if (slow != null) slow.afterWalking(entity);
@@ -104,6 +119,8 @@ public final class RewoundHooks {
         } finally { endWalking(); }
     }
     public static void endWalking() {
+        final FlyModule fly = module(FlyModule.class);
+        if (fly != null) fly.endRewoundWalking();
         CriticalsModule criticals = module(CriticalsModule.class);
         if (criticals != null) criticals.endRewoundWalking();
         NoSlowModule slow = module(NoSlowModule.class);
@@ -113,7 +130,9 @@ public final class RewoundHooks {
     }
     /** Inserted after PacketThreadUtil, so the packet and state change exactly once on the client thread. */
     public static void correction(Object packet) {
-        dev.vibe.module.impl.movement.PhaseModule phase=module(dev.vibe.module.impl.movement.PhaseModule.class);if(phase!=null&&packet instanceof S08PacketPlayerPosLook)phase.correction();
+        final FlyModule fly = module(FlyModule.class);
+        if (fly != null && packet instanceof S08PacketPlayerPosLook) fly.rewoundCorrection();
+        PhaseModule phase=module(PhaseModule.class);if(phase!=null&&packet instanceof S08PacketPlayerPosLook)phase.correction();
         dev.vibe.module.impl.client.FlagDetectorModule flags=module(dev.vibe.module.impl.client.FlagDetectorModule.class);
         if(flags!=null&&packet instanceof S08PacketPlayerPosLook)flags.observe((S08PacketPlayerPosLook)packet);
         dev.vibe.module.impl.world.ScaffoldModule scaffold = module(dev.vibe.module.impl.world.ScaffoldModule.class);

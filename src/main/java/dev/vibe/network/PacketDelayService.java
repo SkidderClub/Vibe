@@ -1,6 +1,8 @@
 package dev.vibe.network;
 
 import dev.vibe.Vibe;
+import dev.vibe.features.FeatureModule;
+import dev.vibe.module.impl.movement.FlyModule;
 import dev.vibe.module.impl.combat.BacktrackModule;
 import dev.vibe.module.impl.meme.GirlfriendModule;
 import dev.vibe.module.impl.combat.LagRangeModule;
@@ -30,7 +32,7 @@ import net.minecraft.network.play.server.S08PacketPlayerPosLook;
  */
 public final class PacketDelayService {
 
-    public enum Owner { LAG_RANGE, BACKTRACK }
+    public enum Owner { LAG_RANGE, BACKTRACK, REWOUND_FLIGHT, ADJUST_PHASE }
 
     private static final String HANDLER = "vibe_packet_delay";
     private static final PacketDelayService INSTANCE = new PacketDelayService();
@@ -85,6 +87,8 @@ public final class PacketDelayService {
 
     private boolean delayOutbound(Packet<?> packet, ChannelHandlerContext ctx, ChannelPromise promise) {
         if (UNMODIFIED.remove(packet) != null) return false;
+        final FlyModule fly = FeatureModule.module(FlyModule.class);
+        if (fly != null) fly.observeOutbound(packet);
         MoveFixModule moveFix = Vibe.getInstance() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
         if (moveFix != null) moveFix.applyToOutgoing(packet);
@@ -126,7 +130,15 @@ public final class PacketDelayService {
         if(phase!=null)phase.mutate(packet);
         dev.vibe.module.impl.client.DisablerModule disabler=dev.vibe.features.FeatureModule.module(dev.vibe.module.impl.client.DisablerModule.class);
         if(disabler!=null&&disabler.outbound(packet,ctx,promise))return true;
+        if (phase != null && phase.holdAdjust(packet)) {
+            queue(outbound, new Entry(Owner.ADJUST_PHASE, packet, ctx, promise, Long.MAX_VALUE));
+            return true;
+        }
         if(phase!=null&&phase.outbound(packet,ctx,promise))return true;
+        if (fly != null && fly.rewoundBlinking()) {
+            queue(outbound, new Entry(Owner.REWOUND_FLIGHT, packet, ctx, promise, Long.MAX_VALUE));
+            return true;
+        }
         LagRangeModule lagRange = Vibe.getInstance() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(LagRangeModule.class);
         if (lagRange == null || !lagRange.shouldBlink(packet)) return false;
@@ -149,7 +161,13 @@ public final class PacketDelayService {
     public static boolean isUnmodified(Object packet) { return UNMODIFIED.containsKey(packet); }
 
     private boolean delayInbound(Packet<?> packet, ChannelHandlerContext ctx) {
+        final FlyModule fly = FeatureModule.module(FlyModule.class);
+        if (fly != null) fly.observeInbound(packet);
         dev.vibe.module.impl.movement.PhaseModule phase=dev.vibe.features.FeatureModule.module(dev.vibe.module.impl.movement.PhaseModule.class);if(phase!=null)phase.receive(packet);
+        if (phase != null && phase.holdAdjust(packet)) {
+            queue(inbound, new Entry(Owner.ADJUST_PHASE, packet, ctx, null, Long.MAX_VALUE));
+            return true;
+        }
         VelocityModule velocity = Vibe.getInstance() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(VelocityModule.class);
         if (velocity != null && velocity.handleInbound(packet)) return true;
@@ -208,17 +226,19 @@ public final class PacketDelayService {
             removeOwner(outbound, owner);
             return;
         }
-        channel.eventLoop().execute(new Runnable() {
-            @Override public void run() {
-                release(inbound, Long.MAX_VALUE, false, owner);
-                release(outbound, Long.MAX_VALUE, true, owner);
-            }
-        });
+        final Runnable release = () -> {
+            release(inbound, Long.MAX_VALUE, false, owner);
+            release(outbound, Long.MAX_VALUE, true, owner);
+        };
+        if (channel.eventLoop().inEventLoop()) release.run();
+        else channel.eventLoop().execute(release);
     }
 
     public void flushAll() {
         flush(Owner.LAG_RANGE);
         flush(Owner.BACKTRACK);
+        flush(Owner.REWOUND_FLIGHT);
+        flush(Owner.ADJUST_PHASE);
     }
 
     /** Snapshot of the retained outbound stream in original send order. */

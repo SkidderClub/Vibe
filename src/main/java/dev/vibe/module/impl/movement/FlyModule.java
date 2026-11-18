@@ -1,9 +1,13 @@
 package dev.vibe.module.impl.movement;
 
 import dev.vibe.combat.CombatTimerAccess;
+import dev.vibe.inventory.ItemSwitching;
 import dev.vibe.module.Category;
 import dev.vibe.module.Module;
 import dev.vibe.movement.AacMovementSupport;
+import dev.vibe.movement.AdjustFlight;
+import dev.vibe.features.FeatureModule;
+import net.minecraft.network.Packet;
 import dev.vibe.setting.ModeSetting;
 import dev.vibe.setting.NumberSetting;
 import dev.vibe.setting.BooleanSetting;
@@ -16,7 +20,7 @@ import org.lwjgl.input.Keyboard;
 public final class FlyModule extends Module {
 
     private final ModeSetting mode = addSetting(new ModeSetting("Mode", "Basic", "Basic", "GroundSpoof",
-            "AAC1.9.10", "AAC3.0.5", "AAC3.1.6-Gomme", "AAC3.3.12", "AAC3.3.12-Glide", "AAC3.3.13"));
+            "Rewound", "AAC1.9.10", "AAC3.0.5", "AAC3.1.6-Gomme", "AAC3.3.12", "AAC3.3.12-Glide", "AAC3.3.13"));
     private final NumberSetting horizontalSpeed = addSetting(new NumberSetting("Horizontal Speed", 0.8D, 0.1D, 3.0D, 0.1D));
     private final NumberSetting verticalSpeed = addSetting(new NumberSetting("Vertical Speed", 0.35D, 0.1D, 2.0D, 0.05D));
     private final NumberSetting aacSpeed = addSetting(new NumberSetting("AAC1.9.10-Speed", 0.3D, 0.0D, 1.0D, 0.01D,
@@ -27,6 +31,24 @@ public final class FlyModule extends Module {
             () -> mode.is("AAC3.3.12")));
     private final NumberSetting aacMotion2 = addSetting(new NumberSetting("AAC3.3.13-Motion", 10.0D, 0.1D, 10.0D, 0.1D,
             () -> mode.is("AAC3.3.13")));
+    public final NumberSetting rewoundSpeed = addSetting(new NumberSetting("Rewound Speed", 1, 0.5, 5, 0.05, () -> mode.is("Rewound")));
+    public final ModeSetting rewoundDamage = addSetting(new ModeSetting("Rewound Damage", "Normal", () -> mode.is("Rewound"), "Normal", "Wait", "None"));
+    public final BooleanSetting rewoundTimer = addSetting(new BooleanSetting("Rewound Timer", true, () -> mode.is("Rewound")));
+    public final NumberSetting rewoundTimerSpeed = addSetting(new NumberSetting("Rewound Timer Speed", 2, 0.5, 10, 0.05, () -> mode.is("Rewound") && rewoundTimer.isEnabled()));
+    public final NumberSetting rewoundTimerTime = addSetting(new NumberSetting("Rewound Timer Time", 500, 5, 2000, 5, () -> mode.is("Rewound") && rewoundTimer.isEnabled()));
+    public final BooleanSetting rewoundDrop = addSetting(new BooleanSetting("Rewound Drop", true, () -> mode.is("Rewound")));
+    public final NumberSetting rewoundDropSpeed = addSetting(new NumberSetting("Rewound Drop Speed", 4, 0.5, 10, 0.1, () -> mode.is("Rewound") && rewoundDrop.isEnabled()));
+    public final BooleanSetting rewoundDisabler = addSetting(new BooleanSetting("Rewound Disabler", true, () -> mode.is("Rewound")));
+    public final BooleanSetting rewoundPearl = addSetting(new BooleanSetting("Rewound Ender Pearl", true, () -> mode.is("Rewound") && rewoundDisabler.isEnabled()));
+    public final BooleanSetting rewoundFireball = addSetting(new BooleanSetting("Rewound Fireball", true, () -> mode.is("Rewound") && rewoundDisabler.isEnabled()));
+    public final BooleanSetting rewoundPacket = addSetting(new BooleanSetting("Rewound Packet", true, () -> mode.is("Rewound") && rewoundDisabler.isEnabled()));
+    public final NumberSetting rewoundHorizontal = addSetting(new NumberSetting("Rewound Horizontal Speed", 4, 0.5, 10, 0.1, () -> mode.is("Rewound") && rewoundDisabler.isEnabled()));
+    public final NumberSetting rewoundVertical = addSetting(new NumberSetting("Rewound Vertical Speed", 2, 0.5, 10, 0.1, () -> mode.is("Rewound") && rewoundDisabler.isEnabled()));
+    public final BooleanSetting rewoundProgress = addSetting(new BooleanSetting("Rewound Progress", true, () -> mode.is("Rewound")));
+    public final ModeSetting rewoundBobbing = addSetting(new ModeSetting("Rewound Bobbing", "None", () -> mode.is("Rewound"), "None", "Normal only", "Always"));
+    public final ItemSwitching rewoundSwitching = new ItemSwitching(this::addSetting, "Silent", () -> mode.is("Rewound") && rewoundDisabler.isEnabled());
+    private final AdjustFlight rewound = new AdjustFlight(this);
+    private boolean rewoundActive;
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private boolean wasFlying;
     private double startY;
@@ -42,6 +64,8 @@ public final class FlyModule extends Module {
 
     @Override
     protected void onEnable() {
+        rewoundActive = mode.is("Rewound");
+        if (rewoundActive) rewound.enable();
         wasFlying = minecraft.thePlayer != null && minecraft.thePlayer.capabilities.isFlying;
         if (minecraft.thePlayer != null) startY = minecraft.thePlayer.posY;
         jump = 3.8D;
@@ -52,6 +76,19 @@ public final class FlyModule extends Module {
     }
 
     public void tick() {
+        rewound.tick();
+        if (rewoundActive && (!isEnabled() || !mode.is("Rewound"))) {
+            rewound.disable();
+            rewoundActive = false;
+        }
+        if (isEnabled() && mode.is("Rewound")) {
+            if (!rewoundActive) {
+                if (minecraft.thePlayer != null) minecraft.thePlayer.capabilities.isFlying = wasFlying;
+                rewound.enable();
+                rewoundActive = true;
+            }
+            return;
+        }
         if (!isEnabled() || minecraft.thePlayer == null || minecraft.currentScreen != null) {
             return;
         }
@@ -75,6 +112,12 @@ public final class FlyModule extends Module {
 
     @Override
     protected void onDisable() {
+        if (rewoundActive) {
+            rewound.disable();
+            rewoundActive = false;
+            return;
+        }
+
         CombatTimerAccess.setSpeed(1.0F);
         if (minecraft.thePlayer == null) return;
         minecraft.thePlayer.capabilities.isFlying = wasFlying;
@@ -87,6 +130,58 @@ public final class FlyModule extends Module {
         aacWasDead = false;
         aacTick = 0;
         glideTick = 0;
+    }
+
+    public void rewoundPreUpdate() {
+        rewound.observeGround();
+    }
+
+    public double[] rewoundMove(final Object entity) {
+        return isEnabled() && mode.is("Rewound") && entity == minecraft.thePlayer ? rewound.move() : null;
+    }
+
+    public void rewoundBeforeWalking(final Object entity) {
+        if (isEnabled() && mode.is("Rewound") && entity == minecraft.thePlayer)
+            rewound.beforeWalking();
+    }
+
+    public void endRewoundWalking() {
+        rewound.endWalking();
+    }
+
+    public void rewoundAfterWalking() {
+        rewound.afterWalking();
+    }
+
+    public void maintainRewound() {
+        rewound.tick();
+    }
+
+    public void rewoundCorrection() {
+        if (isEnabled() && mode.is("Rewound"))
+            rewound.correction();
+    }
+
+    public void observeOutbound(final Packet<?> packet) {
+        rewound.outbound(packet);
+    }
+
+    public void observeInbound(final Packet<?> packet) {
+        rewound.receive(packet);
+    }
+
+    public boolean rewoundBlinking() {
+        return isEnabled() && mode.is("Rewound") && rewound.blinking();
+    }
+
+    public static boolean blockClickHook(final boolean blocked) {
+        final FlyModule fly = FeatureModule.module(FlyModule.class);
+        return blocked || fly != null && fly.rewoundBlinking();
+    }
+
+    public void renderRewoundProgress(final int width, final int height) {
+        if (mode.is("Rewound"))
+            rewound.renderProgress(width, height);
     }
 
     private void setHorizontalSpeed(double speed) {

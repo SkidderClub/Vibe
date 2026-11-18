@@ -29,6 +29,7 @@ import dev.vibe.module.impl.meme.Gta7Module;
 import dev.vibe.module.impl.client.QolModule;
 import dev.vibe.module.impl.combat.VelocityModule;
 import dev.vibe.module.impl.movement.FlyModule;
+import dev.vibe.module.impl.movement.PhaseModule;
 import dev.vibe.module.impl.movement.FreecamModule;
 import dev.vibe.module.impl.movement.SpeedModule;
 import dev.vibe.module.impl.movement.LongJumpModule;
@@ -394,6 +395,10 @@ public final class ClientEvents {
         dev.vibe.module.impl.visual.CustomModelRendererModule customModels = Vibe.getInstance().getModuleManager()
                 .getModule(dev.vibe.module.impl.visual.CustomModelRendererModule.class);
         if (customModels != null) customModels.tick();
+        final PhaseModule trackedPhase = Vibe.getInstance().getModuleManager().getModule(PhaseModule.class);
+        if (trackedPhase != null) trackedPhase.maintainAdjust();
+        final FlyModule trackedFly = Vibe.getInstance().getModuleManager().getModule(FlyModule.class);
+        if (trackedFly != null) trackedFly.maintainRewound();
         if (minecraft.thePlayer == null) return;
         dev.vibe.module.impl.combat.TargetsModule targets = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.TargetsModule.class);
         if (targets != null) targets.tickWarnings();
@@ -572,6 +577,8 @@ public final class ClientEvents {
                     oofArrowsRenderer.render();
                     hitmarkerRenderer.renderOverlay();
                     scaffoldCountRenderer.render();
+                    final FlyModule fly = Vibe.getInstance().getModuleManager().getModule(FlyModule.class);
+                    if (fly != null) fly.renderRewoundProgress(event.resolution.getScaledWidth(), event.resolution.getScaledHeight());
                     if (deferredCrosshair) customCrosshairRenderer.render();
                     freecamHudRenderer.render();
                 }
