@@ -129,7 +129,8 @@ public final class EspEditorGui extends GuiScreen {
     private Esp2DRenderer.Actor previewActor() {
         Esp2DRenderer.Actor actor=new Esp2DRenderer.Actor(previewName,15,20,16,12,"Diamond Sword",new ItemStack(Items.diamond_sword),
                 new ItemStack[]{new ItemStack(Items.diamond_helmet),new ItemStack(Items.diamond_chestplate),new ItemStack(Items.diamond_leggings),new ItemStack(Items.diamond_boots)},1);
-        actor.teamColor=PREVIEW_TEAM;actor.hurt=previewHurt;actor.profile=esp.resolvedProfile(esp.editingProfile());return actor;
+        actor.teamColor=PREVIEW_TEAM;actor.hurt=previewHurt;actor.profile=esp.resolvedProfile(esp.editingProfile());
+        actor.forcedColor=esp.inheritedColorOverride(esp.editingProfile(),PREVIEW_TEAM,previewHurt);return actor;
     }
     private void draw3DPreview() {
         int profile=esp.resolvedProfile(esp.editingProfile());boolean walls=esp.getThroughWalls(profile).isEnabled();
@@ -144,6 +145,10 @@ public final class EspEditorGui extends GuiScreen {
     private void buildRows() {
         rows.clear();
         if(esp.editingProfile()!=0)setting(esp.editingProfile()==1?esp.getFriendsProfile().getUsePlayerDefaults():esp.getTargetsProfile().getUsePlayerDefaults(),"Use player defaults");
+        if(esp.editingProfile()==2&&inherited()){
+            setting(esp.getTargetsProfile().getOverrideColors(),"Override colors");
+            setting(esp.getTargetsProfile().getOverrideColor(),"Target color (RGB only)");
+        }
         if(esp.getModes().isSelected("2D")) {
             header("2D / Layout",0);if(!collapsed.contains("2D / Layout")) {
                 setting(settings().distanceScaling,"Distance scaling");setting(settings().gap,"Element gap");
@@ -177,7 +182,7 @@ public final class EspEditorGui extends GuiScreen {
     }
     private void profileRows(String title,EspModule.ProfileSettings p) {
         header(title,1);if(collapsed.contains(title))return;
-        setting(p.getUsePlayerDefaults(),"Use player defaults");setting(p.getColorMode(),"Color mode");setting(p.getOverrideColor(),"Override color");
+        setting(p.getColorMode(),"Color mode");if(esp.editingProfile()!=2||!inherited())setting(p.getOverrideColor(),"Override color");
         setting(p.getOutline(),"Outline");setting(p.getFill(),"Fill");
     }
     private void chamsRows(String label,EspModule.ChamsSettings c) {

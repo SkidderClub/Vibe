@@ -34,6 +34,8 @@ public final class MoveFixLoadingPlugin implements IFMLLoadingPlugin {
                 "dev.vibe.core.ChatCompletionTransformer",
                 "dev.vibe.core.ChatterTitleTransformer",
                 "dev.vibe.core.HudChatTransformer",
+                "dev.vibe.core.ShopSaverTransformer",
+                "dev.vibe.core.TabListTransformer",
                 "dev.vibe.core.RecorderRenderTransformer",
                 "dev.vibe.core.HotbarOverlayTransformer",
                 "dev.vibe.core.ContainerThemeTransformer",

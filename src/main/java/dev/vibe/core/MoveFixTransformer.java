@@ -83,7 +83,7 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
                         return new PacketVisitor(delegate);
                     }
                     if (target == 3 && isLivingUpdate(method, descriptor)) {
-                        return new SprintVisitor(delegate);
+                        return new SprintVisitor(delegate,method);
                     }
                     if (target == 3 && isUpdate(method, descriptor)) {
                         return new UpdateVisitor(delegate, reader.getClassName());
@@ -391,9 +391,19 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
 
     private static final class SprintVisitor extends MethodVisitor {
         private boolean firstForward = true;
+        private final String method;
 
-        private SprintVisitor(MethodVisitor delegate) {
+        private SprintVisitor(MethodVisitor delegate,String method) {
             super(Opcodes.ASM5, delegate);
+            this.method=method;
+        }
+
+        @Override public void visitMethodInsn(int opcode,String owner,String name,String descriptor,boolean itf){
+            if(opcode==Opcodes.INVOKESPECIAL&&name.equals(method)&&descriptor.equals("()V")){
+                super.visitVarInsn(Opcodes.ALOAD,0);
+                super.visitMethodInsn(Opcodes.INVOKESTATIC,SCAFFOLD_HOOK,"nativeSprintHook","(Ljava/lang/Object;)V",false);
+            }
+            super.visitMethodInsn(opcode,owner,name,descriptor,itf);
         }
 
         @Override

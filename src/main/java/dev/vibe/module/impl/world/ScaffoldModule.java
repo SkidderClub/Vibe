@@ -856,6 +856,18 @@ public final class ScaffoldModule extends Module {
         KeyBinding.setKeyBindState(minecraft.gameSettings.keyBindSprint.getKeyCode(), down);
         sprintOwned = true;
     }
+    /** Run after vanilla's forward-only sprint cancellation, before native movement physics. */
+    public static void nativeSprintHook(Object entity){
+        ScaffoldModule m=module();Minecraft mc=Minecraft.getMinecraft();
+        if(m==null||!m.isEnabled()||!m.sprint.is("Always")||mc==null||entity!=mc.thePlayer
+                ||mc.thePlayer==null||mc.theWorld==null||mc.currentScreen!=null
+                ||dev.vibe.module.impl.movement.FreecamModule.cameraActiveHook())return;
+        EntityPlayerSP p=mc.thePlayer;
+        boolean moving=m.isMoving()||p.movementInput!=null&&(p.movementInput.moveForward!=0||p.movementInput.moveStrafe!=0);
+        boolean allowed=moving&&p.movementInput!=null&&!p.movementInput.sneak&&!p.isUsingItem()
+                &&(p.capabilities.allowFlying||p.getFoodStats()!=null&&p.getFoodStats().getFoodLevel()>6);
+        m.setSprintKey(allowed);p.setSprinting(allowed);
+    }
 
     // ----------------------------------------------------------------------------------------- placing
 

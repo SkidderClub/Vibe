@@ -121,15 +121,17 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
         }
         if (now < cooldown || HotbarSwitches.busy(this,HotbarSwitches.BUFF) || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()
                 || dev.vibe.module.impl.movement.FreecamModule.cameraActiveHook()
-                || mc.thePlayer.isUsingItem() || VanillaClicks.physicallyDown(mc.gameSettings.keyBindUseItem)
+                || mc.thePlayer.isUsingItem()&&!canInterruptAuraBlock() || VanillaClicks.physicallyDown(mc.gameSettings.keyBindUseItem)
                 || mc.thePlayer.inventory.getItemStack() != null) { candidate = null; return; }
         if (mc.currentScreen == null) {
             for (Kind kind : PRIORITY) {
+                if(mc.thePlayer.isUsingItem()&&kind!=Kind.HEAD)continue;
                 if (!enabled(kind) || now < blockedUntil.getOrDefault(kind, 0L)) continue;
                 int found = findHotbar(kind);
                 if (found < 0 || !shouldUse(kind, mc.thePlayer.inventory.getStackInSlot(found))) continue;
                 if (candidate != kind) { candidate = kind; candidateDue = now + pick(delays.get(kind)); }
                 if (now >= candidateDue) {
+                    if(kind==Kind.HEAD)KillAuraModule.pauseForConsumable();
                     active = kind; slot = found; previousSlot = mc.thePlayer.inventory.currentItem;
                     expected = mc.thePlayer.inventory.getStackInSlot(found).copy();
                     slotLease=HotbarSwitches.acquire(this,switching,found,HotbarSwitches.BUFF);
@@ -144,6 +146,7 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
             }
         }
         candidate = null;
+        if(mc.thePlayer.isUsingItem())return;
         if (refill.isEnabled() && (refillMoving.isEnabled() || !moving()) && refillPlan(layout()) != null && inventory.open(refillMode.getValue())) {
             refilling = true; refillAt = now + pick(openDelay);
         }
@@ -262,6 +265,11 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
     @Override protected void onDisable() { cancel(true); }
     private long pick(RangeSetting s) { return s.getMinInt() + random.nextInt(s.getMaxInt() - s.getMinInt() + 1); }
     private ItemStack selectedStack(){return slotLease==null?null:slotLease.stack();}
+    private boolean canInterruptAuraBlock(){
+        KillAuraModule aura=KillAuraModule.activeController();
+        ItemStack use=mc.thePlayer.getItemInUse();
+        return enabled(Kind.HEAD)&&aura!=null&&aura.isEnabled()&&use!=null&&use.getItem() instanceof ItemSword;
+    }
     private static AutoBuffModule module() { return Vibe.getInstance() == null ? null : Vibe.getInstance().getModuleManager().getModule(AutoBuffModule.class); }
     public static boolean ownsUseInput() { AutoBuffModule m = module(); return m != null && m.isEnabled() && m.phase != Phase.IDLE; }
     /** Mark only an actual C08 dispatched by the native use controller, on the client thread. */
@@ -310,7 +318,9 @@ public final class AutoBuffModule extends dev.vibe.module.Module {
             net.minecraft.client.settings.KeyBinding.setKeyBindState(m.mc.gameSettings.keyBindUseItem.getKeyCode(), false);
             return;
         }
-        if (!m.pressed) {
+        // A pulse can be consumed by vanilla while its right-click delay is
+        // nonzero. Retry on the next input pass until the controller sends use.
+        if (!m.pressed || m.active==Kind.HEAD&&!m.headInteracted) {
             VanillaClicks.pulseUse(m.mc.gameSettings.keyBindUseItem); m.pressed = true;
         } else net.minecraft.client.settings.KeyBinding.setKeyBindState(m.mc.gameSettings.keyBindUseItem.getKeyCode(),
                 m.expected.getMaxItemUseDuration() > 0 && m.mc.thePlayer.isUsingItem());

@@ -61,6 +61,7 @@ public final class SkeletalRenderer {
                     continue;
                 }
                 EntityPlayer player = (EntityPlayer) object;
+                if(!dev.vibe.ui.render.RewoundPlayers.showEsp(player))continue;
                 Pose pose = poses.get(player.getUniqueID());
                 if (pose == null || player.isDead) {
                     continue;
@@ -95,6 +96,9 @@ public final class SkeletalRenderer {
         int resolved=module.getColor().resolve(color(module, player.getEntityId() * 0.11F), Vibe.getInstance().getModuleManager().getModule(EspModule.class).teamColor(player),player.hurtTime>0);
         dev.vibe.module.impl.meme.HypixelModule hypixel=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
         int forced=hypixel==null?0:hypixel.visualColor(player);
+        EspModule esp=Vibe.getInstance().getModuleManager().getModule(EspModule.class);
+        int inherited=esp.inheritedColorOverride(esp.profileFor(player),esp.teamColor(player),player.hurtTime>0);
+        if(inherited!=0)forced=inherited;
         if(forced!=0)resolved=(resolved&0xFF000000)|(forced&0x00FFFFFF);
         WorldRenderUtils.color(backplate ? 0xB8000000 : resolved);
         drawPose(pose);

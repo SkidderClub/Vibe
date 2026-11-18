@@ -9,9 +9,13 @@ import org.lwjgl.input.Keyboard;
 
 /** Small client-only quality-of-life presentation controls. */
 public final class QolModule extends Module {
+    public static final String REAL_REWOUND_PLAYERS="RealRewoundPlayers";
 
     private final MultiSelectSetting features = addSetting(new MultiSelectSetting("Features",
-            Arrays.asList("Hide Black Background", "AntiInvisibility"), Arrays.asList("Hide Black Background")));
+            Arrays.asList("Hide Black Background", "AntiInvisibility", REAL_REWOUND_PLAYERS), Arrays.asList("Hide Black Background")));
+    private final MultiSelectSetting realPlayerViews=addSetting(new MultiSelectSetting("RealRewoundPlayers Views",
+            Arrays.asList("ESP","Tab"),Arrays.asList("ESP","Tab"),()->features.isSelected(REAL_REWOUND_PLAYERS)));
+    public MultiSelectSetting getRealPlayerViews(){return realPlayerViews;}
     private final MultiSelectSetting guiTargets = addSetting(new MultiSelectSetting("Hide In",
             Arrays.asList("Inventory", "ESC", "Other Vanilla GUIs"),
             Arrays.asList("Inventory", "ESC", "Other Vanilla GUIs"),

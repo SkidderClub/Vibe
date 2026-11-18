@@ -246,6 +246,8 @@ public final class ClientEvents {
             MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
             if (moveFix != null) moveFix.beginRotationTick();
             dev.vibe.features.FeatureHooks.tick();
+            dev.vibe.module.impl.client.ShopSaverModule shopSaver = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.ShopSaverModule.class);
+            if (shopSaver != null) shopSaver.tick();
             dev.vibe.module.impl.movement.TeleportModule teleport=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.TeleportModule.class);if(teleport!=null)teleport.tick();
             NoteBotModule noteBot = Vibe.getInstance().getModuleManager().getModule(NoteBotModule.class);
             if (noteBot != null) noteBot.tickStart();
@@ -724,8 +726,7 @@ public final class ClientEvents {
         dev.vibe.inventory.HotbarSwitches.Highlight slot=dev.vibe.inventory.HotbarSwitches.highlight();
         if (slot != null) {
             int x = left + slot.slot * 20;
-            RenderUtils.roundedOutline(x, top, x + 22, top + 22, 2.0F, 1.5F,
-                    slot.color);
+            dev.vibe.ui.render.HotbarHighlightRenderer.draw(x,top,22,slot.color);
         }
     }
 
@@ -1033,6 +1034,8 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onGuiOpen(GuiOpenEvent event) {
+        dev.vibe.module.impl.client.ShopSaverModule shopSaver = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.ShopSaverModule.class);
+        if (shopSaver != null) event.gui = shopSaver.opening(event.gui);
         if (event.gui instanceof net.minecraft.client.gui.GuiIngameMenu && dev.vibe.module.impl.world.NoEscMenuModule.blocksMenuHook()) {
             event.setCanceled(true); return;
         }

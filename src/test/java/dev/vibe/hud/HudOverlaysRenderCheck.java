@@ -194,6 +194,19 @@ public final class HudOverlaysRenderCheck {
             check(e.getHeight()==34,"Open chat reserved empty space instead of fitting two messages");
             net.minecraft.client.gui.GuiTextField input=new net.minecraft.client.gui.GuiTextField(0,mc.fontRendererObj,0,0,320,14);input.setMaxStringLength(256);input.setFocused(true);input.writeText("Hello world");HudChat.drawInput(input,1280,720);
             check(input.getText().equals("Hello world")&&input.xPosition>=4&&input.yPosition==700,"Styled input changed editing or escaped its panel");save(output.resolve("custom-chat-live.png"),1280,720);
+            net.minecraft.util.IChatComponent action=new net.minecraft.util.ChatComponentText("Play again").setChatStyle(new net.minecraft.util.ChatStyle().setBold(true)
+                    .setChatClickEvent(new net.minecraft.event.ClickEvent(net.minecraft.event.ClickEvent.Action.RUN_COMMAND,"/play again")));
+            chat.printChatMessage(new net.minecraft.util.ChatComponentText("Click ").appendSibling(action));
+            freezeMotion("motion",1,1);freezeMotion("openMotion",1,1);freezeMotion("heightMotion",45,45);
+            for(float scale:new float[]{.75F,1F,1.5F}){
+                e.setScale(scale);frame(1280,720);manager.drawChat();
+                int xx=e.getLeft()+Math.round((6+mc.fontRendererObj.getStringWidth("Click ")+4)*scale);
+                int yy=e.getTop()+Math.round((45-6-11+1+4)*scale);
+                net.minecraft.util.IChatComponent hit=(net.minecraft.util.IChatComponent)HudChat.component(xx,720-1-yy);
+                check(hit!=null&&hit.getChatStyle().getChatClickEvent()!=null&&hit.getChatStyle().getChatClickEvent().getValue().equals("/play again"),"Scaled, bottom-anchored chat lost its rendered click target at "+scale);
+                save(output.resolve("custom-chat-click-"+scale+".png"),1280,720);
+            }
+            e.setScale(1);chat.clearChatMessages();chat.printChatMessage(new net.minecraft.util.ChatComponentText("First message"));chat.printChatMessage(new net.minecraft.util.ChatComponentText("Second message"));
             // Hold a half-open animation. The glass shader ignores modelview translations,
             // so its scissor and the geometry border must both use the animated coordinates.
             e.setTheme("LiquidGlass");mc.currentScreen=null;

@@ -8,6 +8,20 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class EspAppearanceTest {
+    @Test public void inheritedTargetsOverrideOnlyRgbAndCanReturnExactlyToPlayerDefaults(){
+        EspModule esp=new EspModule();esp.getEditProfile().setValue("Targets");
+        assertTrue(esp.getTargetsProfile().getOverrideColors().isVisible());
+        assertEquals(0xFFFF0000,esp.getTargetsProfile().getOverrideColor().getArgb());
+        esp.getOutlineColor().setValue(0x9A1256AB);esp.getFillColor().setValue(0x23123456);
+        esp.getTargetsProfile().getOverrideColor().setValue(0x04EE1122);
+        EspModule.Style target=esp.getPreviewStyle(2);
+        assertEquals(0x9AEE1122,target.getOutline());assertEquals(0x23EE1122,target.getFill());assertEquals(0,esp.resolvedProfile(2));
+        esp.getTargetsProfile().getOverrideColors().setEnabled(false);
+        assertFalse(esp.getTargetsProfile().getOverrideColor().isVisible());
+        assertEquals(esp.getPreviewStyle(0).getOutline(),esp.getPreviewStyle(2).getOutline());
+        assertEquals(esp.getPreviewStyle(0).getFill(),esp.getPreviewStyle(2).getFill());
+        esp.getTargetsProfile().getUsePlayerDefaults().setEnabled(false);assertFalse(esp.getTargetsProfile().getOverrideColors().isVisible());assertEquals(2,esp.resolvedProfile(2));
+    }
     @Test public void profilesAreIndependentAndAllColorsSupportContext(){
         EspModule esp=new EspModule();esp.getModes().toggle("2D");esp.getModes().toggle("Chams");
         assertEquals(0,esp.resolvedProfile(1));

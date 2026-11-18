@@ -37,7 +37,7 @@ public final class BowAimbotModule extends dev.vibe.module.Module {
         for(Entity e:mc.theWorld.loadedEntityList)if(e instanceof EntityLivingBase&&e!=mc.thePlayer&&e.isEntityAlive()&&mc.thePlayer.getDistanceSqToEntity(e)<=range.getDouble()*range.getDouble()&&(filters==null||filters.canTarget((EntityLivingBase)e))){
             float yaw=(float)Math.toDegrees(Math.atan2(e.posZ-mc.thePlayer.posZ,e.posX-mc.thePlayer.posX))-90;if(Math.abs(RotationMath.difference(yaw,mc.thePlayer.rotationYaw))<=fov.getFloat()/2)candidates.add((EntityLivingBase)e);
         }
-        candidates.sort(Comparator.comparingDouble(e->e==target?-1:mc.thePlayer.getDistanceSqToEntity(e)));ArrowAimSolver.Shot found=null;EntityLivingBase chosen=null;Vec3 chosenRelative=null;
+        candidates.sort(this::compareTargets);ArrowAimSolver.Shot found=null;EntityLivingBase chosen=null;Vec3 chosenRelative=null;
         for(int i=0;i<Math.min(3,candidates.size())&&found==null;i++){
             EntityLivingBase e=candidates.get(i);AxisAlignedBB box=e.getEntityBoundingBox();Vec3[] movement=ArrowAimSolver.forecast(mc.theWorld,e,prediction.isEnabled());List<Vec3> points=new ArrayList<>();
             if(e==target&&relative!=null)points.add(relative);
@@ -51,6 +51,10 @@ public final class BowAimbotModule extends dev.vibe.module.Module {
         target=chosen;relative=chosenRelative;solution=found;
         if(found!=null){mc.thePlayer.rotationYaw+=RotationMath.clamp(RotationMath.difference(found.yaw,mc.thePlayer.rotationYaw),-yawSpeed.getFloat(),yawSpeed.getFloat());mc.thePlayer.rotationPitch+=RotationMath.clamp(found.pitch-mc.thePlayer.rotationPitch,-pitchSpeed.getFloat(),pitchSpeed.getFloat());}
         fix.setFakeRotation(getId(),mc.thePlayer.rotationYaw,mc.thePlayer.rotationPitch);
+    }
+    public int compareTargets(EntityLivingBase first,EntityLivingBase second){
+        int priority=dev.vibe.target.TargetManager.comparePriority(first,second);Minecraft mc=Minecraft.getMinecraft();
+        return priority!=0?priority:Double.compare(first==target?-1:mc.thePlayer.getDistanceSqToEntity(first),second==target?-1:mc.thePlayer.getDistanceSqToEntity(second));
     }
     private Vec3 origin(float yaw){Minecraft mc=Minecraft.getMinecraft();double angle=Math.toRadians(yaw);return mc.thePlayer.getPositionEyes(1).addVector(-Math.cos(angle)*.16,-.10000000149,-Math.sin(angle)*.16);}
     @Override protected void onDisable(){target=null;relative=null;solution=null;}

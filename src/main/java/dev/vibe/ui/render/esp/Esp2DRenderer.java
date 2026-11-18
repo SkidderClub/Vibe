@@ -168,7 +168,7 @@ public final class Esp2DRenderer {
     private boolean shape(Esp2DSettings settings,Paint paint,EspLayout.Rect rect,EspLayout.Rect paintRect,Actor actor,int w,int h,double seconds,boolean solid,int color,int kind,float radius,float width,float corners,float length){
         if(rect.w<=0||rect.h<=0)return true;
         GlStateManager.disableTexture2D();GL11.glDisable(GL11.GL_ALPHA_TEST);GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(770,771);
-        boolean override=solid||actor.forcedColor!=0;
+        boolean override=solid;
         int resolved=solid?color:override?fallback(settings,paint,paintRect,w,h,seconds,actor):0;
         if(!EspPaintShader.shape(settings,paint,rect,paintRect,w,h,actor.opacity,seconds,actor.teamColor,actor.hurt,actor.forcedColor,override,resolved,kind,radius,width,corners,length))return false;
         quad(rect.expand((kind==2?width/2:0)+2));GL20.glUseProgram(0);return true;
@@ -209,10 +209,8 @@ public final class Esp2DRenderer {
     private boolean paint(Esp2DSettings settings,Paint paint,EspLayout.Rect rect,int w,int h,boolean texture,Actor actor,double seconds) {
         GL11.glDisable(GL11.GL_ALPHA_TEST);GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(770,771);
         if(!texture)GlStateManager.disableTexture2D();
-        // A detected Murder Mystery role is an explicit colour override. Use
-        // the CPU paint path for it so gradients and rainbow paints cannot
-        // leak their original hue through the role colour.
-        boolean shader=actor.forcedColor==0&&EspPaintShader.bind(settings,paint,rect,w,h,texture,actor.opacity,seconds,actor.teamColor,actor.hurt,actor.forcedColor);
+        // Override RGB after sampling the paint, retaining its alpha gradient and glyph mask.
+        boolean shader=EspPaintShader.bind(settings,paint,rect,w,h,texture,actor.opacity,seconds,actor.teamColor,actor.hurt,actor.forcedColor);
         if(!shader) {GL20.glUseProgram(0);color(alpha(fallback(settings,paint,rect,w,h,seconds,actor),actor.opacity));}
         return shader;
     }

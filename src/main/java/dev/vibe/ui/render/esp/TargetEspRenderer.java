@@ -21,6 +21,7 @@ public final class TargetEspRenderer {
     public void render(RenderWorldLastEvent event) {
         TargetEspModule module = Vibe.getInstance().getModuleManager().getModule(TargetEspModule.class);
         EntityLivingBase target = target();
+        if(target!=null&&!dev.vibe.ui.render.RewoundPlayers.showEsp(target))return;
         if (module == null || !module.isEnabled() || target == null || minecraft.thePlayer == null) {
             return;
         }

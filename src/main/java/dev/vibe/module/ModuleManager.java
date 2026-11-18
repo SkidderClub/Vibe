@@ -137,6 +137,7 @@ public final class ModuleManager {
         register(new DebugModule());
         register(new LanguageModule());
         register(new QolModule());
+        register(new ShopSaverModule());
         register(new NoJumpDelayModule());
         register(new EagleModule());
         register(new FastPlaceModule());

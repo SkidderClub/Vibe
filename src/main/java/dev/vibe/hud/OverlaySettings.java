@@ -23,10 +23,11 @@ public abstract class OverlaySettings {
     protected BooleanSetting bool(String name,boolean value){return add(new BooleanSetting(prefix+" "+name,value));}
     public static final class Chat extends OverlaySettings {
         public final NumberSetting width,height,lineHeight,fadeSeconds,opacity;
-        public final BooleanSetting fade,keepColors,scrollbar;
+        public final BooleanSetting fade,keepColors,scrollbar,infiniteScrolling;
         public Chat(Function<Setting<?>,Setting<?>> r){super(r,"Chat");width=super.number("Width",320,120,640,1);height=super.number("Height",150,40,360,1);
             lineHeight=super.number("Line Height",11,9,20,1);fadeSeconds=super.number("Fade Seconds",10,2,60,1);opacity=super.number("Opacity",1,.1,1,.05);
-            fade=super.bool("Fade Messages",true);keepColors=super.bool("Keep Message Colors",true);scrollbar=super.bool("Scrollbar",true);}
+            fade=super.bool("Fade Messages",true);keepColors=super.bool("Keep Message Colors",true);scrollbar=super.bool("Scrollbar",true);
+            infiniteScrolling=super.bool("Infinite Scrolling",true);}
     }
     public static final class BlockCounter extends OverlaySettings {
         public final BooleanSetting barGlow;public final NumberSetting barGlowStrength;

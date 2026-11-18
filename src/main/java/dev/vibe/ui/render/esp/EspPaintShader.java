@@ -16,7 +16,7 @@ final class EspPaintShader {
             +"uniform sampler2D image; uniform int textured; uniform int count; uniform int rainbow;"
             +"uniform vec4 colors[8]; uniform float stops[8]; uniform vec2 direction; uniform float phase;"
             +"uniform vec4 viewport; uniform vec2 screen; uniform vec4 region; uniform float opacity; uniform float saturation;"
-            +"varying vec2 localPoint; uniform int shape; uniform vec4 shapeRect; uniform vec4 shapeData; uniform vec2 cornerExtent;"
+            +"varying vec2 localPoint; uniform int shape; uniform vec4 shapeRect; uniform vec4 shapeData; uniform vec2 cornerExtent; uniform int forceRgb; uniform vec3 forcedRgb;"
             +"float coverage(float d,float px){return clamp(.5-d/max(.00001,px),0.,1.);}"
             +"float rectangleMask(vec2 p,vec2 size,vec2 px){if(min(size.x,size.y)<=0.)return 0.;vec2 m=clamp(.5+p/px,0.,1.)-clamp(.5+(p-size)/px,0.,1.);return m.x*m.y;}"
             +"float shapeMask(){vec2 p=localPoint-shapeRect.xy;vec2 halfSize=shapeRect.zw*.5;"
@@ -32,7 +32,7 @@ final class EspPaintShader {
             +"vec2 q=p-region.xy; float t=.5+dot(q-region.zw*.5,direction)/max(.001,dot(abs(direction),region.zw));"
             +"vec4 c=colors[0]; if(rainbow==1){vec3 hue=clamp(abs(mod(fract(t+phase)*6.+vec3(0.,4.,2.),6.)-3.)-1.,0.,1.);c=vec4(mix(vec3(1.),hue,saturation),1.);}"
             +"else {t=1.-abs(mod(t+phase,2.)-1.); for(int i=1;i<8;i++){if(i<count){float f=clamp((t-stops[i-1])/max(.00001,stops[i]-stops[i-1]),0.,1.); c=mix(c,colors[i],f);}}}"
-            +"gl_FragColor=vec4(c.rgb,c.a*mask*opacity);}";
+            +"if(forceRgb==1)c.rgb=forcedRgb;gl_FragColor=vec4(c.rgb,c.a*mask*opacity);}";
 
     static boolean bind(Esp2DSettings settings, Esp2DSettings.Paint paint, EspLayout.Rect rect,
                         int screenWidth,int screenHeight,boolean texture,float opacity,double seconds,int team,boolean hurt,int forcedColor) {
@@ -59,6 +59,8 @@ final class EspPaintShader {
         if(paint.mode.is("Team")&&team!=0&&!paint.solid.isHurtOverride(hurt))solidColor=(solidColor&0xFF000000)|(team&0xFFFFFF);
         if(override)solidColor=overrideColor;
         GL20.glUseProgram(program);
+        GL20.glUniform1i(forceRgbLocation,forcedColor==0?0:1);
+        GL20.glUniform3f(forcedRgbLocation,(forcedColor>>16&255)/255F,(forcedColor>>8&255)/255F,(forcedColor&255)/255F);
         GL20.glUniform1i(shapeLocation,0);
         GL20.glUniform1i(imageLocation,0);GL20.glUniform1i(texturedLocation,texture?1:0);
         GL20.glUniform1i(countLocation,solid?1:gradient.colors.length);
@@ -97,7 +99,7 @@ final class EspPaintShader {
     // Looked up once after linking; the names never change, so per-paint string building is unnecessary.
     private static final int[] COLOR_LOCATIONS=new int[8],STOP_LOCATIONS=new int[8];
     private static int imageLocation,texturedLocation,countLocation,directionLocation,phaseLocation,rainbowLocation,
-            saturationLocation,opacityLocation,viewportLocation,screenLocation,regionLocation,shapeLocation,shapeRectLocation,shapeDataLocation,cornerExtentLocation;
+            saturationLocation,opacityLocation,viewportLocation,screenLocation,regionLocation,shapeLocation,shapeRectLocation,shapeDataLocation,cornerExtentLocation,forceRgbLocation,forcedRgbLocation;
     private static void resolveLocations() {
         imageLocation=location("image");texturedLocation=location("textured");countLocation=location("count");
         for(int i=0;i<8;i++){COLOR_LOCATIONS[i]=location("colors["+i+"]");STOP_LOCATIONS[i]=location("stops["+i+"]");}
@@ -105,6 +107,7 @@ final class EspPaintShader {
         saturationLocation=location("saturation");opacityLocation=location("opacity");viewportLocation=location("viewport");
         screenLocation=location("screen");regionLocation=location("region");
         shapeLocation=location("shape");shapeRectLocation=location("shapeRect");shapeDataLocation=location("shapeData");cornerExtentLocation=location("cornerExtent");
+        forceRgbLocation=location("forceRgb");forcedRgbLocation=location("forcedRgb");
     }
     private static int location(String name) { return GL20.glGetUniformLocation(program,name); }
     private static int compile(int type,String source) {

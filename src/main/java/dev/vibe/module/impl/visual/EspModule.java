@@ -53,7 +53,7 @@ public final class EspModule extends Module {
     private final ModeSetting heldPosition = addSetting(position("Held Item Position", "Bottom", () -> false));
 
     private final ProfileSettings friends = new ProfileSettings("Friends/Teams", 0xFF5BE8A6, () -> profileSelected(1));
-    private final ProfileSettings targets = new ProfileSettings("Targets", 0xFFFF5B6E, () -> profileSelected(2));
+    private final ProfileSettings targets = new ProfileSettings("Targets", 0xFFFF0000, () -> profileSelected(2));
 
     public EspModule() { super("ESP", "2D, 3D, Skeletal and customizable model Chams ESP", Category.VISUAL, Keyboard.KEY_P);
         for(dev.vibe.setting.Setting<?> setting:new java.util.ArrayList<dev.vibe.setting.Setting<?>>(getSettings()))
@@ -70,6 +70,11 @@ public final class EspModule extends Module {
         return isFriendOrTeam(entity)?1:0;
     }
     public int resolvedProfile(int type){return profileDefaults(type)?0:type;}
+    /** RGB only. An opaque sentinel also permits overriding to black; source alphas stay intact. */
+    public int inheritedColorOverride(int type,int team,boolean hurt){
+        return type==2&&targets.usePlayerDefaults.isEnabled()&&targets.overrideColors.isEnabled()
+                ?0xFF000000|targets.overrideColor.resolve(team,hurt)&0xFFFFFF:0;
+    }
     public Esp2DSettings get2D(int type){return type==1?friends2D:type==2?targets2D:twoD;}
     public ChamsSettings getChams(int type,boolean visible){return type==1?(visible?friendVisible:friendHidden):type==2?(visible?targetVisible:targetHidden):(visible?visibleChams:invisibleChams);}
     public int teamColor(EntityLivingBase entity){
@@ -134,10 +139,15 @@ public final class EspModule extends Module {
         HypixelModule hypixel = Vibe.getInstance() == null || Vibe.getInstance().getModuleManager() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(HypixelModule.class);
         int override = hypixel == null ? 0 : hypixel.visualColor(entity);
-        return override == 0 ? style : style.recolor(override);
+        int inherited=inheritedColorOverride(profileFor(entity),teamColor(entity),entity.hurtTime>0);
+        return inherited!=0||override==0?style:style.recolor(override);
     }
     public Style getPreviewStyle(int type) { return getPreviewStyle(type,0,false); }
     public Style getPreviewStyle(int type,int team,boolean hurt) {
+        if(type==2&&targets.usePlayerDefaults.isEnabled()){
+            Style inherited=getPreviewStyle(0,team,hurt);int rgb=inheritedColorOverride(type,team,hurt);
+            return rgb==0?inherited:inherited.recolor(rgb);
+        }
         ProfileSettings p=type==1?friends:type==2?targets:null;
         Style style=p==null?baseStyle(team,hurt):p.toStyle(baseStyle(team,hurt),team);
         ColorSetting line=p==null||p.usePlayerDefaults.isEnabled()?outlineColor:p.outline;
@@ -208,6 +218,7 @@ public final class EspModule extends Module {
 
     public final class ProfileSettings {
         private final BooleanSetting usePlayerDefaults;
+        private final BooleanSetting overrideColors;
         private final ModeSetting colorMode;
         private final ColorSetting overrideColor;
         private final ColorSetting outline;
@@ -230,8 +241,12 @@ public final class EspModule extends Module {
 
         private ProfileSettings(final String title, int color, final java.util.function.BooleanSupplier baseVisible) {
             usePlayerDefaults = addSetting(new BooleanSetting(title + " Use Player Defaults", true, baseVisible));
-            colorMode = addSetting(new ModeSetting(title + " Color Mode", "Color", ()->baseVisible.getAsBoolean()&&modes.isSelected("3D"), "Color", "Team Color", "Rainbow"));
-            overrideColor = addSetting(new ColorSetting(title + " Override Color", color, ()->baseVisible.getAsBoolean()&&modes.isSelected("3D")));
+            overrideColors=addSetting(new BooleanSetting(title+" Override Colors",true,
+                    ()->baseVisible.getAsBoolean()&&title.equals("Targets")&&usePlayerDefaults.isEnabled()));
+            colorMode = addSetting(new ModeSetting(title + " Color Mode", "Color", ()->baseVisible.getAsBoolean()&&modes.isSelected("3D")
+                    &&(!title.equals("Targets")||!usePlayerDefaults.isEnabled()), "Color", "Team Color", "Rainbow"));
+            overrideColor = addSetting(new ColorSetting(title + " Override Color", color, ()->baseVisible.getAsBoolean()
+                    &&(title.equals("Targets")&&usePlayerDefaults.isEnabled()?overrideColors.isEnabled():modes.isSelected("3D"))));
             java.util.function.BooleanSupplier custom = new java.util.function.BooleanSupplier() { public boolean getAsBoolean() { return baseVisible.getAsBoolean() && modes.isSelected("3D") && !usePlayerDefaults.isEnabled(); } };
             outline = addSetting(new ColorSetting(title + " Outline", color, custom));
             fill = addSetting(new ColorSetting(title + " Fill", (color & 0x00FFFFFF) | 0x34000000, custom));
@@ -253,6 +268,7 @@ public final class EspModule extends Module {
         }
 
         public BooleanSetting getUsePlayerDefaults() { return usePlayerDefaults; }
+        public BooleanSetting getOverrideColors(){return overrideColors;}
         public ModeSetting getColorMode() { return colorMode; }
         public ColorSetting getOverrideColor() { return overrideColor; }
         public ColorSetting getOutline() { return outline; }

@@ -45,6 +45,13 @@ public final class HudChat {
     public static int width(int original){return active()?Math.round((hud().chat.width.getInt()-12)*scale()):original;}
     public static float scale(float original){return active()?scale():original;}
     public static int lines(int original){return active()?Math.max(1,(hud().chat.height.getInt()-12)/hud().chat.lineHeight.getInt()):original;}
+    public static int historyLimit(int original){
+        Vibe vibe=Vibe.getInstance();HudModule h=vibe==null||vibe.getModuleManager()==null?null:vibe.getModuleManager().getModule(HudModule.class);
+        // Keep session history even while the custom element is temporarily hidden.
+        return h!=null&&h.chat.infiniteScrolling.isEnabled()?Integer.MAX_VALUE:original;
+    }
+    public static int mouseX(int guiX){Minecraft mc=Minecraft.getMinecraft();return (int)((guiX+.5)*mc.displayWidth/new ScaledResolution(mc).getScaledWidth());}
+    public static int mouseY(int guiY){Minecraft mc=Minecraft.getMinecraft();return mc.displayHeight-1-(int)((guiY+.5)*mc.displayHeight/new ScaledResolution(mc).getScaledHeight());}
     public static void restoreVanilla(){if(!active()&&wrappedChat!=null){GuiNewChat old=wrappedChat;wrappedChat=null;wrappedWidth=-1;shown.clear();old.refreshChat();}}
 
     @SuppressWarnings("unchecked") static void draw(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){
@@ -100,6 +107,21 @@ public final class HudChat {
         if(s.scrollbar.isEnabled()&&open&&history.size()>capacity){float track=used-12,thumb=Math.max(12,track*capacity/history.size());float yy=top+6+(track-thumb)*(1-scroll/(float)Math.max(1,history.size()-capacity));HudShapes.round(x+w-3,yy,2,thumb,1,s.accent.getArgb());}
     }
 
+    /** Native and custom chat share styled-span measurement and retain the original click/hover metadata. */
+    @SuppressWarnings("unchecked") public static Object component(Object source,int mouseX,int mouseY){
+        if(active())return component(mouseX,mouseY);
+        Minecraft mc=Minecraft.getMinecraft();if(!(mc.currentScreen instanceof GuiChat)||!(source instanceof GuiNewChat))return null;
+        GuiNewChat chat=(GuiNewChat)source;ScaledResolution res=new ScaledResolution(mc);float scale=chat.getChatScale();
+        int x=MathHelper.floor_float((mouseX/res.getScaleFactor()-3)/scale);
+        int y=MathHelper.floor_float((mouseY/res.getScaleFactor()-27)/scale);
+        if(x<0||y<0||x>MathHelper.floor_float(chat.getChatWidth()/scale))return null;
+        try{
+            List<ChatLine> history=(List<ChatLine>)LINES.get(chat);int count=Math.min(chat.getLineCount(),history.size());
+            if(y>=mc.fontRendererObj.FONT_HEIGHT*count)return null;
+            int line=y/mc.fontRendererObj.FONT_HEIGHT+SCROLL.getInt(chat);
+            return line>=history.size()?null:span(history.get(line).getChatComponent(),x,mc.gameSettings.chatColours);
+        }catch(IllegalAccessException error){throw new IllegalStateException("Cannot read vanilla chat history",error);}
+    }
     public static Object component(int mouseX,int mouseY){
         if(!active())return null;Minecraft mc=Minecraft.getMinecraft();if(!(mc.currentScreen instanceof GuiChat))return null;
         HudManager.HudElement e=Vibe.getInstance().getHudManager().getElement(HudManager.CHAT);ScaledResolution res=new ScaledResolution(mc);float scale=e.getScale();
@@ -107,10 +129,13 @@ public final class HudChat {
         float y=(res.getScaledHeight()-1-mouseY/(float)res.getScaleFactor()-e.getTop())/scale;
         if(x<0||x>hud().chat.width.getInt()-12||y<6||y>shownHeight-6)return null;
         int line=(int)((shownHeight-6-1-y)/hud().chat.lineHeight.getFloat());if(line<0||line>=shown.size())return null;
-        float advance=0;for(IChatComponent part:shown.get(line)){
+        return span(shown.get(line),x,hud().chat.keepColors.isEnabled());
+    }
+    private static IChatComponent span(IChatComponent message,float x,boolean colors){
+        float advance=0;for(IChatComponent part:message){
             // getFormattedText includes siblings; measure only this span so a root component cannot swallow link hits.
-            String span=hud().chat.keepColors.isEnabled()?part.getChatStyle().getFormattingCode()+part.getUnformattedTextForChat():EnumChatFormatting.getTextWithoutFormattingCodes(part.getUnformattedTextForChat());
-            advance+=mc.fontRendererObj.getStringWidth(span);if(advance>x)return part;
+            String span=colors?part.getChatStyle().getFormattingCode()+part.getUnformattedTextForChat():EnumChatFormatting.getTextWithoutFormattingCodes(part.getUnformattedTextForChat());
+            advance+=Minecraft.getMinecraft().fontRendererObj.getStringWidth(span);if(advance>x)return part;
         }
         return null;
     }

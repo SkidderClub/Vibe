@@ -193,6 +193,8 @@ public class ScaffoldModuleTest {
 
         // Spoof Slot: the server holds the blocks while the hotbar stays on the sword.
         assertEquals(3, AutoToolModule.serverSlotHook(0));
+        assertNotNull(dev.vibe.inventory.HotbarSwitches.highlight());
+        assertEquals(3,dev.vibe.inventory.HotbarSwitches.highlight().slot);
         ScaffoldModule.prepareInputHook();
         assertEquals(1, controller.placements.size());
         Object[] placement = controller.placements.get(0);
@@ -203,6 +205,8 @@ public class ScaffoldModuleTest {
         ScaffoldModule.finishInputHook();
         assertEquals(0, player.inventory.currentItem);
         assertSame(sword, player.getHeldItem());
+        assertNotNull("Silent scaffold keeps its highlight outside the input scope",dev.vibe.inventory.HotbarSwitches.highlight());
+        assertEquals(3,dev.vibe.inventory.HotbarSwitches.highlight().slot);
 
         scaffold.setEnabled(false);
         assertEquals(0, AutoToolModule.serverSlotHook(0));

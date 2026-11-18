@@ -58,6 +58,7 @@ public final class ChamsRenderer {
         if (hypixel != null && hypixel.suppressVisuals()) return null;
         if (esp == null || !esp.isEnabled() || !esp.getModes().isSelected("Chams")) return null;
         EntityLivingBase entity = (EntityLivingBase) candidate;
+        if(!dev.vibe.ui.render.RewoundPlayers.showEsp(entity))return null;
         if (entity.worldObj != mc.theWorld || !entity.isEntityAlive() || entity.isDead) return null;
         if (entity == mc.thePlayer) return FreecamModule.thirdPersonHook(mc.gameSettings.thirdPersonView) != 0 ? esp : null;
         TargetsModule targets = vibe.getModuleManager().getModule(TargetsModule.class);
@@ -127,7 +128,7 @@ public final class ChamsRenderer {
 
     public static void preview(EspModule esp,int profile,boolean occluded,int team,boolean hurt,boolean armor,Runnable geometry) {
         boolean previous=directPreview;directPreview=true;
-        try { draw(esp,armor,1,geometry,false,esp.resolvedProfile(profile),team,hurt,occluded?0:1,0); }
+        try { draw(esp,armor,1,geometry,false,esp.resolvedProfile(profile),team,hurt,occluded?0:1,esp.inheritedColorOverride(profile,team,hurt)); }
         finally {directPreview=previous;}
     }
 
@@ -217,6 +218,9 @@ public final class ChamsRenderer {
     private static int overrideColor(EntityLivingBase entity) {
         Vibe vibe=Vibe.getInstance();
         if(vibe==null||vibe.getModuleManager()==null)return 0;
+        EspModule esp=vibe.getModuleManager().getModule(EspModule.class);
+        int inherited=esp==null?0:esp.inheritedColorOverride(esp.profileFor(entity),esp.teamColor(entity),entity.hurtTime>0);
+        if(inherited!=0)return inherited;
         dev.vibe.module.impl.meme.HypixelModule hypixel=vibe.getModuleManager().getModule(dev.vibe.module.impl.meme.HypixelModule.class);
         return hypixel==null?0:hypixel.visualColor(entity);
     }

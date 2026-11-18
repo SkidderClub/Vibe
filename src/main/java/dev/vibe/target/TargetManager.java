@@ -17,6 +17,14 @@ import net.minecraft.entity.player.EntityPlayer;
 
 /** Persistent priority target roster for combat modules. */
 public final class TargetManager {
+    public static boolean priority(net.minecraft.entity.EntityLivingBase entity){
+        dev.vibe.Vibe vibe=dev.vibe.Vibe.getInstance();
+        return entity instanceof EntityPlayer&&vibe!=null&&vibe.getTargetManager()!=null
+                &&vibe.getTargetManager().isTarget((EntityPlayer)entity);
+    }
+    public static int comparePriority(net.minecraft.entity.EntityLivingBase first,net.minecraft.entity.EntityLivingBase second){
+        return Boolean.compare(priority(second),priority(first));
+    }
     private final File file;
     private final Set<String> targets = new LinkedHashSet<String>();
     public TargetManager(File minecraftConfigDirectory) { file = new File(new File(minecraftConfigDirectory, "vibe"), "targets.json"); load(); }

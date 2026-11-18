@@ -149,7 +149,8 @@ public final class AimAssistModule extends Module {
                 continue;
             }
             double score = score(candidate, yawDifference);
-            if (score < bestScore) {
+            int preferred=dev.vibe.target.TargetManager.comparePriority(candidate,best);
+            if (best==null||preferred<0||preferred==0&&score < bestScore) {
                 best = candidate;
                 bestScore = score;
             }
@@ -158,10 +159,6 @@ public final class AimAssistModule extends Module {
     }
 
     private double score(EntityLivingBase candidate, float yawDifference) {
-        if (candidate instanceof net.minecraft.entity.player.EntityPlayer && Vibe.getInstance().getTargetManager() != null
-                && Vibe.getInstance().getTargetManager().isTarget((net.minecraft.entity.player.EntityPlayer) candidate)) {
-            return -1000000.0D;
-        }
         if (targetMode.is("Distance")) {
             return minecraft.thePlayer.getDistanceToEntity(candidate);
         }

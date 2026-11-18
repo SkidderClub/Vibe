@@ -106,6 +106,7 @@ public final class EspRenderer {
                     continue;
                 }
                 EntityLivingBase player = (EntityLivingBase) object;
+                if(!dev.vibe.ui.render.RewoundPlayers.showEsp(player))continue;
                 boolean antiInvisible = isAntiInvisible(qol, player);
                 boolean local = player == minecraft.thePlayer;
                 if (local ? FreecamModule.thirdPersonHook(minecraft.gameSettings.thirdPersonView) == 0 || !player.isEntityAlive()
@@ -139,6 +140,8 @@ public final class EspRenderer {
                                 antiInvisible ? qol.getInvisibleAlpha().getFloat() / 255F : 1);
                         actor.profile=esp.resolvedProfile(esp.profileFor(player));actor.teamColor=esp.teamColor(player);actor.hurt=player.hurtTime>0;
                         actor.forcedColor=hypixel==null?0:hypixel.visualColor(player);
+                        int inherited=esp.inheritedColorOverride(esp.profileFor(player),actor.teamColor,actor.hurt);
+                        if(inherited!=0)actor.forcedColor=inherited;
                         screenBoxes.add(new ScreenBox(bounds,actor));
                     }
                 }

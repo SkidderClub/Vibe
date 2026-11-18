@@ -374,7 +374,7 @@ public class KillAuraModule extends Module {
     }
 
     private int compare(EntityLivingBase first, EntityLivingBase second) {
-        if (priority(first) != priority(second)) return priority(first) ? -1 : 1;
+        int preferred=dev.vibe.target.TargetManager.comparePriority(first,second);if(preferred!=0)return preferred;
         int result = Double.compare(score(first), score(second));
         if (result == 0) result = Double.compare(distanceTo(first), distanceTo(second));
         if (result == 0) result = Integer.compare(first.getEntityId(), second.getEntityId());
@@ -382,8 +382,7 @@ public class KillAuraModule extends Module {
     }
 
     private boolean priority(EntityLivingBase entity) {
-        return entity instanceof EntityPlayer && Vibe.getInstance().getTargetManager() != null
-                && Vibe.getInstance().getTargetManager().isTarget((EntityPlayer) entity);
+        return dev.vibe.target.TargetManager.priority(entity);
     }
 
     protected double score(EntityLivingBase entity) {
@@ -703,6 +702,16 @@ public class KillAuraModule extends Module {
     }
 
     public static KillAuraModule activeController(){return module();}
+    /** Release native sword use before a consumable changes the shared held slot. */
+    public static void pauseForConsumable(){
+        KillAuraModule aura=module();if(aura==null||!aura.isEnabled())return;
+        aura.resetHypixelBlock(true);aura.releaseOwnedBlock();aura.clear();
+        Minecraft mc=aura.minecraft;
+        ItemStack use=mc.thePlayer==null?null:mc.thePlayer.getItemInUse();
+        if(use!=null&&use.getItem() instanceof ItemSword&&mc.playerController!=null)
+            mc.playerController.onStoppedUsingItem(mc.thePlayer);
+        aura.blockOwned=false;
+    }
 
     private static KillAuraModule module() {
         Vibe vibe = Vibe.getInstance();

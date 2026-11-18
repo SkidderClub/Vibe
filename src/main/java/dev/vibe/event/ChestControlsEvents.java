@@ -14,26 +14,27 @@ import org.lwjgl.input.Mouse;
 
 /** Live chest safety controls, using ordinary Forge buttons and module disable paths. */
 public final class ChestControlsEvents {
-    static final int AURA=0x564910,STEALER=0x564911;
+    static final int AURA=0x564910,STEALER=0x564911,COPY=0x564912;
     private final Map<GuiScreen,List<GuiButton>> screens=new WeakHashMap<>();
     @SubscribeEvent public void init(GuiScreenEvent.InitGuiEvent.Post event){
         if(!(event.gui instanceof GuiChest))return;
-        event.buttonList.removeIf(button->button.id==AURA||button.id==STEALER);
+        event.buttonList.removeIf(button->button.id==AURA||button.id==STEALER||button.id==COPY);
         event.buttonList.add(new GuiButton(AURA,0,0,138,18,LanguageManager.translate("Disable Killaura")));
         event.buttonList.add(new GuiButton(STEALER,0,0,138,18,LanguageManager.translate("Disable Cheststealer")));
+        event.buttonList.add(new GuiButton(COPY,0,0,138,18,LanguageManager.translate("Copy Chest NBT")));
         screens.put(event.gui,event.buttonList);sync(event.gui);
     }
     @SubscribeEvent public void draw(GuiScreenEvent.DrawScreenEvent.Pre event){if(event.gui instanceof GuiChest)sync(event.gui);}
     private void sync(GuiScreen gui){
         List<GuiButton> buttons=screens.get(gui);if(buttons==null)return;int y=6,w=Math.min(138,gui.width-12);
-        for(int id:new int[]{AURA,STEALER})for(GuiButton button:buttons)if(button.id==id){
-            Module module=module(id);button.visible=button.enabled=module!=null&&module.isEnabled();
+        for(int id:new int[]{AURA,STEALER,COPY})for(GuiButton button:buttons)if(button.id==id){
+            Module module=module(id);button.visible=button.enabled=id==COPY||module!=null&&module.isEnabled();
             button.width=w;button.xPosition=gui.width-w-6;button.yPosition=y;if(button.visible)y+=22;
         }
     }
     @SubscribeEvent public void click(GuiScreenEvent.ActionPerformedEvent.Pre event){
-        if(!(event.gui instanceof GuiChest)||event.button==null||(event.button.id!=AURA&&event.button.id!=STEALER))return;
-        event.setCanceled(true);disable(event.gui,event.button.id);
+        if(!(event.gui instanceof GuiChest)||event.button==null||!control(event.button.id))return;
+        event.setCanceled(true);activate(event.gui,event.button.id);
     }
     @SubscribeEvent public void mouse(GuiScreenEvent.MouseInputEvent.Pre event){
         if(!(event.gui instanceof GuiChest)||Mouse.getEventButton()!=0||!Mouse.getEventButtonState())return;
@@ -45,15 +46,26 @@ public final class ChestControlsEvents {
     }
     boolean press(GuiScreen gui,int x,int y){
         sync(gui);List<GuiButton> buttons=screens.get(gui);if(buttons==null)return false;
-        for(GuiButton button:buttons)if((button.id==AURA||button.id==STEALER)&&button.mousePressed(net.minecraft.client.Minecraft.getMinecraft(),x,y)){
-            disable(gui,button.id);return true;
+        for(GuiButton button:buttons)if(control(button.id)&&button.mousePressed(net.minecraft.client.Minecraft.getMinecraft(),x,y)){
+            activate(gui,button.id);return true;
         }
         return false;
     }
-    private void disable(GuiScreen gui,int id){
+    private static boolean control(int id){return id==AURA||id==STEALER||id==COPY;}
+    private void activate(GuiScreen gui,int id){
+        if(id==COPY){
+            if(!(((GuiChest)gui).inventorySlots instanceof net.minecraft.inventory.ContainerChest))return;
+            try{
+                String nbt=dev.vibe.inventory.ChestSnapshot.capture((net.minecraft.inventory.ContainerChest)((GuiChest)gui).inventorySlots).toString();
+                // Unlike GuiScreen.setClipboardString, report a failed clipboard write.
+                java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new java.awt.datatransfer.StringSelection(nbt),null);
+                dev.vibe.chat.ClientChat.send("Chest NBT copied to the clipboard.");
+            }catch(RuntimeException error){dev.vibe.chat.ClientChat.send("Could not copy chest NBT. Please try again.");}
+            return;
+        }
         Module module=module(id);if(module!=null)module.setEnabled(false);sync(gui);
         Vibe vibe=Vibe.getInstance();if(vibe!=null&&vibe.getConfig()!=null)vibe.getConfig().save(vibe.getModuleManager());
     }
-    private static Module module(int id){Vibe vibe=Vibe.getInstance();if(vibe==null||vibe.getModuleManager()==null)return null;
+    private static Module module(int id){Vibe vibe=Vibe.getInstance();if(id==COPY||vibe==null||vibe.getModuleManager()==null)return null;
         return id==AURA?vibe.getModuleManager().getModule(KillAuraModule.class):vibe.getModuleManager().getModule(ChestStealerModule.class);}
 }

@@ -53,11 +53,41 @@ public final class EspRenderCheck {
             set(ModuleManager.class,modules,"modules",new ArrayList<dev.vibe.module.Module>(Arrays.asList(esp,editorModule)));set(Vibe.class,vibe,"moduleManager",modules);
             esp.getModes().setValue(new LinkedHashSet<String>(Arrays.asList("2D")));renderer=new Esp2DRenderer();
             cornersAndContext();textBackgrounds();textAfterBars();fontFilterRestored();distanceAnchors();subpixelOutlines();subpixelBars();scalingGallery();healthAndState();check("bars");gradientMask();check("gradient");textFonts();check("fonts");editor(editorModule);check("editor");protectedNameGlow();check("protected name");
+            inheritedTargetColor();hotbarDepthOverlay();
             if(GL11.glGetError()!=0)throw new AssertionError("OpenGL error after ESP checks");
             System.out.println("ESP native checks passed: bars, global gradient masks, fonts, editor selection/resizing and settings visibility.");
         } finally {buffer.destroy();}
     }
     private static Esp2DRenderer.Actor actor(float health,float max) {Esp2DRenderer.Actor a=new Esp2DRenderer.Actor("Player",health,max,14,12,"Service pistol",null,null,1);a.nativeItem="Pistol";return a;}
+    private static void inheritedTargetColor()throws Exception{
+        EspModule targetEsp=new EspModule();Esp2DSettings settings=targetEsp.get2D();
+        for(Esp2DSettings.Element element:settings.elements)element.enabled.setValue(false);
+        settings.box.enabled.setValue(true);settings.box.corners.setValue(false);settings.box.rounding.setValue(0D);
+        settings.box.outline.setValue(false);settings.box.backgroundEnabled.setValue(false);settings.box.color.mode.setValue("Static");settings.box.color.solid.setValue(0x5D00AAFF);
+        settings.distanceScaling.setValue(0D);Esp2DRenderer.Actor actor=actor(20,20);
+        frame();renderer.draw(settings,actor,new EspLayout.Rect(300,180,100,180),W,H,true);int source=pixel(350,180);
+        actor.forcedColor=targetEsp.inheritedColorOverride(2,0,false);frame();renderer.draw(settings,actor,new EspLayout.Rect(300,180,100,180),W,H,true);int target=pixel(350,180);
+        if((source&255)<10||(target>>16&255)<10||(target&0xFFFF)!=0)throw new AssertionError("Inherited target RGB override was not rendered");
+        if(Math.abs((source&255)-(target>>16&255))>2)throw new AssertionError("Target override changed the source opacity");
+        save("target-inherited-color.png");
+        settings.box.color.mode.setValue("Custom Gradient");Esp2DSettings.Gradient gradient=settings.box.color.gradient;
+        gradient.count.setValue(2D);gradient.positions.get(0).setValue(0D);gradient.positions.get(1).setValue(1D);
+        gradient.colors.get(0).setValue(0x200000FF);gradient.colors.get(1).setValue(0xD00000FF);gradient.direction.setValue(0D);gradient.speed.setValue(0D);
+        actor.forcedColor=0;frame();renderer.draw(settings,actor,new EspLayout.Rect(300,180,100,180),W,H,true);
+        int low=pixel(310,180)&255,high=pixel(390,180)&255;
+        actor.forcedColor=targetEsp.inheritedColorOverride(2,0,false);frame();renderer.draw(settings,actor,new EspLayout.Rect(300,180,100,180),W,H,true);
+        if(high-low<20||Math.abs(low-(pixel(310,180)>>16&255))>2||Math.abs(high-(pixel(390,180)>>16&255))>2)
+            throw new AssertionError("RGB override flattened the per-pixel alpha gradient");
+        save("target-inherited-gradient-alpha.png");
+    }
+    private static void hotbarDepthOverlay()throws Exception{
+        frame();GL11.glEnable(GL11.GL_DEPTH_TEST);GL11.glDepthMask(true);GL11.glDepthFunc(GL11.GL_LESS);
+        GL11.glClearDepth(0);GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);GL11.glDisable(GL11.GL_BLEND);
+        dev.vibe.ui.render.HotbarHighlightRenderer.draw(40,40,22,0xFF2DE2C2);
+        if((pixel(51,40)>>8&255)<100)throw new AssertionError("Hotbar highlight disappeared behind item depth");
+        if(!GL11.glIsEnabled(GL11.GL_DEPTH_TEST)||GL11.glIsEnabled(GL11.GL_BLEND))throw new AssertionError("Hotbar highlight leaked GL state");
+        GL11.glClearDepth(1);save("hotbar-highlight-depth.png");
+    }
     private static void frame() {
         GL11.glViewport(0,0,W,H);GL11.glClearColor(0,0,0,0);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);
         GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GL11.glOrtho(0,W,H,0,1000,3000);
@@ -274,6 +304,10 @@ public final class EspRenderCheck {
         if(player.getCurrentArmor(3)==null||player.getHeldItem()==null)throw new AssertionError("Preview has no actual equipment");
         GuiInput.mouseClicked(gui,670,55,0);if(esp.editingProfile()!=2||esp.getChams(2,true).getMode().is("Glow"))throw new AssertionError("Profile edits leaked to Targets");
         frame();gui.drawScreen(0,0,0);save("editor-targets-inherited.png");
+        Field rowsField=EspEditorGui.class.getDeclaredField("rows");rowsField.setAccessible(true);boolean override=false,color=false;
+        for(Object row:(List<?>)rowsField.get(gui)){Field setting=row.getClass().getDeclaredField("setting");setting.setAccessible(true);
+            override|=setting.get(row)==esp.getTargetsProfile().getOverrideColors();color|=setting.get(row)==esp.getTargetsProfile().getOverrideColor();}
+        if(!override||!color)throw new AssertionError("Inherited Targets editor hides its RGB override controls");
     }
     private static void installItemRenderer()throws Exception {
         installItemRenderer(mc);
