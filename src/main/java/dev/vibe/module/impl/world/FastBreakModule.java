@@ -6,7 +6,6 @@ import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ModeSetting;
 import dev.vibe.setting.MultiSelectSetting;
 import dev.vibe.setting.NumberSetting;
-import java.lang.reflect.Field;
 import java.util.Arrays;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockBed;
@@ -15,7 +14,7 @@ import net.minecraft.block.BlockStone;
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
 import net.minecraft.init.Blocks;
-import net.minecraft.util.MovingObjectPosition;
+import net.minecraft.util.BlockPos;
 import org.lwjgl.input.Keyboard;
 
 /** Tunes Minecraft's normal local block-damage controller with explicit exclusions. */
@@ -31,39 +30,45 @@ public final class FastBreakModule extends Module {
             Arrays.asList("Obsidian", "Woods", "Stones", "Bed"), Arrays.asList("Obsidian")));
 
     private final Minecraft minecraft = Minecraft.getMinecraft();
-    private Field blockHitDelay;
-    private Field blockDamage;
 
     public FastBreakModule() {
         super("FastBreak", "Tune the normal block-damage controller", Category.WORLD, Keyboard.KEY_NONE);
     }
 
-    public void tick() {
-        if (!isEnabled() || minecraft.thePlayer == null || minecraft.theWorld == null || minecraft.currentScreen != null
-                || minecraft.objectMouseOver == null || minecraft.objectMouseOver.typeOfHit != MovingObjectPosition.MovingObjectType.BLOCK
-                || !minecraft.gameSettings.keyBindAttack.isKeyDown()) return;
-        Block block = minecraft.theWorld.getBlockState(minecraft.objectMouseOver.getBlockPos()).getBlock();
-        if (excluded(block) || (onlyWithTools.isEnabled() && !hasTool(block))) return;
-        try {
-            if (blockHitDelay == null) blockHitDelay = field("blockHitDelay", "field_78781_i");
-            if (blockDamage == null) blockDamage = field("curBlockDamageMP", "field_78770_f");
-            if (blockHitDelay != null) blockHitDelay.setInt(minecraft.playerController, 0);
-            if (blockDamage == null) return;
-            float damage = blockDamage.getFloat(minecraft.playerController);
-            if (mode.is("Speed")) {
-                // This runs before PlayerControllerMP adds its normal one-tick
-                // hardness. Multiplying the accumulated damage did nothing at
-                // the start of a block (zero stayed zero); add exactly the
-                // missing portion of vanilla's per-tick progress instead.
-                float vanillaStep = block.getPlayerRelativeBlockHardness(minecraft.thePlayer, minecraft.theWorld,
-                        minecraft.objectMouseOver.getBlockPos());
-                float extra = vanillaStep * Math.max(0.0F, speed.getFloat() - 1.0F);
-                blockDamage.setFloat(minecraft.playerController, Math.min(0.999F, damage + extra));
-            } else if (damage >= finishAt.getFloat() / 100.0F) {
-                blockDamage.setFloat(minecraft.playerController, 1.0F);
-            }
-        } catch (Exception ignored) {
-        }
+    /** Native controller reads keep the hit delay for ineligible blocks and normal gameplay. */
+    public static int delayHook(int delay, Object controller, Object position) {
+        FastBreakModule module = module();
+        return eligible(module, controller, position) ? 0 : delay;
+    }
+
+    /** Scale the real hardness increment once, never the accumulated progress. */
+    public static float stepHook(float step, Object controller, Object position) {
+        FastBreakModule module = module();
+        return eligible(module, controller, position) && module.mode.is("Speed") ? step * module.speed.getFloat() : step;
+    }
+
+    /** Complete on the same native tick that reaches the chosen threshold. */
+    public static float progressHook(float next, Object controller, Object position) {
+        FastBreakModule module = module();
+        return eligible(module, controller, position) && module.mode.is("FinishFaster")
+                && next >= module.finishAt.getFloat() / 100F ? Math.max(1F, next) : next;
+    }
+
+    private static boolean eligible(FastBreakModule module, Object controller, Object position) {
+        return module != null && position instanceof BlockPos && module.applies(controller, (BlockPos)position);
+    }
+
+    private boolean applies(Object controller, BlockPos position) {
+        if (!isEnabled() || controller != minecraft.playerController || minecraft.thePlayer == null
+                || minecraft.theWorld == null || minecraft.currentScreen != null || minecraft.thePlayer.isSpectator()
+                || minecraft.playerController.isInCreativeMode()) return false;
+        Block block = minecraft.theWorld.getBlockState(position).getBlock();
+        return block != Blocks.air && !excluded(block) && (!onlyWithTools.isEnabled() || hasTool(block));
+    }
+
+    private static FastBreakModule module() {
+        dev.vibe.Vibe vibe = dev.vibe.Vibe.getInstance();
+        return vibe == null || vibe.getModuleManager() == null ? null : vibe.getModuleManager().getModule(FastBreakModule.class);
     }
 
     private boolean hasTool(Block block) {
@@ -79,13 +84,4 @@ public final class FastBreakModule extends Module {
                 || block == Blocks.wooden_slab || block == Blocks.oak_stairs);
     }
 
-    private Field field(String... names) {
-        for (String name : names) try {
-            Field field = minecraft.playerController.getClass().getDeclaredField(name);
-            field.setAccessible(true);
-            return field;
-        } catch (Exception ignored) {
-        }
-        return null;
-    }
 }

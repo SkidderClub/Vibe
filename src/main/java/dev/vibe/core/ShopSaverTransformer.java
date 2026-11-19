@@ -16,7 +16,7 @@ public final class ShopSaverTransformer implements IClassTransformer, Opcodes {
         for (Object entry : node.methods) {
             MethodNode method = (MethodNode) entry;
             if (!method.desc.equals("()V") || !(player
-                    ? method.name.equals("closeScreen") || method.name.equals("func_71053_j") || method.name.equals("p")
+                    ? method.name.equals("closeScreen") || method.name.equals("func_71053_j") || method.name.equals("n")
                     : method.name.equals("onGuiClosed") || method.name.equals("func_146281_b") || method.name.equals("m"))) continue;
             boolean installed = false;
             for (AbstractInsnNode i : method.instructions.toArray())

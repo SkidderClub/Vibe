@@ -16,13 +16,15 @@ import org.lwjgl.input.Keyboard;
 /** Legacy LiquidBounce AAC no-fall modes with explicit ground spoof modes. */
 public final class NoFallModule extends Module {
     private final ModeSetting mode = addSetting(new ModeSetting("Mode", "No Ground", "No Ground", "Always On Ground",
-            "AAC", "LAAC", "AAC3.3.11", "AAC3.3.15", "Rewound"));
+            "AAC", "LAAC", "AAC3.3.11", "AAC3.3.15", "Rewound", "RewoundAdjust"));
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private int currentState;
     private boolean jumped;
     private boolean serverOnGround;
     private EntityPlayerSP rewoundWalkingPlayer;
     private boolean rewoundGround;
+    private float adjustLastFall;
+    private EntityPlayerSP adjustPlayer;
 
     public NoFallModule() { super("NoFall", "Controls ground-spoof, AAC and Rewound fall-damage modes", Category.MOVEMENT, Keyboard.KEY_NONE); }
 
@@ -30,7 +32,7 @@ public final class NoFallModule extends Module {
         if (!isEnabled() || minecraft.thePlayer == null || minecraft.currentScreen != null) return;
         EntityPlayerSP p = minecraft.thePlayer;
         if (AacMovementSupport.inLiquid(p)) return;
-        if (mode.is("No Ground") || mode.is("Always On Ground") || mode.is("Rewound")) return;
+        if (mode.is("No Ground") || mode.is("Always On Ground") || mode.is("Rewound") || mode.is("RewoundAdjust")) return;
         if (mode.is("AAC")) {
             if (p.fallDistance > 2.0F) { send(new C03PacketPlayer(true)); currentState = 2; }
             else if (currentState == 2 && p.fallDistance < 2.0F) { p.motionY = 0.1D; currentState = 3; return; }
@@ -90,6 +92,14 @@ public final class NoFallModule extends Module {
     public void beforeWalking(Object entity) {
         rewoundWalkingPlayer = null;
         rewoundGround = false;
+        EntityPlayerSP p=minecraft.thePlayer;
+        if(adjustPlayer!=p){adjustPlayer=p;adjustLastFall=0;}
+        if(isEnabled()&&mode.is("RewoundAdjust")&&p!=null&&entity==p){
+            if(p.capabilities.allowFlying||p.isOnLadder()||p.isRiding())adjustLastFall=p.fallDistance;
+            else if(p.fallDistance==0)adjustLastFall=0;
+            int safe=p.isPotionActive(net.minecraft.potion.Potion.jump)?p.getActivePotionEffect(net.minecraft.potion.Potion.jump).getAmplifier()+4:3;
+            if(!p.capabilities.allowFlying&&p.fallDistance-adjustLastFall>=safe+p.motionY){rewoundWalkingPlayer=p;rewoundGround=true;adjustLastFall=p.fallDistance;}
+        }
         if (isEnabled() && mode.is("Rewound") && entity == minecraft.thePlayer && minecraft.thePlayer != null) {
             rewoundWalkingPlayer = minecraft.thePlayer;
             rewoundGround = minecraft.thePlayer.fallDistance > 2F;
@@ -97,8 +107,8 @@ public final class NoFallModule extends Module {
         }
     }
     public boolean walkingGround(Object entity, boolean vanilla) {
-        return vanilla || entity == rewoundWalkingPlayer && rewoundGround && isEnabled() && mode.is("Rewound");
+        return vanilla || entity == rewoundWalkingPlayer && rewoundGround && isEnabled() && (mode.is("Rewound")||mode.is("RewoundAdjust"));
     }
     public void afterWalking() { rewoundWalkingPlayer = null; rewoundGround = false; }
-    @Override protected void onDisable() { currentState = 0; jumped = false; serverOnGround = false; afterWalking(); }
+    @Override protected void onDisable() { adjustLastFall=0;adjustPlayer=null;currentState = 0; jumped = false; serverOnGround = false; afterWalking(); }
 }

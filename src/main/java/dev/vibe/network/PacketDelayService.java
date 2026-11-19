@@ -98,8 +98,8 @@ public final class PacketDelayService {
         // They queue it for their next main-thread tick, so this Netty path
         // never reads or mutates the Minecraft world directly.
         if (packet instanceof C07PacketPlayerDigging && Vibe.getInstance() != null) {
-            // Statistics consumes the completed destroy packet on its next
-            // client tick. Do not inspect world state from Netty.
+            // Statistics consumes dig lifecycle requests on its next client
+            // tick; actual destruction is captured by the native controller hook.
             if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordDigging((C07PacketPlayerDigging) packet);
             GirlfriendModule girlfriend = Vibe.getInstance().getModuleManager().getModule(GirlfriendModule.class);
             if (girlfriend != null) girlfriend.onDigging((C07PacketPlayerDigging) packet);

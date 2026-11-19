@@ -159,10 +159,10 @@ public class BedAuraPacketsTest {
         }
     }
 
-    private static final class Fixture implements AutoCloseable {
+    static final class Fixture implements AutoCloseable {
         final Minecraft previousMc=Minecraft.getMinecraft(); final Vibe previousVibe=Vibe.getInstance();
         final Minecraft mc; final Player player; final TestWorld world; final FixedBed bedBlock=new FixedBed();
-        final Queue queue; final PlayerControllerMP controller; final ModuleManager modules;
+        final Queue queue; PlayerControllerMP controller; final ModuleManager modules;
         final BedAuraModule aura; final MoveFixModule fix;
         BlockPos bed=new BlockPos(0,0,3);
         boolean firstManual=true,manualReleased;
@@ -265,6 +265,7 @@ public class BedAuraPacketsTest {
         private TestWorld(){super(null,null,0,null,null);}
         @Override public IBlockState getBlockState(BlockPos pos){return blocks.getOrDefault(pos,Blocks.air.getDefaultState());}
         @Override public boolean isAirBlock(BlockPos pos){return getBlockState(pos).getBlock()==Blocks.air;}
+        @Override public boolean isBlockLoaded(BlockPos pos){return true;}
         @Override public WorldBorder getWorldBorder(){return border;}
         @Override public void sendBlockBreakProgress(int id,BlockPos pos,int progress){ }
         @Override public boolean setBlockState(BlockPos pos,IBlockState state,int flags){blocks.put(pos,state);return true;}

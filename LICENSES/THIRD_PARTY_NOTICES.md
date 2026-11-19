@@ -298,6 +298,13 @@ see [source and conversion details](LICHESS-PIECES.md).
 
 Vibe includes designs, blocking animations, fonts and RewoundNovoline modes adapted from the user-supplied Novoline source checkout. See NOVOLINE_PORT.md for the source-to-port map, assets and available licensing information.
 
+## Adjust Client
+
+Vibe adapts the requested OpenAdjust designs and mechanics from the supplied
+source tree. See ADJUST_PORT.md for the source map, copied assets and available
+licensing information.
+
+
 ## Diablo Client
 
 The Diablo ClickGUI and TargetHUD designs, target visualization, two blocking poses, seven Killsay messages and RewoundDiablo modes are adapted from the user-supplied Diablo 2.1 checkout. See DIABLO_PORT.md for provenance and port details.

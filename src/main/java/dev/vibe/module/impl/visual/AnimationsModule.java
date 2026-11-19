@@ -12,7 +12,8 @@ import org.lwjgl.input.Keyboard;
 public final class AnimationsModule extends Module {
 
     private final ModeSetting blockingStyle = addSetting(new ModeSetting("Blocking Style", "Vanilla",
-            "Vanilla", "Reverse", "Reverse Spin", "Spin", "Orbit", "Swank", "Swing", "Swang", "Swong", "Swaing", "Punch", "Stella", "Styles", "Slide", "Interia", "Ethereal", "1.7", "Sigma", "Exhibition", "Smooth", "Spinning", "Diablo", "ExihiDiablo"));
+            "Vanilla", "Reverse", "Reverse Spin", "Spin", "Orbit", "Swank", "Swing", "Swang", "Swong", "Swaing", "Punch", "Stella", "Styles", "Slide", "Interia", "Ethereal", "1.7", "Sigma", "Exhibition", "Smooth", "Spinning", "Diablo", "ExihiDiablo", "Adjust None", "Adjust Vanilla", "Adjust Bounce", "Adjust Stasis", "Adjust Horizontal", "Adjust Dig", "Adjust Shove", "Adjust Tap", "Adjust Slide", "Adjust Attract", "Adjust Detract", "Adjust Swank", "Adjust Punch"));
+    public final NumberSetting adjustEquip=addSetting(new NumberSetting("Adjust Equip Animation",.5,0,1,.05,()->dev.vibe.ui.render.AdjustAnimations.supports(blockingStyle.getValue())));
     private final MultiSelectSetting itemTypes = addSetting(new MultiSelectSetting("Items",
             Arrays.asList("Swords", "Bow", "Consumables", "Food", "Potions", "Other"), Arrays.asList("Swords")));
     private final NumberSetting animationSpeed = addSetting(new NumberSetting("Animation Speed", 1.0D, 0.1D, 4.0D, 0.1D,

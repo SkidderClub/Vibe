@@ -16,8 +16,8 @@ public final class TargetHudSettings {
     public final BooleanSetting barGlow;public final NumberSetting barGlowStrength;
 
     public TargetHudSettings(Function<Setting<?>,Setting<?>> register) {
-        mode=add(register,new ModeSetting("Target HUD Mode","Novoline","Diablo","Novoline","Tenacity","Zeroday","Rise","LiquidGlass","Lavalamp","ThunderHack","NurikZapen","NurikZapen Mini","CelkaPasta","LiquidBounce"));
-        originalColours=add(register,new BooleanSetting("Target HUD Original Theme Colours",true,()->UpstreamTargetHuds.supports(mode.getValue())));
+        mode=add(register,new ModeSetting("Target HUD Mode","Novoline","Diablo","Adjust","Novoline","Tenacity","Zeroday","Rise","LiquidGlass","Lavalamp","ThunderHack","NurikZapen","NurikZapen Mini","CelkaPasta","LiquidBounce"));
+        originalColours=add(register,new BooleanSetting("Target HUD Original Theme Colours",true,()->UpstreamTargetHuds.supports(mode.getValue())||mode.is("Adjust")));
         thunderImage=add(register,new BooleanSetting("Target HUD ThunderHack Image",true,()->mode.is("ThunderHack")));
         upstreamHealth=add(register,new ModeSetting("Target HUD Health Display","HP",()->UpstreamTargetHuds.supports(mode.getValue())&&!mode.is("LiquidBounce"),"HP","Percent"));
         linger=add(register,new NumberSetting("Target HUD Keep Visible",3,0,10,.25));

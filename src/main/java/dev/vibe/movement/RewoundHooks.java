@@ -32,11 +32,13 @@ public final class RewoundHooks {
     }
     public static float preStepHeight(Object entity, float vanilla) {
         StepModule step = module(StepModule.class);
-        return step == null ? vanilla : step.rewoundPreStep(entity, vanilla);
+        float value=step == null ? vanilla : step.rewoundPreStep(entity, vanilla);
+        return entity==Minecraft.getMinecraft().thePlayer?AdjustJesus.stepHeight(value):value;
     }
     public static float stepHeight(Object entity, float vanilla) {
         StepModule step = module(StepModule.class);
-        return step == null ? vanilla : step.rewoundStepHeight(entity, vanilla);
+        float value=step == null ? vanilla : step.rewoundStepHeight(entity, vanilla);
+        return entity==Minecraft.getMinecraft().thePlayer?AdjustJesus.stepHeight(value):value;
     }
     public static void postStep(Object entity) {
         StepModule step = module(StepModule.class);
@@ -68,6 +70,7 @@ public final class RewoundHooks {
         if (criticals != null) criticals.rewoundBeforeWalking(entity);
         dev.vibe.module.impl.movement.JesusModule jesus=module(dev.vibe.module.impl.movement.JesusModule.class);
         if(jesus!=null)jesus.novolinePreUpdate(entity);
+        AdjustJesus.beforeWalking();
         KillAuraModule aura = KillAuraModule.activeController();
         if(aura!=null)aura.novolineBeforeWalking(entity);
         NoFallModule fall = module(NoFallModule.class);
@@ -85,7 +88,7 @@ public final class RewoundHooks {
     }
     public static double walkingY(double vanilla) {
         CriticalsModule criticals = module(CriticalsModule.class);
-        return criticals == null ? vanilla : criticals.rewoundWalkingY(vanilla);
+        return AdjustJesus.walkingY(criticals == null ? vanilla : criticals.rewoundWalkingY(vanilla));
     }
     public static int positionTicks(int vanilla) {
         CriticalsModule criticals = module(CriticalsModule.class);

@@ -10,8 +10,9 @@ import org.objectweb.asm.tree.*;
 public final class GameplayProductionCheck {
     public static void verify(LaunchClassLoader loader) throws Exception {
         java.lang.reflect.Field field=LaunchClassLoader.class.getDeclaredField("tempFolder");field.setAccessible(true);File dumps=(File)field.get(null);
-        int manual=0,guard=0,finish=0,uses=0,slow=0,sprint=0,multi=0,collisions=0,push=0,tab=0,scaffoldSprint=0,shopHide=0,shopKeep=0,chatLimit=0,chatPick=0,chatMouse=0;
-        for(String name:new String[]{"net.minecraft.client.Minecraft","net.minecraft.client.multiplayer.PlayerControllerMP","net.minecraft.entity.player.EntityPlayer","net.minecraft.world.World","net.minecraft.client.entity.EntityPlayerSP","net.minecraft.client.gui.GuiPlayerTabOverlay","net.minecraft.client.gui.inventory.GuiContainer","net.minecraft.client.gui.GuiNewChat","net.minecraft.client.gui.GuiChat"}){
+        int adjustDrop=0,adjustInventory=0,adjustLiquid=0,adjustJump=0,chatTrack=0;
+        int manual=0,guard=0,finish=0,uses=0,slow=0,sprint=0,multi=0,collisions=0,push=0,tab=0,scaffoldSprint=0,shopHide=0,shopKeep=0,chatLimit=0,chatPick=0,chatMouse=0,miningStep=0,miningProgress=0,miningDelay=0,miningBegin=0,miningFinish=0;
+        for(String name:new String[]{"net.minecraft.client.Minecraft","net.minecraft.client.multiplayer.PlayerControllerMP","net.minecraft.entity.player.EntityPlayer","net.minecraft.entity.EntityLivingBase","net.minecraft.world.World","net.minecraft.client.entity.EntityPlayerSP","net.minecraft.client.gui.GuiPlayerTabOverlay","net.minecraft.client.gui.inventory.GuiContainer","net.minecraft.client.gui.GuiNewChat","net.minecraft.client.gui.GuiChat"}){
             Class.forName(name,false,loader).getDeclaredMethods();File dump=new File(dumps,name.replace('.','/')+".class");
             ClassNode node=new ClassNode();new ClassReader(Files.readAllBytes(dump.toPath())).accept(node,0);
             for(Object value:node.methods)for(AbstractInsnNode instruction:((MethodNode)value).instructions.toArray())if(instruction instanceof MethodInsnNode){MethodInsnNode call=(MethodInsnNode)instruction;
@@ -22,15 +23,40 @@ public final class GameplayProductionCheck {
                 if(call.owner.equals("dev/vibe/module/impl/movement/PhaseModule")){if(call.name.equals("collisions"))collisions++;if(call.name.equals("cancelPush"))push++;}
                 if(call.owner.equals("dev/vibe/ui/render/RewoundPlayers")&&call.name.equals("tabEntries"))tab++;
                 if(call.owner.equals("dev/vibe/module/impl/world/ScaffoldModule")&&call.name.equals("nativeSprintHook"))scaffoldSprint++;
-                if(call.owner.equals("dev/vibe/module/impl/client/ShopSaverModule")){if(call.name.equals("hideHook"))shopHide++;if(call.name.equals("keepContainerHook"))shopKeep++;}
+                if(call.owner.equals("dev/vibe/module/impl/client/ShopSaverModule")){
+                    MethodNode method=(MethodNode)value;
+                    if(call.name.equals("hideHook")){
+                        if(!name.equals("net.minecraft.client.entity.EntityPlayerSP")||!method.name.equals("func_71053_j")||!method.desc.equals("()V"))throw new AssertionError("Shop Saver intercepted "+name+"."+method.name+" instead of local closeScreen");
+                        shopHide++;
+                    }
+                    if(call.name.equals("keepContainerHook")){
+                        if(!name.equals("net.minecraft.client.gui.inventory.GuiContainer")||!method.name.equals("func_146281_b"))throw new AssertionError("Shop Saver intercepted the wrong container callback: "+method.name);
+                        shopKeep++;
+                    }
+                }
+                if(call.owner.equals("dev/vibe/inventory/DropConfirmation")){if(call.name.equals("allowDrop"))adjustDrop++;if(call.name.equals("allowClick"))adjustInventory++;}
+                if(call.owner.equals("dev/vibe/movement/AdjustJesus")){if(call.name.equals("collisions"))adjustLiquid++;if(call.name.equals("cancelJump"))adjustJump++;}
+                if(call.owner.equals("dev/vibe/hud/ChatActions")&&call.name.equals("track"))chatTrack++;
                 if(call.owner.equals("dev/vibe/hud/HudChat")){if(call.name.equals("historyLimit"))chatLimit++;if(call.name.equals("component"))chatPick++;if(call.name.equals("mouseX")||call.name.equals("mouseY"))chatMouse++;}
+                if(call.owner.equals("dev/vibe/module/impl/world/FastBreakModule")){
+                    if(!(((MethodNode)value).name.equals("vibe$tool$func_180512_c")||((MethodNode)value).name.equals("vibe$tool$c"))||!((MethodNode)value).desc.equals("(Lnet/minecraft/util/BlockPos;Lnet/minecraft/util/EnumFacing;)Z"))throw new AssertionError("FastBreak hook outside native mining: "+((MethodNode)value).name);
+                    if(call.name.equals("stepHook"))miningStep++;if(call.name.equals("progressHook"))miningProgress++;if(call.name.equals("delayHook"))miningDelay++;
+                }
+                if(call.owner.equals("dev/vibe/statistics/BlockBreakHooks")){
+                    if(!(((MethodNode)value).name.equals("vibe$tool$func_178888_a")||((MethodNode)value).name.equals("vibe$tool$a"))||!((MethodNode)value).desc.equals("(Lnet/minecraft/util/BlockPos;Lnet/minecraft/util/EnumFacing;)Z"))throw new AssertionError("Break statistics outside native destroy: "+((MethodNode)value).name);
+                    if(call.name.equals("begin"))miningBegin++;if(call.name.equals("finish"))miningFinish++;
+                }
             }
         }
+        if(adjustDrop!=1||adjustInventory!=1||adjustLiquid<1||adjustJump!=1||chatTrack!=2)throw new AssertionError("Adjust production hooks: drop="+adjustDrop+", inventory="+adjustInventory+", liquid="+adjustLiquid+", jump="+adjustJump+", chat="+chatTrack);
         if(manual!=1||guard!=1||uses!=2||finish<2)throw new AssertionError("Gameplay production hooks: manual="+manual+", guard="+guard+", uses="+uses+", finish="+finish);
         if(slow!=2||sprint!=1||multi!=1)throw new AssertionError("Native combat hooks: slowdown="+slow+", sprint="+sprint+", multi="+multi);
         if(collisions<1||push!=1)throw new AssertionError("Phase native hooks: collision="+collisions+", push="+push);
         if(tab!=1||scaffoldSprint!=1)throw new AssertionError("Presentation/sprint hooks: tab="+tab+", scaffoldSprint="+scaffoldSprint);
         if(shopHide!=1||shopKeep!=1||chatLimit!=2||chatPick!=1||chatMouse!=2)throw new AssertionError("Shop/chat hooks: hide="+shopHide+", keep="+shopKeep+", limits="+chatLimit+", pick="+chatPick+", mouse="+chatMouse);
+        if(miningStep!=1||miningProgress!=1||miningDelay!=1||miningBegin!=1||miningFinish<1)throw new AssertionError("Mining hooks: step="+miningStep+", progress="+miningProgress+", delay="+miningDelay+", begin="+miningBegin+", finish="+miningFinish);
+        Class.forName("dev.vibe.statistics.BlockBreakHooks",false,loader).getDeclaredMethods();
+        Class.forName("dev.vibe.module.impl.world.FastBreakModule",false,loader).getDeclaredMethods();
         Class.forName("dev.vibe.module.impl.client.ShopSaverModule",false,loader).getDeclaredMethods();
         Class.forName("dev.vibe.inventory.ChestSnapshot",false,loader).getDeclaredMethods();
         Class.forName("dev.vibe.hud.HudChat",false,loader).getDeclaredMethods();

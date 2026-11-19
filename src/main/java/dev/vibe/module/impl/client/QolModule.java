@@ -9,6 +9,7 @@ import org.lwjgl.input.Keyboard;
 
 /** Small client-only quality-of-life presentation controls. */
 public final class QolModule extends Module {
+    public final dev.vibe.setting.BooleanSetting dropConfirm=addSetting(new dev.vibe.setting.BooleanSetting("Drop confirm",false));
     public static final String REAL_REWOUND_PLAYERS="RealRewoundPlayers";
 
     private final MultiSelectSetting features = addSetting(new MultiSelectSetting("Features",

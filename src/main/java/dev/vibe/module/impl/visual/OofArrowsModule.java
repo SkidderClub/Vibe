@@ -14,7 +14,10 @@ public final class OofArrowsModule extends Module {
     public final NumberSetting length=addSetting(new NumberSetting("Length Scale",.9,.45,1.5,.05));
     public final NumberSetting width=addSetting(new NumberSetting("Width",.8,.35,1.5,.05));
     public final ModeSetting display=addSetting(new ModeSetting("Display","Out of FOV","Out of FOV","In FOV","All directions"));
-    public final MultiSelectSetting entities=addSetting(new MultiSelectSetting("Entities",Arrays.asList("Players","Hostile mobs","Animals"),Arrays.asList("Players")));
+    public final MultiSelectSetting entities=addSetting(new MultiSelectSetting("Entities",Arrays.asList("Players","Hostile mobs","Animals","Projectiles"),Arrays.asList("Players","Projectiles")));
+    public final MultiSelectSetting projectiles=addSetting(new MultiSelectSetting("Projectiles",Arrays.asList("Arrows","Snowballs","Eggs","Ender pearls","Fireballs"),Arrays.asList("Arrows","Snowballs","Eggs","Ender pearls","Fireballs"),()->entities.isSelected("Projectiles")));
+    public final BooleanSetting projectileNames=addSetting(new BooleanSetting("Projectile Names",true,()->entities.isSelected("Projectiles")));
+    public final BooleanSetting projectileDistances=addSetting(new BooleanSetting("Projectile Distances",false,()->entities.isSelected("Projectiles")));
     public final ModeSetting visibility=addSetting(new ModeSetting("Visibility","All","All","Visible only","Occluded only"));
     public final ModeSetting invisibility=addSetting(new ModeSetting("Invisibility","Include","Include","Exclude","Only"));
     public final NumberSetting visibleOpacity=addSetting(new NumberSetting("Visible Opacity",1,0,1,.05,()->!visibility.is("Occluded only")));

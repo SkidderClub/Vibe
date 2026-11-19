@@ -20,16 +20,19 @@ public final class TargetHudRenderer {
         @Override protected boolean removeEldestEntry(java.util.Map.Entry<UUID,State> entry) {return size()>16;}
     };
     private State state;
+    private final AdjustTargetHud adjust=new AdjustTargetHud();
     private final UpstreamTargetHuds upstream=new UpstreamTargetHuds();
 
-    public int height(TargetHudSettings s) { if(s.mode.is("Diablo"))return 45;if(s.mode.is("Novoline"))return 40; return UpstreamTargetHuds.supports(s.mode.getValue())?UpstreamTargetHuds.height(s):s.mode.is("Zeroday")?76:(s.mode.is("LiquidGlass")||s.mode.is("Lavalamp")||s.mode.is("Rise"))?46:42; }
+    public int height(TargetHudSettings s) { if(s.mode.is("Adjust"))return 24; if(s.mode.is("Diablo"))return 45;if(s.mode.is("Novoline"))return 40; return UpstreamTargetHuds.supports(s.mode.getValue())?UpstreamTargetHuds.height(s):s.mode.is("Zeroday")?76:(s.mode.is("LiquidGlass")||s.mode.is("Lavalamp")||s.mode.is("Rise"))?46:42; }
     public int width(TargetHudSettings s,TargetHudData d,FontRenderer font) {
+        if(s.mode.is("Adjust"))return adjust.width(d);
         if(s.mode.is("Diablo"))return 150;
         if(s.mode.is("Novoline"))return 69+dev.vibe.ui.novoline.NovolineFonts.pixel().getStringWidth(d.name);
         if(UpstreamTargetHuds.supports(s.mode.getValue()))return upstream.width(s,d);
         return Math.max(s.mode.is("Zeroday")?184:130,s.width.getInt());
     }
     public void draw(TargetHudSettings s,TargetHudData d,FontRenderer font,int x,int y,int w,Runnable glass,boolean preview,long now) {
+        if(s.mode.is("Adjust")){adjust.draw(s,d,x,y,w,now);return;}
         int h=height(s);
         state=states.get(d.id);
         boolean fresh=state==null;
@@ -182,7 +185,7 @@ public final class TargetHudRenderer {
         }
     }
     public int particleCount() { int count=0;for(State entry:states.values())count+=entry.sparks.size();return count; }
-    public void clear() {states.clear();state=null;}
+    public void clear() {adjust.clear();states.clear();state=null;}
     public void close() {clear();regular.close();bold.close();}
     private static String percent(TargetHudData d) {return String.format(Locale.ROOT,"%.1f%%",d.fraction()*100);}
     private static String decimal(float n) {return String.format(Locale.ROOT,"%.1f",n);}

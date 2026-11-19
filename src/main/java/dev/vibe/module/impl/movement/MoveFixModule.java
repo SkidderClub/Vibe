@@ -120,10 +120,21 @@ public final class MoveFixModule extends Module {
             return;
         }
         float continuousYaw = RotationMath.nearest(yaw, getRotationYaw());
+        fallbackRotation = false;
         rotationOwner = owner;
         rotationSource = owner;
         correctionOverride = correctionMode(correction);
         fakeRotation = new FakeRotation(continuousYaw, RotationMath.clamp(pitch, -90.0F, 90.0F));
+    }
+
+    private boolean fallbackRotation;
+    /** Lowest priority producer. Its ownership expires before next tick's producers run. */
+    public void setFallbackRotation(String owner,float yaw,float pitch) {
+        if(owner==null||!Float.isFinite(yaw)||!Float.isFinite(pitch)||hasOtherRotationOwner(owner))return;
+        setFakeRotation(owner,yaw,pitch);
+        // Adjust explicitly offers headless pitch. Ordinary producers retain the normal pitch clamp.
+        fakeRotation=new FakeRotation(fakeRotation.yaw,pitch);
+        fallbackRotation=true;
     }
 
     private String correctionMode(String mode) {
@@ -150,6 +161,7 @@ public final class MoveFixModule extends Module {
         if (renderedPlayer != null) endPlayerRender(renderedPlayer);
         syncRotationPlayer();
         previousRenderRotation = activeRotation();
+        if(fallbackRotation){rotationOwner=null;fallbackRotation=false;}
     }
 
     private void syncRotationPlayer() {

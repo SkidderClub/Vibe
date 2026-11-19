@@ -13,7 +13,7 @@ public final class NovolineAnimations {
     private static float partialTicks, height;
     private static int i;
     private NovolineAnimations(){}
-    public static boolean supports(String mode){return java.util.Arrays.asList(MODES).contains(mode)||DiabloAnimations.supports(mode);}
+    public static boolean supports(String mode){return java.util.Arrays.asList(MODES).contains(mode)||DiabloAnimations.supports(mode)||AdjustAnimations.supports(mode);}
     public static void frame(AnimationsModule selected){
         i++;
         if(selected!=null&&selected.isEnabled()){
@@ -26,6 +26,7 @@ public final class NovolineAnimations {
     public static boolean active(){return module!=null;}
     public static boolean transform(float equip,float ignoredSwing){
         if(module==null)return false;
+        if(AdjustAnimations.supports(module.getBlockingStyle().getValue()))return AdjustAnimations.transform(module,equip,partialTicks);
         if(DiabloAnimations.supports(module.getBlockingStyle().getValue()))return DiabloAnimations.transform(module,partialTicks);
         float f=equip-.2F+height/100F;
         float f1=Minecraft.getMinecraft().thePlayer.getSwingProgress(partialTicks);

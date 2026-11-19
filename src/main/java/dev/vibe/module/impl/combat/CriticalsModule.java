@@ -61,6 +61,7 @@ public final class CriticalsModule extends FeatureModule {
     private boolean rewoundReady(Object entity){return isEnabled()&&mode.is("Rewound")&&entity==mc.thePlayer&&playing()&&!mc.thePlayer.isSpectator()&&mc.thePlayer.worldObj==mc.theWorld;}
     public void rewoundBeforeWalking(Object entity){
         prepareDiablo();endRewoundWalking();
+        if(dev.vibe.movement.AdjustJesus.standing())return;
         if(!rewoundReady(entity)||rewoundPlayer!=mc.thePlayer||rewoundWorld!=mc.theWorld||groundTicks<3)return;
         BlockPos under=new BlockPos(mc.thePlayer.posX,mc.thePlayer.posY-1,mc.thePlayer.posZ);
         if(!mc.theWorld.isBlockLoaded(under))return;

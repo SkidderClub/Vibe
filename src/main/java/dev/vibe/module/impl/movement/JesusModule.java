@@ -7,8 +7,10 @@ import net.minecraft.potion.Potion;
 
 /** Exire WatchdogJesus at PlayerMoveEvent, exposed as Rewound. */
 public final class JesusModule extends FeatureModule {
-    public final ModeSetting mode=addSetting(new ModeSetting("Mode","Rewound","Rewound","RewoundNovoline"));
+    public final ModeSetting mode=addSetting(new ModeSetting("Mode","Rewound","Rewound","RewoundNovoline","RewoundAdjust"));
     public JesusModule(){super("Jesus","Maintain the Rewound water movement vector",Category.MOVEMENT);}
+    @Override protected void onEnable(){dev.vibe.movement.AdjustJesus.reset();}
+    @Override protected void onDisable(){dev.vibe.movement.AdjustJesus.reset();}
     public void novolinePreUpdate(Object entity){
         if(!isEnabled()||!mode.is("RewoundNovoline")||entity!=mc.thePlayer||!playing()||mc.thePlayer.isSpectator()||mc.thePlayer.isRiding()
                 ||mc.thePlayer.movementInput.sneak||!(mc.thePlayer.isInWater()||mc.thePlayer.isInLava()))return;

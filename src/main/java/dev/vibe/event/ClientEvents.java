@@ -43,7 +43,6 @@ import dev.vibe.module.impl.client.InventoryEditorModule;
 import dev.vibe.module.impl.world.AutoToolModule;
 import dev.vibe.module.impl.world.BedAuraModule;
 import dev.vibe.module.impl.world.NoteBotModule;
-import dev.vibe.module.impl.world.FastBreakModule;
 import dev.vibe.module.impl.visual.AmbienceModule;
 import dev.vibe.module.impl.meme.NesEmulatorModule;
 import dev.vibe.module.impl.combat.WTapModule;
@@ -302,8 +301,6 @@ public final class ClientEvents {
             if (autoTool != null && !dev.vibe.module.impl.combat.AutoBuffModule.ownsUseInput()) autoTool.tick();
             BedAuraModule bedAura = Vibe.getInstance().getModuleManager().getModule(BedAuraModule.class);
             if (bedAura != null && !dev.vibe.module.impl.combat.AutoBuffModule.ownsUseInput()) bedAura.tick();
-            FastBreakModule fastBreak = Vibe.getInstance().getModuleManager().getModule(FastBreakModule.class);
-            if (fastBreak != null) fastBreak.tick();
             NoSlowModule noSlow = Vibe.getInstance().getModuleManager().getModule(NoSlowModule.class);
             if (noSlow != null) {
                 noSlow.installInputHook();
@@ -318,6 +315,7 @@ public final class ClientEvents {
             if (autoWalk != null) autoWalk.tick();
             dev.vibe.module.impl.movement.AntiAFKModule antiAFK = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.AntiAFKModule.class);
             if (antiAFK != null) antiAFK.tick();
+            dev.vibe.module.impl.movement.AntiAimModule antiAim=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.AntiAimModule.class);if(antiAim!=null&&antiAim.isEnabled())antiAim.applyFallback();
             // A normal GuiContainer click is handled before the player update
             // for this client tick.  Keeping automated container input here
             // preserves that same order instead of injecting a window click
@@ -723,6 +721,8 @@ public final class ClientEvents {
         ScaledResolution resolution = new ScaledResolution(minecraft);
         int left = resolution.getScaledWidth() / 2 - 91;
         int top = resolution.getScaledHeight() - 22;
+        int confirmedSlot=dev.vibe.inventory.DropConfirmation.hotbarSlot();
+        if(confirmedSlot>=0)dev.vibe.inventory.DropConfirmation.drawSlot(left+confirmedSlot*20,top,22);
         dev.vibe.inventory.HotbarSwitches.Highlight slot=dev.vibe.inventory.HotbarSwitches.highlight();
         if (slot != null) {
             int x = left + slot.slot * 20;

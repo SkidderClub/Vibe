@@ -20,6 +20,11 @@ public final class HudChatTransformer implements IClassTransformer,Opcodes {
                 method.instructions.add(new MethodInsnNode(INVOKESTATIC,HOOK,"component","(Ljava/lang/Object;II)Ljava/lang/Object;",false));
                 method.instructions.add(new TypeInsnNode(CHECKCAST,Type.getReturnType(method.desc).getInternalName()));method.instructions.add(new InsnNode(ARETURN));changed=true;
             }else if(method.desc.startsWith("(L")&&method.desc.endsWith(";IIZ)V")&&named(method,"setChatLine","func_146237_a","a")){
+                for(AbstractInsnNode i:method.instructions.toArray())if(i instanceof MethodInsnNode){MethodInsnNode call=(MethodInsnNode)i;
+                    if(call.name.equals("<init>")&&call.desc.startsWith("(IL")&&call.desc.endsWith(";I)V")){
+                        InsnList track=new InsnList();track.add(new InsnNode(DUP));track.add(new VarInsnNode(ALOAD,1));track.add(new MethodInsnNode(INVOKESTATIC,"dev/vibe/hud/ChatActions","track","(Ljava/lang/Object;Ljava/lang/Object;)V",false));method.instructions.insert(i,track);changed=true;
+                    }
+                }
                 for(AbstractInsnNode i:method.instructions.toArray())if(i instanceof IntInsnNode&&i.getOpcode()==BIPUSH&&((IntInsnNode)i).operand==100){
                     method.instructions.insert(i,new MethodInsnNode(INVOKESTATIC,HOOK,"historyLimit","(I)I",false));changed=true;
                 }

@@ -55,6 +55,7 @@ public final class HudChat {
     public static void restoreVanilla(){if(!active()&&wrappedChat!=null){GuiNewChat old=wrappedChat;wrappedChat=null;wrappedWidth=-1;shown.clear();old.refreshChat();}}
 
     @SuppressWarnings("unchecked") static void draw(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){
+        if(!preview)ChatActions.beginCustom();
         Minecraft mc=Minecraft.getMinecraft();OverlaySettings.Chat s=hud.chat;FontRenderer font=mc.fontRendererObj;
         int w=s.width.getInt(),h=s.height.getInt(),lineHeight=s.lineHeight.getInt(),capacity=Math.max(1,(h-12)/lineHeight);
         e.ensureScaledOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
@@ -100,6 +101,7 @@ public final class HudChat {
         try(dev.vibe.ui.GuiClip clip=dev.vibe.ui.GuiClip.local(x+4,top+4,w-8,Math.max(0,used-8))){
         for(int i=0;i<components.size();i++){
             int alpha=Math.round(255*opacity.get(i)*opening);if(alpha<4)continue;
+            if(!preview&&open){float rowTop=y+h+offset-6-(i+1)*lineHeight;ChatActions.customRow(history.get(i+scroll),x,Math.max(top+4,rowTop),x+w,Math.min(top+used-4,rowTop+lineHeight));}
             String text=s.keepColors.isEnabled()?components.get(i).getFormattedText():EnumChatFormatting.getTextWithoutFormattingCodes(components.get(i).getFormattedText());
             font.drawString(text,x+6,y+h+offset-6-(i+1)*lineHeight+(lineHeight-font.FONT_HEIGHT)/2F,alpha<<24|s.text.getArgb()&0xFFFFFF,s.shadow.isEnabled());
         }

@@ -70,6 +70,7 @@ public final class VibeClickGui extends GuiScreen {
     private final XanaxWorkspace xanax = new XanaxWorkspace();
     private final DropdownWorkspace dropdown = new DropdownWorkspace();
     private final BreezeWorkspace breeze = new BreezeWorkspace();
+    private final AdjustWorkspace adjust=new AdjustWorkspace();
     private final LavalampWorkspace lavalamp = new LavalampWorkspace();
     private String dropdownPanel;
     private int dropdownTop, dropdownBottom;
@@ -138,7 +139,8 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        if(isLavalampTheme()){
+        if(isAdjustTheme()){adjust.draw(width,height,mouseX,mouseY,partialTicks);
+        } else if(isLavalampTheme()){
             lavalamp.draw(width,height,mouseX,mouseY,partialTicks);
         } else if(isBreezeTheme()){
             breeze.draw(width,height,mouseX,mouseY,partialTicks);
@@ -887,6 +889,7 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
+        if(isAdjustTheme()){adjust.click(mouseX,mouseY,mouseButton);return;}
         if(isLavalampTheme()){lavalamp.click(mouseX,mouseY,mouseButton);return;}
         if(isBreezeTheme()){breeze.click(mouseX,mouseY,mouseButton);return;}
         if (isXanaxTheme()) { xanax.click(mouseX, mouseY, mouseButton); return; }
@@ -1050,6 +1053,7 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     protected void mouseReleased(int mouseX, int mouseY, int state) {
+        if(isAdjustTheme()){adjust.release(state);return;}
         if(isLavalampTheme()){lavalamp.release(state);return;}
         if(isBreezeTheme()){breeze.release(state);return;}
         neverLose.release(state);
@@ -1078,6 +1082,7 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     public void updateScreen() {
+        if(isAdjustTheme()){adjust.tick();return;}
         if(isLavalampTheme()){lavalamp.tick();return;}
         if(isBreezeTheme()){breeze.tick();return;}
         if (textEditor != null) textEditor.updateCursorCounter();
@@ -1126,6 +1131,7 @@ public final class VibeClickGui extends GuiScreen {
     }
 
     void wheel(int mx,int my,int wheel) {
+        if(isAdjustTheme()){adjust.wheel(mx,my,wheel);return;}
         if(isLavalampTheme()){lavalamp.wheel(mx,my,wheel);return;}
         if(isBreezeTheme()){breeze.wheel(mx,my,wheel);return;}
         if(wheel==0)return;
@@ -1189,6 +1195,7 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
+        if(isAdjustTheme()){if(!adjust.key(typedChar,keyCode)&&(keyCode==Keyboard.KEY_ESCAPE||keyCode==Keyboard.KEY_RSHIFT))mc.displayGuiScreen(null);return;}
         if(isLavalampTheme()){if(!lavalamp.key(typedChar,keyCode)&&(keyCode==Keyboard.KEY_ESCAPE||keyCode==Keyboard.KEY_RSHIFT))mc.displayGuiScreen(null);return;}
         if(isBreezeTheme()){if(!breeze.key(typedChar,keyCode)&&(keyCode==Keyboard.KEY_ESCAPE||keyCode==Keyboard.KEY_RSHIFT))mc.displayGuiScreen(null);return;}
         if (isXanaxTheme()) {
@@ -1259,6 +1266,7 @@ public final class VibeClickGui extends GuiScreen {
 
     @Override
     public void onGuiClosed() {
+        adjust.close();
         lavalamp.close();
         breeze.close();
         skeetScrollbar=null;
@@ -1501,10 +1509,11 @@ public final class VibeClickGui extends GuiScreen {
 
     private final net.minecraft.client.gui.GuiButton diabloConfigButton=new net.minecraft.client.gui.GuiButton(90417,0,0,"Config Menu");
     private boolean isBreezeTheme(){ClickGuiModule clickGui=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);return clickGui!=null&&clickGui.getTheme().is("Breeze");}
+    private boolean isAdjustTheme(){ClickGuiModule clickGui=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);return clickGui!=null&&clickGui.getTheme().is("Adjust");}
     private boolean isLavalampTheme(){ClickGuiModule clickGui=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);return clickGui!=null&&clickGui.getTheme().is("Lavalamp");}
     public boolean isTypingForMovement(){
         if(isAugustusTheme())return AugustusImGui.wantsTextInput();
-        return dev.vibe.input.GuiInputFocus.typing(isLavalampTheme()?lavalamp:isBreezeTheme()?breeze:isNeverLoseTheme()?neverLose:isXanaxTheme()?xanax:this);
+        return dev.vibe.input.GuiInputFocus.typing(isAdjustTheme()?adjust:isLavalampTheme()?lavalamp:isBreezeTheme()?breeze:isNeverLoseTheme()?neverLose:isXanaxTheme()?xanax:this);
     }
 
     private boolean isNeverLoseTheme() {

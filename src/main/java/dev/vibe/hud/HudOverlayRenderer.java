@@ -88,6 +88,7 @@ final class HudOverlayRenderer {
         if(s.counts.isEnabled())for(int i=0;i<9;i++){ItemStack item=stack(i,preview);if(item==null||item.stackSize==1)continue;String value=(item.stackSize<1?"§c":"")+item.stackSize;int xx=x+pad+i*(cell+gap)+(cell-16)/2,yy=y+pad+(cell-16)/2;text(value,xx+17-mc.fontRendererObj.getStringWidth(value),yy+9,0xFFFFFFFF,true);}
         if(s.durability.isEnabled())for(int i=0;i<9;i++){ItemStack item=stack(i,preview);if(item==null||!item.isItemDamaged())continue;int xx=x+pad+i*(cell+gap),yy=y+pad+cell-2;Gui.drawRect(xx+2,yy,xx+cell-2,yy+1,0xB0000000);Gui.drawRect(xx+2,yy,xx+2+Math.round((cell-4)*(1-item.getItemDamage()/(float)item.getMaxDamage())),yy+1,s.accent.getArgb());}
         dev.vibe.inventory.HotbarSwitches.Highlight activeSlot=dev.vibe.inventory.HotbarSwitches.highlight();
+        int confirm=preview?-1:dev.vibe.inventory.DropConfirmation.hotbarSlot();if(confirm>=0)dev.vibe.inventory.DropConfirmation.drawSlot(x+pad+confirm*(cell+gap),y+pad,cell);
         if(activeSlot!=null){int xx=x+pad+activeSlot.slot*(cell+gap);drawSelection(s,xx,y+pad,cell,false,activeSlot.color,true);}
         if(xp){int level=mc.thePlayer==null?17:mc.thePlayer.experienceLevel;float value=horse?mc.thePlayer.getHorseJumpPower():mc.thePlayer==null?.6F:mc.thePlayer.experience;
             Gui.drawRect(x+pad,widgetTop+10,x+w-pad,widgetTop+13,s.empty.getArgb());Gui.drawRect(x+pad,widgetTop+10,x+pad+Math.round((w-pad*2)*Math.max(0,Math.min(1,value))),widgetTop+13,horse?s.selected.getArgb():s.experienceColor.getArgb());

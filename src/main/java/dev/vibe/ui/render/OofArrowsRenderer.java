@@ -42,9 +42,11 @@ public final class OofArrowsRenderer {
         HypixelModule hypixel=Vibe.getInstance().getModuleManager().getModule(HypixelModule.class);
         ScaledResolution resolution=new ScaledResolution(mc);
         for(Object value:mc.theWorld.loadedEntityList) {
-            if(!(value instanceof EntityLivingBase))continue;
-            EntityLivingBase e=(EntityLivingBase)value;
-            if(e==mc.thePlayer||e==mc.getRenderViewEntity()||!e.isEntityAlive()||e.isDead||!accept(s,e))continue;
+            if(!(value instanceof Entity))continue;
+            Entity e=(Entity)value;
+            net.minecraft.item.Item projectile=projectile(s,e);
+            if(!(e instanceof EntityLivingBase)&&projectile==null)continue;
+            if(e==mc.thePlayer||e==mc.getRenderViewEntity()||!e.isEntityAlive()||e.isDead||(projectile==null&&(!(e instanceof EntityLivingBase)||!accept(s,(EntityLivingBase)e))))continue;
             double x=e.lastTickPosX+(e.posX-e.lastTickPosX)*partialTicks,
                     y=e.lastTickPosY+(e.posY-e.lastTickPosY)*partialTicks,z=e.lastTickPosZ+(e.posZ-e.lastTickPosZ)*partialTicks;
             double distance=Math.sqrt((x-eye.xCoord)*(x-eye.xCoord)+(y-eye.yCoord)*(y-eye.yCoord)+(z-eye.zCoord)*(z-eye.zCoord));
@@ -58,11 +60,20 @@ public final class OofArrowsRenderer {
             boolean lineOfSight=!checkVisibility||mc.theWorld.rayTraceBlocks(eye,new Vec3(x,y+e.getEyeHeight(),z),false,true,false)==null;
             if(s.visibility.is("Visible only")&&!lineOfSight||s.visibility.is("Occluded only")&&lineOfSight)continue;
             if((lineOfSight?s.visibleOpacity.getFloat():s.occludedOpacity.getFloat())<=0)continue;
-            arrows.add(new Arrow(e.getName(),distance,bearing(view,x-cx,y+e.height*.5-cy,z-cz),lineOfSight,
-                    hypixel==null?0:hypixel.murdererColor(e)));
+            arrows.add(new Arrow(projectile==null?e.getName():new net.minecraft.item.ItemStack(projectile).getDisplayName(),distance,bearing(view,x-cx,y+e.height*.5-cy,z-cz),lineOfSight,
+                    hypixel==null||!(e instanceof EntityLivingBase)?0:hypixel.murdererColor((EntityLivingBase)e),projectile));
         }
         Collections.sort(arrows,Comparator.comparingDouble(a->a.distance));
         if(arrows.size()>s.limit.getInt())arrows.subList(s.limit.getInt(),arrows.size()).clear();
+    }
+    public static net.minecraft.item.Item projectile(OofArrowsModule s,Entity e){
+        if(!s.entities.isSelected("Projectiles")||e.isDead)return null;
+        if(e instanceof net.minecraft.entity.projectile.EntityArrow)return s.projectiles.isSelected("Arrows")&&dev.vibe.features.dodge.DodgeTrajectory.flying(e)?net.minecraft.init.Items.arrow:null;
+        if(e instanceof net.minecraft.entity.projectile.EntitySnowball)return s.projectiles.isSelected("Snowballs")?net.minecraft.init.Items.snowball:null;
+        if(e instanceof net.minecraft.entity.projectile.EntityEgg)return s.projectiles.isSelected("Eggs")?net.minecraft.init.Items.egg:null;
+        if(e instanceof net.minecraft.entity.item.EntityEnderPearl)return s.projectiles.isSelected("Ender pearls")?net.minecraft.init.Items.ender_pearl:null;
+        if(e instanceof net.minecraft.entity.projectile.EntityFireball)return s.projectiles.isSelected("Fireballs")?net.minecraft.init.Items.fire_charge:null;
+        return null;
     }
     private static boolean accept(OofArrowsModule s,EntityLivingBase e) {
         return e instanceof EntityPlayer?s.entities.isSelected("Players"):e instanceof IMob?s.entities.isSelected("Hostile mobs"):
@@ -91,16 +102,20 @@ public final class OofArrowsRenderer {
                 GL11.glDisable(GL11.GL_DEPTH_TEST);GL11.glDisable(GL11.GL_TEXTURE_2D);
                 GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);
                 GL11.glPushMatrix();GL11.glTranslatef(p[0],p[1],0);GL11.glRotatef(p[2],0,0,1);
+                if(arrow.projectile==null){
                 if(s.glow.isEnabled())for(int pass=4;pass>=1;pass--) {
                     float extra=s.glowRadius.getFloat()*pass/4;
                     glyph(s.style.getValue(),length+extra*2,half+extra*.6F,c,s.glowStrength.getFloat()*.035F*(5-pass));
                 }
                 if(s.outline.isEnabled())glyph(s.style.getValue(),length+2.2F,half+1.1F,s.outlineColor.getArgb(),(c>>>24)/255F);
                 glyph(s.style.getValue(),length,half,c,1);
+                }
                 GL11.glPopMatrix();
             }
-            if((c>>>24)>=4&&(s.names.isEnabled()||s.distances.isEnabled())) {
-                String text=(s.names.isEnabled()?arrow.name:"")+(s.distances.isEnabled()?(s.names.isEnabled()?" · ":"")+Math.round(arrow.distance)+"m":"");
+            if(arrow.projectile!=null){projectileIcon(arrow.projectile,p[0]-8,p[1]-8);}
+            boolean showName=arrow.projectile==null?s.names.isEnabled():s.projectileNames.isEnabled(),showDistance=arrow.projectile==null?s.distances.isEnabled():s.projectileDistances.isEnabled();
+            if((c>>>24)>=4&&(showName||showDistance)) {
+                String text=(showName?arrow.name:"")+(showDistance?(showName?" · ":"")+Math.round(arrow.distance)+"m":"");
                 int tw=mc.fontRendererObj.getStringWidth(text);float tx=Math.max(2,Math.min(width-tw-2,p[0]-tw/2F));
                 mc.fontRendererObj.drawStringWithShadow(text,tx,Math.max(2,Math.min(height-10,p[1]+size+4)),c);
             }
@@ -135,6 +150,12 @@ public final class OofArrowsRenderer {
         fade*=lineOfSight?s.visibleOpacity.getFloat():s.occludedOpacity.getFloat();
         return Math.round((color>>>24)*fade)<<24|color&0xFFFFFF;
     }
+    private static void projectileIcon(net.minecraft.item.Item item,float x,float y){
+        GlStateManager.pushMatrix();GlStateManager.translate(x,y,0);
+        try(HudItemGeometryRenderer.Scope scope=HudItemGeometryRenderer.begin()){
+            HudItemGeometryRenderer.prepareItem();Minecraft.getMinecraft().getRenderItem().renderItemAndEffectIntoGUI(new net.minecraft.item.ItemStack(item),0,0);
+        }finally{net.minecraft.client.renderer.RenderHelper.disableStandardItemLighting();GlStateManager.disableDepth();GlStateManager.enableBlend();GlStateManager.popMatrix();GlStateManager.color(1,1,1,1);}
+    }
     private static void glyph(String style,float length,float half,int color,float opacity) {
         GL11.glColor4f((color>>16&255)/255F,(color>>8&255)/255F,(color&255)/255F,(color>>>24)/255F*opacity);
         GL11.glBegin(GL11.GL_TRIANGLES);
@@ -149,9 +170,10 @@ public final class OofArrowsRenderer {
     }
     private static void v(float x,float y) {GL11.glVertex2f(x,y);}
     public static final class Arrow {
-        public final String name;public final double distance,bearing;public final boolean lineOfSight;public final int overrideColor;
+        public final String name;public final double distance,bearing;public final boolean lineOfSight;public final int overrideColor;public final net.minecraft.item.Item projectile;
         public Arrow(String name,double distance,double bearing) {this(name,distance,bearing,true);}
         public Arrow(String name,double distance,double bearing,boolean lineOfSight) {this(name,distance,bearing,lineOfSight,0);}
-        public Arrow(String name,double distance,double bearing,boolean lineOfSight,int overrideColor) {this.name=name;this.distance=distance;this.bearing=bearing;this.lineOfSight=lineOfSight;this.overrideColor=overrideColor;}
+        public Arrow(String name,double distance,double bearing,boolean lineOfSight,int overrideColor) {this(name,distance,bearing,lineOfSight,overrideColor,null);}
+        public Arrow(String name,double distance,double bearing,boolean lineOfSight,int overrideColor,net.minecraft.item.Item projectile){this.name=name;this.distance=distance;this.bearing=bearing;this.lineOfSight=lineOfSight;this.overrideColor=overrideColor;this.projectile=projectile;}
     }
 }

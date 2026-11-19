@@ -136,7 +136,7 @@ public final class InventoryManagerModule extends Module {
             Type type = assignment.getValue();
             ItemStack existing = container.getSlot(target).getStack();
             if (type == Type.BARRIER) {
-                if (existing != null) return PendingAction.drop(target, existing);
+                if (existing != null) return dev.vibe.inventory.DropConfirmation.protects(existing)?null:PendingAction.drop(target, existing);
                 continue;
             }
             int source = findBest(container, layout, type, target);
@@ -182,6 +182,7 @@ public final class InventoryManagerModule extends Module {
         for (int slot : playerSlots()) {
             if (layout.isIgnoredContainerSlot(slot)) continue;
             ItemStack stack = container.getSlot(slot).getStack();
+            if(dev.vibe.inventory.DropConfirmation.protects(stack))continue;
             Type type = classify(stack);
             if (type != null && layout.isDropType(type)) return PendingAction.drop(slot, stack);
         }
@@ -192,6 +193,7 @@ public final class InventoryManagerModule extends Module {
         for (int slot : playerSlots()) {
             if (layout.isIgnoredContainerSlot(slot)) continue;
             ItemStack stack = container.getSlot(slot).getStack();
+            if(dev.vibe.inventory.DropConfirmation.protects(stack))continue;
             Type type = classify(stack);
             if (type == null || !isUnique(type)) continue;
             int preferred = slot;
@@ -221,6 +223,7 @@ public final class InventoryManagerModule extends Module {
         for (int slot : playerSlots()) {
             if (layout.isIgnoredContainerSlot(slot)) continue;
             ItemStack stack = container.getSlot(slot).getStack();
+            if(dev.vibe.inventory.DropConfirmation.protects(stack))continue;
             if (stack == null) continue;
             if (stack.getItem() instanceof ItemFood && stack.getItem() != Items.golden_apple) food.add(slot);
             if (stack.getItem() instanceof ItemBlock) blocks.add(slot);
@@ -254,7 +257,7 @@ public final class InventoryManagerModule extends Module {
             // Drops keep the exact original manager decision (including
             // Barrier and stair/slab slots) but refuse a stale action when
             // that slot now contains another item.
-            if (stack == null || stack.getItem() != action.expectedItem || stack.getItemDamage() != action.expectedDamage) {
+            if (dev.vibe.inventory.DropConfirmation.protects(stack) || stack == null || stack.getItem() != action.expectedItem || stack.getItemDamage() != action.expectedDamage) {
                 pendingAction = null;
                 return false;
             }

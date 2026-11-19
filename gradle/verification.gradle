@@ -358,3 +358,5 @@ registerRenderCheck('verifyNewFeaturesRendering', 'dev.vibe.ui.ClientChangesRend
 registerRenderCheck('verifyDiabloRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'diablo-check', 'Checks supplied Diablo designs, fonts, controls and native block poses.', false) { args 'diablo' }
 
 registerRenderCheck('verifyNovolineRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'novoline-check', 'Checks supplied Novoline designs, fonts and all blocking pose transforms.', false) { args 'novoline' }
+
+registerRenderCheck('verifyAdjustRendering', 'dev.vibe.ui.ClientChangesRenderCheck', 'adjust-check', 'Checks Adjust controls, compact HUD, item rendering and sword transforms.', false) { args 'adjust' }

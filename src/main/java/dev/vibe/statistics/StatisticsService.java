@@ -27,6 +27,8 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockBed;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.entity.EntityLivingBase;
@@ -79,9 +81,9 @@ public final class StatisticsService {
     private final Properties values = new Properties();
     private final Map<EntityLivingBase, Long> attacked = new IdentityHashMap<EntityLivingBase, Long>();
     private final Map<BlockPos, BlockWatch> watchedBlocks = new HashMap<BlockPos, BlockWatch>();
-    /** Netty receives the final dig packet off-thread; tick consumes it on the client thread. */
-    private final Queue<BlockPos> confirmedBreaks = new ConcurrentLinkedQueue<BlockPos>();
-    private final Map<BlockPos, Long> recentBreaks = new HashMap<BlockPos, Long>();
+    /** Dig packets are requests, not acknowledgements; consume them only on the client thread. */
+    private final Queue<C07PacketPlayerDigging> digEvents = new ConcurrentLinkedQueue<C07PacketPlayerDigging>();
+    private final Map<BlockPos, BedBreak> recentBeds = new LinkedHashMap<BlockPos, BedBreak>(16, .75F, true);
     private net.minecraft.world.World sampledWorld;
     private final SecureRandom random = new SecureRandom();
     private SecretKeySpec key;
@@ -98,11 +100,17 @@ public final class StatisticsService {
         private final Block original;
         private final boolean placement;
         private final long expires;
-        private BlockWatch(Block original, boolean placement, long expires) {
+        private final BlockPos bedBase;
+        private BlockWatch(Block original, boolean placement, long expires, BlockPos bedBase) {
             this.original = original;
             this.placement = placement;
             this.expires = expires;
+            this.bedBase = bedBase;
         }
+    }
+    private static final class BedBreak {
+        final BlockPos position;
+        BedBreak(BlockPos position) { this.position = position; }
     }
 
     public StatisticsService(Minecraft minecraft, Path directory) {
@@ -158,26 +166,67 @@ public final class StatisticsService {
     /** Records a client initiated placement and confirms it only once the world changes. */
     public synchronized void watchBlockPlacement(BlockPos position) { watchBlock(position, true); }
 
-    /**
-     * C07 STOP_DESTROY_BLOCK is emitted only once vanilla has completed the
-     * local destroy action. It is the reliable counterpart to the initial
-     * left-click event, which may occur seconds before the block is gone.
-     */
+    /** Queue cancellation/completion requests without reading the world from Netty. */
     public void recordDigging(C07PacketPlayerDigging packet) {
-        if (packet != null && packet.getStatus() == C07PacketPlayerDigging.Action.STOP_DESTROY_BLOCK && packet.getPosition() != null) {
-            confirmedBreaks.offer(packet.getPosition());
+        if (packet != null && (packet.getStatus() == C07PacketPlayerDigging.Action.STOP_DESTROY_BLOCK
+                || packet.getStatus() == C07PacketPlayerDigging.Action.ABORT_DESTROY_BLOCK)) digEvents.offer(packet);
+    }
+
+    /** Vanilla actually removed this block; the original state was captured before removal. */
+    public synchronized void recordBlockDestroyed(BlockPos position, IBlockState original, boolean paired) {
+        if (position == null || original == null || minecraft.theWorld == null || minecraft.thePlayer == null
+                || original.getBlock() == Blocks.air || minecraft.theWorld.getBlockState(position).getBlock() == original.getBlock()) return;
+        updateProfileAndServer();
+        if (sampledWorld != minecraft.theWorld) { resetSamples(); sampledWorld = minecraft.theWorld; }
+        removeBreakWatch(position);
+        BlockPos other = otherBedHalf(position, original);
+        if (other != null) removeBreakWatch(other);
+        creditBreak(position, bedBase(position, original), true, paired);
+    }
+
+    private void removeBreakWatch(BlockPos position) {
+        BlockWatch watch = watchedBlocks.get(position);
+        if (watch != null && !watch.placement) watchedBlocks.remove(position);
+    }
+
+    static BlockPos otherBedHalf(BlockPos position, IBlockState state) {
+        if (!(state.getBlock() instanceof BlockBed)) return null;
+        net.minecraft.util.EnumFacing facing = state.getValue(BlockBed.FACING);
+        return position.offset(state.getValue(BlockBed.PART) == BlockBed.EnumPartType.FOOT ? facing : facing.getOpposite());
+    }
+
+    private static BlockPos bedBase(BlockPos position, IBlockState state) {
+        return !(state.getBlock() instanceof BlockBed) ? null
+                : state.getValue(BlockBed.PART) == BlockBed.EnumPartType.FOOT ? position : otherBedHalf(position, state);
+    }
+
+    private void creditBreak(BlockPos position, BlockPos bed, boolean nativeCompletion, boolean paired) {
+        if (bed != null) {
+            BedBreak previous = recentBeds.get(bed);
+            // One bed has two halves. A fresh complete bed or a fresh block at the
+            // same position is a new native break at those coordinates.
+            if (previous != null && (!nativeCompletion || !paired && !position.equals(previous.position))) return;
+            recentBeds.put(bed, new BedBreak(position));
+            // Retain orphan-half identities across lag, with a fixed memory limit.
+            if (recentBeds.size() > 2048) recentBeds.remove(recentBeds.keySet().iterator().next());
         }
+        addProfile("blocksBroken", 1L);
+        if (bed != null) addProfile("bedsBroken", 1L);
+        activity(Activity.BLOCK_BROKEN, position, null);
+        if (bed != null) activity(Activity.BED_BROKEN, position, null);
     }
 
     private void watchBlock(BlockPos position, boolean placement) {
         if (position == null || minecraft.theWorld == null) return;
-        Block original = minecraft.theWorld.getBlockState(position).getBlock();
+        IBlockState state = minecraft.theWorld.getBlockState(position);
+        Block original = state.getBlock();
+        if (!placement && original == Blocks.air) return;
         BlockWatch existing = watchedBlocks.get(position);
         // PlayerInteract fires while mining is held. Replacing the watch on
         // every click used to push its timeout forward forever, so the final
         // air state was never credited as a break.
         if (existing != null && existing.placement == placement && existing.original == original) return;
-        watchedBlocks.put(position, new BlockWatch(original, placement, System.currentTimeMillis() + 20000L));
+        watchedBlocks.put(position, new BlockWatch(original, placement, System.currentTimeMillis() + 20000L, bedBase(position, state)));
     }
 
     public synchronized Snapshot snapshot(Scope scope) { return snapshot(scope, currentAccount()); }
@@ -303,37 +352,27 @@ public final class StatisticsService {
                 } else if (now > watch.expires) iterator.remove();
             } else {
                 if (current == Blocks.air && watch.original != Blocks.air) {
-                    addProfile("blocksBroken", 1L);
-                    if (watch.original == Blocks.bed) addProfile("bedsBroken", 1L);
-                    recentBreaks.put(entry.getKey(), now);
                     iterator.remove();
-                    activity(Activity.BLOCK_BROKEN, entry.getKey(), null);
-                    if (watch.original == Blocks.bed) activity(Activity.BED_BROKEN, entry.getKey(), null);
+                    creditBreak(entry.getKey(), watch.bedBase, false, false);
                 } else if (now > watch.expires) iterator.remove();
             }
         }
     }
-    /** Consume one final destroy acknowledgement per position and remove its old watch
-     * before the fallback state sampler can count it a second time. */
+    /** A STOP request alone cannot prove that the server or local controller removed a block. */
     private void confirmCompletedBreaks() {
-        long now = System.currentTimeMillis();
-        recentBreaks.values().removeIf(time -> now - time > 1000);
-        BlockPos position;
-        while ((position = confirmedBreaks.poll()) != null) {
+        C07PacketPlayerDigging packet;
+        while ((packet = digEvents.poll()) != null) {
+            BlockPos position = packet.getPosition();
             BlockWatch watch = watchedBlocks.get(position);
-            // An old dig packet can arrive after another block was placed here.
-            // Preserve that newer placement watch for the world-state sampler.
-            if (watch != null && watch.placement) watch = null;
-            else watchedBlocks.remove(position);
-            if (!minecraft.theWorld.isBlockLoaded(position)) continue;
-            // A late STOP packet must not count a break already observed as air.
-            if ((watch == null || watch.original == Blocks.air) && recentBreaks.containsKey(position)) continue;
-            Block broken = watch == null ? minecraft.theWorld.getBlockState(position).getBlock() : watch.original;
-            recentBreaks.put(position, now);
-            addProfile("blocksBroken", 1L);
-            if (broken == Blocks.bed) addProfile("bedsBroken", 1L);
-            activity(Activity.BLOCK_BROKEN, position, null);
-            if (broken == Blocks.bed) activity(Activity.BED_BROKEN, position, null);
+            if (watch == null || watch.placement) continue;
+            if (packet.getStatus() == C07PacketPlayerDigging.Action.ABORT_DESTROY_BLOCK) {
+                watchedBlocks.remove(position); continue;
+            }
+            if (!minecraft.theWorld.isBlockLoaded(position)) { watchedBlocks.remove(position); continue; }
+            if (minecraft.theWorld.isAirBlock(position)) {
+                watchedBlocks.remove(position);
+                creditBreak(position, watch.bedBase, false, false);
+            }
         }
     }
     private void addProfile(String metric, long amount) {
@@ -375,8 +414,8 @@ public final class StatisticsService {
         movementSampled = false;
         walkedRemainder = 0.0D;
         watchedBlocks.clear();
-        confirmedBreaks.clear();
-        recentBreaks.clear();
+        digEvents.clear();
+        recentBeds.clear();
     }
 
     private void addFavourites(Snapshot snapshot) {

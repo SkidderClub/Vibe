@@ -138,6 +138,8 @@ public final class ModuleManager {
         register(new LanguageModule());
         register(new QolModule());
         register(new ShopSaverModule());
+        register(new dev.vibe.module.impl.client.JoinClaimModule());
+        register(new dev.vibe.module.impl.movement.AntiAimModule());
         register(new NoJumpDelayModule());
         register(new EagleModule());
         register(new FastPlaceModule());

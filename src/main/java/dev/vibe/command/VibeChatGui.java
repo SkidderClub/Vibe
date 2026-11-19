@@ -63,11 +63,17 @@ public final class VibeChatGui extends GuiChat {
             Object hovered=dev.vibe.hud.HudChat.component(org.lwjgl.input.Mouse.getX(),org.lwjgl.input.Mouse.getY());
             if(hovered instanceof net.minecraft.util.IChatComponent)handleComponentHover((net.minecraft.util.IChatComponent)hovered,mouseX,mouseY);
         }else super.drawScreen(mouseX, mouseY, partialTicks);
+        java.util.List<String> actionHelp=dev.vibe.hud.ChatActions.draw(mouseX,mouseY);
+        if(!actionHelp.isEmpty())drawHoveringText(actionHelp,mouseX,mouseY);
         if (inputField != null && inputField.getText().startsWith(".")) {
             String suggestion = Vibe.getInstance().getCommandManager().firstSuggestion(inputField.getText());
             if (suggestion != null && !suggestion.equalsIgnoreCase(inputField.getText())) {
         fontRendererObj.drawStringWithShadow(dev.vibe.language.LanguageManager.format("Tab  %s", suggestion), inputField.xPosition, height - 41, 0xFF8FA5C4);
             }
         }
+    }
+    @Override protected void mouseClicked(int mouseX,int mouseY,int button) throws java.io.IOException {
+        if(dev.vibe.hud.ChatActions.click(mouseX,mouseY,button))return;
+        super.mouseClicked(mouseX,mouseY,button);
     }
 }
