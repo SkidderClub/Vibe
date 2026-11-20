@@ -50,8 +50,10 @@ final class MenuThemes {
         try{store.save();}catch(IOException e){store.custom.clear();store.custom.addAll(previous);return false;}return activate(theme,shaders);
     }
     static boolean deleteCustom(String id,MainMenuShaderManager shaders){ensureStore();List<MenuTheme> previous=new ArrayList<>(store.custom);store.custom.removeIf(t->t.id.equals(id));try{store.save();}catch(IOException e){store.custom.clear();store.custom.addAll(previous);return false;}if(active!=null&&active.id.equals(id))return activate(automatic(shaders.getSelected()),shaders);return true;}
+    static boolean hasSample(String shader){ensureStore();return store.shaderColors.containsKey(shader);}
+    /** First sample wins: shaders animate, so a later sample would recolour the whole menu whenever a preview is rebuilt. */
     static void sampled(String shader,int color){
-        ensureStore();Integer previous=store.shaderColors.put(shader,color);if(previous!=null&&previous==color)return;
+        ensureStore();if(store.shaderColors.putIfAbsent(shader,color)!=null)return;
         try{store.save();}catch(IOException ignored){}
         if(active!=null&&active.automatic()&&active.shader.equals(shader)){active.first=active.second=color;base=selected=active.palette();AccountScreenStyle.applyTheme(selected);persist(false);}
     }

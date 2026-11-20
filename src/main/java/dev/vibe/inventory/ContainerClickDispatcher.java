@@ -29,8 +29,10 @@ public final class ContainerClickDispatcher {
     private static int sharedTick = Integer.MIN_VALUE, sharedSettle = Integer.MIN_VALUE;
 
     public boolean click(Container container, int slot, int button, int mode, long delayMs) {
+        net.minecraft.item.ItemStack carried = minecraft.thePlayer == null ? null : minecraft.thePlayer.inventory.getItemStack();
+        boolean dropCarried = CursorClicks.dropsCarried(slot, button, mode, carried);
         if (container == null || minecraft.thePlayer == null || minecraft.playerController == null
-                || slot < 0 || slot >= container.inventorySlots.size()
+                || (!dropCarried && (slot < 0 || slot >= container.inventorySlots.size()))
                 || (!(minecraft.currentScreen instanceof GuiContainer) && !PlayerInventorySession.owns(this))
                 || minecraft.thePlayer.openContainer != container
                 || container.windowId != minecraft.thePlayer.openContainer.windowId) {
@@ -38,7 +40,10 @@ public final class ContainerClickDispatcher {
             return false;
         }
         if (PlayerInventorySession.isBusy() && !PlayerInventorySession.owns(this)) return false;
-        if (mode != 0 && minecraft.thePlayer.inventory.getItemStack() != null) return false;
+        // Shift-click, drop, number-swap and an occupied-slot left click all
+        // take a slot's item while the cursor is already holding one.
+        // Clicking off the window only throws the stack already in hand.
+        if (!CursorClicks.allowed(container, slot, button, mode, carried)) return false;
         // Do not interleave an automated controller call with a real mouse
         // click.  Vanilla itself serializes GUI actions on the input pass;
         // waiting here lets the user's click fully settle first.

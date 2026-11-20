@@ -45,6 +45,14 @@ public class MenuThemesTest {
             MenuTheme original=MenuThemes.active(shaders);MenuTheme draft=new MenuTheme();draft.first=0xFF123456;MenuThemes.preview(draft);MenuThemes.frame();assertEquals(draft.first,MenuThemes.current().accent);assertEquals(original.id,MenuThemes.active(shaders).id);MenuThemes.preview(null);
         }
     }
+    @Test public void firstShaderSampleWinsSoRebuiltPreviewsDoNotRecolourTheMenu()throws Exception{
+        try(PathTestFixture f=new PathTestFixture()){
+            PathTestFixture.set(Minecraft.class,f.mc,"mcDataDir",temp.newFolder());
+            assertFalse(MenuThemes.hasSample("sampled.frag"));
+            MenuThemes.sampled("sampled.frag",0xFF112233);MenuThemes.sampled("sampled.frag",0xFF445566);
+            assertTrue(MenuThemes.hasSample("sampled.frag"));assertEquals(0xFF112233,MenuThemes.automatic("sampled.frag").first);
+        }
+    }
     @Test public void thumbnailQueueIncludesVisibleAndAdjacentRowsInOrder()throws Exception{
         try(PathTestFixture f=new PathTestFixture()){
             MenuThemesGui gui=new MenuThemesGui(null,new MainMenuShaderManager());

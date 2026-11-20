@@ -438,7 +438,9 @@ public class ScaffoldModuleTest {
 
         scaffold.setEnabled(false);
         for (int tick = 0; tick < 100; tick++) moveFix.tick();
-        assertEquals("Back at the camera", -90.0F, moveFix.getRotationYaw(), 0.0F);
+        // the same way, if on another turn: the camera is put on the turn the aim ended on, so the yaw sent never jumps 360
+        assertEquals("Back at the camera", 0.0F, RotationMath.difference(moveFix.getRotationYaw(), -90.0F), 0.0F);
+        assertEquals(moveFix.getRotationYaw(), player.rotationYaw, 0.0F);
         ((ModeSetting) find("Rotation Mode")).setValue("Acceleration");
         range("Rotation Acceleration").setRange(2.0D, 2.0D);
         scaffold.setEnabled(true);

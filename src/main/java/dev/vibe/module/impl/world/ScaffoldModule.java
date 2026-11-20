@@ -1226,9 +1226,11 @@ public final class ScaffoldModule extends Module {
     public static boolean hypixelPacketHook(Object packet) {
         if (dev.vibe.network.PacketDelayService.isUnmodified(packet)) return true;
         ScaffoldModule module = module();
-        return module == null || !module.isEnabled() || !module.hypixelRotations()
+        boolean permit = module == null || !module.isEnabled() || !module.hypixelRotations()
                 || !(packet instanceof net.minecraft.network.Packet)
                 || module.hypixel.permitsPacket((net.minecraft.network.Packet<?>) packet);
+        if (permit) dev.vibe.module.impl.combat.AIAuraV2Module.sent(packet);
+        return permit;
     }
     public void onHypixelMouse(net.minecraftforge.client.event.MouseEvent event) {
         if (isEnabled() && hypixelRotations() && !hypixel.permitsMouse(event.button)) event.setCanceled(true);

@@ -118,7 +118,14 @@ public final class Vibe {
         config.restoreSession(moduleManager);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try { config.saveSession(moduleManager); }
-            finally { try { extensions.shutdown(); } finally { serverBrowser.shutdown(); } }
+            finally {
+                try {
+                    dev.vibe.module.impl.client.RawMouseInputModule rawMouse = moduleManager.getModule(dev.vibe.module.impl.client.RawMouseInputModule.class);
+                    if (rawMouse != null) rawMouse.shutdown();
+                } finally {
+                    try { extensions.shutdown(); } finally { serverBrowser.shutdown(); }
+                }
+            }
         }, "Vibe-Shutdown"));
         feedback.start();
         refreshLoadedCounts();

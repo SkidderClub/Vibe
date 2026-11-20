@@ -157,6 +157,7 @@ public final class ClientEvents {
     private final ItemEspRenderer itemEspRenderer = new ItemEspRenderer();
     private final CustomCosmeticsRenderer customCosmeticsRenderer = new CustomCosmeticsRenderer();
     private final FreecamHudRenderer freecamHudRenderer = new FreecamHudRenderer();
+    private final dev.vibe.ui.render.DebugInfoRenderer debugInfoRenderer = new dev.vibe.ui.render.DebugInfoRenderer();
     private final dev.vibe.ui.render.PathRenderer pathRenderer = new dev.vibe.ui.render.PathRenderer();
     private final ScaffoldCountRenderer scaffoldCountRenderer = new ScaffoldCountRenderer();
     private final dev.vibe.phone.PhoneRenderer phoneRenderer = new dev.vibe.phone.PhoneRenderer();
@@ -243,6 +244,10 @@ public final class ClientEvents {
             if (Vibe.getInstance().getCommandManager() != null) Vibe.getInstance().getCommandManager().tick();
             dev.vibe.module.impl.client.MusicModule music = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.MusicModule.class);
             if (music != null) music.tick();
+            dev.vibe.module.impl.client.RawMouseInputModule rawMouse = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.RawMouseInputModule.class);
+            if (rawMouse != null) rawMouse.tick();
+            dev.vibe.module.impl.client.DebugInfoModule debugInfo = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.client.DebugInfoModule.class);
+            if (debugInfo != null) debugInfo.tick();
             MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
             if (moveFix != null) moveFix.beginRotationTick();
             dev.vibe.features.FeatureHooks.tick();
@@ -266,6 +271,8 @@ public final class ClientEvents {
             if (killaura != null) killaura.tickStart();
             dev.vibe.module.impl.combat.AIAuraModule ai=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AIAuraModule.class);
             if(ai!=null)ai.tickStart();
+            dev.vibe.module.impl.combat.AIAuraV2Module v2=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AIAuraV2Module.class);
+            if(v2!=null)v2.tickStart();
             // Scaffold's rotation must win: it keeps the player on the bridge.
             ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
             if (scaffold != null) scaffold.tickStart();
@@ -359,6 +366,9 @@ public final class ClientEvents {
             if (killaura != null) killaura.tickEnd();
             dev.vibe.module.impl.combat.AIAuraModule ai=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AIAuraModule.class);
             if(ai!=null)ai.tickEnd();
+            dev.vibe.module.impl.combat.AIAuraV2Module v2=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AIAuraV2Module.class);
+            if(v2!=null)v2.tickEnd();
+            dev.vibe.module.impl.combat.AIAuraV2Module.learnTick();
             ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
             if (scaffold != null) scaffold.tickEnd();
             dev.vibe.module.impl.visual.PathModule path = Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.PathModule.class);
@@ -478,6 +488,7 @@ public final class ClientEvents {
     @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.HIGHEST)
     public void onRavenMouse(net.minecraftforge.client.event.MouseEvent event) {
         if(event.dx!=0||event.dy!=0||event.dwheel!=0||event.buttonstate)dev.vibe.features.UserActivity.mark();
+        if(event.button==0&&event.buttonstate)dev.vibe.module.impl.combat.AIAuraV2Module.learnClick(event.nanoseconds);
         KillAuraModule aura = Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);
         if (aura != null) aura.onHypixelMouse(event);
         ScaffoldModule scaffold = Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
@@ -579,6 +590,7 @@ public final class ClientEvents {
                     if (fly != null) fly.renderRewoundProgress(event.resolution.getScaledWidth(), event.resolution.getScaledHeight());
                     if (deferredCrosshair) customCrosshairRenderer.render();
                     freecamHudRenderer.render();
+                    debugInfoRenderer.render();
                 }
                 if (hypixel != null) hypixel.renderPitBotBanner();
             } else {
@@ -971,6 +983,7 @@ public final class ClientEvents {
             return;
         }
         if (Vibe.getInstance().getStatistics() != null) Vibe.getInstance().getStatistics().recordAttack((EntityLivingBase) event.target);
+        dev.vibe.module.impl.combat.AIAuraV2Module.learnAttack(event.target);
         dev.vibe.module.impl.visual.KillEffectsModule kills=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.KillEffectsModule.class);if(kills!=null)kills.attack((EntityLivingBase)event.target);
         WTapModule wTap = Vibe.getInstance().getModuleManager().getModule(WTapModule.class);
         if (wTap != null) wTap.onAttack((EntityLivingBase) event.target);

@@ -330,13 +330,16 @@ public final class PacketDelayService {
         }
 
         @Override public void channelRead(ChannelHandlerContext ctx, Object message) throws Exception {
+            long nowMs = System.nanoTime() / 1000000L;
+            if (message instanceof Packet) dev.vibe.debuginfo.PacketTrafficTracker.observeInbound(ctx.channel(), nowMs);
             if(message instanceof net.minecraft.network.play.server.S03PacketTimeUpdate)
-                dev.vibe.hud.ServerTickRate.observe(ctx.channel(),((net.minecraft.network.play.server.S03PacketTimeUpdate)message).getTotalWorldTime(),System.nanoTime()/1000000);
+                dev.vibe.hud.ServerTickRate.observe(ctx.channel(),((net.minecraft.network.play.server.S03PacketTimeUpdate)message).getTotalWorldTime(),nowMs);
             if (message instanceof Packet && delayInbound((Packet<?>) message, ctx)) return;
             super.channelRead(ctx, message);
         }
 
         @Override public void write(ChannelHandlerContext ctx, Object message, ChannelPromise promise) throws Exception {
+            if (message instanceof Packet) dev.vibe.debuginfo.PacketTrafficTracker.observeOutbound(ctx.channel(), System.nanoTime() / 1000000L);
             if (message instanceof Packet && delayOutbound((Packet<?>) message, ctx, promise)) return;
             super.write(ctx, message, promise);
         }

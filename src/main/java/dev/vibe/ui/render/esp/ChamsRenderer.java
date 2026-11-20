@@ -15,8 +15,6 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemArmor;
-import net.minecraft.item.ItemStack;
 import org.apache.logging.log4j.LogManager;
 import org.lwjgl.opengl.*;
 
@@ -83,12 +81,12 @@ public final class ChamsRenderer {
         render((ModelBase) model, (Entity) entity, swing, amount, age, yaw, pitch, scale, true);
     }
 
-    public static int armorColor(Object armor, Object stack, Object entity) {
-        return appliesTo(entity) ? -1 : ((ItemArmor) armor).getColor((ItemStack) stack);
+    public static int armorColor(int color, Object entity) {
+        return appliesTo(entity) ? -1 : color;
     }
 
-    public static boolean armorHasEffect(Object stack, Object entity) {
-        return !appliesTo(entity) && ((ItemStack) stack).hasEffect();
+    public static boolean armorHasEffect(boolean effect, Object entity) {
+        return effect && !appliesTo(entity);
     }
 
     private static void render(ModelBase model, Entity entity, float swing, float amount, float age,

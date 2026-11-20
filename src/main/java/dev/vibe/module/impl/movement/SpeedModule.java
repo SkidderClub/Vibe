@@ -63,7 +63,7 @@ public final class SpeedModule extends Module {
 
     public void tick() {
         synchronizeRewound();
-        if (!isEnabled() || waterPause() || rewoundStepPaused || AutoWalkModule.reservesJump() || dev.vibe.module.impl.world.ScaffoldModule.ownsStationaryNcpJump() || minecraft.thePlayer == null || minecraft.currentScreen != null) return;
+        if (!isEnabled() || waterPause() || flightActive() || rewoundStepPaused || AutoWalkModule.reservesJump() || dev.vibe.module.impl.world.ScaffoldModule.ownsStationaryNcpJump() || minecraft.thePlayer == null || minecraft.currentScreen != null) return;
         EntityPlayerSP p = minecraft.thePlayer;
         if (mode.is("Rewound")) return; // Runs at moveEntity, never at tick end.
         if (mode.is("Custom")) { tickCustom(p); return; }
@@ -199,7 +199,7 @@ public final class SpeedModule extends Module {
         rewound.reset(minecraft.thePlayer);
         aacYSpoofStage = 0;
         aacYSpoofReset = false;
-        if (waterPause()||dev.vibe.module.impl.world.ScaffoldModule.ownsStationaryNcpJump()) return;
+        if (waterPause()||flightActive()||dev.vibe.module.impl.world.ScaffoldModule.ownsStationaryNcpJump()) return;
         if (minecraft.thePlayer != null && mode.is("Custom")) {
             if (resetXZ.isEnabled()) AacMovementSupport.stopXZ(minecraft.thePlayer);
             if (resetY.isEnabled()) AacMovementSupport.stopY(minecraft.thePlayer);
@@ -219,8 +219,9 @@ public final class SpeedModule extends Module {
     private boolean synchronizeRewound() {
         EntityPlayerSP p = minecraft.thePlayer;
         boolean liquid=waterPause();
-        if (liquid || isEnabled()&&(AutoWalkModule.reservesJump()||dev.vibe.module.impl.world.ScaffoldModule.ownsStationaryNcpJump())) { releaseLegacyTweaks(); aacYSpoofStage=0; aacYSpoofReset=false; }
-        boolean active = isEnabled() && !liquid && !rewoundStepPaused && !AutoWalkModule.reservesJump() && !dev.vibe.module.impl.world.ScaffoldModule.ownsStationaryNcpJump() && mode.is("Rewound") && p != null && p.worldObj != null && p.worldObj == minecraft.theWorld
+        boolean flying = flightActive();
+        if (liquid || flying || isEnabled()&&(AutoWalkModule.reservesJump()||dev.vibe.module.impl.world.ScaffoldModule.ownsStationaryNcpJump())) { releaseLegacyTweaks(); aacYSpoofStage=0; aacYSpoofReset=false; }
+        boolean active = isEnabled() && !liquid && !flying && !rewoundStepPaused && !AutoWalkModule.reservesJump() && !dev.vibe.module.impl.world.ScaffoldModule.ownsStationaryNcpJump() && mode.is("Rewound") && p != null && p.worldObj != null && p.worldObj == minecraft.theWorld
                 && !p.isSpectator() && p.ridingEntity == null;
         // Switching modes must not let Rewound inherit a legacy timer as its baseline.
         if (active) releaseLegacyTweaks();
@@ -228,6 +229,10 @@ public final class SpeedModule extends Module {
         rewoundActive = active;
         rewoundPlayer = p;
         return active;
+    }
+    private static boolean flightActive() {
+        FlyModule fly = dev.vibe.features.FeatureModule.module(FlyModule.class);
+        return fly != null && fly.isEnabled();
     }
     /** Also runs in menus, where ClientEvents skips the ordinary movement ticks. */
     public void maintainRewound() { synchronizeRewound(); }
@@ -250,7 +255,7 @@ public final class SpeedModule extends Module {
                 ? rewound.move(minecraft.thePlayer, x, y, z, rewoundTimer.isEnabled(), rewoundFastFall.getValue()) : null;
     }
     public void rewoundAfterMove(Object entity, double[] move) {
-        if (move != null && entity == minecraft.thePlayer && synchronizeRewound()) rewound.afterMove(minecraft.thePlayer, move);
+        if (move != null && move.length >= 4 && entity == minecraft.thePlayer && synchronizeRewound()) rewound.afterMove(minecraft.thePlayer, move);
     }
     public void rewoundCorrection(net.minecraft.network.play.server.S08PacketPlayerPosLook packet) {
         if (synchronizeRewound()) rewound.correction(minecraft.thePlayer, packet);

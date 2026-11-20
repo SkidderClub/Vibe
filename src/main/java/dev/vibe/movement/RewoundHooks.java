@@ -52,9 +52,10 @@ public final class RewoundHooks {
     public static double[] move(Object entity, double x, double y, double z) {
         if (entity != Minecraft.getMinecraft().thePlayer) return null;
         final FlyModule fly = module(FlyModule.class);
+        SpeedModule speed = module(SpeedModule.class);
+        if (fly != null && fly.isEnabled() && speed != null) speed.maintainRewound();
         final double[] flight = fly == null ? null : fly.rewoundMove(entity);
         if (flight != null) return flight;
-        SpeedModule speed = module(SpeedModule.class);
         double[] result=speed==null?null:speed.rewoundMove(entity,x,y,z);
         dev.vibe.module.impl.movement.JesusModule jesus=module(dev.vibe.module.impl.movement.JesusModule.class);
         double[] water=jesus==null?null:jesus.move(entity,result==null?x:result[0],result==null?y:result[1],result==null?z:result[2]);
@@ -74,7 +75,13 @@ public final class RewoundHooks {
         if (entity != Minecraft.getMinecraft().thePlayer) return;
         PhaseModule phase=module(PhaseModule.class);if(phase!=null)phase.beforeWalking(entity);
         final FlyModule fly = module(FlyModule.class);
-        if (fly != null) fly.rewoundBeforeWalking(entity);
+        if (fly != null) {
+            if (fly.isEnabled()) {
+                SpeedModule speed = module(SpeedModule.class);
+                if (speed != null) speed.maintainRewound();
+            }
+            fly.rewoundBeforeWalking(entity);
+        }
         CriticalsModule criticals = module(CriticalsModule.class);
         if (criticals != null) criticals.rewoundBeforeWalking(entity);
         dev.vibe.module.impl.movement.JesusModule jesus=module(dev.vibe.module.impl.movement.JesusModule.class);

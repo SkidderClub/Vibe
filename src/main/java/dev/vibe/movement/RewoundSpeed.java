@@ -93,6 +93,7 @@ public final class RewoundSpeed {
 
     /** The source emits post-step only after collision resolution chooses a raised path. */
     public void afterMove(EntityPlayerSP player, double[] move) {
+        if (player == null || move == null || move.length < 4) return;
         double rise = player.getEntityBoundingBox().minY - move[3];
         if (!player.noClip && player.isCollidedVertically && rise > Math.max(0, move[1]) + 1E-7) {
             float height = (float) rise;

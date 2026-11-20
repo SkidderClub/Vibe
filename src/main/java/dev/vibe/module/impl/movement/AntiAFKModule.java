@@ -159,7 +159,7 @@ public final class AntiAFKModule extends Module {
         Minecraft mc = Minecraft.getMinecraft();
         if (anti.onlyWithFreecam.isEnabled() && !FreecamModule.cameraActiveHook()) { anti.cancelActions(); return; }
         AutoClickerModule clicker = module(AutoClickerModule.class);
-        KillAuraModule aura = module(KillAuraModule.class);
+        KillAuraModule aura = KillAuraModule.activeController();
         if (mc.currentScreen != null || mc.thePlayer != anti.player || !mc.inGameHasFocus || mc.thePlayer.isUsingItem()
                 || VanillaClicks.physicallyDown(mc.gameSettings.keyBindAttack)
                 || clicker != null && clicker.isEnabled() || aura != null && aura.isEnabled()) return;

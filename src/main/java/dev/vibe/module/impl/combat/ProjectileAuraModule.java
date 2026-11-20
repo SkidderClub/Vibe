@@ -114,9 +114,7 @@ public final class ProjectileAuraModule extends dev.vibe.module.Module {
         return false;
     }
     private EntityLivingBase targetFromAura() {
-        AIAuraModule ai = module(AIAuraModule.class);
-        if (ai != null && ai.isEnabled() && ai.getTarget() != null) return ai.getTarget();
-        KillAuraModule aura = module(KillAuraModule.class);
+        KillAuraModule aura = KillAuraModule.activeController();
         return aura != null && aura.isEnabled() ? aura.getTarget() : null;
     }
     private boolean valid(EntityLivingBase entity, TargetsModule filters) {

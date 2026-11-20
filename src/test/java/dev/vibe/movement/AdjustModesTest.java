@@ -97,6 +97,39 @@ public class AdjustModesTest {
         }
     }
 
+    @Test public void flightWithRewoundSpeedDoesNotCrashAfterMoveAndReleasesSpeedTimer() throws Exception {
+        try (RewoundModesTest.Fixture fixture = new RewoundModesTest.Fixture()) {
+            ((ModeSetting) fixture.speed.getSettings().stream().filter(s -> s.getName().equals("Mode")).findFirst().get()).setValue("Rewound");
+            fixture.speed.setEnabled(true);
+            fixture.player.movementInput.moveForward = 1;
+            final double[] speedMove = RewoundHooks.move(fixture.player, 0, 0, 0);
+            assertNotNull(speedMove);
+            assertEquals(4, speedMove.length);
+            assertEquals(1.2F, CombatTimerAccess.getSpeed(), 0.0001F);
+
+            final FlyModule fly = flight();
+            fly.rewoundDisabler.setValue(false);
+            fly.rewoundDamage.setValue("None");
+            fly.rewoundTimer.setValue(false);
+            fixture.player.ticksExisted = 40;
+            fly.setEnabled(true);
+            // Calling moveEntity / afterMove with Fly's 3-element array must not throw ArrayIndexOutOfBoundsException,
+            // and Speed must yield its timer while Fly is active.
+            final double[] flightMove = RewoundHooks.move(fixture.player, 0, 0, 0);
+            assertNotNull(flightMove);
+            assertEquals(3, flightMove.length);
+            RewoundHooks.afterMove(fixture.player, flightMove);
+            fixture.player.moveEntity(0, 0, 0);
+            assertEquals(1.0F, CombatTimerAccess.getSpeed(), 0.0001F);
+
+            // Defensive check directly on RewoundSpeed.afterMove as well.
+            new RewoundSpeed().afterMove(fixture.player, new double[] { 0, 0, 0 });
+
+            fly.setEnabled(false);
+            fixture.speed.setEnabled(false);
+        }
+    }
+
     @Test public void criticalsYieldToJumpMiningAndFlightAndResetAcrossPlayers() throws Exception {
         try (RewoundModesTest.Fixture fixture = new RewoundModesTest.Fixture()) {
             final CriticalsModule criticals = register(new CriticalsModule());

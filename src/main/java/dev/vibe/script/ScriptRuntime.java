@@ -321,7 +321,7 @@ public final class ScriptRuntime {
         return new String(Files.readAllBytes(local.toPath()), StandardCharsets.UTF_8);
     }
 
-    private String header(String className, String name) {
+    static String header(String className, String name) {
         return "import java.awt.Color;\nimport java.util.*;\nimport java.util.concurrent.*;\n"
                 + "import java.util.concurrent.atomic.*;\nimport java.util.regex.*;\n"
                 + "import keystrokesmod.script.model.*;\n"
@@ -329,7 +329,8 @@ public final class ScriptRuntime {
                 + "import keystrokesmod.script.packet.serverbound.*;\n"
                 + "public class " + className + " extends keystrokesmod.script.ScriptDefaults {\n"
                 + "public static final keystrokesmod.script.ScriptDefaults.modules modules = new keystrokesmod.script.ScriptDefaults.modules(\"" + escape(name) + "\");\n"
-                + "public static final String scriptName = \"" + escape(name) + "\";\n";
+                // Same line as scriptName so diagnostics keep their line offset.
+                + "public static final String scriptName = \"" + escape(name) + "\"; public static String getScriptName() { return scriptName; }\n";
     }
 
     public synchronized void invoke(String name, String method, Object... args) { Program program = programs.get(normalize(name)); if (program != null) invoke(program, method, args); }

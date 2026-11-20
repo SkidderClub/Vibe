@@ -14,6 +14,7 @@ import net.minecraft.client.gui.inventory.GuiChest;
 import net.minecraft.inventory.ContainerChest;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.Slot;
+import net.minecraft.item.ItemStack;
 import org.lwjgl.input.Keyboard;
 
 /** Delayed chest looter which retains only items Inventory Manager considers useful. */
@@ -64,6 +65,17 @@ public final class ChestStealerModule extends Module {
             cursorReady = false;
         }
         if(now<nextAction)return;
+        ItemStack carried = minecraft.thePlayer.inventory.getItemStack();
+        if (carried != null) {
+            // The previous take left a stack on the cursor. Put it into the
+            // player inventory before shift-clicking anything else.
+            int place = placeCarried(chest, carried);
+            if (place < 0) return;
+            long interval = mode.is("Advanced") ? advancedDelay(null) : pick(stealDelay);
+            if (!clicks.click(chest, place, 0, 0, interval)) return;
+            nextAction = now + interval;
+            return;
+        }
         List<Slot> candidates = usefulSlots(chest);
         if (candidates.isEmpty()) {
             if (emptySince == 0L) {emptySince = now;closeAt=now+pick(closeDelay);}
@@ -108,9 +120,27 @@ public final class ChestStealerModule extends Module {
         int chestSlots = chest.getLowerChestInventory().getSizeInventory();
         for (int index = 0; index < chestSlots && index < chest.inventorySlots.size(); index++) {
             Slot slot = chest.getSlot(index);
-            if (slot != null && slot.getHasStack() && InventoryManagerModule.shouldKeep(slot.getStack())) result.add(slot);
+            if (slot != null && slot.getHasStack() && InventoryManagerModule.shouldKeep(slot.getStack())
+                    && canStore(chest, slot.getStack())) result.add(slot);
         }
         return result;
+    }
+
+    /** Player-side slot that can take the carried stack without swapping another item onto the cursor. */
+    private int placeCarried(ContainerChest chest, ItemStack carried) {
+        int chestSlots = chest.getLowerChestInventory().getSizeInventory();
+        int merge = -1;
+        for (int index = chestSlots; index < chest.inventorySlots.size(); index++) {
+            Slot slot = chest.getSlot(index);
+            if (!dev.vibe.inventory.CursorClicks.canPlace(slot, carried)) continue;
+            if (!slot.getHasStack()) return index;
+            if (merge < 0) merge = index;
+        }
+        return merge;
+    }
+
+    private boolean canStore(ContainerChest chest, ItemStack stack) {
+        return placeCarried(chest, stack) >= 0;
     }
 
     private Slot selectDefault(List<Slot> candidates) {

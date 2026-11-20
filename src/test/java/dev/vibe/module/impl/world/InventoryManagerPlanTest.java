@@ -27,6 +27,18 @@ public class InventoryManagerPlanTest {
     }
     @After public void close() throws Exception { field(Minecraft.class, "theMinecraft").set(null, previous); }
 
+    @Test public void occupiedSlotIsClearedBeforeABetterItemIsPickedUp() throws Exception {
+        InventoryLayout layout = new InventoryLayout();
+        layout.set(9, Type.SWORD);
+        inventory.items.setInventorySlotContents(9, new ItemStack(net.minecraft.init.Blocks.dirt));
+        inventory.items.setInventorySlotContents(10, new ItemStack(Items.diamond_sword));
+        Object move = plan("arrangeOne", layout);
+        assertEquals(9, integer(move, "slot"));
+        assertEquals(11, integer(move, "target"));
+        assertEquals(-1, integer(move, "hotbarButton"));
+        for (int slot = 11; slot <= 44; slot++) inventory.items.setInventorySlotContents(slot, new ItemStack(net.minecraft.init.Blocks.cobblestone));
+        assertNull(plan("arrangeOne", layout));
+    }
     @Test public void plansSwordBeforeArmorBeforeSuppliesRegardlessOfAssignmentOrder() throws Exception {
         InventoryLayout layout = new InventoryLayout(); layout.set(8, Type.FOOD); layout.set(0, Type.SWORD);
         inventory.items.setInventorySlotContents(10, new ItemStack(Items.apple));

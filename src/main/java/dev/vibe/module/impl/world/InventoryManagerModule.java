@@ -36,8 +36,11 @@ import org.lwjgl.input.Keyboard;
  * A plan is recomputed from the live container and only one vanilla
  * PlayerController.windowClick is sent per delay interval. Pickup swaps are
  * never queued as raw clicks: the carried stack is checked between each of
- * their three steps, so a rejected transaction cannot desynchronise the next
- * click or touch a newly opened container.
+ * their steps, so a rejected transaction cannot desynchronise the next
+ * click. A held stack is only ever placed or merged: clicking an occupied
+ * slot while already holding an item would take that slot's item too.
+ * A click that does not actually move the stack is abandoned, and the next
+ * attempt waits longer each time instead of repeating the failed packet.
  */
 public final class InventoryManagerModule extends Module {
     private final ModeSetting mode = addSetting(new ModeSetting("Mode", "OpenInv", "OpenInv", "Vanilla"));
@@ -56,6 +59,7 @@ public final class InventoryManagerModule extends Module {
     private long nextAction;
     private int cursorSlot = -1;
     private long cursorUntil;
+    private int strikes;
 
     public InventoryManagerModule() {
         super("Inventory Manager", "Sort tools, armour and supplies into the Inventory Editor layout", Category.WORLD, Keyboard.KEY_NONE);
@@ -86,7 +90,13 @@ public final class InventoryManagerModule extends Module {
         if (now < nextAction) return;
 
         InventoryLayout layout = layout();
-        if (pendingAction == null) {
+        ItemStack carried = minecraft.thePlayer.inventory.getItemStack();
+        if (carried != null && !placing(pendingAction)) {
+            int place = findSafePlace(container, layout, carried, -1);
+            // A full inventory has no empty or matching slot. Throwing the
+            // carried stack is the click that clears the hand without swapping.
+            pendingAction = place < 0 ? PendingAction.dropHeld() : PendingAction.placeHeld(place);
+        } else if (pendingAction == null) {
             pendingAction = arrangeOne(container, layout);
             if (pendingAction == null) pendingAction = dropOneBinItem(container, layout);
             if (pendingAction == null && dropDuplicates.isEnabled()) pendingAction = dropOneDuplicate(container, layout);
@@ -97,13 +107,17 @@ public final class InventoryManagerModule extends Module {
             nextAction = now + pick(delay);
             return;
         }
-        if(minecraft.currentScreen==null&&!session.open("Silent"))return;
+        if (minecraft.currentScreen == null && !session.open("Silent", minecraft.thePlayer.inventory.getItemStack() != null)) {
+            nextAction = now + pick(delay);
+            return;
+        }
         boolean sent = executePending(container, pendingAction, now);
         if (sent || pendingAction == null) {
             // The next step is delayed exactly like RavenBS's delayedClick;
             // no burst of pickup, put and return clicks is emitted in one
-            // client tick.
-            nextAction = now + lastInterval;
+            // client tick. A failed click may already have scheduled a longer pause.
+            long soon = now + lastInterval;
+            if (nextAction < soon) nextAction = soon;
         }
     }
 
@@ -150,7 +164,12 @@ public final class InventoryManagerModule extends Module {
                 }
                 if(existing==null&&best.getItem() instanceof ItemArmor&&target==5+((ItemArmor)best.getItem()).armorType)
                     return new PendingAction(ActionKind.EQUIP,source,target,-1,type,null,0);
-                return PendingAction.pickup(source, target, type);
+                if (existing != null && !dev.vibe.inventory.CursorClicks.canPlace(container.getSlot(target), best)) {
+                    int park = findSafePlace(container, layout, existing, target);
+                    if (park < 0) continue;
+                    return PendingAction.pickup(target, park, classify(existing), existing);
+                }
+                return PendingAction.pickup(source, target, type, best);
             }
         }
         return null;
@@ -246,12 +265,13 @@ public final class InventoryManagerModule extends Module {
     }
 
     private boolean executePending(Container container, PendingAction action, long now) {
-        if (action == null || container != minecraft.thePlayer.openContainer || action.slot < 0
-                || action.slot >= container.inventorySlots.size()) {
+        if (action == null || container != minecraft.thePlayer.openContainer
+                || (action.kind != ActionKind.DROP_HELD && (action.slot < 0 || action.slot >= container.inventorySlots.size()))) {
             pendingAction = null;
             return false;
         }
         long interval = pick(delay);lastInterval=interval;
+        if (action.kind == ActionKind.DROP_HELD) return dropCarried(container, interval, now);
         if (action.kind == ActionKind.DROP) {
             ItemStack stack = container.getSlot(action.slot).getStack();
             // Drops keep the exact original manager decision (including
@@ -270,8 +290,11 @@ public final class InventoryManagerModule extends Module {
         if(action.kind==ActionKind.EQUIP){
             ItemStack stack=container.getSlot(action.slot).getStack();
             if(stack==null||!InventoryLayout.matches(action.type,stack)||container.getSlot(action.target).getHasStack()){pendingAction=null;return false;}
+            Item expected=stack.getItem(); int damage=stack.getItemDamage();
             if(!clicks.click(container,action.slot,0,1,interval))return false;
-            pendingAction=null;cursorSlot=action.target;cursorUntil=now+450;return true;
+            ItemStack equipped=container.getSlot(action.target).getStack();
+            if(equipped==null||equipped.getItem()!=expected||equipped.getItemDamage()!=damage)return fail(now);
+            pendingAction=null;cursorSlot=action.target;cursorUntil=now+450;strikes=0;return true;
         }
         if (action.kind == ActionKind.HOTBAR_SWAP) {
             ItemStack source = container.getSlot(action.slot).getStack();
@@ -279,44 +302,124 @@ public final class InventoryManagerModule extends Module {
                 pendingAction = null;
                 return false;
             }
+            Item expected = source.getItem();
+            int damage = source.getItemDamage();
             if (!clicks.click(container, action.slot, action.hotbarButton, 2, interval)) return false;
+            ItemStack landed = minecraft.thePlayer.inventory.getStackInSlot(action.hotbarButton);
+            if (landed == null || landed.getItem() != expected || landed.getItemDamage() != damage) return fail(now);
             cursorSlot = action.slot;
             cursorUntil = now + 450L;
             pendingAction = null;
+            strikes = 0;
             return true;
         }
 
-        // Pickup, put and return are separate controller actions. Never send
-        // step two/three until the client has the expected carried stack.
+        // Pickup and put stay separate. The put only targets an empty slot or
+        // a matching stack with room, so it cannot take a second item.
         if (action.phase == 0) {
-            if (minecraft.thePlayer.inventory.getItemStack() != null
-                    || !InventoryLayout.matches(action.type, container.getSlot(action.slot).getStack())) {
+            ItemStack stack = container.getSlot(action.slot).getStack();
+            if (minecraft.thePlayer.inventory.getItemStack() != null || stack == null
+                    || stack.getItem() != action.expectedItem || stack.getItemDamage() != action.expectedDamage
+                    || (action.type != null && !InventoryLayout.matches(action.type, stack))) {
                 pendingAction = null;
                 return false;
             }
+            Item expected = stack.getItem();
+            int damage = stack.getItemDamage();
             if (!clicks.click(container, action.slot, 0, 0, interval)) return false;
+            ItemStack held = minecraft.thePlayer.inventory.getItemStack();
+            if (held == null || held.getItem() != expected || held.getItemDamage() != damage) return fail(now);
             action.phase = 1;
             cursorSlot = action.slot;
-        } else if (action.phase == 1) {
-            if (minecraft.thePlayer.inventory.getItemStack() == null || action.target < 0
-                    || action.target >= container.inventorySlots.size()) {
-                pendingAction = null;
-                return false;
-            }
-            if (!clicks.click(container, action.target, 0, 0, interval)) return false;
-            action.phase = 2;
-            cursorSlot = action.target;
+            strikes = 0;
         } else {
-            if (minecraft.thePlayer.inventory.getItemStack() == null) {
+            ItemStack held = minecraft.thePlayer.inventory.getItemStack();
+            if (held == null) {
                 pendingAction = null;
                 return false;
             }
-            if (!clicks.click(container, action.slot, 0, 0, interval)) return false;
-            cursorSlot = action.slot;
-            pendingAction = null;
+            int place = action.phase == 1 && action.target >= 0 && action.target < container.inventorySlots.size()
+                    && dev.vibe.inventory.CursorClicks.canPlace(container.getSlot(action.target), held) ? action.target : -1;
+            if (place < 0) place = findSafePlace(container, layout(), held, action.slot);
+            if (place < 0) return dropCarried(container, interval, now);
+            Item expected = held.getItem();
+            int damage = held.getItemDamage();
+            int before = held.stackSize;
+            if (!clicks.click(container, place, 0, 0, interval)) return false;
+            ItemStack after = minecraft.thePlayer.inventory.getItemStack();
+            if (after != null && (after.getItem() != expected || after.getItemDamage() != damage || after.stackSize >= before)) return fail(now);
+            cursorSlot = place;
+            strikes = 0;
+            if (after == null) pendingAction = null;
+            else action.phase = 2;
         }
         cursorUntil = now + 450L;
         return true;
+    }
+
+    /** Vanilla click outside the GUI. Nothing in a slot is picked up. */
+    private boolean dropCarried(Container container, long interval, long now) {
+        if (minecraft.thePlayer.inventory.getItemStack() == null) {
+            pendingAction = null;
+            return false;
+        }
+        if (!clicks.click(container, -999, 0, 0, interval)) return false;
+        if (minecraft.thePlayer.inventory.getItemStack() != null) return fail(now);
+        pendingAction = null;
+        strikes = 0;
+        cursorSlot = -1;
+        cursorUntil = now + 450L;
+        return true;
+    }
+
+    /** The click was sent, but the stack is still where it was. Wait longer before trying that sort again. */
+    private boolean fail(long now) {
+        pendingAction = null;
+        strikes = Math.min(6, strikes + 1);
+        long pause = Math.max(lastInterval, 200L * strikes);
+        if (nextAction < now + pause) nextAction = now + pause;
+        return false;
+    }
+
+    private static boolean placing(PendingAction action) {
+        return action != null && action.kind == ActionKind.PICKUP && action.phase > 0;
+    }
+
+    /** First slot where {@code carried} can be set down without swapping. {@code avoid} is the slot just picked up. */
+    private int findSafePlace(Container container, InventoryLayout layout, ItemStack carried, int avoid) {
+        if (carried.getItem() instanceof ItemArmor) {
+            int armorSlot = 5 + ((ItemArmor) carried.getItem()).armorType;
+            if (armorSlot != avoid && armorSlot < container.inventorySlots.size() && !layout.isIgnoredContainerSlot(armorSlot)
+                    && dev.vibe.inventory.CursorClicks.canPlace(container.getSlot(armorSlot), carried)) return armorSlot;
+        }
+        int empty = -1;
+        int assignedEmpty = -1;
+        int merge = -1;
+        int retreat = -1;
+        for (int slot = 9; slot <= 44 && slot < container.inventorySlots.size(); slot++) {
+            if (layout.isIgnoredContainerSlot(slot) || assignedType(layout, slot) == Type.BARRIER) continue;
+            net.minecraft.inventory.Slot target = container.getSlot(slot);
+            if (!dev.vibe.inventory.CursorClicks.canPlace(target, carried)) continue;
+            if (slot == avoid) {
+                if (!target.getHasStack() && retreat < 0) retreat = slot;
+                continue;
+            }
+            if (!target.getHasStack()) {
+                if (assignedType(layout, slot) == null) {
+                    if (empty < 0) empty = slot;
+                } else if (assignedEmpty < 0) assignedEmpty = slot;
+            } else if (merge < 0) merge = slot;
+        }
+        if (empty >= 0) return empty;
+        if (assignedEmpty >= 0) return assignedEmpty;
+        return merge >= 0 ? merge : retreat;
+    }
+
+    private static Type assignedType(InventoryLayout layout, int containerSlot) {
+        for (Map.Entry<Integer, Type> entry : layout.assignments().entrySet()) {
+            if (entry.getKey() < 40 && InventoryLayout.toContainerSlot(entry.getKey()) == containerSlot) return entry.getValue();
+        }
+        return null;
     }
 
     private boolean isUnique(Type type) {
@@ -351,6 +454,7 @@ public final class InventoryManagerModule extends Module {
         pendingAction = null;
         cursorSlot = -1;
         cursorUntil = 0L;
+        strikes = 0;
         clicks.reset();
     }
 
@@ -424,7 +528,7 @@ public final class InventoryManagerModule extends Module {
         return result - stack.getItemDamage() * 0.0001D;
     }
 
-    private enum ActionKind { DROP, HOTBAR_SWAP, PICKUP,EQUIP }
+    private enum ActionKind { DROP, HOTBAR_SWAP, PICKUP, EQUIP, DROP_HELD }
 
     private static final class PendingAction {
         private final ActionKind kind;
@@ -454,8 +558,18 @@ public final class InventoryManagerModule extends Module {
             return new PendingAction(ActionKind.HOTBAR_SWAP, source, -1, button, type, null, 0);
         }
 
-        private static PendingAction pickup(int source, int target, Type type) {
-            return new PendingAction(ActionKind.PICKUP, source, target, -1, type, null, 0);
+        private static PendingAction pickup(int source, int target, Type type, ItemStack stack) {
+            return new PendingAction(ActionKind.PICKUP, source, target, -1, type, stack.getItem(), stack.getItemDamage());
+        }
+
+        private static PendingAction placeHeld(int slot) {
+            PendingAction action = new PendingAction(ActionKind.PICKUP, slot, slot, -1, null, null, 0);
+            action.phase = 1;
+            return action;
+        }
+
+        private static PendingAction dropHeld() {
+            return new PendingAction(ActionKind.DROP_HELD, -1, -1, -1, null, null, 0);
         }
     }
 }

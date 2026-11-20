@@ -58,15 +58,21 @@ public final class ChamsTransformer implements IClassTransformer, Opcodes {
             } else if (armor && named(call.name, "getColor", "func_82814_b", "b")
                     && (call.desc.equals("(Lnet/minecraft/item/ItemStack;)I") || call.desc.equals("(Lzx;)I"))) {
                 // A single material pass also avoids double alpha on dyed leather's overlay.
-                method.instructions.insertBefore(call, new VarInsnNode(ALOAD, 1));
-                method.instructions.set(call, new MethodInsnNode(INVOKESTATIC, HOOK, "armorColor",
-                        "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)I", false));
+                // The vanilla call stays in place and only its result is filtered, so other mods'
+                // mixins that redirect ItemArmor.getColor here (e.g. Meowtils) still find it.
+                filterResult(method, call, "armorColor", "(ILjava/lang/Object;)I");
             } else if (armor && named(call.name, "hasEffect", "func_77962_s", "t") && call.desc.equals("()Z")) {
-                method.instructions.insertBefore(call, new VarInsnNode(ALOAD, 1));
-                method.instructions.set(call, new MethodInsnNode(INVOKESTATIC, HOOK, "armorHasEffect",
-                        "(Ljava/lang/Object;Ljava/lang/Object;)Z", false));
+                filterResult(method, call, "armorHasEffect", "(ZLjava/lang/Object;)Z");
             }
         }
+    }
+
+    /** Passes the call's result and the rendered entity (argument 1) through a ChamsRenderer hook. */
+    private static void filterResult(MethodNode method, MethodInsnNode call, String hook, String desc) {
+        InsnList filter = new InsnList();
+        filter.add(new VarInsnNode(ALOAD, 1));
+        filter.add(new MethodInsnNode(INVOKESTATIC, HOOK, hook, desc, false));
+        method.instructions.insert(call, filter);
     }
 
     /** A finally scope keeps inventory previews and first-person hands on vanilla rendering. */

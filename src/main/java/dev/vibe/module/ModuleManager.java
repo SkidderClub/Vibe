@@ -111,6 +111,7 @@ public final class ModuleManager {
         register(new MoveFixModule());
         register(new KillAuraModule());
         register(new AIAuraModule());
+        register(new dev.vibe.module.impl.combat.AIAuraV2Module());
         register(new SpeedModule());
         register(new FlyModule());
         register(new FreecamModule());
@@ -135,11 +136,13 @@ public final class ModuleManager {
         register(new FlagDetectorModule());
         register(new ParticlesModule());
         register(new DebugModule());
+        register(new DebugInfoModule());
         register(new LanguageModule());
         register(new QolModule());
         register(new ShopSaverModule());
         register(new dev.vibe.module.impl.client.JoinClaimModule());
         register(new dev.vibe.module.impl.movement.AntiAimModule());
+        register(new RawMouseInputModule());
         register(new NoJumpDelayModule());
         register(new EagleModule());
         register(new FastPlaceModule());
