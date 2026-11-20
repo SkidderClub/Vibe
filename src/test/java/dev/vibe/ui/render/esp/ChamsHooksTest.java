@@ -41,7 +41,7 @@ public class ChamsHooksTest implements Opcodes {
         bytes = new ChamsTransformer().transform(raw, mapped, bytes);
         ClassNode node = new ClassNode();
         new ClassReader(bytes).accept(node, 0);
-        int body = 0, armor = 0, color = 0, glint = 0, begin = 0, end = 0, invisible = 0;
+        int body = 0, armor = 0, color = 0, glint = 0, begin = 0, end = 0, invisible = 0, vanillaColor = 0;
         for (Object entry : node.methods) {
             MethodNode method = (MethodNode) entry;
             boolean hooked = false;
@@ -49,6 +49,9 @@ public class ChamsHooksTest implements Opcodes {
                 if (!(instruction instanceof MethodInsnNode)) continue;
                 MethodInsnNode call = (MethodInsnNode) instruction;
                 if (call.owner.equals("dev/vibe/ui/render/esp/InvisibleModelHooks") && call.name.equals("isInvisibleToPlayer")) invisible++;
+                // Other mods' mixins (Meowtils) redirect this call, so it must survive the transform.
+                if ((call.name.equals("getColor") || call.name.equals("func_82814_b") || call.name.equals("b"))
+                        && (call.desc.equals("(Lnet/minecraft/item/ItemStack;)I") || call.desc.equals("(Lzx;)I"))) vanillaColor++;
                 if (!call.owner.equals("dev/vibe/ui/render/esp/ChamsRenderer")) continue;
                 hooked = true;
                 if (call.name.equals("renderBody")) body++;
@@ -63,7 +66,7 @@ public class ChamsHooksTest implements Opcodes {
         }
         if (kind == 0) { assertEquals(1, begin); assertEquals(2, end); }
         if (kind == 1) { assertEquals(1, body); assertEquals(1, invisible); }
-        if (kind == 2) { assertEquals(2, armor); assertEquals(1, color); assertEquals(1, glint); }
+        if (kind == 2) { assertEquals(2, armor); assertEquals(1, color); assertEquals(1, glint); assertEquals(1, vanillaColor); }
     }
 
     @Test public void worldScopeRestoresAfterSuccessAndExceptions() throws Exception {

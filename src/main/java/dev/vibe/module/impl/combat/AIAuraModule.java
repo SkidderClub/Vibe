@@ -45,6 +45,7 @@ public final class AIAuraModule extends KillAuraModule {
     }
     @Override protected void onEnable(){
         KillAuraModule ordinary=Vibe.getInstance()==null?null:Vibe.getInstance().getModuleManager().getModule(KillAuraModule.class);if(ordinary!=null&&ordinary!=this&&ordinary.isEnabled())ordinary.setEnabled(false);
+        AIAuraV2Module v2=Vibe.getInstance()==null?null:Vibe.getInstance().getModuleManager().getModule(AIAuraV2Module.class);if(v2!=null&&v2.isEnabled())v2.setEnabled(false);
         if(!isConfigLoading()&&minecraft.thePlayer!=null&&learning().model()==null)dev.vibe.chat.ClientChat.send(new net.minecraft.util.ChatComponentText("AIAura: open Recorder, record manual play, then train your model."));
     }
     @Override protected boolean canOperate(){return super.canOperate()&&minecraft.inGameHasFocus&&!FreecamModule.cameraActiveHook()&&learning().model()!=null;}

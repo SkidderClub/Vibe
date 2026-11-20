@@ -127,7 +127,7 @@ public class KillAuraModule extends Module {
     }
     protected KillAuraModule(String name,String description){super(name,description,Category.COMBAT,Keyboard.KEY_NONE);}
     @Override protected void onEnable(){
-        if(getClass()==KillAuraModule.class&&Vibe.getInstance()!=null&&Vibe.getInstance().getModuleManager()!=null){AIAuraModule ai=Vibe.getInstance().getModuleManager().getModule(AIAuraModule.class);if(ai!=null&&ai.isEnabled())ai.setEnabled(false);}
+        if(getClass()==KillAuraModule.class&&Vibe.getInstance()!=null&&Vibe.getInstance().getModuleManager()!=null){AIAuraModule ai=Vibe.getInstance().getModuleManager().getModule(AIAuraModule.class);if(ai!=null&&ai.isEnabled())ai.setEnabled(false);AIAuraV2Module v2=Vibe.getInstance().getModuleManager().getModule(AIAuraV2Module.class);if(v2!=null&&v2.isEnabled())v2.setEnabled(false);}
     }
 
     public void tickStart() {
@@ -177,11 +177,26 @@ public class KillAuraModule extends Module {
         }
         ProjectileAuraModule.prepareForAura(this, target);
         advanceRotation(target);
-        fix.setFakeRotation(getId(), rotation.getYaw(), rotation.getPitch());
+        if (turnsCamera()) {
+            // Nyx's Change look: the camera is the aim, so nothing silent is sent, turned back from or moved by
+            fix.discardOwnedState(getId());
+            shownYaw = minecraft.thePlayer.rotationYaw;
+            shownPitch = minecraft.thePlayer.rotationPitch;
+            shown = true;
+            minecraft.thePlayer.rotationYaw = rotation.getYaw();
+            minecraft.thePlayer.rotationPitch = rotation.getPitch();
+        } else fix.setFakeRotation(getId(), rotation.getYaw(), rotation.getPitch());
     }
+    /** The camera as it was before this tick's turn: drawn turning from there over the tick, not jumping each one. */
+    private float shownYaw, shownPitch;
+    private boolean shown;
+    /** True: the aim turns the camera itself (Nyx's Change look) instead of a silent MoveFix rotation. */
+    protected boolean turnsCamera(){return false;}
     protected void advanceRotation(EntityLivingBase entity){Vec3 point=ProjectileAuraModule.rotationAimPoint(this,entity);float[] desired=point==null?rotationsTo(entity):rotationsTo(point);boolean acceleration=rotationMode.is("Acceleration");rotation.advance(desired[0],desired[1],(float)sample(acceleration?rotationAcceleration:rotationSpeed),acceleration,minecraft.gameSettings.mouseSensitivity);}
     protected void targetChanged(EntityLivingBase previous,EntityLivingBase next){}
     protected void resetPolicy(){}
+    /** A subclass's own sword blocking, in place of Autoblock Mode; null leaves it to that setting. */
+    protected Boolean ownBlock(long now){return null;}
     protected double selectionRange(){double range=Math.max(reach.getMax(),clickingRange.getDouble());return !autoblock.is("None")&&!autoblock.is("Hypixel")?Math.max(range,blockingRange.getDouble()):range;}
     protected double clickRange(){return clickingRange.getDouble();}
     protected double attackReach(){return sample(reach);}
@@ -234,7 +249,10 @@ public class KillAuraModule extends Module {
         }
         boolean inClickRange = distanceTo(target) <= clickRange();
         if (!inClickRange) clicks.reset();
-        boolean clickDue = inClickRange && clickDue(now);
+        // your own right click with something that is not a sword - a block, a rod, water - is yours: no click and no
+        // crosshair of the aura's this tick, or it would go to them instead
+        boolean ownUse = VanillaClicks.physicallyDown(minecraft.gameSettings.keyBindUseItem) && !swordHeld();
+        boolean clickDue = inClickRange && !ownUse && clickDue(now);
         boolean inBlockRange = swordHeld() && distanceTo(target) <= blockingRange.getDouble();
         visualBlocking = !autoblock.is("None") && inBlockRange
                 && (autoblock.is("Fake") || !onlyRightClick.isEnabled() || rightMouseDown());
@@ -248,6 +266,8 @@ public class KillAuraModule extends Module {
             wantsBlock &= now < legitBlockUntil;
             visualBlocking = wantsBlock;
         }
+        Boolean own = ownBlock(now);
+        if (own != null) visualBlocking = wantsBlock = own && swordHeld();
         KeyBinding attack = minecraft.gameSettings.keyBindAttack;
         attackOwned = true;
         VanillaClicks.discardPresses(attack);
@@ -259,15 +279,19 @@ public class KillAuraModule extends Module {
         // the following tick, never by injecting release+attack packets here.
         if (minecraft.thePlayer.isUsingItem()) {
             if (minecraft.thePlayer.isBlocking() && (blockOwned || wantsBlock)) {
-                setUseKey(wantsBlock && (!clickDue || autoblock.is("Legit")));
+                setUseKey(wantsBlock && (!clickDue || own != null || autoblock.is("Legit")));
             } else blockOwned = false;
             return;
         }
         blockOwned = false;
-        overrideHit(attackHit(attackReach()));
+        // the crosshair is the aura's only on ticks it clicks or blocks: on the others your own right click is untouched
+        if (clickDue || wantsBlock) overrideHit(attackHit(attackReach()));
         if (clickDue) {
             int count = pollClicks(now);
             for (int i = 0; i < count; i++) VanillaClicks.pulseAttack(attack);
+            // a tap, not a hold: let go before vanilla looks at the button again, so a swing at the air resets its miss
+            // delay as your taps do. Held, the next tick's click was eaten after every air swing
+            KeyBinding.setKeyBindState(attack.getKeyCode(), false);
         }
         if (wantsBlock) {
             // A physical-style use edge; vanilla emits interact-at/interact/use.
@@ -347,7 +371,15 @@ public class KillAuraModule extends Module {
         return Math.max(33, Math.min(180, finalDelay));
     }
 
-    public void tickEnd() { restoreInput(); }
+    public void tickEnd() {
+        restoreInput();
+        // the world tick set prev to the turned camera; the frames until the next tick draw the turn instead
+        if (shown && minecraft.thePlayer != null) {
+            minecraft.thePlayer.prevRotationYaw = shownYaw;
+            minecraft.thePlayer.prevRotationPitch = shownPitch;
+        }
+        shown = false;
+    }
 
     protected boolean canOperate() {
           if (AutoBuffModule.ownsUseInput() || dev.vibe.module.impl.world.AutoWaterModule.reserving() || dev.vibe.inventory.PlayerInventorySession.isBusy()) return false;
@@ -444,7 +476,8 @@ public class KillAuraModule extends Module {
         MovingObjectPosition intercept = box.calculateIntercept(eye, end);
         Vec3 point = box.isVecInside(eye) ? eye : intercept == null ? null : intercept.hitVec;
         if (point == null) return miss;
-        if (!piercing.isEnabled() && minecraft.theWorld.rayTraceBlocks(eye, point, false, true, false) != null) return miss;
+        // as vanilla's crosshair: grass, flowers and torches stop it too
+        if (!piercing.isEnabled() && minecraft.theWorld.rayTraceBlocks(eye, point, false, false, false) != null) return miss;
         // Friends and other entities obstruct this ray even with Piercing on.
         for (Object value : minecraft.theWorld.getEntitiesWithinAABBExcludingEntity(minecraft.thePlayer,
                 minecraft.thePlayer.getEntityBoundingBox().addCoord(end.xCoord - eye.xCoord,
@@ -716,6 +749,8 @@ public class KillAuraModule extends Module {
     private static KillAuraModule module() {
         Vibe vibe = Vibe.getInstance();
         if(vibe==null||vibe.getModuleManager()==null)return null;
+        AIAuraV2Module v2=vibe.getModuleManager().getModule(AIAuraV2Module.class);
+        if(v2!=null&&v2.isEnabled())return v2;
         AIAuraModule ai=vibe.getModuleManager().getModule(AIAuraModule.class);
         return ai!=null&&ai.isEnabled()?ai:vibe.getModuleManager().getModule(KillAuraModule.class);
     }

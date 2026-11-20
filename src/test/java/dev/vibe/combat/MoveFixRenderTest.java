@@ -1,5 +1,6 @@
 package dev.vibe.combat;
 
+import dev.vibe.aiaura.MouseMath;
 import dev.vibe.module.impl.movement.MoveFixModule;
 import java.lang.reflect.Field;
 import net.minecraft.client.Minecraft;
@@ -96,10 +97,17 @@ public class MoveFixRenderTest {
         moveFix.beginRotationTick();
         moveFix.clearFakeRotation("aura");
         moveFix.getRotateBackSpeed().setRange(20, 20);
+        float lastYaw = 10, lastPitch = 8;
         moveFix.tick();
+        for (int i = 0; i < 20 && (moveFix.getRotationYaw() != 0 || moveFix.getRotationPitch() != 0); i++) {   // the turn back eases in
+            lastYaw = moveFix.getRotationYaw();
+            lastPitch = moveFix.getRotationPitch();
+            moveFix.beginRotationTick();
+            moveFix.tick();
+        }
         moveFix.beginPlayerRender(player);
-        assertEquals(5.0F, headAt(0.5F), 0.001F);
-        assertEquals(4.0F, pitchAt(0.5F), 0.001F);
+        assertEquals(lastYaw / 2, headAt(0.5F), 0.001F);
+        assertEquals(lastPitch / 2, pitchAt(0.5F), 0.001F);
         moveFix.endPlayerRender(player);
 
         moveFix.beginRotationTick();
@@ -115,14 +123,50 @@ public class MoveFixRenderTest {
         moveFix.getRotateBackSpeed().setRange(30, 30);
         assertTrue(moveFix.getRotateBackSpeed().isVisible());
         moveFix.tick();
-        assertEquals(70.0F, moveFix.getRotationYaw(), 0.001F);
-        assertEquals(10.0F, moveFix.getRotationPitch(), 0.001F);
+        // Nyx's Smooth back: a third of its speed the first tick, gathering pace, in whole mouse counts
+        assertEquals(90.0F, moveFix.getRotationYaw(), 0.01F);
+        assertEquals(30.0F, moveFix.getRotationPitch(), 0.01F);
+        float step = MouseMath.step(minecraft.gameSettings.mouseSensitivity), turned = 100.0F - moveFix.getRotationYaw();
+        assertEquals("whole mouse counts", Math.round(turned / step), turned / step, 0.01F);
+        float before = moveFix.getRotationYaw();
+        moveFix.tick();
+        assertEquals("then quicker", 20.0F, before - moveFix.getRotationYaw(), 0.01F);
 
         moveFix.getSmoothBackRotate().setEnabled(false);
         assertFalse("The speed only applies to a smooth return", moveFix.getRotateBackSpeed().isVisible());
         moveFix.tick();
         assertEquals(0.0F, moveFix.getRotationYaw(), 0.0F);
         assertEquals(0.0F, moveFix.getRotationPitch(), 0.0F);
+    }
+
+    @Test public void aTurnBackAfterAWholeTurnRoundYouHandsOverWithoutTheYawJumping() {
+        moveFix.beginRotationTick();
+        for (float yaw = 0; yaw <= 370; yaw += 10) moveFix.setFakeRotation("aura", yaw, 0);   // followed someone round past your back
+        moveFix.clearFakeRotation("aura");
+        float sent = moveFix.getRotationYaw();
+        for (int i = 0; i < 40; i++) {
+            moveFix.tick();
+            assertTrue("a mouse's yaw only adds up", Math.abs(moveFix.getRotationYaw() - sent) < 15F);
+            sent = moveFix.getRotationYaw();
+        }
+        assertFalse(moveFix.ownsRotation("aura"));
+        assertEquals("the camera put on the same turn", 360F, player.rotationYaw, 0.01F);
+    }
+
+    @Test public void silentKeysStayUntilTheWayYouSteerIsThirtyDegreesOffThem() {
+        net.minecraft.util.MovementInput input = new net.minecraft.util.MovementInput();
+        float[] strafes = new float[3];
+        float[] fakes = {20F, 25F, 35F};                 // the camera at 0, W held: they are 20, 25 and 35 degrees off W
+        for (int i = 0; i < fakes.length; i++) {
+            moveFix.setFakeRotation("aura", fakes[i], 0, "Silent");
+            input.moveForward = 1F;
+            input.moveStrafe = 0F;
+            moveFix.correctInjectedInput(input);
+            strafes[i] = input.moveStrafe;
+        }
+        assertEquals("W", 0F, strafes[0], 0F);
+        assertEquals("past 22.5 it is still W", 0F, strafes[1], 0F);
+        assertNotEquals("past 30 it turns", 0F, strafes[2], 0F);
     }
 
     @Test public void changingPlayerDiscardsPreviousWorldRotation() throws Exception {
@@ -161,8 +205,8 @@ public class MoveFixRenderTest {
         moveFix.beginRotationTick();moveFix.setFakeRotation("aura",100,40,"Silent");moveFix.setForcedMovement("aura",1,0,true);
         moveFix.getRotateBackSpeed().setRange(10,10);moveFix.releaseOwnedState("aura");
         assertFalse(moveFix.ownsRotation("aura"));assertFalse(moveFix.hasForcedMovement());assertEquals(100,moveFix.getRotationYaw(),0);
-        moveFix.tick();assertEquals(90,moveFix.getRotationYaw(),.001);assertEquals(30,moveFix.getRotationPitch(),.001);
-        for(int i=0;i<12;i++)moveFix.tick();assertEquals(0,moveFix.getRotationYaw(),0);
+        moveFix.tick();assertEquals(100-10/3F,moveFix.getRotationYaw(),.01);assertEquals(40-10/3F,moveFix.getRotationPitch(),.01);
+        for(int i=0;i<40;i++)moveFix.tick();assertEquals(0,moveFix.getRotationYaw(),0);
         moveFix.setFakeRotation("other",75,20);moveFix.releaseOwnedState("aura");assertEquals(75,moveFix.getRotationYaw(),0);
         moveFix.getSmoothBackRotate().setEnabled(false);moveFix.releaseOwnedState("other");assertEquals(0,moveFix.getRotationYaw(),0);
     }

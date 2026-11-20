@@ -1,6 +1,7 @@
 package dev.vibe.module.impl.movement;
 
 import dev.vibe.Vibe;
+import dev.vibe.aiaura.MouseMath;
 import dev.vibe.module.impl.combat.SprintResetModule;
 import dev.vibe.combat.RotationMath;
 import dev.vibe.module.Category;
@@ -262,6 +263,7 @@ public final class MoveFixModule extends Module {
     public void tick() {
         syncRotationPlayer();
         if (rotationOwner != null || fakeRotation == null) {
+            backTicks = 0;
             return;
         }
         EntityPlayerSP player = Minecraft.getMinecraft().thePlayer;
@@ -276,16 +278,44 @@ public final class MoveFixModule extends Module {
             correctionOverride = null;
             return;
         }
+        // Nyx 26.2's Smooth back: it gathers pace over its first three ticks, then covers three tenths of what is
+        // left - quick while far, gentle at the end - never under a degree and a half nor over the speed, and every
+        // step whole mouse counts. An even 8 to 14 degrees a tick, off the mouse's grid, was no hand's
         FakeRotation current = fakeRotation;
-        float yaw = approachAngle(current.yaw, player.rotationYaw, speed);
-        float pitch = approach(current.pitch, player.rotationPitch, speed);
-        if (Math.abs(net.minecraft.util.MathHelper.wrapAngleTo180_float(player.rotationYaw - yaw)) < 0.001F
-                && Math.abs(player.rotationPitch - pitch) < 0.001F) {
+        float top = speed * Math.min(1.0F, ++backTicks / 3.0F), sensitivity = Minecraft.getMinecraft().gameSettings.mouseSensitivity;
+        float gcd = MouseMath.step(sensitivity);
+        float yaw = MouseMath.angle(current.yaw, backCounts(RotationMath.difference(player.rotationYaw, current.yaw), top, gcd), sensitivity);
+        float pitch = MouseMath.pitch(current.pitch, backCounts(player.rotationPitch - current.pitch, top, gcd), sensitivity);
+        if (Math.abs(RotationMath.difference(player.rotationYaw, yaw)) + Math.abs(player.rotationPitch - pitch) < 1.0F) {
+            // the camera takes over: put on the same turn first. Followed round past your back the aim gets there a whole
+            // turn off in count, and the yaw sent jumped 360 degrees, which a mouse - whose yaw only adds up - never does
+            float turns = Math.round((yaw - player.rotationYaw) / 360.0F) * 360.0F;
+            if (turns != 0.0F) {
+                player.rotationYaw += turns;
+                player.prevRotationYaw += turns;
+                player.rotationYawHead += turns;
+                player.prevRotationYawHead += turns;
+                player.renderYawOffset += turns;
+                player.prevRenderYawOffset += turns;
+                player.renderArmYaw += turns;
+                player.prevRenderArmYaw += turns;
+            }
             fakeRotation = null;
             correctionOverride = null;
         } else {
             fakeRotation = new FakeRotation(yaw, pitch);
         }
+    }
+
+    private int backTicks;
+    /** Silent's keys last tick, forward and sideways, -1 to 1; nothing held is 0 and 0. */
+    private int keptForward, keptStrafe;
+
+    /** One tick of the way back along one axis, in mouse counts. */
+    private static int backCounts(float left, float top, float gcd) {
+        float move = left * 0.3F, least = Math.min(Math.abs(left), 1.5F);
+        if (Math.abs(move) < least) move = Math.signum(left) * least;
+        return Math.round(RotationMath.clamp(move, -top, top) / gcd);
     }
 
     public ModeSetting getCorrectMovement() {
@@ -324,15 +354,6 @@ public final class MoveFixModule extends Module {
         return (float) (min + (max <= min ? 0.0D : rotationRandom.nextDouble() * (max - min)));
     }
 
-    private static float approach(float current, float target, float amount) {
-        float difference = target - current;
-        return Math.abs(difference) <= amount ? target : current + Math.copySign(amount, difference);
-    }
-
-    private static float approachAngle(float current, float target, float amount) {
-        return current + RotationMath.clamp(RotationMath.difference(target, current), -amount, amount);
-    }
-
     private boolean usesDirectYaw() {
         return forcedMovementOwner != null || correctionIs("Direct") || correctionIs("Silent");
     }
@@ -353,10 +374,8 @@ public final class MoveFixModule extends Module {
         // This wrapper is the player's keyboard input even when another Vibe
         // wrapper (for example NoSlow) sits outside it.  No other input can
         // call this private wrapper method.
-        if (rotation == null || !correctionIs("Silent")) {
-            return;
-        }
-        if (input.moveForward == 0.0F && input.moveStrafe == 0.0F) {
+        if (rotation == null || !correctionIs("Silent") || input.moveForward == 0.0F && input.moveStrafe == 0.0F) {
+            keptForward = keptStrafe = 0;
             return;
         }
 
@@ -378,6 +397,7 @@ public final class MoveFixModule extends Module {
                 + input.moveStrafe * Math.sin(Math.toRadians(realYaw));
 
         double[] bestMovement = null;
+        double keptOff = Double.MAX_VALUE;
         for (int forward = -1; forward <= 1; forward++) {
             for (int strafe = -1; strafe <= 1; strafe++) {
                 double newMoveX = strafe * inputScale * Math.cos(Math.toRadians(fakeYaw))
@@ -390,9 +410,17 @@ public final class MoveFixModule extends Module {
                 if (bestMovement == null || bestMovement[0] > distance) {
                     bestMovement = new double[] {distance, forward, strafe};
                 }
+                if (forward == keptForward && strafe == keptStrafe && (forward != 0 || strafe != 0)) {
+                    keptOff = Math.toDegrees(Math.abs(Math.atan2(newMoveX * moveZ - newMoveZ * moveX, newMoveX * moveX + newMoveZ * moveZ)));
+                }
             }
         }
+        // Nyx 26.2: the keys stay as they are until the way you steer is 30 degrees off them. Changed at 22.5, an aim
+        // that hung about there had them flicker tick by tick, which no hand does
+        if (keptOff <= 30.0D) bestMovement = new double[] {0.0D, keptForward, keptStrafe};
         if (bestMovement != null) {
+            keptForward = (int) bestMovement[1];
+            keptStrafe = (int) bestMovement[2];
             input.moveForward = (float) bestMovement[1] * inputScale;
             input.moveStrafe = (float) bestMovement[2] * inputScale;
         }

@@ -18,7 +18,11 @@ public class MenuThemesGui extends GuiScreen {
     private final GuiScreen parent;private final MainMenuShaderManager shaders;private final Consumer<String> chooseShader;
     private int left,top,panelWidth,panelHeight,listTop,columns,visibleRows,scrollRow;private boolean custom,choosingFile;
     private MenuTextField search;private String query="",status="";private final List<MenuTheme> entries=new ArrayList<>();
-    private final LinkedHashMap<String,Framebuffer> thumbnails=new LinkedHashMap<>(12,.75F,true);
+    /** Least-recently-drawn previews are evicted, so scrolling back never recompiles a shader the user just saw. */
+    private static final int THUMBNAIL_CACHE=48;
+    private final LinkedHashMap<String,Framebuffer> thumbnails=new LinkedHashMap<String,Framebuffer>(64,.75F,true){
+        @Override protected boolean removeEldestEntry(Map.Entry<String,Framebuffer> eldest){
+            if(size()<=THUMBNAIL_CACHE)return false;eldest.getValue().deleteFramebuffer();return true;}};
     private final Set<String> unavailable=new HashSet<>();private long nextPreview=System.nanoTime()+300000000L;
     private long nextRefresh;private List<String> knownShaders=Collections.emptyList();
     private int rowHeight;
@@ -35,7 +39,12 @@ public class MenuThemesGui extends GuiScreen {
         entries.clear();String q=query.trim().toLowerCase(Locale.ROOT);
         if(custom&&chooseShader==null){for(MenuTheme theme:MenuThemes.custom())if((theme.name+" "+theme.shader).toLowerCase(Locale.ROOT).contains(q))entries.add(theme.copy());}
         else{knownShaders=shaders.getPresets();if(chooseShader==null)for(String style:new String[]{"Minimalistic","Skeet"}){MenuTheme theme=MenuTheme.builtin(style);if(style.toLowerCase(Locale.ROOT).contains(q))entries.add(theme);}for(String shader:knownShaders){MenuTheme theme=MenuThemes.automatic(shader);if((theme.name+" "+shader).toLowerCase(Locale.ROOT).contains(q))entries.add(theme);}}
-        scrollRow=Math.max(0,Math.min(scrollRow,Math.max(0,(entries.size()+columns-1)/columns-visibleRows)));buttonList.clear();
+        layout();
+    }
+    private int maxScrollRow(){return Math.max(0,(entries.size()+columns-1)/columns-visibleRows);}
+    /** Places the cards for the current scroll row; scrolling calls only this, never the folder scan in rebuild(). */
+    private void layout(){
+        scrollRow=Math.max(0,Math.min(scrollRow,maxScrollRow()));buttonList.clear();
         buttonList.add(new AccountScreenStyle.Button(0,left+panelWidth-66,top+12,52,24,"Back","",false,false));
         if(chooseShader==null){int x=left+panelWidth-180;buttonList.add(new AccountScreenStyle.Button(1,x,top+44,78,23,"Presets","",!custom,false));buttonList.add(new AccountScreenStyle.Button(2,x+84,top+44,82,23,"Custom","",custom,false));}
         int cardWidth=(panelWidth-34-(columns-1)*8)/columns;
@@ -76,7 +85,8 @@ public class MenuThemesGui extends GuiScreen {
         super.mouseClicked(x,y,button);
     }
     @Override protected void keyTyped(char c,int key)throws IOException{if(key==Keyboard.KEY_ESCAPE){mc.displayGuiScreen(parent);return;}if(search.textboxKeyTyped(c,key)){query=search.getText();scrollRow=0;rebuild();return;}super.keyTyped(c,key);}
-    @Override public void handleMouseInput()throws IOException{super.handleMouseInput();int wheel=Mouse.getEventDWheel();if(wheel!=0){scrollRow+=wheel>0?-1:1;rebuild();}}
+    @Override public void handleMouseInput()throws IOException{super.handleMouseInput();int wheel=Mouse.getEventDWheel();if(wheel==0)return;
+        int row=Math.max(0,Math.min(maxScrollRow(),scrollRow+(wheel>0?-1:1)));if(row!=scrollRow){scrollRow=row;layout();}}
     @Override public boolean doesGuiPauseGame(){return false;}
     @Override public void updateScreen(){search.updateCursorCounter();long now=System.nanoTime();if(now>=nextRefresh){nextRefresh=now+2000000000L;if(!shaders.getPresets().equals(knownShaders))rebuild();}}
     @Override public void onGuiClosed(){Keyboard.enableRepeatEvents(false);for(Framebuffer f:thumbnails.values())f.deleteFramebuffer();thumbnails.clear();}
@@ -84,8 +94,8 @@ public class MenuThemesGui extends GuiScreen {
         if(System.nanoTime()<nextPreview||!OpenGlHelper.isFramebufferEnabled())return;
         for(String name:previewQueue()){if(thumbnails.containsKey(name)||unavailable.contains(name))continue;nextPreview=System.nanoTime()+120000000L;
             try{Framebuffer f=shaders.thumbnail(name);if(f==null){unavailable.add(name);return;}thumbnails.put(name,f);
-                try(dev.vibe.ui.effect.EffectState state=new dev.vibe.ui.effect.EffectState()){f.bindFramebuffer(false);ByteBuffer pixels=BufferUtils.createByteBuffer(128*72*4);GL11.glReadPixels(0,0,128,72,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,pixels);int color=ShaderThemeColors.sample(pixels);MenuThemes.sampled(name,color);for(MenuTheme theme:entries)if(theme.automatic()&&theme.shader.equals(name))theme.first=theme.second=color;}
-                Set<String> retain=new HashSet<>(previewQueue());Iterator<Map.Entry<String,Framebuffer>> it=thumbnails.entrySet().iterator();while(it.hasNext()){Map.Entry<String,Framebuffer> e=it.next();if(!retain.contains(e.getKey())){e.getValue().deleteFramebuffer();it.remove();}}
+                // Read back only for the first colour sample; glReadPixels stalls the frame.
+                if(!MenuThemes.hasSample(name))try(dev.vibe.ui.effect.EffectState state=new dev.vibe.ui.effect.EffectState()){f.bindFramebuffer(false);ByteBuffer pixels=BufferUtils.createByteBuffer(128*72*4);GL11.glReadPixels(0,0,128,72,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,pixels);int color=ShaderThemeColors.sample(pixels);MenuThemes.sampled(name,color);for(MenuTheme theme:entries)if(theme.automatic()&&theme.shader.equals(name))theme.first=theme.second=color;}
             }catch(RuntimeException error){unavailable.add(name);}return;
         }
     }

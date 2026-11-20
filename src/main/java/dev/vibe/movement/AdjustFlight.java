@@ -379,7 +379,7 @@ public final class AdjustFlight {
     }
 
     private boolean ready() {
-        if (owner == mc.thePlayer && world == mc.theWorld && owner != null && !owner.isDead && state != null) return true;
+        if (owner == mc.thePlayer && world == mc.theWorld && owner != null && world != null && !owner.isDead && state != null) return true;
         module.setEnabled(false);
         return false;
     }

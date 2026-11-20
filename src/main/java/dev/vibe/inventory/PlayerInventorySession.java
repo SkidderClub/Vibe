@@ -18,11 +18,12 @@ public final class PlayerInventorySession implements AutoCloseable {
     private GuiScreen openedScreen;
     private boolean spoofed;
     public PlayerInventorySession(ContainerClickDispatcher owner) { this.owner = owner; }
-    public boolean open(String mode) {
+    public boolean open(String mode) { return open(mode, false); }
+    public boolean open(String mode, boolean allowCarried) {
         if (active == this) return valid();
         if (active != null) { if (!active.valid()) active.close(); else return false; }
         if (mc.thePlayer == null || mc.theWorld == null || mc.thePlayer.openContainer != mc.thePlayer.inventoryContainer
-                || mc.thePlayer.inventory.getItemStack() != null
+                || (!allowCarried && mc.thePlayer.inventory.getItemStack() != null)
                 || (mc.currentScreen != null && !(mc.currentScreen instanceof GuiInventory))) return false;
         InventoryManagerModule manager = Vibe.getInstance() == null ? null : Vibe.getInstance().getModuleManager().getModule(InventoryManagerModule.class);
         if (manager != null && manager.isEnabled() && manager.hasPendingInteraction()&&!manager.ownsDispatcher(owner)) return false;
