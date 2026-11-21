@@ -67,6 +67,32 @@ public class TargetStrafeSettingsTest {
             f.base.self.isCollidedHorizontally=true;input=new MovementInput();m.input(input);assertTrue(input.moveStrafe>0);m.setEnabled(false);
         }
     }
+    @Test public void eitherFlyOrSpeedCanEnableAnOrbit() throws Exception {
+        try (MovementForecastTest.Fixture f = new MovementForecastTest.Fixture()) {
+            MoveFixModule fix = new MoveFixModule();
+            TargetStrafeModule strafe = module(f, fix, 2.5);
+            FlyModule fly = new FlyModule();
+            SpeedModule speed = new SpeedModule();
+            f.base.base.modules.registerDynamic(fly);
+            f.base.base.modules.registerDynamic(speed);
+            strafe.onlyFly.setEnabled(true);
+            strafe.onlySpeed.setEnabled(true);
+            strafe.input(new MovementInput());
+            assertFalse(fix.hasForcedMovement());
+            speed.setEnabled(true);
+            strafe.input(new MovementInput());
+            assertTrue(fix.hasForcedMovement());
+            speed.setEnabled(false);
+            f.base.self.capabilities = new net.minecraft.entity.player.PlayerCapabilities();
+            fly.setEnabled(true);
+            strafe.input(new MovementInput());
+            assertTrue(fix.hasForcedMovement());
+            assertNotNull(TargetStrafeModule.speedDirection());
+            fly.setEnabled(false);
+            strafe.tick();
+            assertFalse(fix.hasForcedMovement());
+        }
+    }
     @Test public void automaticDirectionReversesBeforeUnsupportedGround() throws Exception {
         try (MovementForecastTest.Fixture f=new MovementForecastTest.Fixture()) {
             TargetStrafeModule m=module(f,new MoveFixModule(),2.5);

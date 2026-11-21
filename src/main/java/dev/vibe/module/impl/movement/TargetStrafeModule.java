@@ -16,8 +16,19 @@ public final class TargetStrafeModule extends FeatureModule {
     public final ModeSetting direction=addSetting(new ModeSetting("Direction","Automatic","Automatic","Left","Right"));
     public final BooleanSetting aggressive=addSetting(new BooleanSetting("Aggressive",false));
     public final BooleanSetting onlyKillaura=addSetting(new BooleanSetting("Only While Killaura",false)),onlySpeed=addSetting(new BooleanSetting("Only While Speed",false));
+    public final BooleanSetting onlyFly = addSetting(new BooleanSetting("Only While Fly", false));
     public final BooleanSetting holdJump=addSetting(new BooleanSetting("Only While Jump Key",false)),autoJump=addSetting(new BooleanSetting("Auto Jump",true)),voidCheck=addSetting(new BooleanSetting("Void Check",true)),preview=addSetting(new BooleanSetting("Draw Radius",true));
     public final ColorSetting color=addSetting(new ColorSetting("Radius Color",0xB47ACFFF,preview::isEnabled));
+    public final ModeSetting lineStyle = addSetting(new ModeSetting("Radius Style", "Line", preview::isEnabled,
+            "Line", "Dots", "Dotted Line", "Hexagon"));
+    public final NumberSetting lineWidth = addSetting(new NumberSetting("Radius Line Width", 1.5, .5, 6, .5,
+            () -> preview.isEnabled() && !lineStyle.is("Dots")));
+    public final NumberSetting dotSize = addSetting(new NumberSetting("Radius Dot Size", 3, 1, 8, .5,
+            () -> preview.isEnabled() && lineStyle.is("Dots")));
+    public final NumberSetting marks = addSetting(new NumberSetting("Radius Marks", 28, 6, 72, 1,
+            () -> preview.isEnabled() && (lineStyle.is("Dots") || lineStyle.is("Dotted Line"))));
+    public final NumberSetting dashLength = addSetting(new NumberSetting("Radius Dash (%)", 50, 10, 90, 5,
+            () -> preview.isEnabled() && lineStyle.is("Dotted Line")));
     private EntityLivingBase target;
     private int side=1;
     private int lastManualSide;
@@ -34,8 +45,8 @@ public final class TargetStrafeModule extends FeatureModule {
         // Target Range finds candidates. Only Aggressive chases beyond the
         // orbit; a small exit margin prevents flicker at its edge.
         double activation=radius.getDouble()+(selected==previous?.35:0);
-        if(!aggressive.isEnabled()&&mc.thePlayer.getDistanceSqToEntity(selected)>activation*activation)return;
         double horizontal=Math.hypot(mc.thePlayer.posX-selected.posX,mc.thePlayer.posZ-selected.posZ);
+        if (!aggressive.isEnabled() && (flying() ? horizontal * horizontal : mc.thePlayer.getDistanceSqToEntity(selected)) > activation * activation) return;
         if(selected!=previous){wallContact=false;approaching=aggressive.isEnabled()&&horizontal>radius.getDouble();}
         if(!aggressive.isEnabled())approaching=false;
         else if(approaching)approaching=horizontal>radius.getDouble();
@@ -56,9 +67,21 @@ public final class TargetStrafeModule extends FeatureModule {
         steering=new double[]{-Math.sin(radians)*chosen.moveForward+Math.cos(radians)*chosen.moveStrafe,Math.cos(radians)*chosen.moveForward+Math.sin(radians)*chosen.moveStrafe};
         fix.setForcedMovement(getId(),chosen.moveForward,chosen.moveStrafe,chosen.jump);input.moveForward=chosen.moveForward;input.moveStrafe=chosen.moveStrafe;input.jump=chosen.jump;
     }
-    private boolean dependenciesActive(){KillAuraModule aura=KillAuraModule.activeController();SpeedModule speed=module(SpeedModule.class);return (!onlyKillaura.isEnabled()||aura!=null&&aura.isEnabled())&&(!onlySpeed.isEnabled()||speed!=null&&speed.isEnabled());}
+    private boolean dependenciesActive() {
+        KillAuraModule aura = KillAuraModule.activeController();
+        SpeedModule speed = module(SpeedModule.class);
+        boolean flight = flying();
+        return (!onlyKillaura.isEnabled() || aura != null && aura.isEnabled())
+                && (!onlySpeed.isEnabled() && !onlyFly.isEnabled()
+                || onlySpeed.isEnabled() && !flight && speed != null && speed.isEnabled()
+                || onlyFly.isEnabled() && flight);
+    }
+    private boolean flying() {
+        FlyModule fly = module(FlyModule.class);
+        return fly != null && fly.isEnabled();
+    }
     private boolean ScaffoldActive(){return dev.vibe.module.impl.world.ScaffoldModule.isActive();}
-    private EntityLivingBase select(){AIAuraModule ai=module(AIAuraModule.class);KillAuraModule aura=module(KillAuraModule.class);EntityLivingBase picked=ai!=null&&ai.isEnabled()?ai.getTarget():null;if(picked==null&&aura!=null&&aura.isEnabled())picked=aura.getTarget();if(valid(picked))return picked;if(!targetMode.is("Nearest Target"))return null;
+    private EntityLivingBase select(){KillAuraModule aura=KillAuraModule.activeController();EntityLivingBase picked=aura!=null&&aura.isEnabled()?aura.getTarget():null;if(valid(picked))return picked;if(!targetMode.is("Nearest Target"))return null;
         double best=range.getDouble()*range.getDouble();for(Entity e:mc.theWorld.loadedEntityList)if(e instanceof EntityLivingBase&&valid((EntityLivingBase)e)){double d=mc.thePlayer.getDistanceSqToEntity(e);if(d<best){best=d;picked=(EntityLivingBase)e;}}return valid(picked)?picked:null;}
     private boolean valid(EntityLivingBase e){TargetsModule filter=module(TargetsModule.class);return e!=null&&e!=mc.thePlayer&&e.worldObj==mc.theWorld&&e.isEntityAlive()&&!e.isDead&&mc.thePlayer.getDistanceSqToEntity(e)<=range.getDouble()*range.getDouble()&&(filter==null||filter.canTarget(e));}
     private MovementInput plan(MovementInput original,float yaw,int sign){double[] vector;
@@ -67,6 +90,10 @@ public final class TargetStrafeModule extends FeatureModule {
         float[] keys=OrbitSteering.analogKeys(vector[0],vector[1],yaw);
         MovementInput candidate=MovementForecast.copy(original);candidate.moveForward=keys[0];candidate.moveStrafe=keys[1];
         AxisAlignedBB ahead=mc.thePlayer.getEntityBoundingBox().offset(vector[0]*.6,0,vector[1]*.6);
+        if (flying()) {
+            AxisAlignedBB swept = mc.thePlayer.getEntityBoundingBox().addCoord(vector[0] * .6, 0, vector[1] * .6);
+            return MovementForecast.loaded(swept) && mc.theWorld.getCollidingBoundingBoxes(mc.thePlayer, swept).isEmpty() ? candidate : null;
+        }
         candidate.jump|=autoJump.isEnabled()&&mc.thePlayer.onGround&&!mc.theWorld.getCollidingBoundingBoxes(mc.thePlayer,ahead).isEmpty()&&mc.theWorld.getCollidingBoundingBoxes(mc.thePlayer,ahead.offset(0,1.25,0)).isEmpty();
         MovementForecast.Path path=MovementForecast.simulate(candidate,7,yaw);if(!path.loaded||!approaching&&direction.is("Automatic")&&path.collidedHorizontally||path.points.size()<2)return null;
         if(voidCheck.isEnabled()){if(!path.safe)return null;for(AxisAlignedBB box:path.bodies)if(!MovementForecast.supported(box,1.6))return null;}
@@ -77,5 +104,28 @@ public final class TargetStrafeModule extends FeatureModule {
     @Override protected void onDisable(){release();side=1;}
     /** Keep the chosen world vector when Rewound Speed supplies the horizontal magnitude. */
     public static double[] speedDirection(){TargetStrafeModule m=module(TargetStrafeModule.class);if(m==null||!m.isEnabled()||m.steering==null||!m.controlling()||!m.dependenciesActive())return null;MoveFixModule fix=module(MoveFixModule.class);return fix!=null&&fix.ownsForcedMovement(m.getId())?m.steering:null;}
-    @Override public void render(float partial){if(target==null||target.worldObj!=mc.theWorld||!preview.isEnabled())return;List<Vec3> ring=new ArrayList<>();double x=target.lastTickPosX+(target.posX-target.lastTickPosX)*partial,y=target.getEntityBoundingBox().minY+.03,z=target.lastTickPosZ+(target.posZ-target.lastTickPosZ)*partial;for(int i=0;i<=48;i++){double angle=i*Math.PI/24;ring.add(new Vec3(x+Math.cos(angle)*radius.getDouble(),y,z+Math.sin(angle)*radius.getDouble()));}WorldDraw.lines(ring,color.getArgb(),1.5F,false);}
+    @Override public void render(float partial) {
+        if (target == null || target.worldObj != mc.theWorld || !preview.isEnabled()) return;
+        double x = target.lastTickPosX + (target.posX - target.lastTickPosX) * partial;
+        double y = target.getEntityBoundingBox().minY + (target.lastTickPosY - target.posY) * (1 - partial) + .03;
+        double z = target.lastTickPosZ + (target.posZ - target.lastTickPosZ) * partial;
+        boolean dots = lineStyle.is("Dots"), dashed = lineStyle.is("Dotted Line");
+        int count = lineStyle.is("Hexagon") ? 6 : dots || dashed ? marks.getInt() : 64;
+        List<Vec3> ring = new ArrayList<>(dashed ? count * 2 : count + 1);
+        for (int i = 0; i < count; i++) {
+            ring.add(ringPoint(x, y, z, i / (double) count));
+            if (dashed) ring.add(ringPoint(x, y, z, (i + dashLength.getDouble() / 100) / count));
+        }
+        if (dots) WorldDraw.points(ring, color.getArgb(), dotSize.getFloat());
+        else if (dashed) WorldDraw.segments(ring, color.getArgb(), lineWidth.getFloat());
+        else {
+            ring.add(ring.get(0));
+            WorldDraw.lines(ring, color.getArgb(), lineWidth.getFloat(), false);
+        }
+    }
+
+    private Vec3 ringPoint(double x, double y, double z, double turn) {
+        double angle = turn * Math.PI * 2;
+        return new Vec3(x + Math.cos(angle) * radius.getDouble(), y, z + Math.sin(angle) * radius.getDouble());
+    }
 }

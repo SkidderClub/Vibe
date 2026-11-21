@@ -33,6 +33,24 @@ public class AutoWalkModuleTest {
         fix.getMode().setValue("Silent");fix.setFakeRotation("test",90,0);walk.tick();MovementInput input=input();
         assertEquals(0,input.moveForward,.001);assertEquals(1,input.moveStrafe,.001);
     }
+    @Test public void noRotateFollowsThePathWithAnUnchangedCameraAndSilentYaw() throws Exception {
+        fixture.addPlayer(2, "Opponent", 5.5, 64, .5);
+        walk.mode.setValue("Path");
+        walk.noRotate.setEnabled(true);
+        walk.tick();
+        fixture.finishRoute();
+        fixture.player.rotationYaw = 64;
+        fixture.player.rotationPitch = 13;
+        fix.getMode().setValue("Silent");
+        fix.setFakeRotation("antiaim", -121, 90);
+        walk.tick();
+        MovementInput movement = input();
+        double yaw = Math.toRadians(MoveFixModule.movementYawHook(fixture.player, fixture.player.rotationYaw));
+        assertEquals(1, -Math.sin(yaw) * movement.moveForward + Math.cos(yaw) * movement.moveStrafe, 1e-6);
+        assertEquals(0, Math.cos(yaw) * movement.moveForward + Math.sin(yaw) * movement.moveStrafe, 1e-6);
+        assertEquals(64, fixture.player.rotationYaw, 0);
+        assertEquals(13, fixture.player.rotationPitch, 0);
+    }
     @Test public void menusAndOtherMovementOwnersPauseWalking(){
         walk.tick();assertEquals(1,input().moveForward,0);fixture.mc.currentScreen=new GuiScreen(){};walk.tick();assertFalse(walk.isDriving());assertEquals(0,input().moveForward,0);
         fixture.mc.currentScreen=null;fix.setForcedMovement("other",0,1,false);walk.tick();assertFalse(walk.isDriving());

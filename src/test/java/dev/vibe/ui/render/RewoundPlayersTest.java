@@ -11,6 +11,7 @@ import net.minecraft.client.gui.GuiPlayerTabOverlay;
 import net.minecraft.client.network.*;
 import net.minecraft.entity.Entity;
 import net.minecraft.scoreboard.ScorePlayerTeam;
+import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.util.*;
 import org.junit.Test;
 import org.objectweb.asm.*;
@@ -25,10 +26,22 @@ public class RewoundPlayersTest {
             List<NetworkPlayerInfo> original=Arrays.asList(bot,real);
             assertSame(original,RewoundPlayers.tabEntries(original));
             qol.getFeatures().toggle(QolModule.REAL_REWOUND_PLAYERS);qol.setEnabled(true);
-            assertTrue(qol.getRealPlayerViews().isVisible());assertEquals(Collections.singletonList(real),RewoundPlayers.tabEntries(original));assertEquals(2,original.size());
-            assertFalse(RewoundPlayers.starred("Bot *"));assertFalse(RewoundPlayers.starred(null));assertTrue(RewoundPlayers.starred(" §c* §fRankedName"));
+            PathTestFixture.set(net.minecraft.entity.player.EntityPlayer.class, f.player, "gameProfile", new GameProfile(UUID.randomUUID(), "Self"));
             Map<UUID,NetworkPlayerInfo> map=new HashMap<>();map.put(real.getGameProfile().getId(),real);map.put(bot.getGameProfile().getId(),bot);
             PathTestFixture.set(NetHandlerPlayClient.class,f.queue,"playerInfoMap",map);
+            Scoreboard board = new Scoreboard();
+            PathTestFixture.set(net.minecraft.world.World.class, f.base.world, "worldScoreboard", board);
+            net.minecraft.scoreboard.ScoreObjective sidebar = board.addScoreObjective("game", net.minecraft.scoreboard.IScoreObjectiveCriteria.DUMMY);
+            board.setObjectiveInDisplaySlot(1, sidebar);
+            sidebar.setDisplayName("§eSKYWARS");
+            assertSame(original, RewoundPlayers.tabEntries(original));
+            sidebar.setDisplayName("§eTHE HYPIXEL PIT");
+            f.player.ticksExisted++;
+            assertTrue(qol.getRealPlayerViews().isVisible());assertEquals(Collections.singletonList(real),RewoundPlayers.tabEntries(original));assertEquals(2,original.size());
+            board.setObjectiveInDisplaySlot(1, null);
+            assertEquals(Collections.singletonList(real), RewoundPlayers.tabEntries(original));
+            board.setObjectiveInDisplaySlot(1, sidebar);
+            assertFalse(RewoundPlayers.starred("Bot *"));assertFalse(RewoundPlayers.starred(null));assertTrue(RewoundPlayers.starred(" §c* §fRankedName"));
             int existing=f.base.world.loadedEntityList.size();
             PathTestFixture.Player human=f.base.addPlayer(101,"Human",2,64,2),npc=f.base.addPlayer(102,"Bot",3,64,3);
             PathTestFixture.set(Entity.class,human,"entityUniqueID",real.getGameProfile().getId());PathTestFixture.set(Entity.class,npc,"entityUniqueID",bot.getGameProfile().getId());
@@ -36,6 +49,11 @@ public class RewoundPlayersTest {
             f.base.filters.getIgnoreTeammates().setEnabled(false);assertTrue("Bot remains a combat candidate",f.base.filters.canTarget(npc));
             assertEquals(2,map.size());assertEquals(existing+2,f.base.world.loadedEntityList.size());
             qol.getRealPlayerViews().toggle("ESP");assertTrue(RewoundPlayers.showEsp(npc));assertEquals(1,RewoundPlayers.tabEntries(original).size());
+            sidebar.setDisplayName("BED WARS");
+            f.player.ticksExisted++;
+            assertSame(original, RewoundPlayers.tabEntries(original));
+            qol.getRealPlayerModes().toggle("Bedwars");
+            assertEquals(Collections.singletonList(real), RewoundPlayers.tabEntries(original));
             qol.getRealPlayerViews().toggle("Tab");assertSame(original,RewoundPlayers.tabEntries(original));qol.setEnabled(false);
         }
     }

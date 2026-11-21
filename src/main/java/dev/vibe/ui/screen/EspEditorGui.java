@@ -144,10 +144,14 @@ public final class EspEditorGui extends GuiScreen {
     }
     private void buildRows() {
         rows.clear();
-        if(esp.editingProfile()!=0)setting(esp.editingProfile()==1?esp.getFriendsProfile().getUsePlayerDefaults():esp.getTargetsProfile().getUsePlayerDefaults(),"Use player defaults");
-        if(esp.editingProfile()==2&&inherited()){
-            setting(esp.getTargetsProfile().getOverrideColors(),"Override colors");
-            setting(esp.getTargetsProfile().getOverrideColor(),"Target color (RGB only)");
+        if (esp.editingProfile() != 0) {
+            boolean friend = esp.editingProfile() == 1;
+            EspModule.ProfileSettings profile = friend ? esp.getFriendsProfile() : esp.getTargetsProfile();
+            setting(profile.getUsePlayerDefaults(), "Use player defaults");
+            if (inherited()) {
+                setting(profile.getOverrideColors(), "Override colors");
+                setting(profile.getOverrideColor(), friend ? "Friend color (RGB only)" : "Target color (RGB only)");
+            }
         }
         if(esp.getModes().isSelected("2D")) {
             header("2D / Layout",0);if(!collapsed.contains("2D / Layout")) {
@@ -164,7 +168,7 @@ public final class EspEditorGui extends GuiScreen {
                 setting(esp.getOutlineColor(),"Color");setting(esp.getFillColor(),"Fill");setting(esp.getLineWidth(esp.editingProfile()),"Line width");setting(esp.getThroughWalls(esp.editingProfile()),"Through walls");
                 setting(esp.getPlayerColorMode(),"Player color mode");setting(esp.getColorFade(),"Color fade");
                 setting(esp.getFadeStart(),"Fade start");setting(esp.getFadeEnd(),"Fade end");setting(esp.getFadeSpeed(),"Fade speed");
-                if(esp.editingProfile()==1)profileRows("Friends / teams",esp.getFriendsProfile());
+                if(esp.editingProfile()==1)profileRows("Friends",esp.getFriendsProfile());
                 if(esp.editingProfile()==2)profileRows("Targets",esp.getTargetsProfile());
             }
         }
@@ -182,7 +186,7 @@ public final class EspEditorGui extends GuiScreen {
     }
     private void profileRows(String title,EspModule.ProfileSettings p) {
         header(title,1);if(collapsed.contains(title))return;
-        setting(p.getColorMode(),"Color mode");if(esp.editingProfile()!=2||!inherited())setting(p.getOverrideColor(),"Override color");
+        setting(p.getColorMode(),"Color mode");if(!inherited())setting(p.getOverrideColor(),"Override color");
         setting(p.getOutline(),"Outline");setting(p.getFill(),"Fill");
     }
     private void chamsRows(String label,EspModule.ChamsSettings c) {

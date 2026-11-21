@@ -1,6 +1,7 @@
 package dev.vibe.ui.render;
 
 import dev.vibe.Vibe;
+import dev.vibe.features.ServerGameMode;
 import dev.vibe.module.impl.client.QolModule;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +19,8 @@ public final class RewoundPlayers {
         Vibe vibe=Vibe.getInstance();
         QolModule qol=vibe==null||vibe.getModuleManager()==null?null:vibe.getModuleManager().getModule(QolModule.class);
         return qol!=null&&qol.isEnabled()&&qol.getFeatures().isSelected(QolModule.REAL_REWOUND_PLAYERS)
-                &&qol.getRealPlayerViews().isSelected(view);
+                &&qol.getRealPlayerViews().isSelected(view)
+                &&qol.getRealPlayerModes().isSelected(ServerGameMode.current().label());
     }
     public static boolean starred(String name) {
         String plain=EnumChatFormatting.getTextWithoutFormattingCodes(name);

@@ -19,9 +19,10 @@ public final class AutoWalkModule extends Module {
     public final ModeSetting mode=addSetting(new ModeSetting("Mode","Forward","Forward","Path"));
     public final BooleanSetting autoJump=addSetting(new BooleanSetting("Auto Jump",true));
     public final BooleanSetting sprint=addSetting(new BooleanSetting("Sprint",false));
-    public final NumberSetting yawSpeed=addSetting(new NumberSetting("Yaw Speed",180,20,720,10,()->mode.is("Path")));
-    public final BooleanSetting rotatePitch=addSetting(new BooleanSetting("Rotate Pitch",true,()->mode.is("Path")));
-    public final NumberSetting pitchSpeed=addSetting(new NumberSetting("Pitch Speed",90,10,360,5,()->mode.is("Path")&&rotatePitch.isEnabled()));
+    public final BooleanSetting noRotate=addSetting(new BooleanSetting("NoRotate",false,()->mode.is("Path")));
+    public final NumberSetting yawSpeed=addSetting(new NumberSetting("Yaw Speed",180,20,720,10,()->mode.is("Path")&&!noRotate.isEnabled()));
+    public final BooleanSetting rotatePitch=addSetting(new BooleanSetting("Rotate Pitch",true,()->mode.is("Path")&&!noRotate.isEnabled()));
+    public final NumberSetting pitchSpeed=addSetting(new NumberSetting("Pitch Speed",90,10,360,5,()->mode.is("Path")&&!noRotate.isEnabled()&&rotatePitch.isEnabled()));
     public final BooleanSetting showPath=addSetting(new BooleanSetting("Show Path",true,()->mode.is("Path")));
     private boolean driving,jump,rotated,ownedSprint;
     private boolean preparingJump,aligningApproach,navigationJump;
@@ -182,16 +183,17 @@ public final class AutoWalkModule extends Module {
         driving=true;status="Following "+target.getName();
     }
     /** The input wrapper calls this before silent movement correction and normal player physics. */
-    public void apply(MovementInput input){
-        if(isSuspended()||(!isEnabled()&&navigationOwner==null)||player==null)return;
+    public boolean apply(MovementInput input){
+        if(isSuspended()||(!isEnabled()&&navigationOwner==null)||player==null)return false;
         Minecraft mc=Minecraft.getMinecraft();
-        if(mc.thePlayer!=player||mc.currentScreen!=null)return;
+        if(mc.thePlayer!=player||mc.currentScreen!=null)return false;
         // Surfacing is independent of a completed route or a selected target.
         if(player.isInWater())input.jump=true;
-        if(!driving){if(navigationOwner!=null)input.moveForward=input.moveStrafe=0;return;}
+        if(!driving){if(navigationOwner!=null)input.moveForward=input.moveStrafe=0;return false;}
         float scale=input.sneak?.3F:1F;
+        boolean fixedCamera = noRotate.isEnabled() && (navigationOwner != null || mode.is("Path"));
         if(navigationOwner!=null||mode.is("Path")){
-            if(!rotated){
+            if(!fixedCamera&&!rotated){
                 player.rotationYaw=turn(player.rotationYaw,wantedYaw,yawSpeed.getFloat()/20);
                 if(rotatePitch.isEnabled())player.rotationPitch=turn(player.rotationPitch,wantedPitch,pitchSpeed.getFloat()/20);
                 rotated=true;
@@ -201,21 +203,23 @@ public final class AutoWalkModule extends Module {
             float angle=MathHelper.wrapAngleTo180_float(wantedYaw-player.rotationYaw);
             input.moveForward=scale;
             input.moveStrafe=Math.abs(angle)>25?-Math.signum(angle)*scale:0;
-            if(navigationOwner!=null){
+            if(fixedCamera||navigationOwner!=null){
                 input.moveForward=(float)Math.cos(Math.toRadians(angle))*scale;
                 input.moveStrafe=-(float)Math.sin(Math.toRadians(angle))*scale;
+            }
+            if(navigationOwner!=null){
                 double yaw=Math.toRadians(player.rotationYaw);
                 double dx=(-Math.sin(yaw)*input.moveForward+Math.cos(yaw)*input.moveStrafe)*.45;
                 double dz=(Math.cos(yaw)*input.moveForward+Math.sin(yaw)*input.moveStrafe)*.45;
                 AxisAlignedBB ahead=player.getEntityBoundingBox().offset(dx,0,dz);
                 for(double x:new double[]{ahead.minX,ahead.maxX})for(double z:new double[]{ahead.minZ,ahead.maxZ})
-                    if(!navigationArea.test(new BlockPos(x,ahead.minY+.05,z))){input.moveForward=input.moveStrafe=0;path.refreshWalkingRoute();return;}
+                    if(!navigationArea.test(new BlockPos(x,ahead.minY+.05,z))){input.moveForward=input.moveStrafe=0;path.refreshWalkingRoute();return fixedCamera;}
             }
             boolean launch=jump;
             if(preparingJump&&!aligningApproach&&player.onGround){
                 // Face the opening before launching. Continuing around a bend
                 // while already jumping clips the walls beside narrow steps.
-                if(Math.abs(angle)>12){input.moveForward=input.moveStrafe=0;launch=false;}
+                if(!fixedCamera&&Math.abs(angle)>12){input.moveForward=input.moveStrafe=0;launch=false;}
                 else launch&=terrain.canJumpFrom(player.getEntityBoundingBox(),jumpX,jumpY,jumpZ);
             }
             input.jump|=launch;
@@ -229,11 +233,12 @@ public final class AutoWalkModule extends Module {
                 &&!player.isCollidedHorizontally&&player.getFoodStats().getFoodLevel()>6;
         if(canSprint){if(!player.isSprinting()){player.setSprinting(true);ownedSprint=true;}}
         else releaseSprint();
+        return fixedCamera;
     }
-    public static void inputHook(MovementInput input){
+    public static boolean inputHook(MovementInput input){
         Vibe vibe=Vibe.getInstance();
         AutoWalkModule module=vibe==null||vibe.getModuleManager()==null?null:vibe.getModuleManager().getModule(AutoWalkModule.class);
-        if(module!=null)module.apply(input);
+        return module!=null && module.apply(input);
     }
     /** Terrain jumps own their native input/trajectory until landing. */
     public static boolean reservesJump(){

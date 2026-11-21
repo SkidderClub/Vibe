@@ -368,6 +368,18 @@ public final class MoveFixModule extends Module {
         if (!hasForcedMovement()) correctKeyboardInput(input);
     }
 
+    /** Preserves path-following's analog direction when physics uses a different yaw. */
+    private void correctPathInput(MovementInput input) {
+        keptForward = keptStrafe = 0;
+        EntityPlayerSP player = Minecraft.getMinecraft().thePlayer;
+        if (player == null) return;
+        double difference = Math.toRadians(movementYaw(player, player.rotationYaw) - player.rotationYaw);
+        double cos = Math.cos(difference), sin = Math.sin(difference);
+        float forward = input.moveForward, strafe = input.moveStrafe;
+        input.moveForward = (float) (forward * cos - strafe * sin);
+        input.moveStrafe = (float) (strafe * cos + forward * sin);
+    }
+
     private void correctKeyboardInput(MovementInput input) {
         FakeRotation rotation = activeRotation();
         Minecraft minecraft = Minecraft.getMinecraft();
@@ -765,7 +777,7 @@ public final class MoveFixModule extends Module {
             moveForward = vanillaInput.moveForward;
             jump = vanillaInput.jump;
             sneak = vanillaInput.sneak;
-            AutoWalkModule.inputHook(this);
+            boolean fixedCameraPath = AutoWalkModule.inputHook(this);
             AntiAFKModule.inputHook(this);
             ScaffoldModule scaffold = Vibe.getInstance() == null || Vibe.getInstance().getModuleManager() == null ? null
                     : Vibe.getInstance().getModuleManager().getModule(ScaffoldModule.class);
@@ -776,6 +788,8 @@ public final class MoveFixModule extends Module {
                 moveForward = module.forcedForward;
                 moveStrafe = module.forcedStrafe;
                 jump = jump || module.forcedJump;
+            } else if (fixedCameraPath) {
+                module.correctPathInput(this);
             } else {
                 module.correctKeyboardInput(this);
             }

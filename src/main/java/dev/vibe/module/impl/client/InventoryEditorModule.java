@@ -14,7 +14,8 @@ import org.lwjgl.input.Keyboard;
 /** Opens the persisted drag-and-drop layout editor used by Inventory Manager. */
 public final class InventoryEditorModule extends Module {
 
-    private final StringSetting layoutData = addSetting(new StringSetting("Layout Data", "", 4096, () -> false));
+    private static final String MUSIC_RULE_VERSION = "music-rules=1;";
+    private final StringSetting layoutData = addSetting(new StringSetting("Layout Data", MUSIC_RULE_VERSION + "40=DISK", 4096, () -> false));
     private final BooleanSetting drawPosition = addSetting(new BooleanSetting("Draw Position", true));
     private final ColorSetting positionColor = addSetting(new ColorSetting("Position Color", 0xFF2DE2C2,
             () -> drawPosition.isEnabled()));
@@ -31,11 +32,21 @@ public final class InventoryEditorModule extends Module {
     }
 
     public InventoryLayout getLayout() {
-        return InventoryLayout.decode(layoutData.getValue());
+        String encoded = layoutData.getValue();
+        InventoryLayout layout = InventoryLayout.decode(encoded);
+        // Add the new default to older layouts with room, while keeping an intentional removal on save.
+        if (!encoded.startsWith(MUSIC_RULE_VERSION) && !layout.isAssigned(InventoryLayout.Type.DISK)) {
+            for (int slot = 40; slot < 64; slot++) {
+                if (layout.get(slot) != null) continue;
+                layout.set(slot, InventoryLayout.Type.DISK);
+                break;
+            }
+        }
+        return layout;
     }
 
     public void setLayout(InventoryLayout layout) {
-        layoutData.setValue(layout == null ? "" : layout.encode());
+        layoutData.setValue(MUSIC_RULE_VERSION + (layout == null ? "40=DISK" : layout.encode()));
         if (Vibe.getInstance() != null && Vibe.getInstance().getConfig() != null) {
             Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
         }

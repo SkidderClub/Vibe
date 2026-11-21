@@ -17,6 +17,21 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AutomationRulesTest {
+    @Test public void musicHasItsOwnDropBinCategoryAndRemovingTheDefaultPersists() throws Exception {
+        try (PathTestFixture f = new PathTestFixture()) {
+            dev.vibe.module.impl.client.InventoryEditorModule editor = new dev.vibe.module.impl.client.InventoryEditorModule();
+            InventoryLayout layout = editor.getLayout();
+            assertTrue(layout.isDropType(Type.DISK));
+            for (ItemStack stack : Arrays.asList(new ItemStack(Items.record_13), new ItemStack(Items.record_wait),
+                    new ItemStack(Blocks.noteblock), new ItemStack(Blocks.jukebox))) {
+                assertTrue(InventoryLayout.matches(Type.DISK, stack));
+                assertFalse(InventoryLayout.matches(Type.BLOCK, stack));
+            }
+            layout.set(40, null);
+            editor.setLayout(layout);
+            assertFalse(editor.getLayout().isDropType(Type.DISK));
+        }
+    }
     @Test public void cuboidSupportsReversedCornersAllAxesInversionAndDisabledFallback() throws Exception {
         try(PathTestFixture f=new PathTestFixture()) {
             TargetsModule t=f.filters;

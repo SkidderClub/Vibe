@@ -185,6 +185,12 @@ public final class FlyModule extends Module {
     }
 
     private void setHorizontalSpeed(double speed) {
+        double[] orbit = TargetStrafeModule.speedDirection();
+        if (orbit != null) {
+            minecraft.thePlayer.motionX = orbit[0] * speed;
+            minecraft.thePlayer.motionZ = orbit[1] * speed;
+            return;
+        }
         double forward = minecraft.thePlayer.movementInput.moveForward;
         double strafe = minecraft.thePlayer.movementInput.moveStrafe;
         double length = Math.sqrt(forward * forward + strafe * strafe);
@@ -195,7 +201,7 @@ public final class FlyModule extends Module {
         }
         forward /= length;
         strafe /= length;
-        double yaw = Math.toRadians(minecraft.thePlayer.rotationYaw);
+        double yaw = Math.toRadians(MoveFixModule.movementYawHook(minecraft.thePlayer, minecraft.thePlayer.rotationYaw));
         minecraft.thePlayer.motionX = (-Math.sin(yaw) * forward + Math.cos(yaw) * strafe) * speed;
         minecraft.thePlayer.motionZ = (Math.cos(yaw) * forward + Math.sin(yaw) * strafe) * speed;
     }

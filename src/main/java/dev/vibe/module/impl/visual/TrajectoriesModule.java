@@ -145,7 +145,7 @@ public final class TrajectoriesModule extends Module {
         }
         if (stack.getItem() instanceof ItemEgg || stack.getItem() instanceof ItemSnowball || stack.getItem() instanceof ItemEnderPearl) return new double[]{.03D, .99D, 1.5D};
         if (stack.getItem() instanceof ItemExpBottle) return new double[]{.07D, .99D, .7D};
-        if (stack.getItem() instanceof ItemPotion) return new double[]{.05D, .99D, .5D};
+        if (stack.getItem() instanceof ItemPotion && ItemPotion.isSplash(stack.getMetadata())) return new double[]{.05D, .99D, .5D};
         return null;
     }
 

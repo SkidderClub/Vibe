@@ -1,13 +1,24 @@
 package dev.vibe.ui.render.esp;
 
+import dev.vibe.Vibe;
+import dev.vibe.friend.FriendManager;
 import dev.vibe.module.impl.visual.Esp2DSettings;
 import dev.vibe.module.impl.visual.EspModule;
+import dev.vibe.path.PathTestFixture;
 import dev.vibe.setting.Setting;
+import dev.vibe.target.TargetManager;
 import java.util.*;
+import net.minecraft.entity.Entity;
+import net.minecraft.scoreboard.Scoreboard;
+import net.minecraft.world.World;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import static org.junit.Assert.*;
 
 public class EspAppearanceTest {
+    @Rule public final TemporaryFolder temporary = new TemporaryFolder();
+
     @Test public void inheritedTargetsOverrideOnlyRgbAndCanReturnExactlyToPlayerDefaults(){
         EspModule esp=new EspModule();esp.getEditProfile().setValue("Targets");
         assertTrue(esp.getTargetsProfile().getOverrideColors().isVisible());
@@ -40,6 +51,52 @@ public class EspAppearanceTest {
         assertTrue(EspLayout.scale(2,1)<EspLayout.scale(10,1));
         assertTrue(EspLayout.scale(20,1)>EspLayout.scale(10,1));
         assertTrue(EspLayout.scale(20,1)<EspLayout.scale(10,1)*1.1F);
+    }
+    @Test public void inheritedFriendTintPreservesOpacityAndDoesNotChangeTargets() {
+        EspModule esp = new EspModule();
+        esp.getEditProfile().setValue("Friends");
+        esp.getOutlineColor().setValue(0x80335577);
+        esp.getFriendsProfile().getOverrideColor().setValue(0x0055FF33);
+        assertTrue(esp.getFriendsProfile().getOverrideColors().isVisible());
+        assertEquals(0xFF55FF33, esp.inheritedColorOverride(1, 0, false));
+        assertEquals(0x8055FF33, esp.getPreviewStyle(1).getOutline());
+        assertEquals(0x80FF0000, esp.getPreviewStyle(2).getOutline());
+        esp.getFriendsProfile().getOverrideColors().setEnabled(false);
+        assertEquals(esp.getPreviewStyle(0).getOutline(), esp.getPreviewStyle(1).getOutline());
+    }
+    @Test public void friendOverrideUsesTheRealRosterAndExcludesTheLocalProfile() throws Exception {
+        try (PathTestFixture f = new PathTestFixture()) {
+            PathTestFixture.Player teammate = f.addPlayer(2, "Teammate", 2, 64, 1);
+            PathTestFixture.Player friend = f.addPlayer(3, "Friend", 3, 64, 1);
+            PathTestFixture.Player target = f.addPlayer(4, "Target", 4, 64, 1);
+            PathTestFixture.Player localCopy = f.addPlayer(5, f.player.getName(), 5, 64, 1);
+            UUID localId = UUID.randomUUID();
+            PathTestFixture.set(Entity.class, f.player, "entityUniqueID", localId);
+            PathTestFixture.set(Entity.class, localCopy, "entityUniqueID", localId);
+            Scoreboard scoreboard = new Scoreboard();
+            PathTestFixture.set(World.class, f.world, "worldScoreboard", scoreboard);
+            scoreboard.createTeam("team");
+            for (Entity player : Arrays.asList(f.player, friend, teammate)) scoreboard.addPlayerToTeam(player.getName(), "team");
+            assertTrue(f.filters.isTeammate(teammate));
+
+            FriendManager friends = new FriendManager(temporary.getRoot());
+            TargetManager targets = new TargetManager(temporary.getRoot());
+            PathTestFixture.set(Vibe.class, f.vibe, "friendManager", friends);
+            PathTestFixture.set(Vibe.class, f.vibe, "targetManager", targets);
+            friends.add(friend.getName(), teammate.getName());
+            friends.add(f.player.getName(), null);
+            targets.add(target.getName());
+            targets.add(f.player.getName());
+
+            EspModule esp = new EspModule();
+            assertEquals(1, esp.profileFor(friend));
+            assertEquals(esp.getFriendColor().getArgb(), esp.getStyleFor(friend).getOutline());
+            for (PathTestFixture.Player ordinary : Arrays.asList(teammate, f.player, localCopy)) {
+                assertEquals(0, esp.profileFor(ordinary));
+                assertEquals(esp.getPreviewStyle(0).getOutline(), esp.getStyleFor(ordinary).getOutline());
+            }
+            assertEquals(2, esp.profileFor(target));
+        }
     }
     @Test public void disabledModesElementsAndInheritedTextHideDetails() {
         EspModule esp=new EspModule();Esp2DSettings s=esp.get2D();

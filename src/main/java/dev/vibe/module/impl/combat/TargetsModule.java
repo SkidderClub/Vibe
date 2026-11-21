@@ -1,5 +1,6 @@
 package dev.vibe.module.impl.combat;
 
+import dev.vibe.features.ServerGameMode;
 import dev.vibe.module.Category;
 import dev.vibe.module.Module;
 import dev.vibe.module.impl.client.FriendsModule;
@@ -26,7 +27,9 @@ public final class TargetsModule extends Module {
     private final BooleanSetting invisibles = addSetting(new BooleanSetting("Invisibles", false));
     private final BooleanSetting ignoreTeammates = addSetting(new BooleanSetting("Ignore Teammates", false));
     private final ModeSetting teammateDetection = addSetting(new ModeSetting("Teammate Detection", "Scoreboard",
-            () -> ignoreTeammates.isEnabled(), "Name Color", "Chestplate", "Scoreboard"));
+            () -> ignoreTeammates.isEnabled(), "Auto", "Name Color", "Chestplate", "Scoreboard"));
+    private static final int[] TEAM_COLORS = {0x000000,0x0000AA,0x00AA00,0x00AAAA,0xAA0000,0xAA00AA,0xFFAA00,0xAAAAAA,
+            0x555555,0x5555FF,0x55FF55,0x55FFFF,0xFF5555,0xFF55FF,0xFFFF55,0xFFFFFF};
     private final Set<String> warnedTargets = new HashSet<String>();
     private Object warningWorld;
     public final BooleanSetting targetArea = addSetting(new BooleanSetting("Target Area", false));
@@ -130,18 +133,26 @@ public final class TargetsModule extends Module {
 
     public boolean isTeammate(EntityPlayer other) {
         net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getMinecraft();
-        if (minecraft.thePlayer == null) return false;
+        if (minecraft.thePlayer == null || other == null) return false;
+        if (teammateDetection.is("Auto")) {
+            ServerGameMode game = ServerGameMode.current();
+            if (game == ServerGameMode.BEDWARS) {
+                int color = chestplateColor(minecraft.thePlayer, true);
+                return color != 0 && color == chestplateColor(other, true);
+            }
+            if (game == ServerGameMode.SKYWARS_TEAMS) {
+                char color = ServerGameMode.playerNameColor(minecraft.thePlayer);
+                return color != 0 && color == ServerGameMode.playerNameColor(other);
+            }
+            return false;
+        }
         if (teammateDetection.is("Scoreboard")) {
             net.minecraft.scoreboard.Team mine = minecraft.thePlayer.getTeam();
             return mine != null && mine == other.getTeam();
         }
         if (teammateDetection.is("Chestplate")) {
-            ItemStack first = minecraft.thePlayer.getCurrentArmor(2);
-            ItemStack second = other.getCurrentArmor(2);
-            if (first == null || second == null || !(first.getItem() instanceof ItemArmor) || !(second.getItem() instanceof ItemArmor)) return false;
-            ItemArmor a = (ItemArmor) first.getItem(); ItemArmor b = (ItemArmor) second.getItem();
-            return a.getArmorMaterial() == ItemArmor.ArmorMaterial.LEATHER && b.getArmorMaterial() == ItemArmor.ArmorMaterial.LEATHER
-                    && a.getColor(first) == b.getColor(second);
+            int color = chestplateColor(minecraft.thePlayer, false);
+            return color != 0 && color == chestplateColor(other, false);
         }
         return nameColor(minecraft.thePlayer.getDisplayName().getFormattedText()) != 0
                 && nameColor(minecraft.thePlayer.getDisplayName().getFormattedText()) == nameColor(other.getDisplayName().getFormattedText());
@@ -150,14 +161,27 @@ public final class TargetsModule extends Module {
     /** Uses the same source as teammate detection, including leather chestplate colors. */
     public int teamColor(EntityPlayer player){
         if(player==null)return 0;
-        if(teammateDetection.is("Chestplate")){
-            ItemStack stack=player.getCurrentArmor(2);if(stack==null||!(stack.getItem() instanceof ItemArmor))return 0;
-            ItemArmor armor=(ItemArmor)stack.getItem();return armor.getArmorMaterial()==ItemArmor.ArmorMaterial.LEATHER?0xFF000000|armor.getColor(stack):0;
+        if (teammateDetection.is("Auto")) {
+            ServerGameMode game = ServerGameMode.current();
+            if (game == ServerGameMode.BEDWARS) return chestplateColor(player, true);
+            return game == ServerGameMode.SKYWARS_TEAMS ? rgb(ServerGameMode.playerNameColor(player)) : 0;
         }
+        if(teammateDetection.is("Chestplate")) return chestplateColor(player, false);
         String text=teammateDetection.is("Name Color")?player.getDisplayName().getFormattedText():player.getTeam() instanceof net.minecraft.scoreboard.ScorePlayerTeam?((net.minecraft.scoreboard.ScorePlayerTeam)player.getTeam()).getColorPrefix():null;
-        char code=nameColor(text);int index="0123456789abcdef".indexOf(code);
-        int[] colors={0x000000,0x0000AA,0x00AA00,0x00AAAA,0xAA0000,0xAA00AA,0xFFAA00,0xAAAAAA,0x555555,0x5555FF,0x55FF55,0x55FFFF,0xFF5555,0xFF55FF,0xFFFF55,0xFFFFFF};
-        return index<0?0:0xFF000000|colors[index];
+        return rgb(nameColor(text));
+    }
+
+    private static int rgb(char code) {
+        int index = "0123456789abcdef".indexOf(code);
+        return index < 0 ? 0 : 0xFF000000 | TEAM_COLORS[index];
+    }
+
+    private static int chestplateColor(EntityPlayer player, boolean dyedOnly) {
+        ItemStack stack = player.getCurrentArmor(2);
+        if (stack == null || !(stack.getItem() instanceof ItemArmor)) return 0;
+        ItemArmor armor = (ItemArmor) stack.getItem();
+        if (armor.getArmorMaterial() != ItemArmor.ArmorMaterial.LEATHER || dyedOnly && !armor.hasColor(stack)) return 0;
+        return 0xFF000000 | armor.getColor(stack);
     }
 
     private char nameColor(String value) {

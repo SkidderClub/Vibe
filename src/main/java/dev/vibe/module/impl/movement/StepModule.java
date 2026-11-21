@@ -41,5 +41,8 @@ public final class StepModule extends FeatureModule {
     public float rewoundPreStep(Object entity,float vanilla){if(entity==mc.thePlayer&&maintainAdjust())return adjust.prepare(adjustHeight.getFloat());if(entity==mc.thePlayer&&maintainNovoline())return novoline.prepare();return entity==mc.thePlayer&&maintainRewound()?rewound.preStep(delay.getInt(),speedCheck.isEnabled()):vanilla;}
     public float rewoundStepHeight(Object entity,float vanilla){if(entity==mc.thePlayer&&maintainAdjust())return adjust.height();if(entity==mc.thePlayer&&maintainNovoline())return novoline.height();return entity==mc.thePlayer&&maintainRewound()?rewound.height():vanilla;}
     public void rewoundPostStep(Object entity){if(entity==mc.thePlayer&&maintainNovoline())novoline.confirm();if(entity==mc.thePlayer&&maintainRewound())rewound.postStep(timer.isEnabled());}
+    public void adjustPostStep(Object entity) {
+        if (entity == mc.thePlayer && maintainAdjust()) adjust.confirm();
+    }
     @Override protected void onDisable(){adjust.reset(null);adjustOwner=null;novoline.reset(null);novolineOwner=null;restore();rewound.reset(null);rewoundOwner=null;}
 }

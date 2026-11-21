@@ -142,6 +142,7 @@ public final class ModuleManager {
         register(new ShopSaverModule());
         register(new dev.vibe.module.impl.client.JoinClaimModule());
         register(new dev.vibe.module.impl.movement.AntiAimModule());
+        register(new dev.vibe.module.impl.movement.NoRotateSetModule());
         register(new RawMouseInputModule());
         register(new NoJumpDelayModule());
         register(new EagleModule());

@@ -53,9 +53,14 @@ public final class RewoundTransformer implements net.minecraft.launchwrapper.ICl
                     MethodInsnNode call = (MethodInsnNode) instruction;
                     if (!call.owner.equals("net/minecraft/network/PacketThreadUtil") && !call.owner.equals("fh")) continue;
                     InsnList hook = new InsnList();
+                    hook.add(new MethodInsnNode(INVOKESTATIC, "dev/vibe/module/impl/movement/NoRotateSetModule", "capture", "()V", false));
                     hook.add(new VarInsnNode(ALOAD, 1));
                     hook.add(new MethodInsnNode(INVOKESTATIC, HOOK, "correction", "(Ljava/lang/Object;)V", false));
                     method.instructions.insert(call, hook);
+                    for (AbstractInsnNode exit : method.instructions.toArray()) {
+                        if (exit.getOpcode() == RETURN) method.instructions.insertBefore(exit, new MethodInsnNode(INVOKESTATIC,
+                                "dev/vibe/module/impl/movement/NoRotateSetModule", "restore", "()V", false));
+                    }
                     break;
                 }
             }
@@ -123,6 +128,17 @@ public final class RewoundTransformer implements net.minecraft.launchwrapper.ICl
         InsnList post = new InsnList(); post.add(new VarInsnNode(ALOAD, 0));
         post.add(new MethodInsnNode(INVOKESTATIC, HOOK, "postStep", "(Ljava/lang/Object;)V", false));
         method.instructions.insert(boxes.get(2), post);
+        // The final bounding box has either accepted the step or reverted to the unstepped move here.
+        for (AbstractInsnNode insn = boxes.get(3).getNext(); insn != null; insn = insn.getNext()) {
+            if (!(insn instanceof MethodInsnNode) || !((MethodInsnNode) insn).owner.equals(heights.get(0).owner)
+                    || !((MethodInsnNode) insn).desc.equals("()V")) continue;
+            InsnList confirm = new InsnList();
+            confirm.add(new VarInsnNode(ALOAD, 0));
+            confirm.add(new MethodInsnNode(INVOKESTATIC, HOOK, "confirmAdjustStep", "(Ljava/lang/Object;)V", false));
+            method.instructions.insertBefore(insn, confirm);
+            return;
+        }
+        throw new IllegalStateException("Native step position sync not found");
     }
 
     private static void wrapWalking(ClassNode node, MethodNode original) {

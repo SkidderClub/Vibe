@@ -385,6 +385,12 @@ public final class AdjustFlight {
     }
 
     private void strafe(final double speed) {
+        double[] orbit = dev.vibe.module.impl.movement.TargetStrafeModule.speedDirection();
+        if (orbit != null) {
+            mc.thePlayer.motionX = orbit[0] * speed;
+            mc.thePlayer.motionZ = orbit[1] * speed;
+            return;
+        }
         if (!AacMovementSupport.moving(mc.thePlayer)) {
             mc.thePlayer.motionX = mc.thePlayer.motionZ = 0;
             return;

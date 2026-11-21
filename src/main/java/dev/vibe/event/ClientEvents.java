@@ -829,6 +829,7 @@ public final class ClientEvents {
             || minecraft.theWorld == null || minecraft.thePlayer == null) {
             return;
         }
+        dev.vibe.features.ServerGameMode.current();
         suppressedScoreboard = minecraft.theWorld.getScoreboard();
         suppressedSidebar = suppressedScoreboard.getObjectiveInDisplaySlot(1);
         ScorePlayerTeam team = suppressedScoreboard.getPlayersTeam(minecraft.thePlayer.getName());

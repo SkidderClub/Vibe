@@ -48,6 +48,11 @@ public final class RewoundHooks {
         StepModule step = module(StepModule.class);
         if (step != null) step.rewoundPostStep(entity);
     }
+    public static void confirmAdjustStep(Object entity) {
+        if (entity != Minecraft.getMinecraft().thePlayer) return;
+        StepModule step = module(StepModule.class);
+        if (step != null) step.adjustPostStep(entity);
+    }
 
     public static double[] move(Object entity, double x, double y, double z) {
         if (entity != Minecraft.getMinecraft().thePlayer) return null;

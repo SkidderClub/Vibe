@@ -19,10 +19,13 @@ public final class RewoundProductionCheck {
             if (!dump.isFile()) throw new AssertionError("Missing final production dump: " + dump);
             ClassNode node = new ClassNode(); new ClassReader(Files.readAllBytes(dump.toPath())).accept(node, 0);
             for (Object value : node.methods) for (AbstractInsnNode instruction : ((MethodNode) value).instructions.toArray()) {
-                if (instruction instanceof MethodInsnNode && ((MethodInsnNode) instruction).owner.equals("dev/vibe/movement/RewoundHooks")) hooks.add(((MethodInsnNode) instruction).name);
+                if (!(instruction instanceof MethodInsnNode)) continue;
+                MethodInsnNode call = (MethodInsnNode) instruction;
+                if (call.owner.equals("dev/vibe/movement/RewoundHooks")) hooks.add(call.name);
+                if (call.owner.equals("dev/vibe/module/impl/movement/NoRotateSetModule")) hooks.add("NoRotateSet." + call.name);
             }
         }
-        for (String hook : new String[] {"move", "afterMove", "beforeWalking", "afterWalking", "endWalking", "ground", "correction", "preUpdate", "preStepHeight", "stepHeight", "postStep", "walkingY", "positionTicks"}) {
+        for (String hook : new String[] {"move", "afterMove", "beforeWalking", "afterWalking", "endWalking", "ground", "correction", "preUpdate", "preStepHeight", "stepHeight", "postStep", "confirmAdjustStep", "NoRotateSet.capture", "NoRotateSet.restore", "walkingY", "positionTicks"}) {
             if (!hooks.contains(hook)) throw new AssertionError("Missing production Rewound hook: " + hook + " in " + hooks);
         }
         Class.forName("net.minecraft.client.renderer.ItemRenderer",false,loader).getDeclaredMethods();

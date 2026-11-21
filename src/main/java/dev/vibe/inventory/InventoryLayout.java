@@ -22,6 +22,7 @@ public final class InventoryLayout {
         HOE("Hoe", new ItemStack(Items.diamond_hoe)),
         ROD("Rod", new ItemStack(Items.fishing_rod)),
         BOW("Bow", new ItemStack(Items.bow)),
+        DISK("Music Discs / Music Blocks", new ItemStack(Items.record_13)),
         BLOCK("Blocks", new ItemStack(Blocks.planks)),
         STAIRS("Stairs", new ItemStack(Blocks.oak_stairs)),
         SLAB("Slabs", new ItemStack(Blocks.wooden_slab)),
@@ -170,7 +171,8 @@ public final class InventoryLayout {
             case HOE: return item instanceof net.minecraft.item.ItemHoe;
             case ROD: return item == Items.fishing_rod;
             case BOW: return item == Items.bow;
-            case BLOCK: return item instanceof net.minecraft.item.ItemBlock && !isStairs(stack) && !isSlab(stack);
+            case DISK: return isMusicItem(item);
+            case BLOCK: return item instanceof net.minecraft.item.ItemBlock && !isStairs(stack) && !isSlab(stack) && !isMusicItem(item);
             case STAIRS: return isStairs(stack);
             case SLAB: return isSlab(stack);
             case FLOWER: return item == Item.getItemFromBlock(Blocks.red_flower) || item == Item.getItemFromBlock(Blocks.yellow_flower);
@@ -197,6 +199,11 @@ public final class InventoryLayout {
             case BOOTS: return armor(stack, 3);
             default: return false;
         }
+    }
+
+    private static boolean isMusicItem(Item item) {
+        return item instanceof net.minecraft.item.ItemRecord || item == Item.getItemFromBlock(Blocks.noteblock)
+                || item == Item.getItemFromBlock(Blocks.jukebox);
     }
 
     private static boolean armor(ItemStack stack, int armourType) {

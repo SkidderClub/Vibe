@@ -30,6 +30,14 @@ public class AdjustPortTest {
             f.player.motionX=.8;f.player.motionY=-.0784;f.player.setEntityBoundingBox(new AxisAlignedBB(.4,64,.2,1,65.8,.8));
             net.minecraft.util.Timer timer=PathTestFixture.allocate(net.minecraft.util.Timer.class);PathTestFixture.set(net.minecraft.util.Timer.class,timer,"timerSpeed",1F);PathTestFixture.set(Minecraft.class,f.mc,"timer",timer);
             dev.vibe.movement.AdjustStep step=new dev.vibe.movement.AdjustStep();step.reset(f.player);PathTestFixture.set(dev.vibe.movement.AdjustStep.class,step,"lastStep",0L);assertEquals(2,step.prepare(2.5F),0);
+            assertTrue("A predicted step must not send offsets", f.queue.packets.isEmpty());
+            assertEquals(1, dev.vibe.combat.CombatTimerAccess.getSpeed(), 0);
+            step.confirm();
+            assertTrue("Vanilla can reject the step", f.queue.packets.isEmpty());
+            assertEquals(1, dev.vibe.combat.CombatTimerAccess.getSpeed(), 0);
+            assertEquals(2, step.prepare(2.5F), 0);
+            f.player.setEntityBoundingBox(f.player.getEntityBoundingBox().offset(.8, height / 2.0, 0));
+            step.confirm();
             assertEquals(height==2?2:height==3?6:8,f.queue.packets.size());net.minecraft.network.play.client.C03PacketPlayer first=(net.minecraft.network.play.client.C03PacketPlayer)f.queue.packets.get(0);assertEquals(64+.42,first.getPositionY(),.000001);assertFalse(first.isOnGround());
             float speed=height==2?.7F:height==3?.35F:.25F;assertEquals(speed,dev.vibe.combat.CombatTimerAccess.getSpeed(),0);step.preUpdate();assertEquals(speed,dev.vibe.combat.CombatTimerAccess.getSpeed(),0);step.preUpdate();step.preUpdate();assertEquals(1,dev.vibe.combat.CombatTimerAccess.getSpeed(),0);step.reset(null);
         }
@@ -53,6 +61,11 @@ public class AdjustPortTest {
         try(AutomationFixture f=new AutomationFixture()){
             MoveFixModule fix=new MoveFixModule();AntiAimModule anti=new AntiAimModule();f.base.modules.registerDynamic(fix);f.base.modules.registerDynamic(anti);fix.setEnabled(true);anti.setEnabled(true);
             f.player.rotationYaw=20;fix.beginRotationTick();anti.applyFallback();assertTrue(fix.ownsRotation("antiaim"));assertEquals(-160,fix.getRotationYaw(),.001);assertEquals(90,fix.getRotationPitch(),0);
+            f.player.inventory.mainInventory[0] = new ItemStack(Items.potionitem, 1, 16386);
+            anti.applyFallback();
+            assertFalse(fix.ownsRotation("antiaim"));
+            assertEquals(20, fix.getRotationYaw(), 0);
+            f.player.inventory.mainInventory[0] = null;
             fix.beginRotationTick();assertFalse("A fallback must not block another producer's ownership check",fix.hasOtherRotationOwner("killaura"));
             fix.setFakeRotation("killaura",41,17);anti.applyFallback();assertTrue(fix.ownsRotation("killaura"));assertEquals(0,MathHelper.wrapAngleTo180_float(fix.getRotationYaw()-41),.001);assertEquals(17,fix.getRotationPitch(),0);
             fix.clearFakeRotation("killaura");anti.pitch.setValue("Down Headless");anti.applyFallback();assertEquals(-180,fix.getRotationPitch(),0);

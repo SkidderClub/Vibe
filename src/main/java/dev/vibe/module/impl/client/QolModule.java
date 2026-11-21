@@ -17,6 +17,10 @@ public final class QolModule extends Module {
     private final MultiSelectSetting realPlayerViews=addSetting(new MultiSelectSetting("RealRewoundPlayers Views",
             Arrays.asList("ESP","Tab"),Arrays.asList("ESP","Tab"),()->features.isSelected(REAL_REWOUND_PLAYERS)));
     public MultiSelectSetting getRealPlayerViews(){return realPlayerViews;}
+    private final MultiSelectSetting realPlayerModes = addSetting(new MultiSelectSetting("RealRewoundPlayers Hide In",
+            Arrays.asList("Skywars", "Bedwars", "Survivalgames", "Pit"), Arrays.asList("Pit"),
+            () -> features.isSelected(REAL_REWOUND_PLAYERS)));
+    public MultiSelectSetting getRealPlayerModes() { return realPlayerModes; }
     private final MultiSelectSetting guiTargets = addSetting(new MultiSelectSetting("Hide In",
             Arrays.asList("Inventory", "ESC", "Other Vanilla GUIs"),
             Arrays.asList("Inventory", "ESC", "Other Vanilla GUIs"),

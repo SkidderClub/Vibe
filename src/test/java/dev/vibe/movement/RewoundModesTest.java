@@ -37,6 +37,33 @@ import static org.junit.Assert.*;
 
 /** Native packet writers and reference values from the uploaded Exire REWOUND/NCP/Vanilla branches. */
 public class RewoundModesTest implements Opcodes {
+    @Test public void noRotateSetRestoresTheCameraWithoutChangingTheCorrectedPosition() throws Exception {
+        try (Fixture f = new Fixture()) {
+            dev.vibe.module.impl.movement.NoRotateSetModule module = new dev.vibe.module.impl.movement.NoRotateSetModule();
+            Vibe.getInstance().getModuleManager().registerDynamic(module);
+            f.player.rotationYaw = 70;
+            f.player.prevRotationYaw = 65;
+            f.player.rotationPitch = 12;
+            f.player.prevRotationPitch = 11;
+            module.setEnabled(true);
+            dev.vibe.module.impl.movement.NoRotateSetModule.capture();
+            f.player.setPositionAndRotation(1, 65, 2, 180, 40);
+            dev.vibe.module.impl.movement.NoRotateSetModule.restore();
+            assertEquals(1, f.player.posX, 0);
+            assertEquals(65, f.player.posY, 0);
+            assertEquals(2, f.player.posZ, 0);
+            assertEquals(70, f.player.rotationYaw, 0);
+            assertEquals(65, f.player.prevRotationYaw, 0);
+            assertEquals(12, f.player.rotationPitch, 0);
+            assertEquals(11, f.player.prevRotationPitch, 0);
+            module.setEnabled(false);
+            dev.vibe.module.impl.movement.NoRotateSetModule.capture();
+            f.player.setPositionAndRotation(1, 65, 2, 180, 40);
+            dev.vibe.module.impl.movement.NoRotateSetModule.restore();
+            assertEquals(180, f.player.rotationYaw, 0);
+            assertEquals(40, f.player.rotationPitch, 0);
+        }
+    }
     @Test public void disabledHooksPreserveEveryNativeWalkingVariantByteForByte() throws Exception {
         assertEquals(walkingTrace(false), walkingTrace(true));
     }
