@@ -20,6 +20,7 @@ public final class ShopSaverModule extends Module {
     private static final String[] SHOP_TITLES = {"Quick Buy", "Blocks", "Melee", "Armor", "Tools", "Ranged", "Potions", "Utility"};
     private GuiChest saved;
     private GuiScreen hiding;
+    private boolean closingShop;
     private EntityPlayerSP player;
     private Object world;
 
@@ -39,18 +40,34 @@ public final class ShopSaverModule extends Module {
 
     private boolean hide(Object closingPlayer) {
         Minecraft mc = Minecraft.getMinecraft();
-        if (!isEnabled() || closingPlayer != mc.thePlayer || mc.theWorld == null
-                || !mc.thePlayer.isEntityAlive() || !(mc.currentScreen instanceof GuiChest)) return false;
+        if (closingShop || closingPlayer != mc.thePlayer || !canCloseShop(mc.currentScreen)) return false;
         GuiChest chest = (GuiChest) mc.currentScreen;
-        if (!(chest.inventorySlots instanceof ContainerChest) || !isShop((ContainerChest)chest.inventorySlots)
-                || chest.inventorySlots != mc.thePlayer.openContainer
-                || chest.inventorySlots == mc.thePlayer.inventoryContainer) return false;
         saved = chest; player = mc.thePlayer; world = mc.theWorld;
         hiding = chest;
         try { mc.displayGuiScreen(null); }
         finally { hiding = null; }
         if (mc.currentScreen == chest) { clear(); return false; }
         return true;
+    }
+
+    public boolean canCloseShop(GuiScreen screen) {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (!isEnabled() || mc == null || mc.theWorld == null || mc.thePlayer == null || !mc.thePlayer.isEntityAlive()
+                || screen != mc.currentScreen || !(screen instanceof GuiChest)) return false;
+        net.minecraft.inventory.Container container = ((GuiChest) screen).inventorySlots;
+        return container instanceof ContainerChest && container == mc.thePlayer.openContainer
+                && container != mc.thePlayer.inventoryContainer && isShop((ContainerChest) container);
+    }
+
+    public void closeShop(GuiScreen screen) {
+        if (!canCloseShop(screen)) return;
+        clear();
+        closingShop = true;
+        try {
+            Minecraft.getMinecraft().thePlayer.closeScreen();
+        } finally {
+            closingShop = false;
+        }
     }
 
     /** Match the supplied shop menus, never a normal storage window with a similar name. */

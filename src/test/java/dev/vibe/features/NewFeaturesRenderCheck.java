@@ -1,5 +1,7 @@
 package dev.vibe.features;
 
+import cc.rewound.modapi.packet.impl.clientbound.event.ClientboundPitEventsPacket;
+import cc.rewound.modapi.packet.impl.clientbound.event.ClientboundPitEventsPacket.PitEvent;
 import dev.vibe.Vibe;
 import dev.vibe.hud.*;
 import dev.vibe.module.Module;
@@ -35,6 +37,44 @@ public final class NewFeaturesRenderCheck {
             ClientChangesRenderCheck.frame(1280,720);for(int i=0;i<DashboardWidgets.IDS.length;i++){int x=28+(i%3)*405,y=95+(i/3)*260;String id=DashboardWidgets.IDS[i];HudManager.HudElement e=manager.getElement(id);e.setTheme(theme);manager.drawPreview(e,mc.fontRendererObj);e.moveTo(x,y,new ScaledResolution(mc));manager.drawPreview(e,mc.fontRendererObj);mc.fontRendererObj.drawString(DashboardWidgets.title(id),x,y-24,0xFFE7EAF1);}
             if(GL11.glGetError()!=0)throw new AssertionError("Dashboard GL error: "+theme);save(out.resolve("dashboard-"+theme.toLowerCase(java.util.Locale.ROOT)+".png"));
         }
+        HudManager.HudElement countdown = manager.getElement(MatchCountdowns.ID);
+        countdown.setTheme("Adjust");
+        ClientChangesRenderCheck.frame(1280, 720);
+        manager.drawPreview(countdown, mc.fontRendererObj);
+        countdown.moveTo(48, 48, new ScaledResolution(mc));
+        ClientChangesRenderCheck.frame(1280, 720);
+        manager.drawPreview(countdown, mc.fontRendererObj);
+        if (!"Adjust".equals(countdown.getTheme()) || countdown.getHeight() <= 40 || GL11.glGetError() != 0) {
+            throw new AssertionError("Match Countdowns Adjust preview did not render");
+        }
+        save(out.resolve("match-countdowns-adjust.png"));
+        Object state = read(manager.dashboards, "countdowns");
+        java.lang.reflect.Method updatePit = MatchCountdowns.class.getDeclaredMethod("updatePit",
+                ClientboundPitEventsPacket.class, long.class, long.class);
+        updatePit.setAccessible(true);
+        long epoch = System.currentTimeMillis();
+        PitEvent live = new PitEvent("spire", "Spire", true, epoch - 40000, epoch + 52000);
+        PitEvent minor = new PitEvent("koth", "King of the Hill", false, epoch + 200000, 0);
+        PitEvent major = new PitEvent("raffle", "Raffle", true, epoch + 700000, 0);
+        updatePit.invoke(state, new ClientboundPitEventsPacket(
+                live, java.util.Arrays.asList(minor, major)), epoch, System.nanoTime() / 1000000L);
+        ClientChangesRenderCheck.frame(1280, 720);
+        int countdownX = 44;
+        manager.beginEditorPreview(true);
+        try {
+            for (String theme : new String[]{"Skeet", "Vibe", "Lavalamp", "LiquidGlass", "Adjust"}) {
+                countdown.setTheme(theme);
+                countdown.moveTo(countdownX, 100, new ScaledResolution(mc));
+                mc.fontRendererObj.drawString(theme, countdownX, 82, 0xFFE7EAF1);
+                manager.drawPreview(countdown, mc.fontRendererObj);
+                countdownX += 235;
+            }
+        } finally {
+            manager.endEditorPreview();
+            updatePit.invoke(state, null, 0L, 0L);
+        }
+        if (GL11.glGetError() != 0) throw new AssertionError("Rewound Pit countdown preview GL error");
+        save(out.resolve("match-countdowns-rewound-themes.png"));
         HudReviewRenderCheck.verify(mc,modules,manager,hud,out);
         HealthColorGrading grading=hud.customHealth.grading;grading.enabled.setEnabled(true);grading.exposure.setValue(1D);try(HealthGradePass pass=new HealthGradePass()){
             ClientChangesRenderCheck.frame(1280,720);Gui.drawRect(0,0,1280,720,0xFF243650);int outside=pixel(50,50);pass.render(grading,false,()->Gui.drawRect(100,100,220,180,0xFF406020));int actual=pixel(150,140);if(Math.abs((actual>>16&255)-128)>4||Math.abs((actual>>8&255)-192)>4)throw new AssertionError("Health grade exposure: "+Integer.toHexString(actual));if(pixel(50,50)!=outside)throw new AssertionError("Health grade affected the world outside its content");save(out.resolve("health-grading-isolation.png"));

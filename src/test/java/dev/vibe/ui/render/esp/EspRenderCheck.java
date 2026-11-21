@@ -3,9 +3,11 @@ package dev.vibe.ui.render.esp;
 import dev.vibe.Vibe;
 import dev.vibe.module.ModuleManager;
 import dev.vibe.ui.GuiInput;
+import dev.vibe.module.impl.visual.ChestEspModule;
 import dev.vibe.module.impl.visual.Esp2DSettings;
 import dev.vibe.module.impl.visual.EspEditorModule;
 import dev.vibe.module.impl.visual.EspModule;
+import dev.vibe.path.PathTestFixture;
 import dev.vibe.ui.GuiRenderState;
 import dev.vibe.ui.screen.EspEditorGui;
 import java.awt.image.BufferedImage;
@@ -16,13 +18,22 @@ import java.nio.file.*;
 import java.util.*;
 import javax.imageio.ImageIO;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.gui.*;
+import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.texture.*;
 import net.minecraft.client.resources.*;
 import net.minecraft.client.resources.data.*;
 import net.minecraft.client.settings.GameSettings;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.init.Blocks;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.tileentity.TileEntityChest;
+import net.minecraft.tileentity.TileEntityEnderChest;
+import net.minecraft.util.BlockPos;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.World;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.*;
 
@@ -31,6 +42,7 @@ public final class EspRenderCheck {
     private static final int W=920,H=560;
     private static Minecraft mc;
     private static EspModule esp;
+    private static ChestEspModule chests;
     private static Esp2DRenderer renderer;
     private static Path output;
     private static void set(Class<?> c,Object o,String n,Object v)throws Exception{Field f=c.getDeclaredField(n);f.setAccessible(true);f.set(o,v);}
@@ -48,14 +60,14 @@ public final class EspRenderCheck {
             set(Minecraft.class,mc,"mcResourceManager",resources);mc.renderEngine=new TextureManager(resources);
             OpenGlHelper.initializeTextures();
             mc.fontRendererObj=new FontRenderer(mc.gameSettings,new ResourceLocation("textures/font/ascii.png"),mc.renderEngine,false);mc.fontRendererObj.onResourceManagerReload(resources);
-            Vibe vibe=new Vibe();set(Vibe.class,null,"instance",vibe);esp=new EspModule();EspEditorModule editorModule=new EspEditorModule();
+            Vibe vibe=new Vibe();set(Vibe.class,null,"instance",vibe);esp=new EspModule();EspEditorModule editorModule=new EspEditorModule();chests=new ChestEspModule();
             ModuleManager modules=(ModuleManager)u.getMethod("allocateInstance",Class.class).invoke(unsafe,ModuleManager.class);
-            set(ModuleManager.class,modules,"modules",new ArrayList<dev.vibe.module.Module>(Arrays.asList(esp,editorModule)));set(Vibe.class,vibe,"moduleManager",modules);
+            set(ModuleManager.class,modules,"modules",new ArrayList<dev.vibe.module.Module>(Arrays.asList(esp,editorModule,chests)));set(Vibe.class,vibe,"moduleManager",modules);
             esp.getModes().setValue(new LinkedHashSet<String>(Arrays.asList("2D")));renderer=new Esp2DRenderer();
             cornersAndContext();textBackgrounds();textAfterBars();fontFilterRestored();distanceAnchors();subpixelOutlines();subpixelBars();scalingGallery();healthAndState();check("bars");gradientMask();check("gradient");textFonts();check("fonts");editor(editorModule);check("editor");protectedNameGlow();check("protected name");
-            inheritedTargetColor();hotbarDepthOverlay();
+            inheritedTargetColor();hotbarDepthOverlay();chestProjection();check("ChestESP world and overlay");
             if(GL11.glGetError()!=0)throw new AssertionError("OpenGL error after ESP checks");
-            System.out.println("ESP native checks passed: bars, global gradient masks, fonts, editor selection/resizing and settings visibility.");
+            System.out.println("ESP native checks passed: Player ESP rendering, editor controls, both ChestESP previews and projected double chests.");
         } finally {buffer.destroy();}
     }
     private static Esp2DRenderer.Actor actor(float health,float max) {Esp2DRenderer.Actor a=new Esp2DRenderer.Actor("Player",health,max,14,12,"Service pistol",null,null,1);a.nativeItem="Pistol";return a;}
@@ -284,10 +296,97 @@ public final class EspRenderCheck {
         if(Math.abs(hsv[1]-.5)>.02||Math.abs(hsv[2]-.5)>.02)throw new AssertionError("Picker saturation/brightness interaction");
         GuiInput.keyTyped(gui,(char)0,org.lwjgl.input.Keyboard.KEY_ESCAPE);
         profilePreviews(gui);
+        chestEditor(gui);
         gui.width=460;gui.height=280;gui.initGui();GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GL11.glOrtho(0,460,280,0,1000,3000);GL11.glMatrixMode(GL11.GL_MODELVIEW);
         gui.drawScreen(0,0,0);save("editor-small.png");
         GuiInput.keyTyped(gui,(char)0,org.lwjgl.input.Keyboard.KEY_ESCAPE);
         if(((PreviewMinecraft)mc).destination!=parent)throw new AssertionError("Editor did not return to its parent screen");
+    }
+
+    private static void chestEditor(EspEditorGui gui) throws Exception {
+        GuiInput.mouseClicked(gui, 410, 15, 0);
+        if (!chests.getMode().is("3D")) throw new AssertionError("Existing ChestESP must default to 3D");
+        frame(); gui.drawScreen(0, 0, 0); save("chest-esp-editor-3d.png");
+        GuiInput.mouseClicked(gui, 60, 53, 0);
+        if (!chests.is2D()) throw new AssertionError("ChestESP tab did not switch the live render mode");
+        GuiInput.mouseClicked(gui, 700, 127, 0);
+        if (!chests.getBoxStyle().is("Full box")) throw new AssertionError("ChestESP editor did not change the live box style");
+        GuiInput.mouseClicked(gui, 290, 128, 0);
+        frame(); gui.drawScreen(0, 0, 0); save("chest-esp-editor-2d.png");
+        int before = pixel(193, 320);
+        GuiInput.mouseClicked(gui, 190, 320, 0);
+        GuiInput.mouseClickMove(gui, 226, 320, 0, 100);
+        GuiInput.mouseReleased(gui, 226, 320, 0);
+        frame(); gui.drawScreen(0, 0, 0);
+        if (before == pixel(193, 320)) throw new AssertionError("Chest preview did not rotate");
+
+        GuiInput.mouseClicked(gui, 352, 509, 0);
+        GuiInput.mouseReleased(gui, 352, 509, 0);
+        Field distance = EspEditorGui.class.getDeclaredField("previewDistance");
+        distance.setAccessible(true);
+        if (((dev.vibe.setting.NumberSetting) distance.get(gui)).getInt() != 256) {
+            throw new AssertionError("Preview distance did not reach the configured maximum");
+        }
+        GuiInput.mouseClicked(gui, 300, 15, 0);
+        frame(); gui.drawScreen(0, 0, 0);
+        check("return from chest tab to Player ESP");
+    }
+
+    private static void chestProjection() throws Exception {
+        WorldClient originalWorld = mc.theWorld;
+        EntityPlayerSP originalPlayer = mc.thePlayer;
+        ChestFixture world = PathTestFixture.allocate(ChestFixture.class);
+        TileEntityChest west = new TileEntityChest(), east = new TileEntityChest();
+        west.setPos(new BlockPos(-3, -1, 0));
+        east.setPos(new BlockPos(-2, -1, 0));
+        west.adjacentChestXPos = east;
+        east.adjacentChestXNeg = west;
+        TileEntityEnderChest ender = new TileEntityEnderChest();
+        ender.setPos(new BlockPos(2, -1, 0));
+        world.ender = ender.getPos();
+        set(World.class, world, "loadedTileEntityList", Arrays.<TileEntity>asList(west, east, ender));
+        ChestEspModule settings = new ChestEspModule();
+        settings.setEnabled(true);
+        settings.getMode().setValue("2D");
+        settings.getBoxStyle().setValue("Full box");
+        settings.getFadeAlpha().setEnabled(false);
+        settings.getNormalOutline().setValue(0xFFFF0000);
+        settings.getNormalFill().setValue(0xFF00FF00);
+        settings.getEnder().setEnabled(false);
+        ChestEspRenderer renderer = new ChestEspRenderer();
+        try {
+            mc.theWorld = world;
+            mc.thePlayer = PathTestFixture.allocate(EntityPlayerSP.class);
+            frame();
+            GL11.glMatrixMode(GL11.GL_PROJECTION);
+            GL11.glLoadIdentity();
+            GL11.glOrtho(-6, 6, -4, 4, -10, 10);
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);
+            GL11.glLoadIdentity();
+            renderer.renderWorld(settings);
+            if (!renderer.hasOverlay()) throw new AssertionError("World mode did not capture projected chests");
+            frame();
+            renderer.renderOverlay(settings);
+            if ((pixel(307, 318) & 0xFFFFFF) != 0x00FF00) throw new AssertionError("Double chest projection has a gap or seam");
+            if (pixel(650, 318) != 0) throw new AssertionError("Disabled Ender Chest appeared in the 2D overlay");
+            if (renderer.hasOverlay()) throw new AssertionError("World projection leaked into a later frame");
+            save("chest-esp-world-2d.png");
+        } finally {
+            mc.theWorld = originalWorld;
+            mc.thePlayer = originalPlayer;
+        }
+    }
+
+    private static final class ChestFixture extends WorldClient {
+        private BlockPos ender;
+
+        private ChestFixture() {
+            super(null, null, 0, null, null);
+        }
+
+        @Override public IBlockState getBlockState(BlockPos pos) {
+            return (pos.equals(ender) ? Blocks.ender_chest : Blocks.chest).getDefaultState();
+        }
     }
     private static void profilePreviews(EspEditorGui gui)throws Exception {
         esp.getModes().setValue(new LinkedHashSet<String>(Arrays.asList("Chams")));

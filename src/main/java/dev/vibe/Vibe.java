@@ -95,6 +95,7 @@ public final class Vibe {
         ((IReloadableResourceManager) minecraft.getResourceManager()).registerReloadListener(AugustusImGui::resourcesReloaded);
         ClientEvents events = new ClientEvents();
         MinecraftForge.EVENT_BUS.register(events);
+        MinecraftForge.EVENT_BUS.register(new dev.vibe.network.RewoundPitEvents());
         MinecraftForge.EVENT_BUS.register(new MainMenuEvents());
         MinecraftForge.EVENT_BUS.register(serverBrowser);
         FMLCommonHandler.instance().bus().register(serverBrowser);

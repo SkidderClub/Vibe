@@ -18,6 +18,8 @@ import org.lwjgl.opengl.GL11;
 /** Adjust's narrow gradient-header columns, text controls, eye buttons and inline HSBA picker.
  * Uses Vibe's Module/Setting objects directly; no second configuration or input model. */
 final class AdjustWorkspace {
+    private static final int PANEL_WIDTH = 132, HEADER_HEIGHT = 22, ROW_HEIGHT = 22, PANEL_GAP = 4;
+    private static final float DEFAULT_PHYSICAL_SCALE = 2.25F;
     private static final Map<Category,int[]> SAVED=new EnumMap<>(Category.class);
     private static final Set<String> EXPANDED=new HashSet<>();
     private static float savedPan;
@@ -26,7 +28,7 @@ final class AdjustWorkspace {
     private final List<Hit> hits=new ArrayList<>();
     private final Set<Setting<?>> open=Collections.newSetFromMap(new IdentityHashMap<Setting<?>,Boolean>());
     private final Map<ColorSetting,Picker> pickers=new IdentityHashMap<>();
-    private Panel moving;private int dx,dy,width,height,panelWidth=132;private float pan,panMax;
+    private Panel moving;private int dx,dy,width,height;private float pan,panMax,scale=1;
     private Hit dragging;private RangeSetting.Drag rangeDrag;
     private Module binding;
     private Setting<?> editing;private GuiTextField editor,search;
@@ -34,12 +36,30 @@ final class AdjustWorkspace {
     private int accent,secondary;private String oldQuery="";
 
     void draw(int w,int h,int mx,int my,float partial){
-        dev.vibe.ui.GuiRenderState.prepare(false);width=w;height=h;
+        GuiRenderState.prepare(false);
+        int guiScale = new ScaledResolution(mc).getScaleFactor();
+        float physicalScale = Math.max(1, Math.min(DEFAULT_PHYSICAL_SCALE, Math.min(mc.displayWidth / 320F, mc.displayHeight / 240F)));
+        // The workspace metrics are doubled to leave room for Vibe's shared settings widgets.
+        scale = physicalScale / (2 * guiScale);
         ClickGuiModule gui=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
         accent=gui.getPrimaryColor().getArgb();secondary=gui.getSecondaryColor().getArgb();
         if(mc.theWorld==null)Gui.drawRect(0,0,w,h,0xFF131315);
         float intro=Math.min(1,(System.nanoTime()-opened)/220e6F);
         Gui.drawRect(0,0,w,h,Math.round(80*intro)<<24);
+        GL11.glPushMatrix();
+        try {
+            GL11.glScalef(scale, scale, 1);
+            drawWorkspace((int)(w/scale), (int)(h/scale), coordinate(mx), coordinate(my));
+        } finally {
+            GL11.glPopMatrix();
+            GuiRenderState.prepare(false);
+        }
+    }
+
+    private int coordinate(int value) { return (int) Math.floor(value / scale); }
+
+    private void drawWorkspace(int w,int h,int mx,int my) {
+        width=w;height=h;
         if(search==null){search=new GuiTextField(410,mc.fontRendererObj,0,0,120,16);search.setEnableBackgroundDrawing(false);search.setMaxStringLength(100);}
         int sw=Math.min(180,w-20);search.xPosition=(w-sw)/2+7;search.yPosition=h-21;search.width=sw-14;
         Gui.drawRect((w-sw)/2,h-26,(w+sw)/2,h-5,0xEE111113);RenderUtils.roundedOutline((w-sw)/2,h-26,(w+sw)/2,h-5,0,1,0xFF35353A);
@@ -47,66 +67,71 @@ final class AdjustWorkspace {
         if(search.getText().isEmpty()&&!search.isFocused())AdjustFonts.LABEL.draw("Search...",search.xPosition,h-23,0xFF85858C);else search.drawTextBox();
         String query=search.getText().trim().toLowerCase(Locale.ROOT);
         if(!query.equals(oldQuery)){for(Panel p:panels)p.target=p.scroll=0;oldQuery=query;}
-        panelWidth=Math.max(104,Math.min(132,(w-20)/Category.values().length-4));
         if(panels.isEmpty()){
             int i=0;pan=savedPan;
+            int totalWidth = Category.values().length * (PANEL_WIDTH + PANEL_GAP) - PANEL_GAP;
+            int left = Math.max(10, (w - totalWidth) / 2);
+            int top = Math.min(168, Math.max(24, h / 6));
             for(Category c:Category.values()){
-                int[] saved=SAVED.get(c);Panel p=new Panel(c,saved==null?10+i*(panelWidth+4):saved[0],saved==null?38:Math.max(4,Math.min(h-64,saved[1])));
+                int[] saved=SAVED.get(c);Panel p=new Panel(c,saved==null?left+i*(PANEL_WIDTH+PANEL_GAP):saved[0],saved==null?top:Math.max(4,Math.min(h-64,saved[1])));
                 if(saved!=null){p.collapsed=saved[2]!=0;p.scroll=p.target=saved[3];}panels.add(p);i++;
             }
         }
-        int far=0;for(Panel p:panels)far=Math.max(far,p.x+panelWidth+10);panMax=Math.max(0,far-w);pan=Math.max(0,Math.min(panMax,pan));
+        int far=0;for(Panel p:panels)far=Math.max(far,p.x+PANEL_WIDTH+10);panMax=Math.max(0,far-w);pan=Math.max(0,Math.min(panMax,pan));
         if(moving!=null){moving.x=Math.max(0,mx+Math.round(pan)-dx);moving.y=Math.max(4,Math.min(h-60,my-dy));}
         if(dragging!=null){if(!Mouse.isButtonDown(0)||!dragging.setting.isVisible())release(0);else drag(mx,my);}
         long now=System.nanoTime();float dt=previous==0?1/60F:Math.min(.05F,(now-previous)/1e9F);previous=now;float ease=1-(float)Math.exp(-22*dt);
         hits.clear();
         for(Panel p:panels){
             p.modules.clear();for(Module m:ClickGuiModule.sortedModules(Vibe.getInstance().getModuleManager().getModules(p.category)))if(matches(m,query))p.modules.add(m);
-            int content=0;for(Module m:p.modules){content+=22;if(expanded(m,query))content+=settingsHeight(m);}
-            p.h=p.collapsed?24:Math.min(Math.max(46,h-p.y-34),24+content+3);p.max=Math.max(0,content-(p.h-27));p.target=Math.max(0,Math.min(p.max,p.target));p.scroll+=(p.target-p.scroll)*ease;
+            int content=0;for(Module m:p.modules){content+=ROW_HEIGHT;if(expanded(m,query))content+=settingsHeight(m);}
+            int limit = Math.min(Math.max(HEADER_HEIGHT + 3, h-p.y-34), Math.round(h * .58F));
+            p.h=p.collapsed?HEADER_HEIGHT:Math.min(limit,HEADER_HEIGHT+content+3);
+            p.max=Math.max(0,content-(p.h-HEADER_HEIGHT-3));p.target=Math.max(0,Math.min(p.max,p.target));p.scroll+=(p.target-p.scroll)*ease;
             panel(p,mx,my,query);
         }
         if(panMax>0){Gui.drawRect(10,h-31,w-10,h-29,0x77303036);float size=(w-20)*(w/(w+panMax)),x=10+(w-20-size)*(pan/panMax);Gui.drawRect((int)x,h-31,(int)(x+size),h-29,accent);}
-        dev.vibe.ui.GuiRenderState.prepare(false);
     }
     private static boolean matches(Module m,String q){if(q.isEmpty()||m.getRawName().toLowerCase(Locale.ROOT).contains(q))return true;for(Setting<?> s:m.getSettings())if(s.getRawName().toLowerCase(Locale.ROOT).contains(q))return true;return false;}
     private boolean expanded(Module m,String q){return EXPANDED.contains(m.getId())||!q.isEmpty();}
     private void panel(Panel p,int mx,int my,String query){
-        int x=p.x-Math.round(pan),y=p.y;if(x+panelWidth<0||x>width)return;
-        Gui.drawRect(x,y,x+panelWidth,y+p.h,0xEC101013);
-        DropdownStyle.gradient(x,y,panelWidth,24,RenderUtils.blend(accent,0xFFFFFFFF,.28F),RenderUtils.blend(secondary,0xFF000000,.2F));
-        RenderUtils.roundedOutline(x,y,x+panelWidth,y+24,0,1,0x64232323);
+        int x=p.x-Math.round(pan),y=p.y;if(x+PANEL_WIDTH<0||x>width)return;
+        Gui.drawRect(x,y,x+PANEL_WIDTH,y+p.h,0xED121419);
+        DropdownStyle.gradient(x,y,PANEL_WIDTH,HEADER_HEIGHT,RenderUtils.blend(accent,0xFFFFFFFF,.22F),RenderUtils.blend(secondary,0xFF000000,.23F));
+        RenderUtils.roundedOutline(x,y,x+PANEL_WIDTH,y+p.h,0,1,0x66454A57);
         net.minecraft.client.renderer.GlStateManager.disableBlend();net.minecraft.client.renderer.GlStateManager.enableBlend();
-        AdjustFonts.TITLE.draw(p.category.getLabel(),x+(panelWidth-AdjustFonts.TITLE.width(p.category.getLabel()))/2,y+5,0xFFEEEEF2);
-        hit(p,x,y,panelWidth,24,Kind.HEADER,null,null,null,0);
+        String title = p.category.getLabel();
+        AdjustFonts.TITLE.draw(title, x + (PANEL_WIDTH - AdjustFonts.TITLE.width(title)) / 2,
+                y + (HEADER_HEIGHT - AdjustFonts.TITLE.inkHeight(title)) / 2 - AdjustFonts.TITLE.inkTop(title), 0xFFEEEEF2);
+        hit(p,x,y,PANEL_WIDTH,HEADER_HEIGHT,Kind.HEADER,null,null,null,0);
         if(p.collapsed)return;
-        try(GuiClip clip=GuiClip.local(x,y+24,panelWidth,p.h-25)){
-            int yy=y+24-Math.round(p.scroll);
+        try(GuiClip clip=GuiClip.local(x,y+HEADER_HEIGHT,PANEL_WIDTH,p.h-HEADER_HEIGHT-1)){
+            int yy=y+HEADER_HEIGHT-Math.round(p.scroll);
             HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);
             for(Module m:p.modules){
-                boolean hover=inside(mx,my,x,yy,panelWidth,22)&&my>=y+24&&my<y+p.h;
-                if(hover)Gui.drawRect(x,yy,x+panelWidth,yy+22,0x2CFFFFFF);
+                boolean hover=inside(mx,my,x,yy,PANEL_WIDTH,ROW_HEIGHT)&&my>=y+HEADER_HEIGHT&&my<y+p.h-1;
+                if(hover)Gui.drawRect(x,yy,x+PANEL_WIDTH,yy+ROW_HEIGHT,0x20FFFFFF);
                 boolean visible=hud==null||hud.getArrayListModules().isSelected(m.getRawName());
-                int reserve=hover||!visible?42:6;
-                label(m.getName(),x+5,yy+5,panelWidth-reserve,m.isEnabled()?0xFFF2F2F5:0xFF929297);
-                hit(p,x,yy,panelWidth,22,Kind.MODULE,m,null,null,0);
-                if(hover||!visible){eye(x+panelWidth-30,yy+11,visible,visible?0xFFCBCBD1:0xFF74747B);hit(p,x+panelWidth-40,yy,20,22,Kind.EYE,m,null,null,0);}
-                if(hover||expanded(m,query)){NeverLoseStyle.chevron(x+panelWidth-10,yy+11,expanded(m,query),0xFFB5B5BC);hit(p,x+panelWidth-20,yy,20,22,Kind.EXPAND,m,null,null,0);}
-                yy+=22;
+                int reserve=hover?42:expanded(m,query)?22:6;
+                label(m.getName(),x+5,yy+5,PANEL_WIDTH-reserve,m.isEnabled()?0xFFF2F2F5:0xFFA1A4AD);
+                hit(p,x,yy,PANEL_WIDTH,ROW_HEIGHT,Kind.MODULE,m,null,null,0);
+                if(hover&&hud!=null){eye(x+PANEL_WIDTH-30,yy+ROW_HEIGHT/2F,visible,visible?0xFFCBCBD1:0xFF92929A);hit(p,x+PANEL_WIDTH-40,yy,20,ROW_HEIGHT,Kind.EYE,m,null,null,0);}
+                if(hover||expanded(m,query)){NeverLoseStyle.chevron(x+PANEL_WIDTH-10,yy+ROW_HEIGHT/2,expanded(m,query),0xFFB5B5BC);hit(p,x+PANEL_WIDTH-20,yy,20,ROW_HEIGHT,Kind.EXPAND,m,null,null,0);}
+                yy+=ROW_HEIGHT;
                 if(expanded(m,query)){
-                    Gui.drawRect(x+1,yy,x+panelWidth-1,yy+settingsHeight(m),0xE918181C);
-                    label("Bind: "+(binding==m?"Press a key...":m.getKey()==0?"None":Keyboard.getKeyName(m.getKey())),x+5,yy+3,panelWidth-10,0xFFAAAAB2);
-                    hit(p,x,yy,panelWidth,18,Kind.BIND,m,null,null,0);yy+=18;
+                    Gui.drawRect(x+1,yy,x+PANEL_WIDTH-1,yy+settingsHeight(m),0xE918181C);
+                    label("Bind: "+(binding==m?"Press a key...":m.getKey()==0?"None":Keyboard.getKeyName(m.getKey())),x+5,yy+3,PANEL_WIDTH-10,0xFFAAAAB2);
+                    hit(p,x,yy,PANEL_WIDTH,18,Kind.BIND,m,null,null,0);yy+=18;
                     for(Setting<?> s:m.getSettings())if(s.isVisible()){setting(p,s,x,yy,mx,my);yy+=settingHeight(s);}
                 }
             }
         }
-        if(p.max>0){float track=p.h-27,thumb=Math.max(12,track*track/(track+p.max)),sy=y+25+(track-thumb)*p.scroll/p.max;Gui.drawRect(x+panelWidth-2,(int)sy,x+panelWidth-1,(int)(sy+thumb),0x889E9EA7);}
+        if(p.max>0){float track=p.h-HEADER_HEIGHT-3,thumb=Math.min(track,Math.max(12,track*track/(track+p.max))),sy=y+HEADER_HEIGHT+1+(track-thumb)*p.scroll/p.max;Gui.drawRect(x+PANEL_WIDTH-2,(int)sy,x+PANEL_WIDTH-1,(int)(sy+thumb),0x889E9EA7);}
     }
     private int settingsHeight(Module m){int h=18;for(Setting<?> s:m.getSettings())if(s.isVisible())h+=settingHeight(s);return h;}
     private int settingHeight(Setting<?> s){if(s instanceof ColorSetting)return 18+(open.contains(s)?108:0);if(s instanceof MultiSelectSetting)return 18+(open.contains(s)?((MultiSelectSetting)s).getOptions().size()*18:0);return s instanceof NumberSetting||s instanceof RangeSetting?24:s instanceof StringSetting?34:18;}
     private void setting(Panel p,Setting<?> s,int x,int y,int mx,int my){
-        int w=panelWidth,muted=0xFFAFAFB7;
+        int w=PANEL_WIDTH,muted=0xFFAFAFB7;
         if(s instanceof BooleanSetting){boolean on=((BooleanSetting)s).isEnabled();Gui.drawRect(x+4,y+4,x+15,y+15,0x620F0F13);if(on)Gui.drawRect(x+5,y+5,x+14,y+14,accent);label(s.getName()+": "+(on?"Yes":"No"),x+19,y+3,w-24,on?0xFFD3D3DC:muted);hit(p,x,y,w,18,Kind.SETTING,null,s,null,0);}
         else if(s instanceof NumberSetting||s instanceof RangeSetting){
             double min,max,low,high;if(s instanceof NumberSetting){NumberSetting n=(NumberSetting)s;min=n.getMinimum();max=n.getMaximum();low=min;high=n.getDouble();}else{RangeSetting n=(RangeSetting)s;min=n.getMinimum();max=n.getMaximum();low=n.getMin();high=n.getMax();}
@@ -134,6 +159,7 @@ final class AdjustWorkspace {
         hit(p,x,y,w,72,Kind.COLOR,null,c,null,0);hit(p,x,y+76,w,10,Kind.COLOR,null,c,null,1);hit(p,x,y+90,w,10,Kind.COLOR,null,c,null,2);
     }
     void click(int mx,int my,int button){
+        mx=coordinate(mx);my=coordinate(my);
         if(search!=null&&my>=height-26){commit();search.mouseClicked(mx,my,button);return;}
         if(search!=null)search.setFocused(false);
         for(int i=hits.size()-1;i>=0;i--){Hit hit=hits.get(i);if(!hit.contains(mx,my))continue;
@@ -152,7 +178,7 @@ final class AdjustWorkspace {
         commit();
     }
     private static void toggleModule(Module m){if(!EXPANDED.add(m.getId()))EXPANDED.remove(m.getId());}
-    void wheel(int mx,int my,int wheel){if(wheel==0||dragging!=null)return;for(int i=panels.size()-1;i>=0;i--){Panel p=panels.get(i);if(inside(mx,my,p.x-Math.round(pan),p.y,panelWidth,p.h)&&!(Keyboard.isCreated()&&GuiScreen.isShiftKeyDown())){p.target=Math.max(0,Math.min(p.max,p.target+(wheel>0?-36:36)));return;}}pan=Math.max(0,Math.min(panMax,pan+(wheel>0?-80:80)));}
+    void wheel(int mx,int my,int wheel){if(wheel==0||dragging!=null)return;mx=coordinate(mx);my=coordinate(my);for(int i=panels.size()-1;i>=0;i--){Panel p=panels.get(i);if(inside(mx,my,p.x-Math.round(pan),p.y,PANEL_WIDTH,p.h)&&!(Keyboard.isCreated()&&GuiScreen.isShiftKeyDown())){p.target=Math.max(0,Math.min(p.max,p.target+(wheel>0?-36:36)));return;}}pan=Math.max(0,Math.min(panMax,pan+(wheel>0?-80:80)));}
     boolean key(char ch,int key){
         if(binding!=null){binding.setKey(key==Keyboard.KEY_ESCAPE||key==Keyboard.KEY_DELETE?0:key);binding=null;saveConfig();return true;}
         if(editing!=null){if(key==Keyboard.KEY_ESCAPE){editing=null;editor=null;return true;}if(key==Keyboard.KEY_RETURN||key==Keyboard.KEY_NUMPADENTER){commit();return true;}editor.textboxKeyTyped(ch,key);return true;}
@@ -168,7 +194,7 @@ final class AdjustWorkspace {
     private double sliderValue(Hit h,int mx){double min=h.setting instanceof NumberSetting?((NumberSetting)h.setting).getMinimum():((RangeSetting)h.setting).getMinimum(),max=h.setting instanceof NumberSetting?((NumberSetting)h.setting).getMaximum():((RangeSetting)h.setting).getMaximum();return min+Math.max(0,Math.min(1,(mx-h.x)/(double)Math.max(1,h.w)))*(max-min);}
     private void drag(int mx,int my){Hit h=dragging;if(h.kind==Kind.SLIDER){double v=sliderValue(h,mx);if(h.setting instanceof NumberSetting)((NumberSetting)h.setting).setValue(v);else if(rangeDrag!=null)rangeDrag.move(v);return;}
         ColorSetting c=(ColorSetting)h.setting;Picker v=pickers.get(c);if(v==null)return;float xx=Math.max(0,Math.min(1,(mx-h.x)/(float)h.w)),yy=Math.max(0,Math.min(1,(my-h.y)/(float)h.h));int alpha=c.getAlpha();if(h.part==0){v.saturation=xx;v.brightness=1-yy;}else if(h.part==1)v.hue=xx;else alpha=Math.round(xx*255);int rgb=Color.HSBtoRGB(v.hue,v.saturation,v.brightness);c.setValue(alpha<<24|rgb&0xFFFFFF);v.last=c.getArgb();}
-    private void hit(Panel p,int x,int y,int w,int h,Kind kind,Module m,Setting<?> s,String option,int part){int top=kind==Kind.HEADER?y:Math.max(y,p.y+24),bottom=kind==Kind.HEADER?y+h:Math.min(y+h,p.y+p.h-1);if(bottom>top)hits.add(new Hit(p,x,y,w,h,top,bottom,kind,m,s,option,part));}
+    private void hit(Panel p,int x,int y,int w,int h,Kind kind,Module m,Setting<?> s,String option,int part){int top=kind==Kind.HEADER?y:Math.max(y,p.y+HEADER_HEIGHT),bottom=kind==Kind.HEADER?y+h:Math.min(y+h,p.y+p.h-1);if(bottom>top)hits.add(new Hit(p,x,y,w,h,top,bottom,kind,m,s,option,part));}
     private static boolean inside(int x,int y,int l,int t,int w,int h){return x>=l&&x<l+w&&y>=t&&y<t+h;}
     private static String number(double n){return java.math.BigDecimal.valueOf(n).stripTrailingZeros().toPlainString();}
     private static void label(String s,float x,float y,float w,int c){ScrollingText.draw(AdjustFonts.LABEL,s,x,y,Math.max(1,w),c,ScrollingText.Alignment.LEFT);}

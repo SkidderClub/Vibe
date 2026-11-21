@@ -58,10 +58,11 @@ public final class DashboardWidgets {
         double a=Math.toRadians(angle),vx=px-cx,vy=py-cy;
         GL11.glTexCoord2d(.5+(vx*Math.cos(a)+vy*Math.sin(a)-dx)/span,.5+(-vx*Math.sin(a)+vy*Math.cos(a)-dz)/span);GL11.glVertex2f(px,py);
     }
-    public static final String[] IDS={"radar","networkgraph","killfeed","sessiontimeline","candle","keybindlist"};
-    public static String title(String id){switch(id){case "keybindlist":return "Keybind List";case "radar":return "Radar";case "networkgraph":return "Network Graph";case "killfeed":return "Kill Feed";case "sessiontimeline":return "Session Timeline";case "candle":return "Candle";default:return id;}}
+    public static final String[] IDS={"radar","networkgraph","killfeed","sessiontimeline","candle","keybindlist",MatchCountdowns.ID};
+    public static String title(String id){switch(id){case "keybindlist":return "Keybind List";case "radar":return "Radar";case "networkgraph":return "Network Graph";case "killfeed":return "Kill Feed";case "sessiontimeline":return "Session Timeline";case "candle":return "Candle";case MatchCountdowns.ID:return MatchCountdowns.TITLE;default:return id;}}
     public static boolean contains(String id){return Arrays.asList(IDS).contains(id);}
     private final Minecraft mc=Minecraft.getMinecraft();private final RadarMapCache map=new RadarMapCache();private final NetworkSamples network=new NetworkSamples();
+    private final MatchCountdowns countdowns = new MatchCountdowns();
     private float mapLeft,mapTop,mapWidth,mapHeight,mapRadius;
     private Object world,connection;private long sampleAt,lastTick;private boolean stalled;private float lastYaw,lastPitch,bend,velocity;
     public void tick(HudManager manager){
@@ -73,13 +74,32 @@ public final class DashboardWidgets {
         }
         HudModule hud=Vibe.getInstance().getModuleManager().getModule(HudModule.class);
         if(hud!=null&&hud.isEnabled()&&manager.isEnabled("radar")&&hud.dashboards.get("radar").mode.is("Map"))map.tick(hud.dashboards.get("radar").range.getDouble()/hud.dashboards.get("radar").zoom.getDouble()*2.9);else map.suspend();
+        if (hud != null && hud.isEnabled() && manager.isEnabled(MatchCountdowns.ID) && mc.theWorld != null && mc.thePlayer != null) {
+            List<String[]> sidebar = new ArrayList<>(15);
+            String title = manager.sidebar(sidebar);
+            List<String> lines = new ArrayList<>(sidebar.size());
+            for (String[] row : sidebar) lines.add(row[0]);
+            countdowns.update(mc.theWorld, title, lines, now);
+            countdowns.updatePit(dev.vibe.network.RewoundPitEvents.snapshot(mc.getNetHandler()), System.currentTimeMillis(), now);
+        } else {
+            countdowns.update(null, null, Collections.emptyList(), now);
+            countdowns.updatePit(null, 0, now);
+        }
     }
-    public void draw(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){DashboardSettings s=hud.dashboards.get(e.getId());if(s==null)return;String id=e.getId(),theme=manager.theme(e,hud);int step=id.equals("killfeed")&&theme.equals("Fortnite")?17:24;int w=id.equals("candle")?60:s.width.getInt(),h=id.equals("candle")?88:id.equals("networkgraph")?s.height.getInt():id.equals("radar")?s.height.getInt():s.rows.getInt()*step+8;
+    public void draw(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){DashboardSettings s=hud.dashboards.get(e.getId());if(s==null)return;String id=e.getId(),theme=manager.theme(e,hud);
+        if (MatchCountdowns.ID.equals(id)) {
+            long now = System.nanoTime() / 1000000L;
+            List<MatchCountdowns.Timer> timers = countdowns.visible(now);
+            if (preview && timers.isEmpty()) timers = MatchCountdowns.preview(now);
+            MatchCountdownsRenderer.draw(manager, hud, e, s, res, timers, now);
+            return;
+        }
+        int step=id.equals("killfeed")&&theme.equals("Fortnite")?17:24;int w=id.equals("candle")?60:s.width.getInt(),h=id.equals("candle")?88:id.equals("networkgraph")?s.height.getInt():id.equals("radar")?s.height.getInt():s.rows.getInt()*step+8;
         List<SessionJournal.Entry> entries=SessionJournal.INSTANCE.entries();long now=System.nanoTime()/1000000;
         if(id.equals("keybindlist"))h=26+Math.max(1,Math.min(s.bindLimit.getInt(),binds(s).size()))*19;
         if(id.equals("radar")&&s.mode.is("Map")&&s.mapCorners.getInt()==100)h=w;
         if(id.equals("killfeed")||id.equals("sessiontimeline")){entries.removeIf(v->id.equals("killfeed")?!(v.kind.equals("Kill")||v.kind.equals("Death"))||now-v.time>s.lifetime.getDouble()*1000:now-v.time>s.lifetime.getDouble()*1000);if(!preview&&entries.isEmpty()){e.setBounds(e.left(res,w),e.top(res,0),w,0);return;}h=Math.min(s.rows.getInt(),preview?3:entries.size())*step+8;}
-        e.ensureOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
+        int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
         if(id.equals("radar")&&s.mode.is("Map")){
             // A filled panel would turn the map's transparent void pixels dark again.
             if(s.border.isEnabled()&&!theme.equals("Transparent"))dev.vibe.ui.RenderUtils.roundedOutline(x,y,x+w,y+h,Math.min(w,h)*s.mapCorners.getFloat()/200,1,dev.vibe.ui.RenderUtils.alpha(s.accent.getArgb(),90));

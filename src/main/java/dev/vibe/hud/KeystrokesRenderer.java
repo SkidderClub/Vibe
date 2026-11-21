@@ -14,7 +14,7 @@ final class KeystrokesRenderer {
     void draw(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){
         Minecraft mc=Minecraft.getMinecraft();OverlaySettings.Keystrokes s=hud.keystrokes;GameSettings g=mc.gameSettings;
         int size=s.size.getInt(),gap=s.gap.getInt(),w=size*3+gap*2,rows=2+(s.leftClick.isEnabled()||s.rightClick.isEnabled()?1:0)+(s.space.isEnabled()?1:0),h=rows*size+(rows-1)*gap;
-        e.ensureOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
+        int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
         long now=System.nanoTime();float dt=previous==0?1:Math.min(.1F,(now-previous)/1e9F);previous=now;
         KeyBinding[] keys={g.keyBindForward,g.keyBindLeft,g.keyBindBack,g.keyBindRight,g.keyBindAttack,g.keyBindUseItem,g.keyBindJump};
         for(int i=0;i<press.length;i++){boolean down=preview?i==0||i==4:mc.currentScreen==null&&(i==4||i==5?org.lwjgl.input.Mouse.isCreated()&&org.lwjgl.input.Mouse.isButtonDown(i-4):VanillaClicks.physicallyDown(keys[i]));float t=s.animation.isEnabled()?1-(float)Math.exp(-dt*s.speed.getFloat()):1;press[i]+=((down?1:0)-press[i])*t;}

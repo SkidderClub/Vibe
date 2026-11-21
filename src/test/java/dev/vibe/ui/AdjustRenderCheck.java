@@ -25,19 +25,38 @@ import org.lwjgl.opengl.GL11;
 /** Real fonts, item geometry, clipping, input targets and native block poses. */
 public final class AdjustRenderCheck {
     public static void verify(Minecraft mc,ModuleManager modules,Path out)throws Exception{
-        mc.displayWidth=1280;mc.displayHeight=720;
+        mc.displayWidth=1280;mc.displayHeight=720;mc.gameSettings.guiScale=1;
         PathTestFixture.set(Vibe.class,Vibe.getInstance(),"config",new dev.vibe.config.VibeConfig(out.resolve("adjust-config").toFile()));
         dev.vibe.camera.DroneCollisionsTest.registerBlocks();dev.vibe.ui.render.esp.EspRenderCheck.installItemRenderer(mc);
         ClickGuiModule click=register(modules,new ClickGuiModule());click.getTheme().setValue("Adjust");
         HudModule hud=register(modules,new HudModule());Controls controls=register(modules,new Controls());register(modules,new StepModule());register(modules,new JesusModule());register(modules,new NoFallModule());register(modules,new AntiAimModule());register(modules,new QolModule());register(modules,new JoinClaimModule());AnimationsModule animations=register(modules,new AnimationsModule());hud.synchronizeArrayListModules();
         VibeClickGui gui=new VibeClickGui();gui.setWorldAndResolution(mc,1280,720);draw(gui,-1,-1);save(out.resolve("adjust-columns.png"));
-        Object workspace=read(gui,"adjust"),row=find(workspace,"MODULE",controls,null,-1);click(gui,row,1);draw(gui,center(row,"x","w"),center(row,"y","h"));
+        Object workspace=read(gui,"adjust"),row=find(workspace,"MODULE",controls,null,-1);
+        assertNoEye(workspace);
+        click(gui,row,1);draw(gui,guiCoordinate(workspace,center(row,"x","w")),guiCoordinate(workspace,center(row,"y","h")));
         boolean before=hud.getArrayListModules().isSelected(controls.getRawName());click(gui,find(workspace,"EYE",controls,null,-1),0);if(hud.getArrayListModules().isSelected(controls.getRawName())==before)throw new AssertionError("Eye did not update Vibe's arraylist selector");
-        draw(gui,-1,-1);click(gui,find(workspace,"SETTING",null,controls.color,-1),0);draw(gui,-1,-1);
+        draw(gui,-1,-1);assertNoEye(workspace);click(gui,find(workspace,"SETTING",null,controls.color,-1),0);draw(gui,-1,-1);
         click(gui,find(workspace,"COLOR",null,controls.color,1),0);click(gui,find(workspace,"COLOR",null,controls.color,0),0);click(gui,find(workspace,"COLOR",null,controls.color,2),0);if(Math.abs(controls.color.getAlpha()-128)>4)throw new AssertionError("Inline alpha picker ignored its hit rectangle");
-        double old=controls.number.getDouble();Object slider=find(workspace,"SLIDER",null,controls.number,-1);Method wheel=workspace.getClass().getDeclaredMethod("wheel",int.class,int.class,int.class);wheel.setAccessible(true);wheel.invoke(workspace,center(slider,"x","w"),center(slider,"y","h"),-120);if(controls.number.getDouble()!=old)throw new AssertionError("Scrolling changed a slider");
+        double old=controls.number.getDouble();Object slider=find(workspace,"SLIDER",null,controls.number,-1);Method wheel=workspace.getClass().getDeclaredMethod("wheel",int.class,int.class,int.class);wheel.setAccessible(true);wheel.invoke(workspace,guiCoordinate(workspace,center(slider,"x","w")),guiCoordinate(workspace,center(slider,"y","h")),-120);if(controls.number.getDouble()!=old)throw new AssertionError("Scrolling changed a slider");
         click(gui,slider,0);if(Math.abs(controls.number.getDouble()-5)>.2)throw new AssertionError("Slider click not mapped to its track");draw(gui,-1,-1);save(out.resolve("adjust-picker.png"));
-        gui.onGuiClosed();VibeClickGui reopened=new VibeClickGui();reopened.setWorldAndResolution(mc,1280,720);draw(reopened,-1,-1);if(hud.getArrayListModules().isSelected(controls.getRawName())==before)throw new AssertionError("Eye selection lost on reopen");reopened.onGuiClosed();
+        float physicalWidth = (Integer)read(row,"w") * (Float)read(workspace,"scale");
+        gui.onGuiClosed();VibeClickGui reopened=new VibeClickGui();
+        mc.gameSettings.guiScale=3;ScaledResolution resolution=new ScaledResolution(mc);
+        reopened.setWorldAndResolution(mc,resolution.getScaledWidth(),resolution.getScaledHeight());
+        ClientChangesRenderCheck.frame(1280,720);
+        GL11.glMatrixMode(GL11.GL_PROJECTION);
+        GL11.glLoadIdentity();
+        GL11.glOrtho(0,resolution.getScaledWidth_double(),resolution.getScaledHeight_double(),0,-1000,1000);
+        GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        reopened.drawScreen(-1,-1,1);
+        Object scaled=read(reopened,"adjust"),scaledRow=find(scaled,"MODULE",controls,null,-1);
+        if(Math.abs((Integer)read(scaledRow,"w")*(Float)read(scaled,"scale")*3-physicalWidth)>.01F)throw new AssertionError("Adjust density changed with Minecraft GUI scale");
+        if(hud.getArrayListModules().isSelected(controls.getRawName())==before)throw new AssertionError("Eye selection lost on reopen");
+        save(out.resolve("adjust-gui-scale-3.png"));
+        reopened.drawScreen(guiCoordinate(scaled,center(scaledRow,"x","w")),guiCoordinate(scaled,center(scaledRow,"y","h")),1);
+        find(scaled,"EYE",controls,null,-1);
+        if(GL11.glIsEnabled(GL11.GL_SCISSOR_TEST)||GL11.glGetError()!=0)throw new AssertionError("Scaled Adjust leaked GL state");
+        reopened.onGuiClosed();mc.gameSettings.guiScale=1;
         hud.targetHud.mode.setValue("Adjust");ClientChangesRenderCheck.frame(1280,720);TargetHudRenderer renderer=new TargetHudRenderer();TargetHudData sample=TargetHudData.sample();int width=renderer.width(hud.targetHud,sample,mc.fontRendererObj);if(renderer.height(hud.targetHud)!=24||width!=80)throw new AssertionError("Adjust target card is not source-sized");
         GL11.glPushMatrix();GL11.glTranslatef(80,80,0);GL11.glScalef(5,5,1);renderer.draw(hud.targetHud,sample,mc.fontRendererObj,0,0,width,()->{},true,System.currentTimeMillis());GL11.glPopMatrix();save(out.resolve("adjust-target-hud.png"));renderer.close();
         chatActions(mc,hud,out);
@@ -69,7 +88,9 @@ public final class AdjustRenderCheck {
     private static void draw(GuiScreen gui,int x,int y)throws Exception{ClientChangesRenderCheck.frame(1280,720);gui.drawScreen(x,y,1);if(GL11.glGetError()!=0)throw new AssertionError("Adjust GL state error");}
     private static Object find(Object workspace,String kind,Module module,Setting<?> setting,int part)throws Exception{for(Object hit:(List<?>)read(workspace,"hits"))if(read(hit,"kind").toString().equals(kind)&&(module==null||read(hit,"module")==module)&&(setting==null||read(hit,"setting")==setting)&&(part<0||(Integer)read(hit,"part")==part))return hit;throw new AssertionError("Missing Adjust "+kind+" control");}
     private static int center(Object h,String a,String b)throws Exception{return (Integer)read(h,a)+(Integer)read(h,b)/2;}
-    private static void click(GuiScreen gui,Object h,int button)throws Exception{int x=center(h,"x","w"),y=center(h,"y","h");GuiInput.mouseClicked(gui,x,y,button);GuiInput.mouseReleased(gui,x,y,button);}
+    private static void click(GuiScreen gui,Object h,int button)throws Exception{Object workspace=read(gui,"adjust");int x=guiCoordinate(workspace,center(h,"x","w")),y=guiCoordinate(workspace,center(h,"y","h"));GuiInput.mouseClicked(gui,x,y,button);GuiInput.mouseReleased(gui,x,y,button);}
+    private static int guiCoordinate(Object workspace,int value)throws Exception{return Math.round(value*(Float)read(workspace,"scale"));}
+    private static void assertNoEye(Object workspace)throws Exception{for(Object hit:(List<?>)read(workspace,"hits"))if(read(hit,"kind").toString().equals("EYE"))throw new AssertionError("Eye visible away from a module row");}
     private static Object read(Object o,String name)throws Exception{Field f=o.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(o);}
     private static <T extends Module>T register(ModuleManager modules,T module){modules.registerDynamic(module);return module;}
     private static void save(Path path)throws Exception{ByteBuffer b=BufferUtils.createByteBuffer(1280*720*4);GL11.glReadPixels(0,0,1280,720,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,b);BufferedImage image=new BufferedImage(1280,720,BufferedImage.TYPE_INT_ARGB);for(int y=0;y<720;y++)for(int x=0;x<1280;x++){int i=(y*1280+x)*4;image.setRGB(x,719-y,0xFF000000|(b.get(i)&255)<<16|(b.get(i+1)&255)<<8|(b.get(i+2)&255));}ImageIO.write(image,"PNG",path.toFile());}

@@ -1,5 +1,6 @@
 package dev.vibe.pit;
 
+import dev.vibe.network.RewoundPitEvents;
 import java.util.*;
 import java.util.regex.*;
 import net.minecraft.client.Minecraft;
@@ -30,20 +31,44 @@ public final class PitStatus {
     public static PitStatus read(Minecraft mc){
         if(mc.theWorld==null||mc.thePlayer==null)return EMPTY;
         Scoreboard board=mc.theWorld.getScoreboard();if(board==null)return EMPTY;
-        ScorePlayerTeam team=board.getPlayersTeam(mc.thePlayer.getName());ScoreObjective objective=null;
-        if(team!=null&&team.getChatFormat().getColorIndex()>=0)objective=board.getObjectiveInDisplaySlot(3+team.getChatFormat().getColorIndex());
-        if(objective==null)objective=board.getObjectiveInDisplaySlot(1);if(objective==null)return EMPTY;
+        ScoreObjective objective=sidebar(mc,board);if(objective==null)return EMPTY;
         List<String> lines=new ArrayList<>();
         for(Score score:board.getSortedScores(objective))if(!score.getPlayerName().startsWith("#"))
             lines.add(ScorePlayerTeam.formatPlayerName(board.getPlayersTeam(score.getPlayerName()),score.getPlayerName()));
-        String host=mc.getCurrentServerData()==null?"":mc.getCurrentServerData().serverIP.toLowerCase(Locale.ROOT).split(":")[0];
-        boolean connection=host.replaceAll("\\.$","").equals("rewound.cc")||host.endsWith(".rewound.cc")||host.endsWith(".rewound.cc.");
+        boolean connection=rewoundConnection(mc);
         PitStatus parsed=parse(lines,connection);if(parsed.active)return parsed;
         // Proxy scoreboards sometimes retain the real sidebar in a colour-specific slot.
         for(int slot=1;slot<19;slot++){ScoreObjective alternative=board.getObjectiveInDisplaySlot(slot);if(alternative==null||alternative==objective)continue;
             for(Score score:board.getSortedScores(alternative))lines.add(ScorePlayerTeam.formatPlayerName(board.getPlayersTeam(score.getPlayerName()),score.getPlayerName()));
         }
         return parse(lines,connection);
+    }
+
+    public static boolean inPitForChat(Minecraft mc) {
+        if (mc.theWorld == null || mc.thePlayer == null) return false;
+        Boolean location = RewoundPitEvents.pitLocation(mc.getNetHandler());
+        if (location != null) return location;
+        Scoreboard board = mc.theWorld.getScoreboard();
+        ScoreObjective objective = board == null ? null : sidebar(mc, board);
+        if (objective != null && rewoundConnection(mc)) {
+            String title = plain(objective.getDisplayName()).toUpperCase(Locale.ROOT);
+            if (title.equals("PIT") || title.equals("THE PIT") || title.equals("REWOUND PIT")) return true;
+        }
+        return read(mc).active;
+    }
+
+    private static ScoreObjective sidebar(Minecraft mc, Scoreboard board) {
+        ScorePlayerTeam team = board.getPlayersTeam(mc.thePlayer.getName());
+        int color = team == null ? -1 : team.getChatFormat().getColorIndex();
+        ScoreObjective objective = color < 0 ? null : board.getObjectiveInDisplaySlot(3 + color);
+        return objective == null ? board.getObjectiveInDisplaySlot(1) : objective;
+    }
+
+    private static boolean rewoundConnection(Minecraft mc) {
+        if (mc.getCurrentServerData() == null) return false;
+        String host = mc.getCurrentServerData().serverIP.toLowerCase(Locale.ROOT).split(":", 2)[0];
+        if (host.endsWith(".")) host = host.substring(0, host.length() - 1);
+        return host.equals("rewound.cc") || host.endsWith(".rewound.cc");
     }
     private static int roman(String value){
         if(value.matches("\\d+"))try{return Integer.parseInt(value);}catch(NumberFormatException ignored){}

@@ -5,6 +5,7 @@ import dev.vibe.combat.CombatTimerAccess;
 import dev.vibe.module.Category;
 import dev.vibe.module.Module;
 import dev.vibe.movement.AacMovementSupport;
+import dev.vibe.movement.AdjustJesus;
 import dev.vibe.movement.RewoundSpeed;
 import dev.vibe.setting.BooleanSetting;
 import dev.vibe.setting.ModeSetting;
@@ -265,12 +266,12 @@ public final class SpeedModule extends Module {
         EntityPlayerSP p=minecraft.thePlayer;
         if(p!=waterPlayer||minecraft.theWorld!=waterWorld){waterPlayer=p;waterWorld=minecraft.theWorld;wasLiquid=false;resumeAfterWater=Integer.MIN_VALUE;}
         if(p==null)return false;
-        if(inLiquid()){wasLiquid=true;return true;}
+        if(inLiquid() || AdjustJesus.supportsFeet(p)){wasLiquid=true;return true;}
         if(wasLiquid){wasLiquid=false;resumeAfterWater=p.ticksExisted+4;}
         return p.ticksExisted<resumeAfterWater;
     }
     private void setLegacyTimer(float value) {
-        if (!legacyTimerOwned) previousTimer=CombatTimerAccess.getSpeed();
+        if (!legacyTimerOwned) previousTimer=CombatTimerAccess.getBaseSpeed();
         legacyTimerOwned=true;lastTimer=value;CombatTimerAccess.setSpeed(value);
     }
     private void claimAir(EntityPlayerSP p) {
@@ -282,7 +283,7 @@ public final class SpeedModule extends Module {
     private void setAirSpeed(EntityPlayerSP p,float value) { claimAir(p);AacMovementSupport.speedInAir(p,value);lastAir=value; }
     /** Restore Speed-owned settings once; leave swimming input/velocity and other owners alone. */
     private void releaseLegacyTweaks() {
-        if (legacyTimerOwned && Float.compare(CombatTimerAccess.getSpeed(),lastTimer)==0) CombatTimerAccess.setSpeed(previousTimer);
+        if (legacyTimerOwned && Float.compare(CombatTimerAccess.getBaseSpeed(),lastTimer)==0) CombatTimerAccess.setSpeed(previousTimer);
         legacyTimerOwned=false;
         if (airOwner != null) {
             if (Float.compare(airOwner.jumpMovementFactor,lastJumpFactor)==0) airOwner.jumpMovementFactor=previousJumpFactor;

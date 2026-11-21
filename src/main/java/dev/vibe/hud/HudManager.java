@@ -142,6 +142,7 @@ public final class HudManager {
         dashboardElements.put("radar",new HudElement("radar",12,60,false,false));dashboardElements.put("networkgraph",new HudElement("networkgraph",12,218,false,false));
         dashboardElements.put("killfeed",new HudElement("killfeed",12,65,true,false));dashboardElements.put("sessiontimeline",new HudElement("sessiontimeline",12,60,false,true));dashboardElements.put("candle",new HudElement("candle",12,190,true,false));
         dashboardElements.put("keybindlist",new HudElement("keybindlist",12,290,false,false));
+        dashboardElements.put(MatchCountdowns.ID, new HudElement(MatchCountdowns.ID, 12, 110, true, false));
         layoutFile = new File(new File(minecraftConfigDirectory, "vibe"), "hud.json");
         load();
     }
@@ -243,8 +244,6 @@ public final class HudManager {
         List<ModuleNotifications.Entry> entries = all.subList(Math.max(0, all.size() - visibleCount), all.size());
         if (entries.isEmpty()) return;
         int height = entries.size() * stride - settings.gap.getInt();
-        // Clamp before applying the widget transform, including large stacks and HUD scale changes.
-        notifications.ensureScaledOnScreen(resolution, width, height);
         renderScaled(notifications, resolution, () -> drawNotificationContents(hud, resolution, entries, now, width, height));
     }
 
@@ -306,10 +305,8 @@ public final class HudManager {
     private void renderScaledContents(HudElement element, ScaledResolution resolution, Runnable render) {
         float scale = element.getScale();
         if (Math.abs(scale - 1.0F) < .0001F) { render.run(); return; }
-        int anchorX = element.horizontalCenter() ? resolution.getScaledWidth() / 2 + element.x
-                : element.rightAnchored ? resolution.getScaledWidth() - element.x : element.x;
-        int anchorY = element.verticallyCentred || element.centred ? resolution.getScaledHeight() / 2 + element.y
-                : element.bottomAnchored ? resolution.getScaledHeight() - element.y : element.y;
+        int anchorX = element.anchorX(resolution);
+        int anchorY = element.anchorY(resolution);
         long boundsBefore = element.boundsRevision;
         if ((!previewingHud || framebufferPreview) && element.getWidth() > 1 && element.getHeight() > 1 && blurEnabled(element.id))
             KawaseBlur.drawRegion(element.getLeft(), element.getTop(),
@@ -349,8 +346,8 @@ public final class HudManager {
         if (!preview && m.hideIdle.isEnabled() && !track.playing) return;
         float scale = dev.vibe.hud.MusicHudRenderer.effectiveScale(m, resolution.getScaledWidth(), resolution.getScaledHeight()) * music.getScale();
         int width = Math.round(m.hudWidth.getFloat()*scale), height = Math.round(64*scale);
-        music.ensureOnScreen(resolution, width, height);
-        int left = Math.max(0, music.left(resolution, width)), top = Math.max(0, music.top(resolution, height));
+
+        int left = music.left(resolution, width), top = music.top(resolution, height);
         music.setBounds(left, top, width, height);
         if (!preview && DebugOverlay.overlaps(left, top, left + width, top + height)) return;
         HudModule hud = Vibe.getInstance().getModuleManager().getModule(HudModule.class);
@@ -366,9 +363,9 @@ public final class HudManager {
         List<String> tags=watermarkRenderer.tags(hud,previewingHud);
         WatermarkRenderer.Layout layout=watermarkRenderer.layout(hud,font,tags,(int)((resolution.getScaledWidth()-18)/watermark.getScale())-20);
         int width=layout.width+20,height=layout.height;
-        watermark.ensureOnScreen(resolution, width, height);
+
         int left = watermark.left(resolution, width);
-        int top = watermark.getY();
+        int top = watermark.top(resolution, height);
         if (hideForDebug(watermark, left, top, width, height, !isSkeet() && hud.getWatermarkOutline().isEnabled() ? 1 : 0)) return;
         if (blurEnabled(BlurModule.WATERMARK)) {
             KawaseBlur.drawRegion(left, top, left + width, top + height, 3, 0.0F);
@@ -390,7 +387,7 @@ public final class HudManager {
         String name=hud.getWatermarkText().getValue();String clock=java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
         boolean showTime=hud.getWatermarkDetails().isSelected("Time");
         int width=(int)Math.ceil(font.width(name)+(showTime?font.width(" ("+clock+")")+2:0))+2,height=14;
-        watermark.ensureOnScreen(resolution,width,height);int left=watermark.left(resolution,width),top=watermark.getY();
+        int left=watermark.left(resolution,width),top=watermark.top(resolution,height);
         if(hideForDebug(watermark,left,top,width,height,0))return;
         long phase=System.currentTimeMillis();int base=hud.watermark.client.color.getArgb();
         float[] hsb=java.awt.Color.RGBtoHSB(base>>16&255,base>>8&255,base&255,null);float cursor=left+1;
@@ -528,7 +525,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         int z = player == null ? 0 : net.minecraft.util.MathHelper.floor_double(player.posZ);
         String text = "XYZ " + x + " / " + y + " / " + z;
         int width = font.getStringWidth(text) + 20;
-        coordinates.ensureOnScreen(resolution, width, 24);
+
         int left = coordinates.left(resolution, width);
         int top = coordinates.top(resolution, 24);
         coordinates.setBounds(left, top, width, 24);
@@ -548,7 +545,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     private void drawGhosts(HudModule hud, ScaledResolution resolution) {
         GhostSettings settings = hud.ghosts;
         int size = settings.size.getInt();
-        ghosts.ensureOnScreen(resolution, size, size);
+
         int left = ghosts.left(resolution, size), top = ghosts.top(resolution, size);
         ghostArt.draw(left, top, size, size, settings.mode.is("Animated"), settings.flipX.isEnabled(),
                 settings.flipY.isEnabled(), settings.override.isEnabled(), settings.color.getArgb(),
@@ -562,7 +559,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             int width = Math.max(hud.clock.diameter.getInt(), hud.clock.digital.isEnabled() ? font.getStringWidth(ClockRenderer.time(hud.clock, now)) : 0);
             if (hud.clock.date.isEnabled()) width = Math.max(width, font.getStringWidth(ClockRenderer.date(now)));
             int height = ClockRenderer.height(hud.clock);
-            clock.ensureOnScreen(resolution, width, height);
+
             int left = clock.left(resolution, width), top = clock.top(resolution, height);
             boolean lava = "Lavalamp".equalsIgnoreCase(theme(clock, hud));
             if (lava || "LiquidGlass".equalsIgnoreCase(theme(clock, hud)))
@@ -573,7 +570,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             String time = ClockRenderer.time(hud.clock, now), date = ClockRenderer.date(now);
             int width = Math.max(font.getStringWidth(time), hud.clock.date.isEnabled() ? font.getStringWidth(date) : 0) + 20;
             int height = hud.clock.date.isEnabled() ? 39 : 24;
-            clock.ensureOnScreen(resolution, width, height);
+
             int left = clock.left(resolution, width), top = clock.top(resolution, height);
             if(!"Transparent".equalsIgnoreCase(theme(clock,hud)))drawHudSurface(hud, clock, left, top, left + width, top + height);
             font.drawStringWithShadow(time, left + (width - font.getStringWidth(time)) / 2F, top + 8, hud.clock.text.getArgb());
@@ -625,7 +622,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
                 : targetCards.update(live, hud.targetHud, rowHeight, capacity, now);
         if (!previewingHud && cards.isEmpty()) { targetRenderer.clear(); return; }
         int height = previewingHud ? rowHeight : Math.max(1, (int) Math.ceil(TargetHudCards.height(cards, rowHeight)));
-        targetHud.ensureScaledOnScreen(resolution, width, height);
+
         renderScaled(targetHud, resolution, () -> {
             int left = targetHud.left(resolution, width), top = targetHud.top(resolution, height);
             targetHud.setBounds(left, top, width, height);
@@ -688,7 +685,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         long walked = 0L;
         if (service != null) walked = service.snapshot(dev.vibe.statistics.StatisticsService.Scope.ACCOUNT).blocksWalked;
         int widgetWidth = 154, widgetHeight = 56;
-        sessionInfo.ensureOnScreen(resolution, widgetWidth, widgetHeight);
+
         int left = sessionInfo.left(resolution, widgetWidth), top = sessionInfo.top(resolution, widgetHeight);
         if (hideForDebug(sessionInfo, left, top, widgetWidth, widgetHeight, isSkeet() ? 0 : 1)) return;
         if (blurEnabled(BlurModule.SESSION_INFO)) KawaseBlur.drawRegion(left, top, left + widgetWidth, top + widgetHeight, 3, 0.0F);
@@ -717,7 +714,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         }
         int widgetWidth = 196;
         int widgetHeight = 64;
-        motionGraph.ensureOnScreen(resolution, widgetWidth, widgetHeight);
+
         int left = motionGraph.left(resolution, widgetWidth);
         int top = motionGraph.top(resolution, widgetHeight);
         if (hideForDebug(motionGraph, left, top, widgetWidth, widgetHeight, isSkeet() ? 0 : 1)) return;
@@ -767,7 +764,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         int rows = visible == 0 && previewingHud ? 1 : visible;
         int width = 212;
         int height = Math.max(18, rows * 50);
-        stalker.ensureOnScreen(resolution, width, height);
+
         int left = stalker.left(resolution, width);
         int top = stalker.top(resolution, height);
         if (rows == 0) {
@@ -842,7 +839,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     private void drawSimpleWidget(HudElement element, String text, HudModule hud, ScaledResolution resolution, FontRenderer font, float phase) {
         int widgetWidth = font.getStringWidth(text) + 14;
         int widgetHeight = 18;
-        element.ensureOnScreen(resolution, widgetWidth, widgetHeight);
+
         int left = element.left(resolution, widgetWidth);
         int top = element.top(resolution, widgetHeight);
         if (hideForDebug(element, left, top, widgetWidth, widgetHeight, isSkeet() ? 0 : 1)) return;
@@ -862,7 +859,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         int contentHeight = vertical ? 72 : 18;
         int widgetWidth = contentWidth + 10;
         int widgetHeight = contentHeight + 10;
-        armor.ensureOnScreen(resolution, widgetWidth, widgetHeight);
+
         int left = armor.left(resolution, widgetWidth);
         int top = armor.top(resolution, widgetHeight);
         if (hideForDebug(armor, left, top, widgetWidth, widgetHeight, isSkeet() ? 0 : 1)) return;
@@ -907,7 +904,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         final int rows = 3;
         final int widgetWidth = columns * 18 + 10;
         final int widgetHeight = rows * 18 + 10;
-        inventory.ensureOnScreen(resolution, widgetWidth, widgetHeight);
+
         int left = inventory.left(resolution, widgetWidth);
         int top = inventory.top(resolution, widgetHeight);
         if (hideForDebug(inventory, left, top, widgetWidth, widgetHeight, isSkeet() ? 0 : 1)) return;
@@ -961,7 +958,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         int textWidth = font.getStringWidth(healthText) + (absorptionText.isEmpty() ? 0 : font.getStringWidth(absorptionText));
         int widgetWidth = textWidth + 4;
         int widgetHeight = 18;
-        health.ensureOnScreen(resolution, widgetWidth, widgetHeight);
+
         int left = health.left(resolution, widgetWidth);
         int top = health.top(resolution, widgetHeight);
         int textLeft = left + (widgetWidth - textWidth) / 2;
@@ -986,7 +983,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         int padding = lava ? 6 : 0;
         int width = font.getStringWidth(text) + padding * 2;
         int height = font.FONT_HEIGHT + padding * 2;
-        cps.ensureOnScreen(resolution, width, height + 2);
+
         int left = cps.left(resolution, width);
         int top = cps.top(resolution, height + 2);
         if (hideForDebug(cps, left, top, width, height + 2, 0)) return;
@@ -1006,7 +1003,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         }
         int widgetWidth = 196;
         int widgetHeight = 64;
-        cpsGraph.ensureOnScreen(resolution, widgetWidth, widgetHeight);
+
         int left = cpsGraph.left(resolution, widgetWidth);
         int top = cpsGraph.top(resolution, widgetHeight);
         if (hideForDebug(cpsGraph, left, top, widgetWidth, widgetHeight, isSkeet() ? 0 : 1)) return;
@@ -1093,7 +1090,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         int width = contentWidth + 6;
         int height = rows.size() * font.FONT_HEIGHT + font.FONT_HEIGHT + 3;
         ScaledResolution resolution = new ScaledResolution(minecraft);
-        scoreboard.ensureOnScreen(resolution, width + 2, height);
+
         int left = scoreboard.left(resolution, width);
         int top = scoreboard.top(resolution, height);
         int backgroundLeft = left - 2;
@@ -1122,7 +1119,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
     }
 
     /** Collects the visible sidebar rows as formatted name and points; returns the title, or null without a sidebar. */
-    private String sidebar(List<String[]> rows) {
+    String sidebar(List<String[]> rows) {
         if (minecraft.theWorld == null || minecraft.thePlayer == null) return null;
         Scoreboard board = minecraft.theWorld.getScoreboard();
         ScoreObjective objective = null;
@@ -1213,7 +1210,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
 
     public String[] getElementIds() {
         return new String[] {WATERMARK, ARRAY_LIST, COORDINATES, SCOREBOARD, CLOCK, SESSION_INFO, MOTION_GRAPH, STALKER,
-                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, TARGET_HUD, NOTIFICATIONS, MUSIC, GHOSTS,CHAT,HOTBAR,CUSTOM_HEALTH,TAB,BLOCK_COUNTER,DYNAMIC_ISLAND,EFFECTS,CUSTOM_GUIS,KEYSTROKES,"radar","networkgraph","killfeed","sessiontimeline","candle","keybindlist"};
+                ARMOR, INVENTORY, HEALTH, CPS, CPS_GRAPH, TARGET_HUD, NOTIFICATIONS, MUSIC, GHOSTS,CHAT,HOTBAR,CUSTOM_HEALTH,TAB,BLOCK_COUNTER,DYNAMIC_ISLAND,EFFECTS,CUSTOM_GUIS,KEYSTROKES,"radar","networkgraph","killfeed","sessiontimeline","candle","keybindlist",MatchCountdowns.ID};
     }
 
     public boolean isEnabled(String id) {
@@ -1437,6 +1434,8 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
         private final int defaultY;
         private final boolean defaultRightAnchored;
         private final boolean defaultVerticallyCentred;
+        private final int viewportPadding;
+        private final boolean sizedByRenderer;
         private int left;
         private int top;
         private int width;
@@ -1468,20 +1467,40 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             this.defaultY = y;
             this.defaultRightAnchored = rightAnchored;
             this.defaultVerticallyCentred = verticallyCentred;
+            this.viewportPadding = CHAT.equals(id) || TARGET_HUD.equals(id) || NOTIFICATIONS.equals(id) ? 8 : 0;
+            this.sizedByRenderer = ARRAY_LIST.equals(id) || MUSIC.equals(id);
         }
 
         public int left(ScaledResolution resolution, int width) {
-            if (horizontalCenter()) {
-                return resolution.getScaledWidth() / 2 + x - width / 2;
-            }
-            return rightAnchored ? resolution.getScaledWidth() - x - width : x;
+            int offset = horizontalCenter() ? -width / 2 : rightAnchored ? -width : 0;
+            return fit(anchorX(resolution), offset, width, resolution.getScaledWidth());
         }
 
         public int top(ScaledResolution resolution, int height) {
-            if(EFFECTS.equals(id))return y>resolution.getScaledHeight()/2?y-height:y;
-            return verticallyCentred ? resolution.getScaledHeight() / 2 + y - height / 2
-                    : centred ? resolution.getScaledHeight() / 2 + y
-                    : (bottomAnchored ? resolution.getScaledHeight() - y - height : y);
+            int offset = EFFECTS.equals(id) ? (y > resolution.getScaledHeight() / 2 ? -height : 0)
+                    : verticallyCentred ? -height / 2 : bottomAnchored && !centred ? -height : 0;
+            return fit(anchorY(resolution), offset, height, resolution.getScaledHeight());
+        }
+
+        private int anchorX(ScaledResolution resolution) {
+            int screen = resolution.getScaledWidth();
+            return horizontalCenter() ? screen / 2 + x : rightAnchored ? screen - x : x;
+        }
+
+        private int anchorY(ScaledResolution resolution) {
+            int screen = resolution.getScaledHeight();
+            return verticallyCentred || centred ? screen / 2 + y : bottomAnchored ? screen - y : y;
+        }
+
+        /** Keep drawing bounds in the current viewport without rewriting the layout. */
+        private int fit(int anchor, int offset, int size, int screen) {
+            double drawScale = sizedByRenderer ? 1 : getScale();
+            double rendered = anchor + offset * drawScale;
+            int room = Math.max(0, screen - (int) Math.ceil(size * drawScale));
+            int padding = room >= 2 * viewportPadding ? viewportPadding : 0;
+            if (rendered < padding) return anchor + (int) Math.ceil((padding - anchor) / drawScale);
+            if (rendered > room - padding) return anchor + (int) Math.floor((room - padding - anchor) / drawScale);
+            return anchor + offset;
         }
 
         public void setBounds(int left, int top, int width, int height) {
@@ -1492,55 +1511,20 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             boundsRevision++;
         }
 
-        /** Restore defaults if a resolution/GUI-scale change pushes this HUD item offscreen. */
-        public void ensureOnScreen(ScaledResolution resolution, int expectedWidth, int expectedHeight) {
-            int currentLeft = left(resolution, expectedWidth);
-            int currentTop = top(resolution, expectedHeight);
-            if (currentLeft < 0 || currentTop < 0 || currentLeft + expectedWidth > resolution.getScaledWidth()
-                    || currentTop + expectedHeight > resolution.getScaledHeight()) {
-                x = defaultX;
-                y = defaultY;
-                rightAnchored = defaultRightAnchored;
-                centred = HEALTH.equals(id) || CPS.equals(id) || TARGET_HUD.equals(id);
-                verticallyCentred = defaultVerticallyCentred;
-            }
-        }
-
-        /** Keep a dynamically sized stack visible without discarding its saved alignment or scale. */
-        void ensureScaledOnScreen(ScaledResolution resolution, int expectedWidth, int expectedHeight) {
-            int anchorX = centred ? resolution.getScaledWidth() / 2 + x : rightAnchored ? resolution.getScaledWidth() - x : x;
-            int anchorY = verticallyCentred || centred ? resolution.getScaledHeight() / 2 + y
-                    : bottomAnchored ? resolution.getScaledHeight() - y : y;
-            int actualLeft = Math.round(anchorX + (left(resolution, expectedWidth) - anchorX) * scale);
-            int actualTop = Math.round(anchorY + (top(resolution, expectedHeight) - anchorY) * scale);
-            int actualWidth = Math.round(expectedWidth * scale), actualHeight = Math.round(expectedHeight * scale);
-            int dx = Math.max(8, Math.min(resolution.getScaledWidth() - actualWidth - 8, actualLeft)) - actualLeft;
-            int dy = Math.max(8, Math.min(resolution.getScaledHeight() - actualHeight - 8, actualTop)) - actualTop;
-            x += rightAnchored && !centred ? -dx : dx;
-            y += bottomAnchored && !centred && !verticallyCentred ? -dy : dy;
-        }
-
         public void moveTo(int desiredLeft, int desiredTop, ScaledResolution resolution) {
             if(CUSTOM_GUIS.equals(id))return;
             int safeLeft = Math.max(0, Math.min(resolution.getScaledWidth() - Math.max(1, width), desiredLeft));
             int safeTop = Math.max(0, Math.min(resolution.getScaledHeight() - Math.max(1, height), desiredTop));
             centred = false;
             verticallyCentred = false;
+            if (ARRAY_LIST.equals(id)) rightAnchored = safeLeft + width / 2 >= resolution.getScaledWidth() / 2;
             x = horizontalCenter()?safeLeft-resolution.getScaledWidth()/2+width/2:rightAnchored ? resolution.getScaledWidth() - safeLeft - width : safeLeft;
             y = EFFECTS.equals(id)?safeTop>resolution.getScaledHeight()/2?safeTop+height:safeTop:bottomAnchored ? resolution.getScaledHeight() - safeTop - height : safeTop;
             left = safeLeft;
             top = safeTop;
         }
 
-        public void setRightAnchored(boolean rightAnchored, ScaledResolution resolution, int currentWidth) {
-            if (this.rightAnchored == rightAnchored) {
-                return;
-            }
-            int currentLeft = left(resolution, currentWidth);
-            centred = false;
-            x = rightAnchored ? resolution.getScaledWidth() - currentLeft - currentWidth : currentLeft;
-            this.rightAnchored = rightAnchored;
-        }
+        boolean isRightAnchored() { return rightAnchored; }
 
         private JsonObject toJson() {
             JsonObject value = new JsonObject();
@@ -1605,6 +1589,7 @@ if ((hud != null && hud.getMode().is("LiquidGlass")) || "LiquidGlass".equalsIgno
             else if ("Vibe".equalsIgnoreCase(value)) theme = "Vibe";
             else if ("Novoline".equalsIgnoreCase(value)) theme = "Novoline";
             else if ("Skeet".equalsIgnoreCase(value)) theme = "Skeet";
+            else if (MatchCountdowns.ID.equals(id) && "Adjust".equalsIgnoreCase(value)) theme = "Adjust";
             else if ("LiquidGlass".equalsIgnoreCase(value)) theme = "LiquidGlass";
             else if ("Lavalamp".equalsIgnoreCase(value)) theme = "Lavalamp";
             else if ("Transparent".equalsIgnoreCase(value)) theme = "Transparent";

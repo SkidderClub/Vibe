@@ -145,6 +145,10 @@ public final class RewoundHooks {
     }
     /** Inserted after PacketThreadUtil, so the packet and state change exactly once on the client thread. */
     public static void correction(Object packet) {
+        if (packet instanceof S08PacketPlayerPosLook) {
+            StepModule step = module(StepModule.class);
+            if (step != null) step.adjustCorrection();
+        }
         final FlyModule fly = module(FlyModule.class);
         if (fly != null && packet instanceof S08PacketPlayerPosLook) fly.rewoundCorrection();
         PhaseModule phase=module(PhaseModule.class);if(phase!=null&&packet instanceof S08PacketPlayerPosLook)phase.correction();

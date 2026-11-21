@@ -23,7 +23,7 @@ public final class StepModule extends FeatureModule {
     private EntityPlayerSP owner;private float previous;
     public StepModule(){super("Step","Controls collision stepping, normal jumps and Rewound stepping",Category.MOVEMENT);}
     private void restore(){if(owner!=null){owner.stepHeight=previous;owner=null;}}
-    @Override public void tick(){maintainAdjust();maintainNovoline();maintainRewound();if(!controlling()||owner!=null&&owner!=mc.thePlayer||mode.is("Rewound")||mode.is("RewoundNovoline")||mode.is("RewoundAdjust"))restore();}
+    @Override public void tick(){if(maintainAdjust())adjust.preUpdate();maintainNovoline();maintainRewound();if(!controlling()||owner!=null&&owner!=mc.thePlayer||mode.is("Rewound")||mode.is("RewoundNovoline")||mode.is("RewoundAdjust"))restore();}
     @Override public void input(MovementInput input){if(!controlling()||mc.thePlayer.isInWater()||mc.thePlayer.isOnLadder()){restore();return;}
         if(mode.is("Rewound")||mode.is("RewoundNovoline")||mode.is("RewoundAdjust")){restore();return;}
         if(mode.is("Vanilla")){if(owner==null){owner=mc.thePlayer;previous=owner.stepHeight;}owner.stepHeight=height.getFloat();}
@@ -37,12 +37,13 @@ public final class StepModule extends FeatureModule {
         if(rewoundOwner!=next||rewoundWorld!=mc.theWorld){rewound.reset(next);rewoundOwner=next;rewoundWorld=mc.theWorld;}return active;}
     private boolean maintainNovoline(){boolean active=isEnabled()&&mode.is("RewoundNovoline")&&playing()&&mc.thePlayer.worldObj==mc.theWorld&&!mc.thePlayer.isSpectator()&&!mc.thePlayer.isRiding();EntityPlayerSP next=active?mc.thePlayer:null;
         if(novolineOwner!=next||novolineWorld!=mc.theWorld){novoline.reset(next);novolineOwner=next;novolineWorld=mc.theWorld;}return active;}
-    public void rewoundPreUpdate(Object entity){if(entity==mc.thePlayer&&maintainAdjust())adjust.preUpdate();if(entity==mc.thePlayer&&maintainNovoline())novoline.preUpdate();if(entity==mc.thePlayer&&maintainRewound())rewound.preUpdate(delay.getInt(),speedCheck.isEnabled());}
+    public void rewoundPreUpdate(Object entity){if(entity==mc.thePlayer&&maintainNovoline())novoline.preUpdate();if(entity==mc.thePlayer&&maintainRewound())rewound.preUpdate(delay.getInt(),speedCheck.isEnabled());}
     public float rewoundPreStep(Object entity,float vanilla){if(entity==mc.thePlayer&&maintainAdjust())return adjust.prepare(adjustHeight.getFloat());if(entity==mc.thePlayer&&maintainNovoline())return novoline.prepare();return entity==mc.thePlayer&&maintainRewound()?rewound.preStep(delay.getInt(),speedCheck.isEnabled()):vanilla;}
     public float rewoundStepHeight(Object entity,float vanilla){if(entity==mc.thePlayer&&maintainAdjust())return adjust.height();if(entity==mc.thePlayer&&maintainNovoline())return novoline.height();return entity==mc.thePlayer&&maintainRewound()?rewound.height():vanilla;}
     public void rewoundPostStep(Object entity){if(entity==mc.thePlayer&&maintainNovoline())novoline.confirm();if(entity==mc.thePlayer&&maintainRewound())rewound.postStep(timer.isEnabled());}
     public void adjustPostStep(Object entity) {
         if (entity == mc.thePlayer && maintainAdjust()) adjust.confirm();
     }
+    public void adjustCorrection() { adjust.cancelStep(); }
     @Override protected void onDisable(){adjust.reset(null);adjustOwner=null;novoline.reset(null);novolineOwner=null;restore();rewound.reset(null);rewoundOwner=null;}
 }

@@ -35,6 +35,25 @@ public class RewoundPitTest {
         for(String text:new String[]{"DOUBLE KILL! on [113] GrimRT +31XP +14.00g","PIT LEVEL UP! [2] -> [3]","ASSIST! 27% on x","STREAK! of 1100 kills","MEGASTREAK! [120] someone activated OVERDRIVE!","BOUNTY! 100g","MULTIKILL! x","KILL! x"})assertTrue(text,PitMenus.noisyMessage("§a"+text));
         for(String text:new String[]{"<Player> DOUBLE KILL!","[MVP] Name: ASSIST!","You cannot use /spawn in combat!","Prestige available!","Assist! text","[Vibe] KILL!"})assertFalse(text,PitMenus.noisyMessage(text));
     }
+    @Test public void filtersPitChatEvenWhileTheSidebarHasNoLevelOrGold() throws Exception {
+        try (Fixture f = new Fixture()) {
+            f.stats(10, 0, 500);
+            f.mc.setServerData(new net.minecraft.client.multiplayer.ServerData("Rewound", "play.rewound.cc", false));
+            ScoreObjective old = f.board.getObjectiveInDisplaySlot(1);
+            f.board.removeObjective(old);
+            ScoreObjective objective = f.board.addScoreObjective("join", IScoreObjectiveCriteria.DUMMY);
+            objective.setDisplayName("§eTHE PIT");
+            f.board.setObjectiveInDisplaySlot(1, objective);
+            assertFalse(PitStatus.read(f.mc).active);
+            assertTrue(f.pit.filterMessage("§aMULTI KILL! on [30] Example"));
+            assertFalse(f.pit.filterMessage("Example: MULTI KILL!"));
+            f.pit.filterMessages.setEnabled(false);
+            assertFalse(f.pit.filterMessage("MULTI KILL!"));
+            f.pit.filterMessages.setEnabled(true);
+            objective.setDisplayName("SKYWARS");
+            assertFalse(f.pit.filterMessage("MULTI KILL!"));
+        }
+    }
     @Test public void acceptsPrestigeDecoratedLevelsAndInvisibleSidebarSeparators(){
         PitStatus status=PitStatus.parse(Arrays.asList("§eLevel: [V-120]","Gold: 31\u202f272.47g","Prestige: IV","play.re\u200bwound.cc"),false);
         assertTrue(status.active);assertEquals(120,status.level);assertEquals(31272.47,status.gold,1E-6);

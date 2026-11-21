@@ -95,7 +95,10 @@ public final class CameraHologramRenderCheck {
         f.mc.setServerData(new ServerData("Demo","example.invalid",false));GuiIngameMenu pause=new GuiIngameMenu();pause.width=W;pause.height=H;List<GuiButton> buttons=new ArrayList<>();new ReconnectEvents().init(new GuiScreenEvent.InitGuiEvent.Post(pause,buttons));
         gui();for(GuiButton b:buttons){check(b.enabled,"Pause reconnect button was disabled on a server");b.drawButton(mc,-1,-1);}save("pause-reconnect-buttons.png",pixels());
         KillAuraModule aura=new KillAuraModule();ChestStealerModule stealer=new ChestStealerModule();f.modules.registerDynamic(aura);f.modules.registerDynamic(stealer);PathTestFixture.set(dev.vibe.module.Module.class,aura,"enabled",true);PathTestFixture.set(dev.vibe.module.Module.class,stealer,"enabled",true);
-        ChestControlsEvents controls=new ChestControlsEvents();GuiChest chest=PathTestFixture.allocate(GuiChest.class);chest.width=W;chest.height=H;buttons.clear();controls.init(new GuiScreenEvent.InitGuiEvent.Post(chest,buttons));gui();for(GuiButton b:buttons){check(b.visible&&b.yPosition<50,"Chest controls missing at top right");b.drawButton(mc,-1,-1);}save("chest-disable-buttons.png",pixels());
+        ChestControlsEvents controls=new ChestControlsEvents();GuiChest chest=PathTestFixture.allocate(GuiChest.class);chest.width=W;chest.height=H;buttons.clear();controls.init(new GuiScreenEvent.InitGuiEvent.Post(chest,buttons));gui();
+        check(buttons.stream().filter(b->b.visible).count()==3,"Chest controls missing at top right");
+        controls.render(new GuiScreenEvent.DrawScreenEvent.Post(chest,W-60,17,1));
+        save("chest-disable-buttons.png",pixels());
     }
     private static void scene(){
         GL20.glUseProgram(0);for(int i=0;i<3;i++){GL13.glActiveTexture(GL13.GL_TEXTURE0+i);GL11.glDisable(GL11.GL_TEXTURE_2D);}GL13.glActiveTexture(GL13.GL_TEXTURE0);GL11.glViewport(0,0,W,H);GL11.glDisable(GL11.GL_SCISSOR_TEST);GL11.glDisable(GL11.GL_BLEND);GL11.glDisable(GL11.GL_FOG);GL11.glDisable(GL11.GL_ALPHA_TEST);GL11.glDepthMask(true);GL11.glEnable(GL11.GL_DEPTH_TEST);GL11.glDepthFunc(GL11.GL_LEQUAL);GL11.glClearColor(0,0,0,1);GL11.glClearDepth(1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);

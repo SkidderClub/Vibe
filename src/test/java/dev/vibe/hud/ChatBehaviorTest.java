@@ -52,7 +52,7 @@ public class ChatBehaviorTest {
         }
     }
 
-    @Test public void bothNativeHistoryListsRetainMessagesAcrossRewrapScrollAndExplicitClear()throws Exception{
+    @Test public void onlyCustomChatKeepsBoundedExtendedHistoryAcrossRewrapAndTemporaryHide()throws Exception{
         try(PathTestFixture f=new PathTestFixture()){
             HudModule hud=setup(f);f.mc.currentScreen=new GuiChat();String name="net.minecraft.client.gui.GuiNewChat";
             HudChatTransformer transformer=new HudChatTransformer();byte[] patched=transformer.transform(name,name,resource(name));verify(patched);
@@ -60,16 +60,34 @@ public class ChatBehaviorTest {
             Class<?> nativeChat=new ClassLoader(getClass().getClassLoader()){Class<?> define(){return defineClass(null,patched,0,patched.length);}}.define();
             Object chat=nativeChat.getConstructor(Minecraft.class).newInstance(f.mc);
             Method insert=nativeChat.getDeclaredMethod("setChatLine",IChatComponent.class,int.class,int.class,boolean.class);insert.setAccessible(true);
-            assertTrue(hud.chat.infiniteScrolling.isEnabled());
-            for(int i=0;i<350;i++)insert.invoke(chat,new ChatComponentText("Message "+i),0,i,false);
-            assertEquals(350,rows(chat,"chatLines").size());assertEquals(350,rows(chat,"drawnChatLines").size());
-            nativeChat.getMethod("scroll",int.class).invoke(chat,300);Field scroll=nativeChat.getDeclaredField("scrollPos");scroll.setAccessible(true);assertEquals(300,scroll.getInt(chat));
-            nativeChat.getMethod("refreshChat").invoke(chat);assertEquals(350,rows(chat,"drawnChatLines").size());
-            assertEquals("Message 0",rows(chat,"chatLines").get(349).getChatComponent().getUnformattedText());
-            hud.chat.infiniteScrolling.setValue(false);insert.invoke(chat,new ChatComponentText("Limited"),0,351,false);
-            assertEquals(100,rows(chat,"chatLines").size());assertEquals(100,rows(chat,"drawnChatLines").size());
-            hud.chat.infiniteScrolling.setValue(true);nativeChat.getMethod("clearChatMessages").invoke(chat);
-            assertTrue(rows(chat,"chatLines").isEmpty());assertTrue(rows(chat,"drawnChatLines").isEmpty());
+            assertTrue(hud.chat.extendedHistory.isEnabled());
+            for (int i = 0; i < 150; i++) insert.invoke(chat, new ChatComponentText("Vanilla " + i), 0, i, false);
+            assertHistorySize(chat, 100);
+            nativeChat.getMethod("clearChatMessages").invoke(chat);
+
+            hud.getHudElements().toggle(HudManager.CHAT);
+            for (int i = 0; i < 2_100; i++) insert.invoke(chat, new ChatComponentText("Message " + i), 0, i, false);
+            assertHistorySize(chat, 2_000);
+            assertEquals("Message 100", rows(chat, "chatLines").get(1_999).getChatComponent().getUnformattedText());
+            nativeChat.getMethod("scroll", int.class).invoke(chat, 1_500);
+            Field scroll = nativeChat.getDeclaredField("scrollPos");
+            scroll.setAccessible(true);
+            assertEquals(1_500, scroll.getInt(chat));
+            nativeChat.getMethod("refreshChat").invoke(chat);
+            assertHistorySize(chat, 2_000);
+
+            f.mc.gameSettings.hideGUI = true;
+            insert.invoke(chat, new ChatComponentText("Hidden"), 0, 2_100, false);
+            assertHistorySize(chat, 2_000);
+            hud.chat.extendedHistory.setEnabled(false);
+            insert.invoke(chat, new ChatComponentText("Limited"), 0, 2_101, false);
+            assertHistorySize(chat, 100);
+            hud.chat.extendedHistory.setEnabled(true);
+            hud.setEnabled(false);
+            insert.invoke(chat, new ChatComponentText("HUD disabled"), 0, 2_102, false);
+            assertHistorySize(chat, 100);
+            nativeChat.getMethod("clearChatMessages").invoke(chat);
+            assertHistorySize(chat, 0);
         }
     }
 
@@ -97,6 +115,10 @@ public class ChatBehaviorTest {
         HudModule hud=new HudModule();f.modules.registerDynamic(hud);PathTestFixture.set(Vibe.class,f.vibe,"hudManager",new HudManager(temporary.newFolder()));return hud;
     }
     private static List<ChatLine> rows(Object chat,String name)throws Exception{Class<?> type=chat instanceof GuiNewChat?GuiNewChat.class:chat.getClass();Field field=type.getDeclaredField(name);field.setAccessible(true);return (List<ChatLine>)field.get(chat);}
+    private static void assertHistorySize(Object chat, int expected) throws Exception {
+        assertEquals(expected, rows(chat, "chatLines").size());
+        assertEquals(expected, rows(chat, "drawnChatLines").size());
+    }
     private Class<?> clickClass()throws Exception{
         String name="net.minecraft.client.gui.GuiChat";HudChatTransformer transformer=new HudChatTransformer();byte[] patched=transformer.transform(name,name,resource(name));verify(patched);assertArrayEquals(patched,transformer.transform(name,name,patched));
         ClassNode source=new ClassNode();new ClassReader(patched).accept(source,0);

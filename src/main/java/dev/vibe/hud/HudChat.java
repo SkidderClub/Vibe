@@ -14,6 +14,7 @@ import net.minecraftforge.fml.relauncher.ReflectionHelper;
 
 /** Draws vanilla's wrapped, styled chat history; GuiChat still owns editing, scrolling and link actions. */
 public final class HudChat {
+    private static final int EXTENDED_HISTORY_LIMIT = 2_000;
     private static final Field LINES=ReflectionHelper.findField(GuiNewChat.class,"drawnChatLines","field_146253_i");
     private static final Field SCROLL=ReflectionHelper.findField(GuiNewChat.class,"scrollPos","field_146250_j");
     private static final Field INPUT_WIDTH=ReflectionHelper.findField(GuiTextField.class,"width","field_146218_h");
@@ -46,9 +47,11 @@ public final class HudChat {
     public static float scale(float original){return active()?scale():original;}
     public static int lines(int original){return active()?Math.max(1,(hud().chat.height.getInt()-12)/hud().chat.lineHeight.getInt()):original;}
     public static int historyLimit(int original){
-        Vibe vibe=Vibe.getInstance();HudModule h=vibe==null||vibe.getModuleManager()==null?null:vibe.getModuleManager().getModule(HudModule.class);
-        // Keep session history even while the custom element is temporarily hidden.
-        return h!=null&&h.chat.infiniteScrolling.isEnabled()?Integer.MAX_VALUE:original;
+        Vibe vibe = Vibe.getInstance();
+        HudModule hud = vibe == null || vibe.getModuleManager() == null ? null : vibe.getModuleManager().getModule(HudModule.class);
+        // Temporary visibility changes such as F1 should keep the configured history.
+        return hud != null && hud.isEnabled() && hud.getHudElements().isSelectedIgnoreCase(HudManager.CHAT)
+                && hud.chat.extendedHistory.isEnabled() ? EXTENDED_HISTORY_LIMIT : original;
     }
     public static int mouseX(int guiX){Minecraft mc=Minecraft.getMinecraft();return (int)((guiX+.5)*mc.displayWidth/new ScaledResolution(mc).getScaledWidth());}
     public static int mouseY(int guiY){Minecraft mc=Minecraft.getMinecraft();return mc.displayHeight-1-(int)((guiY+.5)*mc.displayHeight/new ScaledResolution(mc).getScaledHeight());}
@@ -58,7 +61,7 @@ public final class HudChat {
         if(!preview)ChatActions.beginCustom();
         Minecraft mc=Minecraft.getMinecraft();OverlaySettings.Chat s=hud.chat;FontRenderer font=mc.fontRendererObj;
         int w=s.width.getInt(),h=s.height.getInt(),lineHeight=s.lineHeight.getInt(),capacity=Math.max(1,(h-12)/lineHeight);
-        e.ensureScaledOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
+        int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
         GuiNewChat chat=mc.ingameGUI==null?null:mc.ingameGUI.getChatGUI();List<ChatLine> history=Collections.emptyList();int scroll=0;
         if(chat!=null&&!preview){
             int width=w-12;if(chat!=wrappedChat||wrappedWidth!=width){wrappedChat=chat;wrappedWidth=width;chat.refreshChat();}

@@ -9,7 +9,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.Packet;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement;
-import net.minecraft.network.play.client.C17PacketCustomPayload;
 import net.minecraft.network.play.server.*;
 import net.minecraft.init.Items;
 
@@ -137,16 +136,6 @@ public final class AdjustFlightTracker {
     private void payload(final String channel, final byte[] data) {
         if (channel.equals("rewound:hello")) {
             reset();
-            if (mc.getNetHandler() == null) return;
-            final PacketBuffer registration = new PacketBuffer(Unpooled.buffer());
-            registration.writeByte(1);
-            registration.writeVarIntToBuffer(4);
-            for (final String name : new String[] { "location", "game_start", "game_finish", "game_rejoin" }) {
-                registration.writeString("rewound:" + name);
-                registration.writeVarIntToBuffer(1);
-            }
-
-            mc.getNetHandler().addToSendQueue(new C17PacketCustomPayload("rewound:register", registration));
             return;
         }
 

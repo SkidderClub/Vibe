@@ -55,12 +55,10 @@ final float scale = s.scale.getFloat() * element.getScale();
         int maxRows = Math.max(1,(int)(screen.getScaledHeight()/(rh+gap)));
         if(rows.size()>maxRows)rows=new ArrayList<>(rows.subList(0,maxRows));
         int w = (int)Math.ceil(maximum), h = (int)Math.ceil(Math.max(1,rows.size()*(rh+gap)-gap));
-        element.ensureOnScreen(screen,w,h);
+
         int left = element.left(screen,w);
-        boolean right = s.alignment.is("Right") || s.alignment.is("Auto") && left+w/2 >= screen.getScaledWidth()/2;
-        element.setRightAnchored(right,screen,w);
-        left = element.left(screen,w);
-        int top = element.getY();
+        boolean right = s.alignment.is("Right") || s.alignment.is("Auto") && element.isRightAnchored();
+        int top = element.top(screen,h);
         element.setBounds(left,top,w,rows.isEmpty()?0:h);
         if(rows.isEmpty() || !preview && DebugOverlay.overlaps(left-12,top-12,left+w+12,top+h+12))return;
         BlurModule blur = Vibe.getInstance().getModuleManager().getModule(BlurModule.class);

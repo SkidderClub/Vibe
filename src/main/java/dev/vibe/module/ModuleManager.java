@@ -41,6 +41,7 @@ public final class ModuleManager {
         register(new BlockDebrisModule());
         register(new StepModule());
         register(new NoEscMenuModule());
+        register(new TimerModule());
         register(new AntiVoidModule());
         register(new ReverseStepModule());
         register(new ParkourModule());

@@ -37,7 +37,7 @@ final class BlockCounterRenderer {
         if(s.percentage.isEnabled()&&!circle)contentWidth+=font.getStringWidth(percent)+7;
         int w=Math.max(s.compact.isEnabled()?0:s.width.getInt(),contentWidth+pad*2);
         int h=Math.max(s.block.isEnabled()?26:22,circle?s.ringSize.getInt()+pad*2:s.bar.isEnabled()?28:22);
-        e.ensureOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
+        int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
         if(opacity<.02F)return;
         String theme=manager.theme(e,hud);int textColor=s.text.getArgb();
         if(s.warning.isEnabled())textColor=count<=Math.min(s.redAt.getInt(),s.yellowAt.getInt())?s.red.getArgb():count<=Math.max(s.redAt.getInt(),s.yellowAt.getInt())?s.yellow.getArgb():textColor;

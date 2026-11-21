@@ -50,7 +50,7 @@ final class DynamicIslandRenderer {
         float blend=preview||!s.animate.isEnabled()?1:transition.update(1,now,ms,s.easing.getValue());
         int w=Math.round(preview?targetW:width.update(targetW,now,ms,s.easing.getValue()));
         int h=Math.round(preview?targetH:height.update(targetH,now,ms,s.easing.getValue()));
-        e.ensureOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
+        int x=e.left(res,w),y=e.top(res,h);e.setBounds(x,y,w,h);
         String theme=manager.theme(e,hud);float radius=Math.min(s.radius.getFloat(),h/2F);
         if("LiquidGlass".equals(theme)||"Lavalamp".equals(theme))manager.drawOverlayGlass(hud,e,s,x,y,w,h,1);
         else{HudShapes.round(x,y,w,h,"Skeet".equals(theme)?1:radius,s.background.getArgb());

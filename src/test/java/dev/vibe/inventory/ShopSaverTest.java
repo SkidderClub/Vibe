@@ -27,6 +27,36 @@ import org.objectweb.asm.tree.analysis.*;
 import static org.junit.Assert.*;
 
 public class ShopSaverTest {
+    @Test public void closeShopClosesTheLiveWindowWithoutTurningOffShopSaver() throws Exception {
+        try (AutomationFixture f = new AutomationFixture()) {
+            Client mc = client(f);
+            ShopSaverModule module = new ShopSaverModule();
+            f.base.modules.registerDynamic(module);
+            module.setEnabled(true);
+            Chest shop = chest(mc);
+            mc.thePlayer.closeScreen();
+            mc.displayGuiScreen(new GuiInventory(mc.thePlayer));
+            assertSame(shop, mc.currentScreen);
+            java.util.List<net.minecraft.client.gui.GuiButton> buttons = new java.util.ArrayList<>();
+            shop.width = 320;
+            shop.height = 240;
+            dev.vibe.event.ChestControlsEvents controls = new dev.vibe.event.ChestControlsEvents();
+            controls.init(new net.minecraftforge.client.event.GuiScreenEvent.InitGuiEvent.Post(shop, buttons));
+            net.minecraft.client.gui.GuiButton close = buttons.get(0);
+            assertEquals("Close Shop", close.displayString);
+            assertTrue(close.visible);
+            assertEquals(8, close.yPosition);
+            controls.click(new net.minecraftforge.client.event.GuiScreenEvent.ActionPerformedEvent.Pre(shop, close, buttons) {
+                @Override public boolean isCancelable() { return true; }
+            });
+            assertNull(mc.currentScreen);
+            assertSame(mc.thePlayer.inventoryContainer, mc.thePlayer.openContainer);
+            assertTrue(module.isEnabled());
+            assertEquals(1, f.queue.packets.size());
+            assertTrue(f.queue.packets.get(0) instanceof C0DPacketCloseWindow);
+            assertTrue(module.opening(new GuiInventory(mc.thePlayer)) instanceof GuiInventory);
+        }
+    }
     @Test public void nativeDismissRetainsContainerAndCursorReopensLiveContentsAndDisablingClosesOnce() throws Exception {
         try (AutomationFixture f = new AutomationFixture()) {
             Client mc = client(f); ShopSaverModule module = new ShopSaverModule(); f.base.modules.registerDynamic(module); module.setEnabled(true);

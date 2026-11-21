@@ -6,6 +6,7 @@ import dev.vibe.module.Module;
 import dev.vibe.module.impl.combat.CriticalsModule;
 import dev.vibe.module.impl.movement.FlyModule;
 import dev.vibe.module.impl.movement.PhaseModule;
+import dev.vibe.module.impl.movement.StepModule;
 import dev.vibe.network.PacketDelayService;
 import dev.vibe.path.PathTestFixture;
 import dev.vibe.setting.ModeSetting;
@@ -47,6 +48,85 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AdjustModesTest {
+    @Test public void adjustStepTimerExpiresWithoutPlayerMovementAndClearsOnCorrectionOrExit() throws Exception {
+        try (RewoundModesTest.Fixture f = new RewoundModesTest.Fixture()) {
+            StepModule step = register(new StepModule());
+            step.mode.setValue("RewoundAdjust");
+            step.setEnabled(true);
+
+            confirmAdjustStep(f, step);
+            step.tick();
+            step.tick();
+            assertEquals(.7F, CombatTimerAccess.getSpeed(), 0);
+            step.tick();
+            assertEquals(1, CombatTimerAccess.getSpeed(), 0);
+
+            confirmAdjustStep(f, step);
+            RewoundHooks.correction(new S08PacketPlayerPosLook(0, 64, 0, 0, 0, Collections.emptySet()));
+            assertEquals(1, CombatTimerAccess.getSpeed(), 0);
+
+            confirmAdjustStep(f, step);
+            step.mode.setValue("Vanilla");
+            step.tick();
+            assertEquals(1, CombatTimerAccess.getSpeed(), 0);
+
+            step.mode.setValue("RewoundAdjust");
+            confirmAdjustStep(f, step);
+            f.mc.theWorld = null;
+            step.tick();
+            assertEquals(1, CombatTimerAccess.getSpeed(), 0);
+            step.setEnabled(false);
+        }
+    }
+
+    @Test public void speedCanStartOrStopDuringAnAdjustStepWithoutLeavingTheTimerChanged() throws Exception {
+        for (String mode : new String[]{"Rewound", "AACHop4"}) {
+            try (RewoundModesTest.Fixture f = new RewoundModesTest.Fixture()) {
+                StepModule step = register(new StepModule());
+                step.mode.setValue("RewoundAdjust");
+                step.setEnabled(true);
+                f.speed.getSettings().stream().filter(s -> s instanceof ModeSetting && s.getRawName().equals("Mode"))
+                        .map(ModeSetting.class::cast).findFirst().get().setValue(mode);
+                f.player.onGround = false;
+                f.player.fallDistance = .05F;
+
+                applySpeedTimer(f);
+                float speedRate = CombatTimerAccess.getSpeed();
+                assertTrue(speedRate > 1);
+                confirmAdjustStep(f, step);
+                f.speed.setEnabled(false);
+                assertEquals(mode, 1, CombatTimerAccess.getSpeed(), 0);
+
+                confirmAdjustStep(f, step);
+                applySpeedTimer(f);
+                assertEquals(mode, speedRate, CombatTimerAccess.getSpeed(), 0);
+                for (int i = 0; i < 3; i++) step.tick();
+                assertEquals(mode, speedRate, CombatTimerAccess.getSpeed(), 0);
+                f.speed.setEnabled(false);
+                assertEquals(mode, 1, CombatTimerAccess.getSpeed(), 0);
+                step.setEnabled(false);
+            }
+        }
+    }
+
+    private static void confirmAdjustStep(RewoundModesTest.Fixture f, StepModule step) throws Exception {
+        step.tick();
+        Field state = StepModule.class.getDeclaredField("adjust");
+        state.setAccessible(true);
+        PathTestFixture.set(AdjustStep.class, state.get(step), "prepared", 2F);
+        f.position(64);
+        f.player.setEntityBoundingBox(f.player.getEntityBoundingBox().offset(0, 1, 0));
+        RewoundHooks.confirmAdjustStep(f.player);
+        assertEquals(.7F, CombatTimerAccess.getSpeed(), 0);
+        f.position(64);
+    }
+
+    private static void applySpeedTimer(RewoundModesTest.Fixture f) {
+        f.speed.setEnabled(true);
+        f.speed.tick();
+        RewoundHooks.move(f.player, 0, -.0784, .15);
+    }
+
     @Test public void criticalsPreserveAdjustJesusHoverAfterMerge() throws Exception {
         try (RewoundModesTest.Fixture fixture = new RewoundModesTest.Fixture()) {
             final CriticalsModule criticals = register(new CriticalsModule());

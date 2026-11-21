@@ -170,7 +170,7 @@ public final class AdjustFlight {
 
     private void setTimer(final float speed) {
         if (!timerOwned)
-            previousTimer = CombatTimerAccess.getSpeed();
+            previousTimer = CombatTimerAccess.getBaseSpeed();
 
         CombatTimerAccess.setSpeed(speed);
         lastTimer = speed;
@@ -178,7 +178,7 @@ public final class AdjustFlight {
     }
 
     private void releaseTimer() {
-        if (timerOwned && CombatTimerAccess.getSpeed() == lastTimer)
+        if (timerOwned && CombatTimerAccess.getBaseSpeed() == lastTimer)
             CombatTimerAccess.setSpeed(previousTimer);
 
         timerOwned = false;

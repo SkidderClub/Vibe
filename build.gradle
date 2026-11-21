@@ -84,6 +84,7 @@ dependencies {
     implementation 'io.github.spair:imgui-java-natives-linux:1.86.11'
     implementation 'io.github.spair:imgui-java-natives-macos:1.86.11'
     implementation 'javazoom:jlayer:1.0.1'
+    implementation 'com.github.HypixelNCP:modapi:1.0.4'
 }
 
 unimined.minecraft {
@@ -122,7 +123,8 @@ def bundledLibraries = providers.provider {
     def named = { Closure<Boolean> matches -> runtimeLibraries.findAll { matches(it.name.toLowerCase(Locale.ROOT)) } }
     named { it.startsWith('webp-imageio') } +
         named { it.contains('imgui') } +
-        named { it.startsWith('rhino') || it.contains('janino') || it.contains('commons-compiler') || it.contains('jlayer') }
+        named { it.startsWith('rhino') || it.contains('janino') || it.contains('commons-compiler') || it.contains('jlayer') } +
+        named { it == 'modapi-1.0.4.jar' }
 }
 ext.vibeBundledLibraries = bundledLibraries
 

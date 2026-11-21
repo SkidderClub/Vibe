@@ -265,6 +265,24 @@ public final class Esp2DRenderer {
     private static int alpha(int color,float opacity) {return color&0xFFFFFF|Math.round((color>>>24)*Math.max(0,Math.min(1,opacity)))<<24;}
     public static void color(int c) {GL11.glColor4f((c>>16&255)/255F,(c>>8&255)/255F,(c&255)/255F,(c>>>24)/255F);}
     public static void solid(EspLayout.Rect r,int color) {GL20.glUseProgram(0);GlStateManager.disableTexture2D();GL11.glEnable(GL11.GL_BLEND);GL11.glBlendFunc(770,771);color(color);quad(r);}
+    /** A color-only box using the same fractional coverage and corner geometry as Player ESP. */
+    static void drawSolidBox(EspLayout.Rect r, int fill, int outline, float radius, float width, boolean corners, float length) {
+        if ((fill >>> 24) != 0) {
+            if (EspPaintShader.solidShape(r, fill, 1, radius, 0, 0, 0)) {
+                quad(r.expand(2));
+                GL20.glUseProgram(0);
+            } else solidRounded(r, radius, fill);
+        }
+        if ((outline >>> 24) != 0) {
+            if (EspPaintShader.solidShape(r, outline, 2, radius, width, corners ? 1 : 0, length)) {
+                quad(r.expand(width / 2 + 2));
+                GL20.glUseProgram(0);
+            } else {
+                color(outline);
+                stroke(r, radius, width, corners, length);
+            }
+        }
+    }
     private static void border(EspLayout.Rect r,float width,int color) {
         solid(new EspLayout.Rect(r.x-width,r.y-width,r.w+2*width,width),color);
         solid(new EspLayout.Rect(r.x-width,r.bottom(),r.w+2*width,width),color);
@@ -275,7 +293,7 @@ public final class Esp2DRenderer {
         GL11.glBegin(GL11.GL_QUADS);GL11.glVertex2f(r.x,r.y);GL11.glVertex2f(r.x,r.bottom());GL11.glVertex2f(r.right(),r.bottom());GL11.glVertex2f(r.right(),r.y);GL11.glEnd();
     }
     private static void solidRounded(EspLayout.Rect r,float radius,int color) {
-        if((color>>>24)==0)return;GlStateManager.disableTexture2D();color(color);
+        if((color>>>24)==0)return;color(color);
         GL11.glBegin(GL11.GL_TRIANGLE_FAN);GL11.glVertex2f(r.x+r.w/2,r.y+r.h/2);
         for(int corner=0;corner<4;corner++)for(int step=0;step<=8;step++){
             double angle=Math.toRadians((corner%4)*90+180+step*90.0/8);

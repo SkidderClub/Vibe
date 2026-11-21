@@ -28,37 +28,24 @@ final class EspPaintShader {
             +"if(shape==2&&shapeData.z>0.){vec2 edge=min(p,shapeRect.zw-p);"
             +"float horizontal=coverage(edge.x-cornerExtent.x,pp.x)*coverage(edge.y-shapeData.x-shapeData.y*.5,pp.y);"
             +"float vertical=coverage(edge.y-cornerExtent.y,pp.y)*coverage(edge.x-shapeData.x-shapeData.y*.5,pp.x);m*=mix(1.,max(horizontal,vertical),shapeData.z);}return m;}"
-            +"void main(){float mask=shape>0?shapeMask():textured==1?texture2D(image,gl_TexCoord[0].xy).a:1.;if(mask<=0.)discard;vec2 p=(gl_FragCoord.xy-viewport.xy)/viewport.zw*screen; p.y=screen.y-p.y;"
+            +"void main(){float mask=shape>0?shapeMask():textured==1?texture2D(image,gl_TexCoord[0].xy).a:1.;if(mask<=0.)discard;vec4 c=colors[0];"
+            +"if(rainbow==1||count>1){vec2 p=(gl_FragCoord.xy-viewport.xy)/viewport.zw*screen; p.y=screen.y-p.y;"
             +"vec2 q=p-region.xy; float t=.5+dot(q-region.zw*.5,direction)/max(.001,dot(abs(direction),region.zw));"
-            +"vec4 c=colors[0]; if(rainbow==1){vec3 hue=clamp(abs(mod(fract(t+phase)*6.+vec3(0.,4.,2.),6.)-3.)-1.,0.,1.);c=vec4(mix(vec3(1.),hue,saturation),1.);}"
+            +"if(rainbow==1){vec3 hue=clamp(abs(mod(fract(t+phase)*6.+vec3(0.,4.,2.),6.)-3.)-1.,0.,1.);c=vec4(mix(vec3(1.),hue,saturation),1.);}"
             +"else {t=1.-abs(mod(t+phase,2.)-1.); for(int i=1;i<8;i++){if(i<count){float f=clamp((t-stops[i-1])/max(.00001,stops[i]-stops[i-1]),0.,1.); c=mix(c,colors[i],f);}}}"
-            +"if(forceRgb==1)c.rgb=forcedRgb;gl_FragColor=vec4(c.rgb,c.a*mask*opacity);}";
+            +"}if(forceRgb==1)c.rgb=forcedRgb;gl_FragColor=vec4(c.rgb,c.a*mask*opacity);}";
 
     static boolean bind(Esp2DSettings settings, Esp2DSettings.Paint paint, EspLayout.Rect rect,
                         int screenWidth,int screenHeight,boolean texture,float opacity,double seconds,int team,boolean hurt,int forcedColor) {
         return bind(settings,paint,rect,screenWidth,screenHeight,texture,opacity,seconds,team,hurt,forcedColor,false,0);
     }
     private static boolean bind(Esp2DSettings settings,Esp2DSettings.Paint paint,EspLayout.Rect rect,int screenWidth,int screenHeight,boolean texture,float opacity,double seconds,int team,boolean hurt,int forcedColor,boolean override,int overrideColor){
-        if (failed) return false;
-        if(program==0) {
-            int vertex=0,fragment=0,linked=0;
-            try {
-                vertex=compile(GL20.GL_VERTEX_SHADER,VERTEX); fragment=compile(GL20.GL_FRAGMENT_SHADER,FRAGMENT);
-                linked=GL20.glCreateProgram();GL20.glAttachShader(linked,vertex);GL20.glAttachShader(linked,fragment);GL20.glLinkProgram(linked);
-                if(GL20.glGetProgrami(linked,GL20.GL_LINK_STATUS)==0) throw new IllegalStateException(GL20.glGetProgramInfoLog(linked,4096));
-                program=linked;
-                resolveLocations();
-            } catch(RuntimeException error) {
-                failed=true; if(linked!=0)GL20.glDeleteProgram(linked);
-                System.err.println("[Vibe] ESP gradient shader unavailable: "+error.getMessage()); return false;
-            } finally { if(vertex!=0)GL20.glDeleteShader(vertex);if(fragment!=0)GL20.glDeleteShader(fragment); }
-        }
+        if (!useProgram()) return false;
         EspGradient gradient=new EspGradient(paint.mode.is("Global Gradient")?settings.global:paint.gradient,seconds,team,hurt);
         boolean solid=override||paint.mode.is("Static")||paint.mode.is("Team")||paint.solid.isHurtOverride(hurt);
         int solidColor=paint.solid.resolve(team,hurt);
         if(paint.mode.is("Team")&&team!=0&&!paint.solid.isHurtOverride(hurt))solidColor=(solidColor&0xFF000000)|(team&0xFFFFFF);
         if(override)solidColor=overrideColor;
-        GL20.glUseProgram(program);
         GL20.glUniform1i(forceRgbLocation,forcedColor==0?0:1);
         GL20.glUniform3f(forcedRgbLocation,(forcedColor>>16&255)/255F,(forcedColor>>8&255)/255F,(forcedColor&255)/255F);
         GL20.glUniform1i(shapeLocation,0);
@@ -82,13 +69,50 @@ final class EspPaintShader {
         GL20.glUniform4f(regionLocation,global?0:rect.x,global?0:rect.y,global?screenWidth:rect.w,global?screenHeight:rect.h);
         return true;
     }
+
+    private static boolean useProgram() {
+        if (failed) return false;
+        if(program==0) {
+            int vertex=0,fragment=0,linked=0;
+            try {
+                vertex=compile(GL20.GL_VERTEX_SHADER,VERTEX); fragment=compile(GL20.GL_FRAGMENT_SHADER,FRAGMENT);
+                linked=GL20.glCreateProgram();GL20.glAttachShader(linked,vertex);GL20.glAttachShader(linked,fragment);GL20.glLinkProgram(linked);
+                if(GL20.glGetProgrami(linked,GL20.GL_LINK_STATUS)==0) throw new IllegalStateException(GL20.glGetProgramInfoLog(linked,4096));
+                program=linked;
+                resolveLocations();
+            } catch(RuntimeException error) {
+                failed=true; if(linked!=0)GL20.glDeleteProgram(linked);
+                System.err.println("[Vibe] ESP gradient shader unavailable: "+error.getMessage()); return false;
+            } finally { if(vertex!=0)GL20.glDeleteShader(vertex);if(fragment!=0)GL20.glDeleteShader(fragment); }
+        }
+        GL20.glUseProgram(program);
+        return true;
+    }
+
+    static boolean solidShape(EspLayout.Rect rect, int color, int kind, float radius, float width, float corners, float length) {
+        if (!useProgram()) return false;
+        GL20.glUniform1i(forceRgbLocation, 0);
+        GL20.glUniform1i(countLocation, 1);
+        GL20.glUniform1i(rainbowLocation, 0);
+        GL20.glUniform1f(opacityLocation, 1);
+        GL20.glUniform4f(COLOR_LOCATIONS[0], (color >> 16 & 255) / 255F, (color >> 8 & 255) / 255F,
+                (color & 255) / 255F, (color >>> 24) / 255F);
+        shapeGeometry(rect, kind, radius, width, corners, length);
+        return true;
+    }
+
     static boolean shape(Esp2DSettings settings,Esp2DSettings.Paint paint,EspLayout.Rect rect,EspLayout.Rect paintRect,int w,int h,float opacity,double seconds,int team,boolean hurt,int forcedColor,boolean solid,int color,int kind,float radius,float width,float corners,float length){
         if(!bind(settings,paint,paintRect,w,h,false,opacity,seconds,team,hurt,forcedColor,solid,color))return false;
+        shapeGeometry(rect, kind, radius, width, corners, length);
+        return true;
+    }
+
+    private static void shapeGeometry(EspLayout.Rect rect, int kind, float radius, float width, float corners, float length) {
         GL20.glUniform1i(shapeLocation,kind);GL20.glUniform4f(shapeRectLocation,rect.x,rect.y,rect.w,rect.h);
         GL20.glUniform4f(shapeDataLocation,radius,width,corners,0);
         float hx=Math.min(Math.max(0,rect.w/2-radius),Math.max(width,length-radius));
         float hy=Math.min(Math.max(0,rect.h/2-radius),Math.max(width,length-radius));
-        GL20.glUniform2f(cornerExtentLocation,radius+hx,radius+hy);return true;
+        GL20.glUniform2f(cornerExtentLocation,radius+hx,radius+hy);
     }
     /**
      * Drawing ESP boxes never changes the viewport, so their paints share one query.

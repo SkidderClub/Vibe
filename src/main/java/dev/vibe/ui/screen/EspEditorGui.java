@@ -3,6 +3,8 @@ package dev.vibe.ui.screen;
 import com.mojang.authlib.GameProfile;
 import dev.vibe.Vibe;
 import dev.vibe.module.impl.client.BlurModule;
+import dev.vibe.module.impl.visual.ChestEspModule;
+import dev.vibe.module.impl.visual.ChestEspModule.Type;
 import dev.vibe.module.impl.visual.Esp2DSettings.*;
 import dev.vibe.module.impl.visual.Esp2DSettings;
 import dev.vibe.module.impl.visual.EspEditorModule;
@@ -35,6 +37,8 @@ import org.lwjgl.opengl.GL11;
 /** Responsive editor: controls and preview operate directly on the persisted ESP settings. */
 public final class EspEditorGui extends GuiScreen {
     private static final int W=920,H=560,LIST_X=384,LIST_Y=83,LIST_W=518,LIST_BOTTOM=536;
+    private static final int PLAYER_TAB_X=273,CHEST_TAB_X=386,TAB_Y=6,TAB_WIDTH=106,TAB_HEIGHT=17;
+    private static final int CHEST_NEAR_X=32,CHEST_DISTANCE_Y=502,CHEST_DISTANCE_WIDTH=320;
     private final EspEditorModule module;
     private final GuiScreen parent;
     private boolean returning;
@@ -42,6 +46,12 @@ public final class EspEditorGui extends GuiScreen {
     private final Set<String> collapsed=new HashSet<String>();
     private final List<Row> rows=new ArrayList<Row>();
     private EspModule esp;
+    private ChestEspModule chests;
+    private boolean chestTab;
+    private ChestEspPreview chestPreview;
+    private Type previewChest=Type.NORMAL;
+    private float chestYaw=34;
+    private final NumberSetting previewDistance=new NumberSetting("Preview distance",14,0,256,1);
     private boolean initialized;
     private float uiScale=1,scroll,maxScroll,previewYaw;
     private int left,top,mouseX,mouseY,lastMouseX;
@@ -69,6 +79,8 @@ public final class EspEditorGui extends GuiScreen {
         uiScale=Math.min(1,Math.min(width/(float)W,height/(float)H));
         left=Math.round((width/uiScale-W)/2);top=Math.round((height/uiScale-H)/2);
         esp=Vibe.getInstance().getModuleManager().getModule(EspModule.class);
+        chests=Vibe.getInstance().getModuleManager().getModule(ChestEspModule.class);
+        if(chests==null)chestTab=false;
         if(!initialized){for(Element e:settings().elements)collapsed.add(e.title);collapsed.add("Default text");initialized=true;}
         hex=new GuiTextField(0,fontRendererObj,left+PICK_X+14,top+PICK_Y+267,240,20);
         hex.setMaxStringLength(9);
@@ -86,18 +98,55 @@ public final class EspEditorGui extends GuiScreen {
         SkeetEditorStyle.backdrop(this,BlurModule.ESP_EDITOR,partialTicks);
         GlStateManager.pushMatrix();GlStateManager.scale(uiScale,uiScale,1);
         try {
-            SkeetEditorStyle.window(left,top+6,left+W,top+H,"VIBE / ESP EDITOR","Drag / resize / wheel to scale / middle-click to edit");
-
-            button(esp.isEnabled()?"ESP ON":"ESP OFF",800,45,101,esp.isEnabled());
-            String[] modes={"2D","3D","Skeletal","Chams"};
-            for(int i=0;i<modes.length;i++)button(modes[i],18+i*91,45,82,esp.getModes().isSelected(modes[i]));
-            String[] profiles={"Players","Friends","Targets"};
-            for(int i=0;i<3;i++)button(profiles[i],400+i*128,45,119,esp.editingProfile()==i);
-            drawPreview(partialTicks);
+            SkeetEditorStyle.window(left,top+6,left+W,top+H,"VIBE / ESP EDITOR",
+                    chestTab?"Drag the chest to rotate":"Drag / resize / wheel to scale / middle-click to edit");
+            if(chests!=null){
+                tab("Player ESP",PLAYER_TAB_X,!chestTab);
+                tab("ChestESP",CHEST_TAB_X,chestTab);
+            }
+            if(chestTab){
+                button(chests.isEnabled()?"ChestESP On":"ChestESP Off",780,45,121,chests.isEnabled());
+                button("2D",18,45,82,chests.is2D());
+                button("3D",109,45,82,!chests.is2D());
+                drawChestPreview();
+            }else{
+                button(esp.isEnabled()?"ESP ON":"ESP OFF",800,45,101,esp.isEnabled());
+                String[] modes={"2D","3D","Skeletal","Chams"};
+                for(int i=0;i<modes.length;i++)button(modes[i],18+i*91,45,82,esp.getModes().isSelected(modes[i]));
+                String[] profiles={"Players","Friends","Targets"};
+                for(int i=0;i<3;i++)button(profiles[i],400+i*128,45,119,esp.editingProfile()==i);
+                drawPreview(partialTicks);
+            }
             buildRows();drawRows();
             if(activeColor!=null)drawPicker();
         } finally {GlStateManager.popMatrix();}
         super.drawScreen(mx,my,partialTicks);
+    }
+    private void tab(String label,int x,boolean active){
+        SkeetEditorStyle.button(left+x,top+TAB_Y,left+x+TAB_WIDTH,top+TAB_Y+TAB_HEIGHT,label,active);
+    }
+    private void drawChestPreview(){
+        SkeetEditorStyle.panel(left+18,top+83,left+368,top+536,"Live preview / ChestESP");
+        for(Type type:Type.values())button(type.label,28+type.ordinal()*111,117,105,type==previewChest);
+        int maxDistance=chests.getMaxDistance().getInt();
+        float ratio=previewDistance.getFloat()/maxDistance;
+        scissor(18,144,350,337);
+        try{
+            if(chestPreview==null)chestPreview=new ChestEspPreview();
+            chestPreview.draw(chests,previewChest,ratio,chestYaw,left+193,top+319,
+                    width/(double)uiScale,height/(double)uiScale);
+        }finally{GL11.glDisable(GL11.GL_SCISSOR_TEST);}
+        if(!chests.getStyle(previewChest).enabled.isEnabled())text("This chest type is disabled",32,458,SkeetEditorStyle.MUTED);
+        else if(ratio>1)text("Outside max distance",32,458,SkeetEditorStyle.MUTED);
+        text("Preview distance",CHEST_NEAR_X,485,SkeetEditorStyle.TEXT);
+        String distance=previewDistance.getInt()+" / "+maxDistance+" blocks";
+        text(distance,CHEST_NEAR_X+CHEST_DISTANCE_WIDTH-fontRendererObj.getStringWidth(distance),485,SkeetEditorStyle.MUTED);
+        rect(CHEST_NEAR_X,CHEST_DISTANCE_Y+6,CHEST_DISTANCE_WIDTH,2,SkeetEditorStyle.BORDER);
+        float progress=(float)(CHEST_DISTANCE_WIDTH*previewDistance.getDouble()/previewDistance.getMaximum());
+        float limit=(float)(CHEST_DISTANCE_WIDTH*maxDistance/previewDistance.getMaximum());
+        rect(CHEST_NEAR_X,CHEST_DISTANCE_Y+6,progress,2,SkeetEditorStyle.accent(0));
+        rect(CHEST_NEAR_X+limit,CHEST_DISTANCE_Y+4,1,6,SkeetEditorStyle.MUTED);
+        rect(CHEST_NEAR_X+progress-2,CHEST_DISTANCE_Y+3,4,8,SkeetEditorStyle.TEXT);
     }
     private void drawPreview(float partialTicks) {
         SkeetEditorStyle.panel(left+18,top+83,left+368,top+536,"LIVE PREVIEW / "+esp.getEditProfile().getValue());
@@ -144,6 +193,35 @@ public final class EspEditorGui extends GuiScreen {
     }
     private void buildRows() {
         rows.clear();
+        if(chestTab)buildChestRows();else buildPlayerRows();
+        float y=0;for(Row r:rows){r.y=y;y+=r.height;}
+        maxScroll=Math.max(0,y-(LIST_BOTTOM-LIST_Y));scroll=Math.max(0,Math.min(scroll,maxScroll));
+    }
+    private void buildChestRows(){
+        header("Appearance",0);
+        if(!collapsed.contains("Appearance")){
+            setting(chests.getBoxStyle(),"2D box style");
+            setting(chests.getCornerLength(),"Corner length");
+            setting(chests.getRounding(),"Corner radius");
+            setting(chests.getLineWidth(),"Line width");
+            setting(chests.getMaxDistance(),"Max distance");
+            setting(chests.getColorFade(),"Distance color fade");
+            setting(chests.getNearColor(),"Near color");
+            setting(chests.getFarColor(),"Far color");
+            setting(chests.getFadeAlpha(),"Fade alpha at max");
+        }
+        for(Type type:Type.values()){
+            String title=type.label+" chests";
+            header(title,0);
+            if(!collapsed.contains(title)){
+                ChestEspModule.ChestStyle style=chests.getStyle(type);
+                setting(style.enabled,"Highlight "+type.label.toLowerCase(Locale.ROOT)+" chests");
+                setting(style.outline,"Outline color");
+                setting(style.fill,"Fill color");
+            }
+        }
+    }
+    private void buildPlayerRows() {
         if (esp.editingProfile() != 0) {
             boolean friend = esp.editingProfile() == 1;
             EspModule.ProfileSettings profile = friend ? esp.getFriendsProfile() : esp.getTargetsProfile();
@@ -181,8 +259,6 @@ public final class EspEditorGui extends GuiScreen {
                 chamsRows("Visible surfaces",esp.getChams(esp.editingProfile(),true));chamsRows("Occluded surfaces",esp.getChams(esp.editingProfile(),false));
             }
         }
-        float y=0;for(Row r:rows){r.y=y;y+=r.height;}
-        maxScroll=Math.max(0,y-(LIST_BOTTOM-LIST_Y));scroll=Math.max(0,Math.min(scroll,maxScroll));
     }
     private void profileRows(String title,EspModule.ProfileSettings p) {
         header(title,1);if(collapsed.contains(title))return;
@@ -255,6 +331,11 @@ public final class EspEditorGui extends GuiScreen {
     @Override protected void mouseClicked(int mx,int my,int button)throws IOException {
         mx=(int)(mx/uiScale);my=(int)(my/uiScale);
         if(activeColor!=null){pickerClick(mx,my,button);return;}
+        if(button==0&&chests!=null){
+            if(hit(PLAYER_TAB_X,TAB_Y,TAB_WIDTH,TAB_HEIGHT,mx,my)){selectTab(false);return;}
+            if(hit(CHEST_TAB_X,TAB_Y,TAB_WIDTH,TAB_HEIGHT,mx,my)){selectTab(true);return;}
+        }
+        if(chestTab){clickChestTab(mx,my,button);return;}
         if(button==0&&hit(800,45,101,23,mx,my)){esp.toggle();return;}
         if(button==0){
             String[] profiles={"Players","Friends","Targets"};
@@ -272,20 +353,52 @@ public final class EspEditorGui extends GuiScreen {
                     dragged=selected;resizing=true;resizeStart=selected.scale.getFloat();resizeDistance=Math.max(8,(float)Math.hypot(mx-r.x,my-r.y));return;}}
             Element e=hovered(mx,my);if(e!=null){select(e);if(button==0&&e!=settings().box){dragged=e;resizing=false;}return;}
         }
-        if(hit(LIST_X,LIST_Y,LIST_W,LIST_BOTTOM-LIST_Y,mx,my)){
-            for(Row r:rows){float y=LIST_Y+r.y-scroll;if(my<top+y||my>=top+y+r.height)continue;
-                if(r.gradient!=null){gradientClick(r.gradient,y,mx,my,button);return;}
-                if(r.setting==null){if(!collapsed.add(r.title))collapsed.remove(r.title);return;}
-                if(mx<left+LIST_X+250)return;
-                Setting<?> s=r.setting;
-                if(s instanceof BooleanSetting)((BooleanSetting)s).toggle();
-                else if(s instanceof ModeSetting)((ModeSetting)s).cycle(button==1);
-                else if(s instanceof ColorSetting)openColor((ColorSetting)s);
-                else if(s instanceof NumberSetting){slider=(NumberSetting)s;sliderX=left+LIST_X+259;sliderWidth=232;updateSlider(mx);}
-                return;
-            }
-        }
+        if(clickRows(mx,my,button))return;
         if(button==0&&hit(18,207,350,265,mx,my)){rotating=true;lastMouseX=mx;}
+    }
+    private void selectTab(boolean chest){
+        if(chestTab==chest)return;
+        chestTab=chest;
+        slider=null;
+        dragged=selected=null;
+        activeStop=null;
+        rotating=resizing=false;
+        frame=null;
+        scroll=0;
+        buildRows();
+    }
+    private void clickChestTab(int mx,int my,int button){
+        if(button==0){
+            if(hit(780,45,121,23,mx,my)){chests.toggle();return;}
+            if(hit(18,45,82,23,mx,my)||hit(109,45,82,23,mx,my)){
+                chests.getMode().setValue(hit(18,45,82,23,mx,my)?"2D":"3D");buildRows();return;
+            }
+            for(Type type:Type.values()){
+                if(hit(28+type.ordinal()*111,117,105,23,mx,my)){previewChest=type;return;}
+            }
+            if(hit(CHEST_NEAR_X-4,CHEST_DISTANCE_Y,CHEST_DISTANCE_WIDTH+8,15,mx,my)){
+                slider=previewDistance;sliderX=left+CHEST_NEAR_X;sliderWidth=CHEST_DISTANCE_WIDTH;updateSlider(mx);return;
+            }
+            if(hit(18,144,350,337,mx,my)){rotating=true;lastMouseX=mx;return;}
+        }
+        clickRows(mx,my,button);
+    }
+    private boolean clickRows(int mx,int my,int button){
+        if(!hit(LIST_X,LIST_Y,LIST_W,LIST_BOTTOM-LIST_Y,mx,my))return false;
+        for(Row r:rows){
+            float y=LIST_Y+r.y-scroll;
+            if(my<top+y||my>=top+y+r.height)continue;
+            if(r.gradient!=null){gradientClick(r.gradient,y,mx,my,button);return true;}
+            if(r.setting==null){if(!collapsed.add(r.title))collapsed.remove(r.title);return true;}
+            if(mx<left+LIST_X+250)return true;
+            Setting<?> s=r.setting;
+            if(s instanceof BooleanSetting)((BooleanSetting)s).toggle();
+            else if(s instanceof ModeSetting)((ModeSetting)s).cycle(button==1);
+            else if(s instanceof ColorSetting)openColor((ColorSetting)s);
+            else if(s instanceof NumberSetting){slider=(NumberSetting)s;sliderX=left+LIST_X+259;sliderWidth=232;updateSlider(mx);}
+            return true;
+        }
+        return false;
     }
     private void gradientClick(Gradient g,float y,int mx,int my,int button){
         int x=left+LIST_X+16,w=475;
@@ -306,7 +419,7 @@ public final class EspEditorGui extends GuiScreen {
         mx=(int)(mx/uiScale);my=(int)(my/uiScale);
         if(activeColor!=null&&pickerPart>=0){updatePicker(mx,my);return;}
         if(slider!=null){updateSlider(mx);return;}
-        if(rotating){previewYaw+=mx-lastMouseX;lastMouseX=mx;}
+        if(rotating){if(chestTab)chestYaw+=mx-lastMouseX;else previewYaw+=mx-lastMouseX;lastMouseX=mx;}
         if(dragged!=null){
             if(resizing){EspLayout.Rect r=dragged==settings().box?box:frame.elements.get(dragged.title);if(r!=null)dragged.scale.setValue((double)(resizeStart*Math.max(8,Math.hypot(mx-r.x,my-r.y))/resizeDistance));}
             else place(dragged,mx,my);
@@ -337,7 +450,7 @@ public final class EspEditorGui extends GuiScreen {
     @Override public void handleMouseInput()throws IOException {
         super.handleMouseInput();int wheel=Mouse.getEventDWheel();if(wheel==0||activeColor!=null)return;
         int mx=(int)(Mouse.getEventX()*width/(float)mc.displayWidth/uiScale),my=(int)((height-Mouse.getEventY()*height/(float)mc.displayHeight-1)/uiScale);
-        Element e=dragged!=null?dragged:hovered(mx,my);
+        Element e=chestTab?null:dragged!=null?dragged:hovered(mx,my);
         if(e!=null){e.scale.setValue(e.scale.getDouble()+(wheel>0?.05:-.05));selected=e;return;}
         if(hit(LIST_X,LIST_Y,LIST_W,LIST_BOTTOM-LIST_Y,mx,my)){
             scroll=Math.max(0,Math.min(maxScroll,scroll+(wheel>0?-38:38)));

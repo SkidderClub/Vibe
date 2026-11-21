@@ -15,23 +15,23 @@ public final class AdjustStep {
     private EntityPlayerSP owner;
     private long lastStep;
     private int timerTicks;
-    private float prepared = .6F, timerSpeed, previousTimer;
+    private float prepared = .6F;
 
     public void reset(EntityPlayerSP player) {
-        if (timerTicks > 0) releaseTimer();
+        cancelStep();
         owner = player;
-        timerTicks = 0;
-        prepared = .6F;
         lastStep = System.nanoTime() / 1000000;
     }
 
     public void preUpdate() {
         prepared = .6F;
-        if (timerTicks > 0 && --timerTicks == 0) releaseTimer();
+        if (timerTicks > 0 && --timerTicks == 0) CombatTimerAccess.releaseTemporarySpeed(this);
     }
 
-    private void releaseTimer() {
-        if (Float.compare(CombatTimerAccess.getSpeed(), timerSpeed) == 0) CombatTimerAccess.setSpeed(previousTimer);
+    public void cancelStep() {
+        if (timerTicks > 0) CombatTimerAccess.releaseTemporarySpeed(this);
+        timerTicks = 0;
+        prepared = .6F;
     }
     public float height(){return prepared;}
     public float prepare(float configured){
@@ -59,11 +59,8 @@ public final class AdjustStep {
             float offset=(float)(OFFSETS[index][i]+(i==0?0:.0003000000142492354D*ADJUSTMENT));
             PacketDelayService.sendUnmodified(owner.sendQueue,new C04PacketPlayerPosition(owner.posX,owner.posY+offset,owner.posZ,false));
         }
-        float current = CombatTimerAccess.getSpeed();
-        if (timerTicks == 0 || Float.compare(current, timerSpeed) != 0) previousTimer = current;
         timerTicks = NovolineSupport.hypixel() ? 1 : 3;
-        timerSpeed = TIMERS[index];
-        CombatTimerAccess.setSpeed(timerSpeed);
+        CombatTimerAccess.setTemporarySpeed(this, TIMERS[index]);
         lastStep = System.nanoTime() / 1000000;
     }
     public static double measureStepOffset(AxisAlignedBB initialBox, double origX, double origZ,

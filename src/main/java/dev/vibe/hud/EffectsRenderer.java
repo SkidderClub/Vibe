@@ -27,7 +27,7 @@ final class EffectsRenderer {
         int body=s.names.isEnabled()&&s.timers.isEnabled()?17:8,barSpace=s.bar.isEnabled()?(int)Math.ceil(s.barHeight.getDouble())+5:0;
         int w=s.width.getInt(),row=Math.max(s.rowHeight.getInt(),Math.max(s.icons.isEnabled()?24:0,body+barSpace+6)),gap=s.gap.getInt(),count=Math.min(effects.size(),Math.max(1,(int)((res.getScaledHeight()-16)/element.getScale())/(row+gap)));
         int h=count==0?0:count*(row+gap)-gap;
-        element.ensureOnScreen(res,w,Math.max(1,h));int x=element.left(res,w),y=element.top(res,h);element.setBounds(x,y,w,h);
+        int x=element.left(res,w),y=element.top(res,h);element.setBounds(x,y,w,h);
         boolean upwards=element.getY()>res.getScaledHeight()/2;
         for(int i=0;i<count;i++){
             PotionEffect effect=effects.get(i);Potion potion=Potion.potionTypes[effect.getPotionID()];if(potion==null)continue;

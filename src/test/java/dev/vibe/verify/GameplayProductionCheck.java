@@ -10,6 +10,7 @@ import org.objectweb.asm.tree.*;
 public final class GameplayProductionCheck {
     public static void verify(LaunchClassLoader loader) throws Exception {
         java.lang.reflect.Field field=LaunchClassLoader.class.getDeclaredField("tempFolder");field.setAccessible(true);File dumps=(File)field.get(null);
+        verifyWorldEntityTracking(loader, dumps);
         int adjustDrop=0,adjustInventory=0,adjustLiquid=0,adjustJump=0,chatTrack=0;
         int manual=0,guard=0,finish=0,uses=0,slow=0,sprint=0,multi=0,collisions=0,push=0,tab=0,scaffoldSprint=0,shopHide=0,shopKeep=0,chatLimit=0,chatPick=0,chatMouse=0,miningStep=0,miningProgress=0,miningDelay=0,miningBegin=0,miningFinish=0;
         for(String name:new String[]{"net.minecraft.client.Minecraft","net.minecraft.client.multiplayer.PlayerControllerMP","net.minecraft.entity.player.EntityPlayer","net.minecraft.entity.EntityLivingBase","net.minecraft.world.World","net.minecraft.client.entity.EntityPlayerSP","net.minecraft.client.gui.GuiPlayerTabOverlay","net.minecraft.client.gui.inventory.GuiContainer","net.minecraft.client.gui.GuiNewChat","net.minecraft.client.gui.GuiChat"}){
@@ -64,5 +65,28 @@ public final class GameplayProductionCheck {
         for(String name:new String[]{"dev.vibe.module.impl.world.NoEscMenuModule","dev.vibe.module.impl.movement.TargetStrafeModule","dev.vibe.module.impl.world.ScaffoldModule","dev.vibe.module.impl.combat.AutoBuffModule",
                 "dev.vibe.module.impl.meme.RewoundPitModule","dev.vibe.pit.PitStatus","dev.vibe.pit.PitMenus","dev.vibe.pit.PitPerk",
                 "dev.vibe.module.impl.combat.KeepSprintModule","dev.vibe.module.impl.movement.JesusModule","dev.vibe.module.impl.movement.PhaseModule","dev.vibe.module.impl.client.DisablerModule"})Class.forName(name,false,loader).getDeclaredMethods();
+    }
+
+    private static void verifyWorldEntityTracking(LaunchClassLoader loader, File dumps) throws Exception {
+        String name = "net.minecraft.client.multiplayer.WorldClient";
+        Class.forName(name, false, loader).getDeclaredMethods();
+        File dump = new File(dumps, name.replace('.', '/') + ".class");
+        ClassNode type = new ClassNode();
+        new ClassReader(Files.readAllBytes(dump.toPath())).accept(type, 0);
+        for (Object entry : type.methods) {
+            MethodNode method = (MethodNode) entry;
+            if (!method.name.equals("func_73027_a") || !method.desc.equals("(ILnet/minecraft/entity/Entity;)V")) continue;
+            boolean assignedId = false;
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof MethodInsnNode)) continue;
+                MethodInsnNode call = (MethodInsnNode) instruction;
+                if (call.owner.equals("net/minecraft/entity/Entity") && call.name.equals("func_145769_d")) assignedId = true;
+                if (call.owner.equals("java/util/Set") && call.name.equals("add")) {
+                    if (!assignedId) throw new AssertionError("WorldClient tracked an entity before setting its network ID");
+                    return;
+                }
+            }
+        }
+        throw new AssertionError("WorldClient entity tracking method missing");
     }
 }

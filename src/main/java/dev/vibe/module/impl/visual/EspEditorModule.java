@@ -9,7 +9,7 @@ import org.lwjgl.input.Keyboard;
 /** Opens the Counter-Strike-inspired interactive ESP layout editor. */
 public final class EspEditorModule extends Module {
     public EspEditorModule() {
-        super("ESP Editor", "Edit 2D, 3D, Skeletal and Chams appearance", Category.VISUAL, Keyboard.KEY_NONE);
+        super("ESP Editor", "Edit Player ESP, Chams and ChestESP appearance", Category.VISUAL, Keyboard.KEY_NONE);
     }
     @Override protected void onEnable() {
         Minecraft mc=Minecraft.getMinecraft();

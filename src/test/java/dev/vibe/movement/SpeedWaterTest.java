@@ -7,12 +7,54 @@ import dev.vibe.setting.*;
 import java.util.*;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.init.Blocks;
 import net.minecraft.network.play.server.S08PacketPlayerPosLook;
 import net.minecraft.util.MovementInput;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class SpeedWaterTest {
+    @Test public void adjustJesusSurfacePausesEverySpeedModeUntilFourTicksAfterReturningToShore() throws Exception {
+        try (RewoundModesTest.Fixture f = new RewoundModesTest.Fixture()) {
+            JesusModule jesus = new JesusModule();
+            dev.vibe.Vibe.getInstance().getModuleManager().registerDynamic(jesus);
+            jesus.mode.setValue("RewoundAdjust");
+            jesus.setEnabled(true);
+            ModeSetting mode = setting(f.speed, "Mode", ModeSetting.class);
+            setting(f.speed, "Not On Void", BooleanSetting.class).setEnabled(false);
+
+            for (String value : mode.getModes()) {
+                mode.setValue(value);
+                f.world.underBlock = Blocks.water.getDefaultState();
+                f.player.onGround = true;
+                f.player.motionY = -.0784;
+                int jumps = f.player.jumps;
+                float timer = CombatTimerAccess.getSpeed();
+                assertFalse(f.player.isInWater());
+                assertTrue(AdjustJesus.supportsFeet(f.player));
+                f.speed.setEnabled(true);
+                f.speed.tick();
+                f.player.moveEntity(0, -.0784, .15);
+                assertArrayEquals(value, new double[] {0, -.0784, .15}, f.player.lastMove, 0);
+                assertEquals(value, -.0784, f.player.motionY, 0);
+                assertEquals(value, jumps, f.player.jumps);
+                assertEquals(value, timer, CombatTimerAccess.getSpeed(), 0);
+                f.speed.setEnabled(false);
+            }
+
+            mode.setValue("Rewound");
+            f.speed.setEnabled(true);
+            assertNull(RewoundHooks.move(f.player, 0, -.0784, .15));
+            f.world.underBlock = Blocks.stone.getDefaultState();
+            for (int tick = 0; tick < 4; tick++) {
+                f.player.ticksExisted++;
+                assertNull("Waiting after leaving the water surface", RewoundHooks.move(f.player, 0, -.0784, .15));
+            }
+            f.player.ticksExisted++;
+            assertEquals(.407, RewoundHooks.move(f.player, 0, -.0784, .15)[1], 0);
+            jesus.setEnabled(false);
+        }
+    }
     @Test public void everySpeedModeLeavesSwimmingMotionInputAndTimerUntouchedIncludingEnableAndDisable() throws Exception {
         try(RewoundModesTest.Fixture f=new RewoundModesTest.Fixture()) {
             PathTestFixture.set(Entity.class,f.player,"inWater",true);f.player.onGround=false;

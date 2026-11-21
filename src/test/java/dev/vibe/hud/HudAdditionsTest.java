@@ -9,6 +9,52 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class HudAdditionsTest {
+    @Test public void clampsToTheSmallerViewportWithoutChangingTheSavedHudLayout() throws Exception {
+        try (PathTestFixture f = new PathTestFixture()) {
+            f.mc.displayWidth = 1280;
+            f.mc.displayHeight = 720;
+            f.mc.gameSettings.guiScale = 1;
+            PathTestFixture.set(net.minecraft.client.Minecraft.class, f.mc, "mcLanguageManager",
+                    new net.minecraft.client.resources.LanguageManager(new net.minecraft.client.resources.data.IMetadataSerializer(), "en_US"));
+            net.minecraft.client.gui.ScaledResolution fullscreen = new net.minecraft.client.gui.ScaledResolution(f.mc);
+            HudManager manager = new HudManager(new java.io.File("build/hud-fullscreen-unit"));
+            HudManager.HudElement clock = manager.getElement(HudManager.CLOCK);
+            HudManager.HudElement array = manager.getElement(HudManager.ARRAY_LIST);
+            HudManager.HudElement chat = manager.getElement(HudManager.CHAT);
+            clock.setBounds(0, 0, 150, 36);
+            clock.moveTo(990, 570, fullscreen);
+            clock.setScale(1.5F);
+            array.setBounds(0, 0, 150, 96);
+            array.moveTo(115, 570, fullscreen);
+            array.setScale(2);
+            chat.setBounds(0, 0, 180, 90);
+            chat.moveTo(970, 540, fullscreen);
+            chat.setScale(1.5F);
+            int chatTop = chat.top(fullscreen, 90);
+            String saved = manager.toJson().toString();
+
+            f.mc.displayWidth = 640;
+            f.mc.displayHeight = 400;
+            net.minecraft.client.gui.ScaledResolution windowed = new net.minecraft.client.gui.ScaledResolution(f.mc);
+            assertEquals(414, drawCoordinate(clock.left(windowed, 150), 990, clock.getScale()));
+            assertEquals(345, drawCoordinate(clock.top(windowed, 36), 570, clock.getScale()));
+            assertEquals(304, array.top(windowed, 96));
+            assertFalse(array.isRightAnchored());
+            assertEquals(361, drawCoordinate(chat.left(windowed, 180), 970, chat.getScale()));
+            assertEquals(saved, manager.toJson().toString());
+
+            assertEquals(990, clock.left(fullscreen, 150));
+            assertEquals(570, clock.top(fullscreen, 36));
+            assertEquals(570, array.top(fullscreen, 96));
+            assertEquals(970, chat.left(fullscreen, 180));
+            assertEquals(chatTop, chat.top(fullscreen, 90));
+        }
+    }
+
+    private static int drawCoordinate(int logical, int anchor, float scale) {
+        return Math.round(anchor + (logical - anchor) * scale);
+    }
+
     @Test public void effectsAnchorExpandsAwayFromTheNearestScreenEdgeAndContainerPreviewIsFixed()throws Exception{
         try(PathTestFixture f=new PathTestFixture()){
             f.mc.displayWidth=1280;f.mc.displayHeight=720;f.mc.gameSettings.guiScale=1;

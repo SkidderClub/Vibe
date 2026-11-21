@@ -66,7 +66,9 @@ public final class RewoundPitModule extends FeatureModule {
     public String getStatus(){return status;}
     public PitStatus getPitStatus(){return stats;}
     public void fought(Entity entity){if(isEnabled()&&entity instanceof EntityPlayer&&entity!=mc.thePlayer)lastFight=clock.getAsLong();}
-    public boolean filterMessage(String text){return isEnabled()&&filterMessages.isEnabled()&&PitStatus.read(mc).active&&PitMenus.noisyMessage(text);}
+    public boolean filterMessage(String text) {
+        return isEnabled() && filterMessages.isEnabled() && PitMenus.noisyMessage(text) && PitStatus.inPitForChat(mc);
+    }
 
     @Override public void tick(){
         try{tickAutomation();}finally{

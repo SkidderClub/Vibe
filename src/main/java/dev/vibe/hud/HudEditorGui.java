@@ -100,6 +100,12 @@ public final class HudEditorGui extends GuiScreen {
     }
 
     @Override public void initGui() {
+        if (dragged != null || drag != null) persist();
+        dragged = null;
+        resizing = false;
+        drag = null;
+        guides.clear();
+        hits.clear();
         layout();
         buttonList.clear();
         buttonList.add(new AccountScreenStyle.Button(0, left + panelWidth - 62, top + (compact ? 10 : 15), 48, 24, "Close", "", false, false));
@@ -430,6 +436,7 @@ public final class HudEditorGui extends GuiScreen {
         if(HudManager.HOTBAR.equals(element.getId()))return new String[]{"Minecraft","Fortnite","Skeet","Vibe","LiquidGlass","Lavalamp"};
         if("radar".equals(element.getId()))return new String[]{"Vibe","Skeet","LiquidGlass","Lavalamp","Transparent"};
         if("keybindlist".equals(element.getId()))return new String[]{"Vibe","Skeet","LiquidGlass","Lavalamp"};
+        if(MatchCountdowns.ID.equals(element.getId()))return MatchCountdowns.THEMES;
         if("killfeed".equals(element.getId()))return new String[]{"Vibe","Skeet","LiquidGlass","Lavalamp","CounterStrike","Fortnite"};
         if("candle".equals(element.getId()))return new String[]{"Vibe","Skeet","LiquidGlass","Lavalamp","Transparent"};
         if(HudManager.CLOCK.equals(element.getId())||HudManager.CHAT.equals(element.getId()))return new String[]{"Vibe","Skeet","LiquidGlass","Lavalamp","Transparent"};
@@ -465,7 +472,7 @@ public final class HudEditorGui extends GuiScreen {
             if(top+cellHeight<=viewportTop||top>=viewportBottom)continue;
             boolean active=value.equalsIgnoreCase(current),hover=hovered(a,top,b,top+cellHeight-1,mouseX,mouseY);
             if(active||hover)AccountScreenStyle.panel(a,top,b-a-1,cellHeight-1,active?TINT:HOVER,active?ACCENT:BORDER);
-            String label="LiquidGlass".equals(value)?"Glass":value;
+            String label="LiquidGlass".equals(value)&&!MatchCountdowns.ID.equals(element.getId())?"Glass":value;
             if(dev.vibe.ui.menu.MenuGlass.active())AccountScreenStyle.BODY_FONT.centered(label,a,top,b-a,cellHeight,active?TEXT:MUTED);
             else AccountScreenStyle.rawText(label,(a+b-fontRendererObj.getStringWidth(label))/2,top+(cellHeight-8)/2,active?TEXT:MUTED);
             addHit(a,top,b,top+cellHeight,(mx,my)->{if(mode==null)element.setTheme(value);else mode.setValue(value);persist();});
@@ -979,6 +986,9 @@ public final class HudEditorGui extends GuiScreen {
     private String friendlyName(String id) { if(DashboardWidgets.contains(id))return DashboardWidgets.title(id); String value; if(HudManager.EFFECTS.equals(id))return "Effects";if(HudManager.CUSTOM_GUIS.equals(id))return "Custom GUIs"; if(HudManager.BLOCK_COUNTER.equals(id))return "Block Counter";if(HudManager.DYNAMIC_ISLAND.equals(id))return "Dynamic Island"; if(HudManager.CHAT.equals(id))return "Custom Chat";if(HudManager.HOTBAR.equals(id))return "Custom Hotbar";if(HudManager.CUSTOM_HEALTH.equals(id))return "Custom Health";if(HudManager.TAB.equals(id))return "Custom Tab"; if (HudManager.TARGET_HUD.equals(id)) value = "Target HUD"; else if (HudManager.ARRAY_LIST.equals(id)) value = "Array list"; else if (HudManager.SESSION_INFO.equals(id)) value = "Statistics"; else if (HudManager.MOTION_GRAPH.equals(id)) value = "Motion graph"; else if (HudManager.CPS_GRAPH.equals(id)) value = "CPS graph"; else if (HudManager.MUSIC.equals(id)) value = "Music"; else { value = id == null ? "" : id.replace('_', ' '); value = value.isEmpty() ? value : Character.toUpperCase(value.charAt(0)) + value.substring(1); } return LanguageManager.translate(value); }
     private String displayName(Setting<?> setting, String element) {
         String value = setting.getRawName();
+        if (HudManager.CHAT.equals(element) && "Chat Infinite Scrolling".equals(value)) {
+            return LanguageManager.translate("Extended History");
+        }
         if(HudManager.KEYSTROKES.equals(element))return LanguageManager.translate(value.replaceFirst("(?i)^Keystrokes\\s+", ""));
         if(HudManager.BLOCK_COUNTER.equals(element))return LanguageManager.translate(value.replaceFirst("(?i)^Block Counter\\s+", ""));
         if(HudManager.DYNAMIC_ISLAND.equals(element))return LanguageManager.translate(value.replaceFirst("(?i)^Dynamic Island\\s+", ""));

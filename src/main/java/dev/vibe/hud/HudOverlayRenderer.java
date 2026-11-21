@@ -65,7 +65,7 @@ final class HudOverlayRenderer {
         boolean horse=mc.thePlayer!=null&&mc.thePlayer.isRidingHorse();
         boolean xp=s.experience.isEnabled()&&(preview||mc.playerController==null||mc.playerController.shouldDrawHUD()||horse);
         int extra=xp?14:0,w=vanilla?182:pad*2+9*cell+8*gap,h=(vanilla?22:cell+pad*2+label)+extra;
-        e.ensureOnScreen(res,w,h);int x=e.left(res,w),widgetTop=e.top(res,h),y=widgetTop+extra,slot=mc.thePlayer==null||mc.thePlayer.inventory==null?0:mc.thePlayer.inventory.currentItem;
+        int x=e.left(res,w),widgetTop=e.top(res,h),y=widgetTop+extra,slot=mc.thePlayer==null||mc.thePlayer.inventory==null?0:mc.thePlayer.inventory.currentItem;
         long now=System.nanoTime();double dt=lastSelection==0?.05:Math.min(.1,(now-lastSelection)/1e9);lastSelection=now;
         if(selection<0||!s.animate.isEnabled()){selection=slot;selectionTween.snap(slot);}
         else if(s.selectionEase.is("Exponential")){selection+=(slot-selection)*(1-(float)Math.exp(-dt*s.selectionSpeed.getFloat()));selectionTween.snap(selection);}
@@ -135,7 +135,7 @@ final class HudOverlayRenderer {
         int hearts=Math.min(100,(int)Math.ceil(max/2)),extra=Math.min(20,(int)Math.ceil(abs/2)),rows=Math.max(1,(hearts+extra+9)/10);
         int armorHeight=s.armor.isEnabled()&&armor>0?11:0;
         int h=fortnite?bar*2+17+armorHeight:rows*10+(armorHeight>0?10:0);
-        e.ensureOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h),color=RenderUtils.blend(s.low.getArgb(),s.high.getArgb(),Math.min(1,hp/max));
+        int x=e.left(res,w),y=e.top(res,h),color=RenderUtils.blend(s.low.getArgb(),s.high.getArgb(),Math.min(1,hp/max));
         if(fortnite){
             int by=y+armorHeight;
             if(s.barGlow.isEnabled()&&HudBarGlow.glass(manager.theme(e,hud))){HudBarGlow.line(x,by,w*Math.min(1,absorptionFraction),bar,s.shield.getArgb(),s.barGlowStrength.getFloat());HudBarGlow.line(x,by+bar+3,w*Math.min(1,healthFraction),bar,color,s.barGlowStrength.getFloat());}
@@ -175,7 +175,7 @@ final class HudOverlayRenderer {
     }
     void tab(HudManager manager,HudModule hud,HudManager.HudElement e,ScaledResolution res,boolean preview){
         TabLayout layout=measureTab(hud,res,e.getScale(),preview);int w=layout.width,h=layout.height;
-        e.ensureOnScreen(res,w,h);int x=e.left(res,w),y=e.top(res,h);
+        int x=e.left(res,w),y=e.top(res,h);
         float opening=preview?1:tabAmount;
         GlStateManager.pushMatrix();GlStateManager.translate(x+w/2F,y-8*(1-opening),0);GlStateManager.scale(.96F+.04F*opening,opening,1);GlStateManager.translate(-x-w/2F,-y,0);
         panel(manager,hud,e,hud.tab,x,y,w,h);

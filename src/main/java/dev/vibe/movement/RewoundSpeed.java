@@ -28,7 +28,7 @@ public final class RewoundSpeed {
     }
 
     public void releaseTimer() {
-        if (timerOwned && Float.compare(CombatTimerAccess.getSpeed(),lastTimer)==0) CombatTimerAccess.setSpeed(timerBefore);
+        if (timerOwned && Float.compare(CombatTimerAccess.getBaseSpeed(),lastTimer)==0) CombatTimerAccess.setSpeed(timerBefore);
         timerOwned = false;
     }
 
@@ -113,7 +113,7 @@ public final class RewoundSpeed {
     }
 
     private void setTimer(float speed) {
-        if (!timerOwned) timerBefore=CombatTimerAccess.getSpeed();
+        if (!timerOwned) timerBefore=CombatTimerAccess.getBaseSpeed();
         CombatTimerAccess.setSpeed(speed);timerOwned=true;lastTimer=speed;
     }
     private static int boost(EntityPlayerSP p, Potion potion) {

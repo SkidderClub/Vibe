@@ -22,6 +22,8 @@ vibe/miniblox/
 # Private, separately distributed extension (sources and assets)
 /extensions/lego/
 Vibe-Lego-*.jar*
+/extensions/recorder/
+Vibe-Recorder-*.jar*
 context/
 .idea/
 *.iml

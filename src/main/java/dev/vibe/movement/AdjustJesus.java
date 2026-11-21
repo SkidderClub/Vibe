@@ -17,6 +17,25 @@ public final class AdjustJesus {
         FlyModule flight=FeatureModule.module(FlyModule.class);
         return liquidBelow(p)&&!p.isInWater()&&!p.isInLava()&&(flight==null||!flight.isEnabled());
     }
+    /** Includes the edges of the player's feet, just like the generated collision surface. */
+    public static boolean supportsFeet(EntityPlayerSP player) {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc == null || player == null || player != mc.thePlayer || !active()) return false;
+        AxisAlignedBB feet = player.getEntityBoundingBox();
+        int y = MathHelper.floor_double(feet.minY - .01);
+        if (feet.minY < y + 1 || player.posY < y + 1) return false;
+        for (int x = MathHelper.floor_double(feet.minX); x < feet.maxX; x++) {
+            for (int z = MathHelper.floor_double(feet.minZ); z < feet.maxZ; z++) {
+                if (liquidSurface(mc, new BlockPos(x, y, z))) return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean liquidSurface(Minecraft mc, BlockPos pos) {
+        return mc.theWorld.isBlockLoaded(pos) && mc.theWorld.getBlockState(pos).getBlock() instanceof BlockLiquid;
+    }
+
     private static boolean liquidBelow(EntityPlayerSP p){AxisAlignedBB b=p.getEntityBoundingBox().contract(.305,0,.305).offset(0,-.1,0);return p.worldObj.getBlockState(new BlockPos(b.minX,b.minY,b.minZ)).getBlock() instanceof BlockLiquid;}
     public static void beforeWalking(){
         Minecraft mc=Minecraft.getMinecraft();if(owner!=mc.thePlayer||world!=mc.theWorld){owner=mc.thePlayer;world=mc.theWorld;ticks=0;}hover=0;
@@ -33,7 +52,7 @@ public final class AdjustJesus {
         if((b.maxX-b.minX)*(b.maxY-b.minY)*(b.maxZ-b.minZ)>4096)return original;
         List<AxisAlignedBB> result=original;
         for(int x=MathHelper.floor_double(b.minX);x<MathHelper.floor_double(b.maxX+1);x++)for(int y=MathHelper.floor_double(b.minY)-1;y<MathHelper.floor_double(b.maxY+1);y++)for(int z=MathHelper.floor_double(b.minZ);z<MathHelper.floor_double(b.maxZ+1);z++){
-            BlockPos pos=new BlockPos(x,y,z);if(mc.thePlayer.posY<y+1||!mc.theWorld.isBlockLoaded(pos)||!(mc.theWorld.getBlockState(pos).getBlock() instanceof BlockLiquid))continue;
+            BlockPos pos=new BlockPos(x,y,z);if(mc.thePlayer.posY<y+1||!liquidSurface(mc,pos))continue;
             AxisAlignedBB surface=new AxisAlignedBB(x,y,z,x+1,y+1,z+1);if(surface.intersectsWith(b)){if(result==original)result=new ArrayList<>(original);result.add(surface);}
         }
         return result;

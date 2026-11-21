@@ -224,6 +224,13 @@ public final class ClientEvents {
         }
     }
 
+    @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.LOWEST)
+    public void onManualTimerTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        dev.vibe.module.impl.world.TimerModule timer = dev.vibe.features.FeatureModule.module(dev.vibe.module.impl.world.TimerModule.class);
+        if (timer != null) timer.tick();
+    }
+
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
@@ -505,6 +512,7 @@ public final class ClientEvents {
         if (event.phase == TickEvent.Phase.START) {
             dev.vibe.ui.render.ChunkAnimationHooks.beginFrame();
             motionBlurRenderer.beginFrame();
+            chestEspRenderer.beginFrame();
             dev.vibe.easter.EasterEggs.INSTANCE.beginFrame();
             dev.vibe.module.impl.combat.AIAuraModule ai=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AIAuraModule.class);
             if(ai!=null)ai.frameTick(event.renderTickTime);
@@ -515,6 +523,11 @@ public final class ClientEvents {
         if (event.phase == TickEvent.Phase.END) {
             if(minecraft.currentScreen instanceof dev.vibe.ui.screen.AIAuraRecorderGui)return;
             if(minecraft.gameSettings.hideGUI)motionBlurRenderer.render(Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.MotionBlurModule.class));
+            if (minecraft.gameSettings.hideGUI && chestEspRenderer.hasOverlay() && minecraft.currentScreen == null
+                    && !dev.vibe.module.impl.meme.HypixelModule.visualsSuppressed()) {
+                minecraft.entityRenderer.setupOverlayRendering();
+                chestEspRenderer.renderOverlay(Vibe.getInstance().getModuleManager().getModule(ChestEspModule.class));
+            }
             // F1 can skip the entire HUD event. Draw once after the frame so the
             // Phone's visibility preference also works with hidden HUDs and menus.
             if (minecraft.theWorld != null && minecraft.thePlayer != null && !FreecamModule.hideHudHook()
@@ -583,6 +596,7 @@ public final class ClientEvents {
                 if (!pitBot) {
                     Vibe.getInstance().getHudManager().draw();
                     espRenderer.renderOverlay();
+                    chestEspRenderer.renderOverlay(Vibe.getInstance().getModuleManager().getModule(ChestEspModule.class));
                     oofArrowsRenderer.render();
                     hitmarkerRenderer.renderOverlay();
                     scaffoldCountRenderer.render();
@@ -796,10 +810,11 @@ public final class ClientEvents {
             // Do not toggle any saved HUD/module settings.
             event.setCanceled(true);
             FreecamModule freecam = Vibe.getInstance().getModuleManager().getModule(FreecamModule.class);
-            if (espRenderer.hasOverlay() || freecam.shouldDrawDroneHud()) {
+            if (espRenderer.hasOverlay() || chestEspRenderer.hasOverlay() || freecam.shouldDrawDroneHud()) {
                 minecraft.entityRenderer.setupOverlayRendering();
                 dev.vibe.ui.GuiRenderState.prepare(false);
                 espRenderer.renderOverlay();
+                chestEspRenderer.renderOverlay(Vibe.getInstance().getModuleManager().getModule(ChestEspModule.class));
                 freecamHudRenderer.render();
             }
             return;
@@ -911,10 +926,7 @@ public final class ClientEvents {
         if (esp != null && esp.isEnabled()) {
             espRenderer.renderWorld(event);
         }
-        ChestEspModule chestEsp = Vibe.getInstance().getModuleManager().getModule(ChestEspModule.class);
-        if (chestEsp != null && chestEsp.isEnabled()) {
-            chestEspRenderer.render(event);
-        }
+        chestEspRenderer.renderWorld(Vibe.getInstance().getModuleManager().getModule(ChestEspModule.class));
         bedEspRenderer.render(event);
         blockChangeEspRenderer.render(event);
         blockOverlayRenderer.render(event);

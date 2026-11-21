@@ -1,8 +1,38 @@
 package dev.vibe.ui.render.esp;
 
+import java.nio.FloatBuffer;
+import net.minecraft.util.AxisAlignedBB;
+import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL11;
+
 /** Double-precision homogeneous clipping; returns GUI bounds or null outside the view. */
 public final class BoxProjection {
     private BoxProjection() { }
+
+    public static final class Camera {
+        private final FloatBuffer matrix = BufferUtils.createFloatBuffer(16);
+        private final float[] view = new float[16], projection = new float[16];
+
+        public void capture() {
+            read(GL11.GL_MODELVIEW_MATRIX, view);
+            read(GL11.GL_PROJECTION_MATRIX, projection);
+        }
+
+        private void read(int mode, float[] target) {
+            matrix.clear();
+            GL11.glGetFloat(mode, matrix);
+            matrix.position(0);
+            matrix.get(target);
+        }
+
+        public EspLayout.Rect project(AxisAlignedBB box, double width, double height) {
+            double[] projected = visibleBounds(new double[]{box.minX, box.minY, box.minZ},
+                    new double[]{box.maxX, box.maxY, box.maxZ}, view, projection, width, height);
+            if (projected == null) return null;
+            float w = (float) (projected[2] - projected[0]), h = (float) (projected[3] - projected[1]);
+            return w < .5F || h < .5F ? null : new EspLayout.Rect((float) projected[0], (float) projected[1], w, h);
+        }
+    }
     public static double[] bounds(double[] min, double[] max, float[] model, float[] projection, double width, double height) {
         return bounds(min,max,model,projection,width,height,true);
     }

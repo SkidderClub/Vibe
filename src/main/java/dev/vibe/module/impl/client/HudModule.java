@@ -50,7 +50,7 @@ public final class HudModule extends Module {
             () -> true));
 
     private final MultiSelectSetting hudElements = addSetting(new MultiSelectSetting("HUD Elements",
-                        Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph", "notifications", "targethud", "ghosts", "customchat", "customhotbar", "customhealth", "customtab", "blockcounter", "dynamicisland", "effects", "customguis", "keystrokes", "radar", "networkgraph", "killfeed", "sessiontimeline", "candle","keybindlist"),
+                        Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "clock", "sessioninfo", "motiongraph", "stalker", "armor", "inventory", "health", "cps", "cpsgraph", "notifications", "targethud", "ghosts", "customchat", "customhotbar", "customhealth", "customtab", "blockcounter", "dynamicisland", "effects", "customguis", "keystrokes", "radar", "networkgraph", "killfeed", "sessiontimeline", "candle","keybindlist",dev.vibe.hud.MatchCountdowns.ID),
             Arrays.asList("watermark", "arraylist", "coordinates", "scoreboard", "notifications")));
 
     private final BooleanSetting replaceScoreboardServer = addSetting(new BooleanSetting("Replace Scoreboard Server", false,
