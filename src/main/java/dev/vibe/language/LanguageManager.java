@@ -92,6 +92,7 @@ public final class LanguageManager {
         registerExpandedLanguages();
         registerModernModuleLabels();
         loadCompleteCatalog();
+        loadLangCatalog("Chinese", "zh.lang");
 
         final boolean[] glyphs = new boolean[Character.MAX_VALUE + 1];
         for (final Map<String, String> language : CATALOG.values())
@@ -126,6 +127,7 @@ public final class LanguageManager {
 
     private static String normalizeUncached(String value) {
         String clean = value.trim();
+        if ("zh".equalsIgnoreCase(clean) || "zh_CN".equalsIgnoreCase(clean) || "zh-CN".equalsIgnoreCase(clean)) return "Chinese";
         if ("Finish".equalsIgnoreCase(clean)) clean = "Finnish";
         if ("Sweden".equalsIgnoreCase(clean)) clean = "Swedish";
         if ("Tagalog (Filipino)".equalsIgnoreCase(clean) || "Filipino".equalsIgnoreCase(clean)) clean = "Tagalog";
@@ -433,6 +435,36 @@ public final class LanguageManager {
 
     private static void add(String language, Map<String, String> values) {
         CATALOG.put(language, Collections.unmodifiableMap(values));
+    }
+
+    /** Reads UTF-8 English key=value entries. Escape literal equals signs and backslashes in keys. */
+    private static void loadLangCatalog(String language, String file) {
+        java.io.InputStream stream = LanguageManager.class.getResourceAsStream("/assets/vibe/lang/" + file);
+        if (stream == null) return;
+        Map<String, String> values = new HashMap<>();
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isEmpty() || line.charAt(0) == '#') continue;
+                StringBuilder key = new StringBuilder();
+                int index = 0;
+                for (; index < line.length(); index++) {
+                    char character = line.charAt(index);
+                    if (character == '=') break;
+                    if (character == '\\' && index + 1 < line.length()
+                            && (line.charAt(index + 1) == '=' || line.charAt(index + 1) == '\\')) {
+                        character = line.charAt(++index);
+                    }
+                    key.append(character);
+                }
+                if (key.length() > 0 && index + 1 < line.length()) {
+                    values.put(key.toString().toLowerCase(Locale.ROOT), line.substring(index + 1));
+                }
+            }
+            extend(language, values);
+        } catch (java.io.IOException error) {
+            System.err.println("[Vibe] Could not read " + file + ": " + error.getMessage());
+        }
     }
 
     private static void extend(String language, Map<String, String> values) {

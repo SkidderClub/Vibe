@@ -9,6 +9,13 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class InterfaceTranslationTest {
+    @Test public void loadsStandaloneSimplifiedChineseCatalog() {
+        assertNotNull(getClass().getResource("/assets/vibe/lang/zh.lang"));
+        assertEquals("Chinese", LanguageManager.normalizeLanguage("zh_CN"));
+        assertTrue(LanguageManager.hasTranslation("Extended History", "zh"));
+        assertEquals("扩展聊天记录", LanguageManager.translate("Extended History", "zh-CN"));
+        assertEquals("Extended History", LanguageManager.translate("Extended History", "English"));
+    }
     @Test public void everyCatalogEntryIsAvailableInAllLanguages() throws Exception {
         Set<String> keys = new HashSet<String>();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream("/assets/vibe/lang/interface.tsv"),StandardCharsets.UTF_8))) {
