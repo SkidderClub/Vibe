@@ -69,6 +69,8 @@ public final class Vibe {
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         instance = this;
+        org.apache.logging.log4j.LogManager.getLogger("Vibe")
+                .info("Runtime: {}", dev.vibe.core.PlatformSupport.describe());
         // A timer-owned combat module can be enabled in the active profile.
         // Restore vanilla timing before config restoration and before a world
         // exists so a previous session can never start the client frozen.

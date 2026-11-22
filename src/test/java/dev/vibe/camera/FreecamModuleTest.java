@@ -181,6 +181,8 @@ public class FreecamModuleTest {
         field(ClientEvents.class, "minecraft").set(events, mc);
         field(ClientEvents.class, "freecamHudRenderer").set(events, new FreecamHudRenderer());
         field(ClientEvents.class, "espRenderer").set(events, new EspRenderer());
+        // World-annotating ESP overlays survive the hidden HUD; every HUD widget stays null.
+        field(ClientEvents.class, "chestEspRenderer").set(events, new dev.vibe.ui.render.esp.ChestEspRenderer());
         RenderGameOverlayEvent base = new RenderGameOverlayEvent(.5F, null);
         RenderGameOverlayEvent.Pre pre = new OverlayPre(base);
         events.onPreAll(pre);

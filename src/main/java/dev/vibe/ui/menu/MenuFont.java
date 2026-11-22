@@ -1,6 +1,7 @@
 package dev.vibe.ui.menu;
 
 import dev.vibe.language.LanguageManager;
+import dev.vibe.ui.NeverLoseFont;
 import java.awt.*;
 import java.awt.font.*;
 import java.awt.image.BufferedImage;
@@ -91,7 +92,7 @@ public final class MenuFont {
         final TextLayout layout;final Rectangle ink;final float advance,bearing,inkWidth,height;
         final int pixelWidth,pixelHeight;DynamicTexture texture;
         Label(String text,float scale,Font font){
-            if(font.canDisplayUpTo(text)>=0)font=new Font("Dialog",font.getStyle(),12).deriveFont(font.getSize2D());
+            font=NeverLoseFont.forText(font,text);
             layout=new TextLayout(text.isEmpty()?" ":text,font,CONTEXT);ink=layout.getPixelBounds(CONTEXT,0,0);
             advance=text.isEmpty()?0:layout.getAdvance()/scale;bearing=ink.x/scale;inkWidth=ink.width/scale;height=ink.height/scale;
             pixelWidth=Math.max(1,ink.width+4);pixelHeight=Math.max(1,ink.height+4);
