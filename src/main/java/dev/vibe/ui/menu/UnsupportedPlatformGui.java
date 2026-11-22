@@ -3,7 +3,6 @@ package dev.vibe.ui.menu;
 import dev.vibe.core.PlatformSupport;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
-import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.gui.GuiScreen;
 
 /**
@@ -15,15 +14,19 @@ public final class UnsupportedPlatformGui extends GuiScreen {
 
     private static boolean shown;
 
-    /** Called once per client tick; shows the notice as soon as the title screen is ready. */
+    /** Called once per client tick; shows the notice as soon as any screen is ready. */
     public static void tick(Minecraft minecraft) {
         if (shown || !PlatformSupport.unsupported() || minecraft.theWorld != null) {
             return;
         }
-        if (!(minecraft.currentScreen instanceof GuiMainMenu)) {
+        // Launchers and other mods may replace GuiMainMenu, so do not match a
+        // specific title-screen class here.
+        if (minecraft.currentScreen == null || minecraft.currentScreen instanceof UnsupportedPlatformGui) {
             return;
         }
         shown = true;
+        org.apache.logging.log4j.LogManager.getLogger("Vibe")
+                .warn("Unsupported platform detected: {}", PlatformSupport.describe());
         minecraft.displayGuiScreen(new UnsupportedPlatformGui());
     }
 

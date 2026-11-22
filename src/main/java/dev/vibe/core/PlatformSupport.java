@@ -43,7 +43,19 @@ public final class PlatformSupport {
         if (env("POJAV_RENDERER") || env("POJAV_LAUNCHER")) {
             return true;
         }
-        if (new File("/system/build.prop").isFile()) {
+        // Pojav, FCL and their forks keep the JRE and game files inside the
+        // Android app sandbox; these prefixes never appear on a desktop OS.
+        for (String path : new String[] {System.getProperty("java.home", ""),
+                System.getProperty("java.library.path", ""),
+                System.getProperty("user.home", ""), String.valueOf(System.getenv("HOME"))}) {
+            String value = path.toLowerCase(Locale.ROOT);
+            if (value.contains("/data/data/") || value.contains("/data/user/")
+                    || value.contains("/storage/emulated") || value.contains("/mnt/sdcard")) {
+                return true;
+            }
+        }
+        if (new File("/system/build.prop").isFile() || new File("/system/bin/app_process").isFile()
+                || new File("/system/bin/linker64").isFile()) {
             return true;
         }
         // Last resort for launchers that hide the Android environment: an ARM
@@ -61,8 +73,9 @@ public final class PlatformSupport {
         }
         // iOS apps are sandboxed under /var/mobile; macOS homes never are.
         String home = System.getProperty("user.home", "");
+        String javaHome = System.getProperty("java.home", "");
         String envHome = System.getenv("HOME");
-        return home.contains("/var/mobile/")
+        return home.contains("/var/mobile/") || javaHome.contains("/var/mobile/")
                 || (envHome != null && envHome.contains("/var/mobile/"));
     }
 
