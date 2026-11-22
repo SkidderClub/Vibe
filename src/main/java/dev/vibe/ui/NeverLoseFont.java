@@ -25,7 +25,30 @@ public final class NeverLoseFont {
     private String activeScript = "";
     private final Map<Integer, Page> pages = new HashMap<Integer, Page>();
     private final Map<Character,float[]> inkMetrics=new HashMap<Character,float[]>();
-    private Font fallback;
+    /** Bundled Noto CJK is the only face guaranteed to exist on Android launchers. */
+    private static Font bundledCjk;
+    private static boolean bundledCjkLoaded;
+    private static java.util.List<Font> systemFaces;
+    private static final String[] SYSTEM_FACES = {
+            "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB",
+            "Yu Gothic", "Meiryo", "Malgun Gothic",
+            "Noto Sans Devanagari", "Nirmala UI", "Mangal",
+            "Noto Sans Bengali", "Vrinda",
+            "Noto Sans Gurmukhi", "Raavi",
+            "Noto Sans Gujarati", "Shruti",
+            "Noto Sans Tamil", "Latha",
+            "Noto Sans Telugu", "Gautami",
+            "Noto Sans Kannada", "Tunga",
+            "Noto Sans Malayalam", "Kartika",
+            "Noto Sans Sinhala", "Iskoola Pota",
+            "Noto Sans Thai", "Leelawadee UI", "Leelawadee",
+            "Noto Sans Arabic", "Arabic Typesetting",
+            "Noto Sans Hebrew",
+            "Noto Sans Ethiopic", "Nyala",
+            "Noto Sans Myanmar", "Myanmar Text",
+            "Noto Sans Khmer", "Khmer UI",
+            "Noto Sans Lao", "Lao UI"
+    };
     /** advance() per character, by high byte; NaN marks a value not computed for the current pages yet. */
     private final float[][] advances = new float[256][];
     private boolean inRun, runAlphaKnown, runAlpha;
@@ -75,7 +98,7 @@ public final class NeverLoseFont {
             char ch=text.charAt(i);if(Character.isWhitespace(ch)||Character.isISOControl(ch))continue;
             float[] bounds=inkMetrics.get(ch);
             if(bounds==null){
-                Font selected=activeFont.canDisplay(ch)?activeFont:fallback();
+                Font selected=fontFor(ch);
                 java.awt.geom.Rectangle2D ink=selected.createGlyphVector(new java.awt.font.FontRenderContext(null,true,false),new char[]{ch}).getVisualBounds();
                 bounds=new float[]{(metrics.getAscent()+(float)ink.getMinY())*.5F,(metrics.getAscent()+(float)ink.getMaxY())*.5F};inkMetrics.put(ch,bounds);
             }
@@ -158,7 +181,7 @@ public final class NeverLoseFont {
         float[] advances = new float[256];
         for (int i = 0; i < 256; i++) {
             char c = (char) ((number << 8) | i);
-            Font selected = activeFont.canDisplay(c) ? activeFont : fallback();
+            Font selected = fontFor(c);
             g.setFont(selected);
             advances[i] = g.getFontMetrics().charWidth(c) * .5F;
             int cellX = (i % 16) * CELL, cellY = (i / 16) * CELL;
@@ -175,14 +198,63 @@ public final class NeverLoseFont {
         return page;
     }
 
-    private Font fallback() {
-        if (fallback == null) {
-            fallback = font;
-            try (InputStream input = NeverLoseFont.class.getResourceAsStream("/assets/vibe/fonts/NotoSansCJKsc-Regular.otf")) {
-                if (input != null) fallback = Font.createFont(Font.TRUETYPE_FONT, input).deriveFont(font.getSize2D());
-            } catch (Exception ignored) { /* Logical fonts still cover Latin and Cyrillic. */ }
+    /**
+     * Android launchers ship no CJK fallback for logical fonts, so a missing
+     * glyph would otherwise draw as an empty box. Try the bundled Noto CJK
+     * first, then installed script faces, and finally the platform dialog face.
+     */
+    public static Font forText(Font base, String text) {
+        if (text == null || text.isEmpty() || base.canDisplayUpTo(text) < 0) return base;
+        Font cjk = bundledCjk(base);
+        if (cjk != null && cjk.canDisplayUpTo(text) < 0) return cjk;
+        for (Font face : systemFaces()) {
+            Font candidate = face.deriveFont(base.getStyle(), base.getSize2D());
+            if (candidate.canDisplayUpTo(text) < 0) return candidate;
         }
-        return fallback;
+        Font dialog = dialogFace(base);
+        if (dialog.canDisplayUpTo(text) < 0) return dialog;
+        return cjk != null ? cjk : dialog;
+    }
+
+    private Font fontFor(char c) {
+        if (activeFont.canDisplay(c)) return activeFont;
+        Font cjk = bundledCjk(activeFont);
+        if (cjk != null && cjk.canDisplay(c)) return cjk;
+        for (Font face : systemFaces()) {
+            Font candidate = face.deriveFont(activeFont.getStyle(), activeFont.getSize2D());
+            if (candidate.canDisplay(c)) return candidate;
+        }
+        Font dialog = dialogFace(activeFont);
+        return dialog.canDisplay(c) ? dialog : cjk != null ? cjk : activeFont;
+    }
+
+    private static synchronized Font bundledCjk(Font base) {
+        if (!bundledCjkLoaded) {
+            bundledCjkLoaded = true;
+            try (InputStream input = NeverLoseFont.class.getResourceAsStream("/assets/vibe/fonts/NotoSansCJKsc-Regular.otf")) {
+                if (input != null) bundledCjk = Font.createFont(Font.TRUETYPE_FONT, input);
+            } catch (Exception ignored) { /* Script faces below still cover Latin and Cyrillic. */ }
+        }
+        return bundledCjk == null ? null : bundledCjk.deriveFont(base.getStyle(), base.getSize2D());
+    }
+
+    private static synchronized java.util.List<Font> systemFaces() {
+        if (systemFaces == null) {
+            java.util.List<Font> faces = new java.util.ArrayList<Font>();
+            java.util.Set<String> seen = new java.util.HashSet<String>();
+            for (String family : SYSTEM_FACES) {
+                Font candidate = new Font(family, Font.PLAIN, 12);
+                // A missing family silently maps to Dialog; skip those so the chain stays predictable.
+                if (!family.equalsIgnoreCase(candidate.getFamily())) continue;
+                if (seen.add(candidate.getFamily().toLowerCase(java.util.Locale.ROOT))) faces.add(candidate);
+            }
+            systemFaces = java.util.Collections.unmodifiableList(faces);
+        }
+        return systemFaces;
+    }
+
+    private static Font dialogFace(Font base) {
+        return new Font(Font.DIALOG, base.getStyle(), 12).deriveFont(base.getSize2D());
     }
 
     private void prepareScript() {
