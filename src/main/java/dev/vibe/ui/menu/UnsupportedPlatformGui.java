@@ -33,10 +33,7 @@ public final class UnsupportedPlatformGui extends GuiScreen {
     @Override
     public void initGui() {
         buttonList.clear();
-        int left = width / 2 - 100;
-        int top = height / 2 + 52;
-        buttonList.add(new GuiButton(0, left, top, 200, 20, "退出游戏 / Quit game"));
-        buttonList.add(new GuiButton(1, left, top + 24, 200, 20, "仍要继续 / Continue anyway"));
+        buttonList.add(new GuiButton(0, width / 2 - 100, height / 2 + 52, 200, 20, "退出游戏 / Quit game"));
     }
 
     @Override
@@ -53,20 +50,12 @@ public final class UnsupportedPlatformGui extends GuiScreen {
 
     @Override
     protected void actionPerformed(GuiButton button) {
-        if (button.id == 0) {
-            Minecraft.getMinecraft().shutdown();
-            return;
-        }
-        Minecraft.getMinecraft().displayGuiScreen(null);
+        Minecraft.getMinecraft().shutdown();
     }
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws java.io.IOException {
-        if (keyCode == 1) {
-            Minecraft.getMinecraft().displayGuiScreen(null);
-            return;
-        }
-        super.keyTyped(typedChar, keyCode);
+        // The notice cannot be dismissed; quitting is the only way forward.
     }
 
     @Override
