@@ -233,6 +233,9 @@ public final class ClientEvents {
 
     @SubscribeEvent
     public void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase == TickEvent.Phase.START) {
+            dev.vibe.ui.menu.UnsupportedPlatformGui.tick(minecraft);
+        }
         if (event.phase == TickEvent.Phase.END) {
             dev.vibe.module.impl.meme.DabModule dab=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.meme.DabModule.class);if(dab!=null)dab.tick();
             dev.vibe.module.impl.visual.KillEffectsModule kills=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.visual.KillEffectsModule.class);if(kills!=null&&!minecraft.isGamePaused())kills.tick();
