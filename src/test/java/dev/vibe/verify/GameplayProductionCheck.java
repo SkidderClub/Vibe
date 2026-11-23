@@ -11,6 +11,14 @@ public final class GameplayProductionCheck {
     public static void verify(LaunchClassLoader loader) throws Exception {
         java.lang.reflect.Field field=LaunchClassLoader.class.getDeclaredField("tempFolder");field.setAccessible(true);File dumps=(File)field.get(null);
         verifyWorldEntityTracking(loader, dumps);
+        verifyClientHook(loader, dumps, "net.minecraft.client.multiplayer.WorldClient", "func_73029_E",
+                "dev/vibe/module/impl/client/QolModule", "barrierParticles", 1);
+        verifyClientHook(loader, dumps, "net.minecraft.client.renderer.EntityRenderer", "func_78475_f",
+                "dev/vibe/module/impl/visual/NoBobModule", "suppressHook", 1);
+        verifyClientHook(loader, dumps, "net.minecraft.client.network.NetHandlerPlayClient", "func_147258_a",
+                "dev/vibe/network/InboundSafety", "reject", 1);
+        verifyClientHook(loader, dumps, "net.minecraft.client.network.NetHandlerPlayClient", "func_147289_a",
+                "dev/vibe/network/InboundSafety", "reject", 1);
         int adjustDrop=0,adjustInventory=0,adjustLiquid=0,adjustJump=0,chatTrack=0;
         int manual=0,guard=0,finish=0,uses=0,slow=0,sprint=0,multi=0,collisions=0,push=0,tab=0,scaffoldSprint=0,shopHide=0,shopKeep=0,chatLimit=0,chatPick=0,chatMouse=0,miningStep=0,miningProgress=0,miningDelay=0,miningBegin=0,miningFinish=0;
         for(String name:new String[]{"net.minecraft.client.Minecraft","net.minecraft.client.multiplayer.PlayerControllerMP","net.minecraft.entity.player.EntityPlayer","net.minecraft.entity.EntityLivingBase","net.minecraft.world.World","net.minecraft.client.entity.EntityPlayerSP","net.minecraft.client.gui.GuiPlayerTabOverlay","net.minecraft.client.gui.inventory.GuiContainer","net.minecraft.client.gui.GuiNewChat","net.minecraft.client.gui.GuiChat"}){
@@ -65,6 +73,25 @@ public final class GameplayProductionCheck {
         for(String name:new String[]{"dev.vibe.module.impl.world.NoEscMenuModule","dev.vibe.module.impl.movement.TargetStrafeModule","dev.vibe.module.impl.world.ScaffoldModule","dev.vibe.module.impl.combat.AutoBuffModule",
                 "dev.vibe.module.impl.meme.RewoundPitModule","dev.vibe.pit.PitStatus","dev.vibe.pit.PitMenus","dev.vibe.pit.PitPerk",
                 "dev.vibe.module.impl.combat.KeepSprintModule","dev.vibe.module.impl.movement.JesusModule","dev.vibe.module.impl.movement.PhaseModule","dev.vibe.module.impl.client.DisablerModule"})Class.forName(name,false,loader).getDeclaredMethods();
+    }
+
+    private static void verifyClientHook(LaunchClassLoader loader, File dumps, String className, String methodName,
+            String owner, String hook, int expected) throws Exception {
+        Class.forName(className, false, loader).getDeclaredMethods();
+        ClassNode node = new ClassNode();
+        new ClassReader(Files.readAllBytes(new File(dumps, className.replace('.', '/') + ".class").toPath())).accept(node, 0);
+        int found = 0;
+        for (Object entry : node.methods) {
+            MethodNode method = (MethodNode) entry;
+            if (!methodName.equals(method.name)) continue;
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (instruction instanceof MethodInsnNode) {
+                    MethodInsnNode call = (MethodInsnNode) instruction;
+                    if (owner.equals(call.owner) && hook.equals(call.name)) found++;
+                }
+            }
+        }
+        if (found != expected) throw new AssertionError(className + "." + methodName + " hook " + hook + ": " + found);
     }
 
     private static void verifyWorldEntityTracking(LaunchClassLoader loader, File dumps) throws Exception {

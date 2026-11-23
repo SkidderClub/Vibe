@@ -10,6 +10,7 @@ import dev.vibe.setting.ColorSetting;
 import dev.vibe.setting.ModeSetting;
 import dev.vibe.setting.MultiSelectSetting;
 import dev.vibe.setting.NumberSetting;
+import dev.vibe.setting.StringSetting;
 import java.awt.Color;
 import java.util.Arrays;
 import java.util.UUID;
@@ -20,12 +21,14 @@ import org.lwjgl.input.Keyboard;
 
 /** Shared 2D appearance, 3D boxes, original pose-based skeletons and model Chams. */
 public final class EspModule extends Module {
-    private final MultiSelectSetting modes = addSetting(new MultiSelectSetting("ESP Modes", Arrays.asList("2D", "3D", "Skeletal", "Chams"), Arrays.asList("3D")));
+    public static final String IMAGE = "Image";
+    private final MultiSelectSetting modes = addSetting(new MultiSelectSetting("ESP Modes", Arrays.asList("2D", "3D", "Skeletal", "Chams", IMAGE), Arrays.asList("3D")));
     private final ModeSetting editProfile=addSetting(new ModeSetting("Edit Appearance","Players","Players","Friends","Targets"));
     private final Esp2DSettings twoD = new Esp2DSettings(setting -> addSetting(setting), () -> visibleFor(0,"2D"));
     private final Esp2DSettings friends2D = new Esp2DSettings(setting -> addSetting(setting), () -> visibleFor(1,"2D"),"Friends ");
     private final Esp2DSettings targets2D = new Esp2DSettings(setting -> addSetting(setting), () -> visibleFor(2,"2D"),"Targets ");
     private final SkeletalSettings skeletal = new SkeletalSettings("",0), friendsSkeletal=new SkeletalSettings("Friends ",1), targetsSkeletal=new SkeletalSettings("Targets ",2);
+    private final ImageSettings[] images = {new ImageSettings("", 0), new ImageSettings("Friends ", 1), new ImageSettings("Targets ", 2)};
     private final ChamsSettings invisibleChams = new ChamsSettings("Invisible", 0xBFFF5B6E);
     private final ChamsSettings visibleChams = new ChamsSettings("Visible", 0xBF2DE2C2);
     private final ChamsSettings friendHidden=new ChamsSettings("Friends ",1,"Invisible",0xBFFF5B6E),friendVisible=new ChamsSettings("Friends ",1,"Visible",0xBF5BE8A6);
@@ -58,7 +61,7 @@ public final class EspModule extends Module {
     private final ProfileSettings friends = new ProfileSettings("Friends/Teams", 0xFF5BE8A6, () -> profileSelected(1));
     private final ProfileSettings targets = new ProfileSettings("Targets", 0xFFFF0000, () -> profileSelected(2));
 
-    public EspModule() { super("ESP", "2D, 3D, Skeletal and customizable model Chams ESP", Category.VISUAL, Keyboard.KEY_P);
+    public EspModule() { super("ESP", "2D, 3D, skeletal, Chams and image overlays", Category.VISUAL, Keyboard.KEY_P);
         for(dev.vibe.setting.Setting<?> setting:new java.util.ArrayList<dev.vibe.setting.Setting<?>>(getSettings()))
             if(setting instanceof ColorSetting)((ColorSetting)setting).enableEntityOptions(s->addSetting(s));
     }
@@ -101,6 +104,23 @@ public final class EspModule extends Module {
     }
 
     public Esp2DSettings get2D() { return twoD; }
+    public ImageSettings getImage(int profile) { return images[resolvedProfile(profile)]; }
+
+    public final class ImageSettings {
+        public final StringSetting file;
+        public final NumberSetting size, offset, opacity, range;
+        public final BooleanSetting throughWalls;
+
+        private ImageSettings(String prefix, int profile) {
+            java.util.function.BooleanSupplier visible = () -> visibleFor(profile, IMAGE);
+            file = addSetting(new StringSetting(prefix + "Image Filename", "", 128, visible));
+            size = addSetting(new NumberSetting(prefix + "Image Size", .75, .2, 3, .05, visible));
+            offset = addSetting(new NumberSetting(prefix + "Image Gap", .2, 0, 2, .05, visible));
+            opacity = addSetting(new NumberSetting(prefix + "Image Opacity", 100, 5, 100, 1, visible));
+            range = addSetting(new NumberSetting(prefix + "Image Range", 48, 4, 128, 1, visible));
+            throughWalls = addSetting(new BooleanSetting(prefix + "Image Through Walls", false, visible));
+        }
+    }
     public SkeletalSettings getSkeletal() { return skeletal; }
     public SkeletalSettings getSkeletal(int type) { return type==1?friendsSkeletal:type==2?targetsSkeletal:skeletal; }
     public MultiSelectSetting getModes() { return modes; }

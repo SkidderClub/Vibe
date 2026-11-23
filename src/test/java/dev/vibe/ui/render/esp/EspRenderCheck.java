@@ -288,6 +288,8 @@ public final class EspRenderCheck {
         GuiInput.mouseClicked(gui,(int)name.right()+1,(int)name.bottom()+1,0);GuiInput.mouseClickMove(gui,(int)name.right()+28,(int)name.bottom()+12,0,100);GuiInput.mouseReleased(gui,0,0,0);
         if(esp.get2D().name.scale.getDouble()<=before)throw new AssertionError("Resize handle did not scale name");
         GuiInput.mouseClicked(gui,109+10,45+10,0);GuiInput.mouseClicked(gui,200+10,45+10,0);GuiInput.mouseClicked(gui,291+10,45+10,0);
+        GuiInput.mouseClicked(gui,392,55,0);
+        if(!esp.getModes().isSelected(EspModule.IMAGE))throw new AssertionError("Image mode could not be selected in the editor");
         frame();gui.drawScreen(0,0,0);save("editor-all-modes.png");check("editor all modes");
         Method openColor=EspEditorGui.class.getDeclaredMethod("openColor",dev.vibe.setting.ColorSetting.class);openColor.setAccessible(true);
         openColor.invoke(gui,esp.get2D().global.colors.get(1));frame();gui.drawScreen(0,0,0);save("editor-color-picker.png");check("color picker");
@@ -390,7 +392,7 @@ public final class EspRenderCheck {
     }
     private static void profilePreviews(EspEditorGui gui)throws Exception {
         esp.getModes().setValue(new LinkedHashSet<String>(Arrays.asList("Chams")));
-        GuiInput.mouseClicked(gui,540,55,0);if(esp.editingProfile()!=1)throw new AssertionError("Friend profile tab");
+        GuiInput.mouseClicked(gui,620,55,0);if(esp.editingProfile()!=1)throw new AssertionError("Friend profile tab");
         esp.getFriendsProfile().getUsePlayerDefaults().setValue(false);
         EspModule.ChamsSettings visible=esp.getChams(1,true),hidden=esp.getChams(1,false);
         visible.getMode().setValue("Glow");visible.getColor().setValue(0xFF00FF80);hidden.getMode().setValue("Glow");hidden.getColor().setValue(0xFFFF3232);
@@ -401,7 +403,7 @@ public final class EspRenderCheck {
         GuiInput.mouseClicked(gui,260,515,0);frame();gui.drawScreen(0,0,0);save("editor-armor-hurt.png");check("armor preview");
         Field p=EspEditorGui.class.getDeclaredField("preview");p.setAccessible(true);net.minecraft.client.entity.EntityOtherPlayerMP player=(net.minecraft.client.entity.EntityOtherPlayerMP)p.get(gui);
         if(player.getCurrentArmor(3)==null||player.getHeldItem()==null)throw new AssertionError("Preview has no actual equipment");
-        GuiInput.mouseClicked(gui,670,55,0);if(esp.editingProfile()!=2||esp.getChams(2,true).getMode().is("Glow"))throw new AssertionError("Profile edits leaked to Targets");
+        GuiInput.mouseClicked(gui,725,55,0);if(esp.editingProfile()!=2||esp.getChams(2,true).getMode().is("Glow"))throw new AssertionError("Profile edits leaked to Targets");
         frame();gui.drawScreen(0,0,0);save("editor-targets-inherited.png");
         Field rowsField=EspEditorGui.class.getDeclaredField("rows");rowsField.setAccessible(true);boolean override=false,color=false;
         for(Object row:(List<?>)rowsField.get(gui)){Field setting=row.getClass().getDeclaredField("setting");setting.setAccessible(true);

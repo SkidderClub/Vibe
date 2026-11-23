@@ -20,6 +20,12 @@ public class PathModuleTest {
     private PathTestFixture fixture;
     @Before public void setup() throws Exception { fixture = new PathTestFixture(); }
     @After public void cleanup() throws Exception { fixture.close(); }
+    @Test public void coordinateNavigationRetainsBoundedSearchAndDoesNotNeedEntities()throws Exception{
+        Object owner=new Object();fixture.module.requestWalking(true,true,true);fixture.module.getRange().setValue(8D);fixture.module.requestPosition(owner,new BlockPos(25,64,0));
+        fixture.floor(13,30,-3,3,63);fixture.finishRoute();assertNull(fixture.module.getTarget());assertFalse(fixture.module.getRoute().complete);assertTrue(fixture.module.getRoute().end.getX()>0);assertTrue(fixture.module.getRoute().end.getX()<=8);
+        fixture.player.setPosition(6.5,64,.5);fixture.forceReplan();for(int i=0;i<40&&fixture.module.getRoute().end.getX()<=6;i++)fixture.module.tick();assertTrue(fixture.module.getRoute().end.getX()>6);
+        fixture.module.releasePosition(new Object());assertNotNull(fixture.module.getWalkingPosition());fixture.module.releasePosition(owner);assertNull(fixture.module.getWalkingPosition());assertTrue(fixture.module.getRoute().nodes.isEmpty());
+    }
 
     @Test public void isAnOptInVisualWithEditableAppearanceAndPerformanceLimits() {
         PathModule path = fixture.module;

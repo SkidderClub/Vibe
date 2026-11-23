@@ -73,6 +73,8 @@ public final class ModuleManager {
         register(new BreakProgressModule());
         register(new FovChangerModule());
         register(new NoHurtCamModule());
+        register(new NoBobModule());
+        register(new FakePlayerModule());
         register(new SmoothF5Module());
         register(new FreeLookModule());
         register(new ItemGlowModule());

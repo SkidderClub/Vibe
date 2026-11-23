@@ -290,6 +290,8 @@ public final class ClientEvents {
             if(projectile!=null)projectile.apply();
             if(fireball!=null)fireball.apply();
             dev.vibe.features.FeatureHooks.rotate();
+            ChestStealerModule chestStealer = Vibe.getInstance().getModuleManager().getModule(ChestStealerModule.class);
+            if (chestStealer != null) chestStealer.applyRotation();
             if (moveFix != null) {
                 moveFix.tick();
                 moveFix.installInputHook();
@@ -344,7 +346,6 @@ public final class ClientEvents {
             if (inventoryManager != null) {
                 inventoryManager.tick();
             }
-            ChestStealerModule chestStealer = Vibe.getInstance().getModuleManager().getModule(ChestStealerModule.class);
             if (chestStealer != null) {
                 chestStealer.tick();
             }

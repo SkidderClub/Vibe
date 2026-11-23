@@ -69,6 +69,8 @@ public final class EspEditorGui extends GuiScreen {
     private static final int PREVIEW_TEAM=0xFF55AAFF;
     private ColorSetting activeColor;
     private GuiTextField hex;
+    private GuiTextField filename;
+    private StringSetting editingFilename;
     private float hue,saturation,brightness;
     private int pickerPart=-1;
     private static final int PICK_X=624,PICK_Y=144,PICK_W=268;
@@ -76,6 +78,9 @@ public final class EspEditorGui extends GuiScreen {
     public EspEditorGui(EspEditorModule module) { this(module,null); }
     public EspEditorGui(EspEditorModule module,GuiScreen parent) { this.module=module;this.parent=parent; }
     @Override public void initGui() {
+        finishFilename(true);
+        java.io.File images = dev.vibe.ui.render.esp.ImageEspRenderer.directory();
+        if (images != null && !images.isDirectory()) images.mkdirs();
         uiScale=Math.min(1,Math.min(width/(float)W,height/(float)H));
         left=Math.round((width/uiScale-W)/2);top=Math.round((height/uiScale-H)/2);
         esp=Vibe.getInstance().getModuleManager().getModule(EspModule.class);
@@ -111,10 +116,10 @@ public final class EspEditorGui extends GuiScreen {
                 drawChestPreview();
             }else{
                 button(esp.isEnabled()?"ESP ON":"ESP OFF",800,45,101,esp.isEnabled());
-                String[] modes={"2D","3D","Skeletal","Chams"};
+                String[] modes={"2D","3D","Skeletal","Chams",EspModule.IMAGE};
                 for(int i=0;i<modes.length;i++)button(modes[i],18+i*91,45,82,esp.getModes().isSelected(modes[i]));
                 String[] profiles={"Players","Friends","Targets"};
-                for(int i=0;i<3;i++)button(profiles[i],400+i*128,45,119,esp.editingProfile()==i);
+                for(int i=0;i<3;i++)button(profiles[i],480+i*105,45,97,esp.editingProfile()==i);
                 drawPreview(partialTicks);
             }
             buildRows();drawRows();
@@ -158,6 +163,12 @@ public final class EspEditorGui extends GuiScreen {
         scissor(18,207,350,265);
         drawPreviewPlayer((int)(box.x+box.w/2),(int)box.bottom());
         if(esp.getModes().isSelected("3D"))draw3DPreview();
+        if(esp.getModes().isSelected(EspModule.IMAGE)){
+            EspModule.ImageSettings image=esp.getImage(esp.editingProfile());
+            if(!previewOccluded||image.throughWalls.isEnabled())
+                dev.vibe.ui.render.esp.ImageEspRenderer.INSTANCE.preview(image,box.x+box.w/2,box.y+13,
+                        Math.min(64, 51 / (image.size.getFloat() + image.offset.getFloat())));
+        }
 
         frame=null;
         if(esp.getModes().isSelected("2D")) {
@@ -254,6 +265,15 @@ public final class EspEditorGui extends GuiScreen {
             header("Skeletal / Pose",0);if(!collapsed.contains("Skeletal / Pose")){ EspModule.SkeletalSettings s=esp.getSkeletal(esp.editingProfile());
                 setting(s.getColor(),"Color");setting(s.getRainbow(),"Rainbow");setting(s.getLineWidth(),"Line width");setting(s.getOnlyTargets(),"Only targets");setting(s.getThroughWalls(),"Through walls");setting(s.getDepthBackplate(),"Depth backplate"); }
         }
+        if(esp.getModes().isSelected(EspModule.IMAGE)){
+            header("Image",0);
+            if(!collapsed.contains("Image")){
+                EspModule.ImageSettings image=esp.getImage(esp.editingProfile());
+                setting(image.file,"Filename (esp-images folder)");
+                setting(image.size,"Size");setting(image.offset,"Gap above entity");setting(image.opacity,"Opacity");
+                setting(image.range,"Range");setting(image.throughWalls,"Through walls");
+            }
+        }
         if(esp.getModes().isSelected("Chams")){
             header("Chams / Materials",0);if(!collapsed.contains("Chams / Materials")){
                 chamsRows("Visible surfaces",esp.getChams(esp.editingProfile(),true));chamsRows("Occluded surfaces",esp.getChams(esp.editingProfile(),false));
@@ -295,6 +315,14 @@ public final class EspEditorGui extends GuiScreen {
             Setting<?> s=r.setting;
             if(s instanceof BooleanSetting){boolean on=((BooleanSetting)s).isEnabled();rect(x,y+6,w,17,on?SkeetEditorStyle.accent(0):SkeetEditorStyle.FIELD);text(on?"Enabled":"Disabled",x+8,y+10,0xFFFFFFFF);}
             else if(s instanceof ModeSetting){rect(x,y+5,w,19,SkeetEditorStyle.FIELD);text(((ModeSetting)s).getValue()+"  >",x+8,y+10,SkeetEditorStyle.TEXT);}
+            else if(s instanceof StringSetting){
+                if(editingFilename==s)filename.drawTextBox();
+                else{
+                    String name=((StringSetting)s).getValue();
+                    rect(x,y+5,w,19,SkeetEditorStyle.FIELD);
+                    text(name.isEmpty()?"Vibe ghost":fontRendererObj.trimStringToWidth(name,w-16),x+8,y+10,SkeetEditorStyle.TEXT);
+                }
+            }
             else if(s instanceof ColorSetting){RenderUtils.transparencyGrid(left+x,top+(int)y+5,left+x+w,top+(int)y+23,4);rect(x,y+5,w,18,((ColorSetting)s).getArgb());}
             else if(s instanceof NumberSetting){NumberSetting n=(NumberSetting)s;float f=(float)((n.getDouble()-n.getMinimum())/(n.getMaximum()-n.getMinimum()));
                 rect(x,y+21,w,2,SkeetEditorStyle.BORDER);rect(x,y+21,w*f,2,SkeetEditorStyle.accent(0));text(format(n.getDouble()),x+8,y+8,SkeetEditorStyle.TEXT);}
@@ -330,6 +358,11 @@ public final class EspEditorGui extends GuiScreen {
     }
     @Override protected void mouseClicked(int mx,int my,int button)throws IOException {
         mx=(int)(mx/uiScale);my=(int)(my/uiScale);
+        if (filename != null) {
+            filename.mouseClicked(mx,my,button);
+            if (filename.isFocused()) return;
+            finishFilename(true);
+        }
         if(activeColor!=null){pickerClick(mx,my,button);return;}
         if(button==0&&chests!=null){
             if(hit(PLAYER_TAB_X,TAB_Y,TAB_WIDTH,TAB_HEIGHT,mx,my)){selectTab(false);return;}
@@ -339,13 +372,13 @@ public final class EspEditorGui extends GuiScreen {
         if(button==0&&hit(800,45,101,23,mx,my)){esp.toggle();return;}
         if(button==0){
             String[] profiles={"Players","Friends","Targets"};
-            for(int i=0;i<3;i++)if(hit(400+i*128,45,119,23,mx,my)){esp.getEditProfile().setValue(profiles[i]);scroll=0;selected=dragged=null;frame=null;return;}
+            for(int i=0;i<3;i++)if(hit(480+i*105,45,97,23,mx,my)){esp.getEditProfile().setValue(profiles[i]);scroll=0;selected=dragged=null;frame=null;return;}
             if(hit(28,504,105,23,mx,my)){previewOccluded=!previewOccluded;return;}
             if(hit(139,504,105,23,mx,my)){previewHurt=!previewHurt;return;}
             if(hit(250,504,105,23,mx,my)){previewArmor=!previewArmor;return;}
         }
-        String[] modes={"2D","3D","Skeletal","Chams"};
-        if(button==0)for(int i=0;i<4;i++)if(hit(18+i*91,45,82,23,mx,my)){esp.getModes().toggle(modes[i]);scroll=0;dragged=null;return;}
+        String[] modes={"2D","3D","Skeletal","Chams",EspModule.IMAGE};
+        if(button==0)for(int i=0;i<modes.length;i++)if(hit(18+i*91,45,82,23,mx,my)){esp.getModes().toggle(modes[i]);scroll=0;dragged=null;return;}
         if(esp.getModes().isSelected("2D")&&!inherited()){
             int i=0;for(Element e:settings().elements){if(button==0&&hit(28+(i%3)*111,117+(i/3)*27,105,23,mx,my)){e.enabled.toggle();if(e.enabled.isEnabled())select(e);return;}i++;}
             if(selected!=null&&frame!=null&&button==0){EspLayout.Rect r=selected==settings().box?box:frame.elements.get(selected.title);
@@ -395,6 +428,13 @@ public final class EspEditorGui extends GuiScreen {
             if(s instanceof BooleanSetting)((BooleanSetting)s).toggle();
             else if(s instanceof ModeSetting)((ModeSetting)s).cycle(button==1);
             else if(s instanceof ColorSetting)openColor((ColorSetting)s);
+            else if(s instanceof StringSetting && button==0){
+                editingFilename=(StringSetting)s;
+                filename=new GuiTextField(1,fontRendererObj,left+LIST_X+259,top+(int)y+5,232,19);
+                filename.setMaxStringLength(editingFilename.getMaxLength());
+                filename.setText(editingFilename.getValue());
+                filename.setFocused(true);
+            }
             else if(s instanceof NumberSetting){slider=(NumberSetting)s;sliderX=left+LIST_X+259;sliderWidth=232;updateSlider(mx);}
             return true;
         }
@@ -449,6 +489,7 @@ public final class EspEditorGui extends GuiScreen {
     }
     @Override public void handleMouseInput()throws IOException {
         super.handleMouseInput();int wheel=Mouse.getEventDWheel();if(wheel==0||activeColor!=null)return;
+        finishFilename(true);
         int mx=(int)(Mouse.getEventX()*width/(float)mc.displayWidth/uiScale),my=(int)((height-Mouse.getEventY()*height/(float)mc.displayHeight-1)/uiScale);
         Element e=chestTab?null:dragged!=null?dragged:hovered(mx,my);
         if(e!=null){e.scale.setValue(e.scale.getDouble()+(wheel>0?.05:-.05));selected=e;return;}
@@ -494,15 +535,28 @@ public final class EspEditorGui extends GuiScreen {
         int rgb=java.awt.Color.HSBtoRGB(hue,saturation,brightness);activeColor.setRgba(rgb>>16&255,rgb>>8&255,rgb&255,pickerPart==2?Math.round(x*255):activeColor.getAlpha());hex.setText(activeColor.getHex());
     }
     @Override protected void keyTyped(char ch,int key)throws IOException {
+        if(filename!=null){
+            if(key==Keyboard.KEY_ESCAPE)finishFilename(false);
+            else if(key==Keyboard.KEY_RETURN||key==Keyboard.KEY_NUMPADENTER)finishFilename(true);
+            else filename.textboxKeyTyped(ch,key);
+            return;
+        }
         if(key==Keyboard.KEY_ESCAPE){if(activeColor!=null){activeColor=null;return;}returning=true;mc.displayGuiScreen(parent);return;}
         if(activeColor!=null&&hex.textboxKeyTyped(ch,key)){if(activeColor.setHex(hex.getText())){float[] hsv=java.awt.Color.RGBtoHSB(activeColor.getRed(),activeColor.getGreen(),activeColor.getBlue(),null);hue=hsv[0];saturation=hsv[1];brightness=hsv[2];}return;}
         super.keyTyped(ch,key);
     }
     @Override public void onGuiClosed(){
+        finishFilename(true);
         if(parent instanceof Gta7Gui && !returning)((Gta7Gui)parent).closeFromEditor();
         if(module.isEnabled())module.setEnabled(false);
         if(Vibe.getInstance().getConfig()!=null)Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
         super.onGuiClosed();
+    }
+    @Override public void updateScreen(){if(filename!=null)filename.updateCursorCounter();}
+    private void finishFilename(boolean save){
+        if(save&&editingFilename!=null)editingFilename.setValue(filename.getText().trim());
+        editingFilename=null;
+        filename=null;
     }
     @Override public boolean doesGuiPauseGame(){return false;}
     private static final class Row {

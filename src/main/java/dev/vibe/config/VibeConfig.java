@@ -237,6 +237,7 @@ public final class VibeConfig {
         // Version 3 distinguishes deliberate selections from the former stock ArrayList list.
         root.addProperty("format", FORMAT_VERSION);
         root.addProperty("toggleFeedbackVersion", 1);
+        root.addProperty("qolAntiCrashVersion", 1);
         if (Vibe.getInstance() != null && Vibe.getInstance().getHudManager() != null)
             root.add("hud", Vibe.getInstance().getHudManager().toJson());
         JsonArray modules = new JsonArray();
@@ -593,6 +594,12 @@ public final class VibeConfig {
                         Set<String> elements = ((HudModule) module).getHudElements().copyValue();
                         elements.add("notifications"); ((HudModule) module).getHudElements().setValue(elements);
                     }
+                }
+                if (module instanceof dev.vibe.module.impl.client.QolModule && !root.has("qolAntiCrashVersion")) {
+                    MultiSelectSetting features = ((dev.vibe.module.impl.client.QolModule) module).getFeatures();
+                    Set<String> selected = features.copyValue();
+                    selected.add(dev.vibe.module.impl.client.QolModule.ANTI_CRASH);
+                    features.setValue(selected);
                 }
                 if (data.has("enabled")) module.setEnabled(getBoolean(data, "enabled", module.isConfiguredEnabled()));
             }

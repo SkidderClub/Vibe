@@ -326,7 +326,7 @@ public class KillAuraModule extends Module {
         boolean inClickRange = target != null && validTarget(target) && distanceTo(target) <= clickingRange.getDouble();
         // Raven's autoclicker also runs on physical LMB while aura has no target.
         boolean clickActive = inClickRange || target == null && VanillaClicks.physicallyDown(attack);
-        if (!clickActive || !minecraft.inGameHasFocus || minecraft.currentScreen != null) hypixelNextAttack = 0L;
+        if (!clickActive || !(minecraft.currentScreen==null?minecraft.inGameHasFocus:guiCombatAllowed())) hypixelNextAttack = 0L;
         else {
             long clickNow = System.currentTimeMillis();
             int count = 0;
@@ -385,8 +385,10 @@ public class KillAuraModule extends Module {
           if (AutoBuffModule.ownsUseInput() || dev.vibe.module.impl.world.AutoWaterModule.reserving() || dev.vibe.inventory.PlayerInventorySession.isBusy()) return false;
         if (!isEnabled() || minecraft.thePlayer == null || minecraft.theWorld == null || minecraft.playerController == null
                 || !minecraft.thePlayer.isEntityAlive() || minecraft.thePlayer.isSpectator() || minecraft.isGamePaused()) return false;
-        return minecraft.currentScreen == null || (!notInInv.isEnabled() && minecraft.currentScreen instanceof GuiContainer);
+        return minecraft.currentScreen == null || guiCombatAllowed();
     }
+    private boolean guiCombatAllowed(){return dev.vibe.module.impl.movement.GuiMoveModule.allowsKillaura()
+            || !notInInv.isEnabled()&&minecraft.currentScreen instanceof GuiContainer;}
 
     private boolean isBreakingBlock() {
         if (!notBlockBreaking.isEnabled() || minecraft.playerController == null) return false;
@@ -721,17 +723,17 @@ public class KillAuraModule extends Module {
 
     public static boolean allowInputHook(boolean vanilla) {
         KillAuraModule aura = module();
-        return vanilla || (aura != null && aura.minecraft.currentScreen instanceof GuiContainer
+        return vanilla || (aura != null && aura.minecraft.currentScreen != null && aura.guiCombatAllowed()
                 && ((aura.canOperate() && aura.target != null) || aura.blockOwned));
     }
 
     public static int guiClickCounterHook(int vanilla) {
         KillAuraModule aura = module();
         // GuiContainer normally installs a 10,000-tick attack lock. Only the
-        // explicit Not In Inv = off option removes that GUI lock; ordinary
+        // explicit GUI permissions remove that GUI lock; ordinary
         // vanilla miss cooldowns are left alone.
         return vanilla == 10000 && aura != null && aura.canOperate() && aura.target != null
-                && aura.minecraft.currentScreen instanceof GuiContainer ? 0 : vanilla;
+                && aura.minecraft.currentScreen != null && aura.guiCombatAllowed() ? 0 : vanilla;
     }
 
     public static KillAuraModule activeController(){return module();}

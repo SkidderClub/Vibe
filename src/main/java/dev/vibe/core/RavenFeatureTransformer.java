@@ -26,6 +26,12 @@ public final class RavenFeatureTransformer implements net.minecraft.launchwrappe
                     && (method.desc.equals("(Lnet/minecraft/network/Packet;)V") || method.desc.equals("(Lff;)V"))) {
                 guard(method, SCAFFOLD, "hypixelPacketHook", true, true);
             }
+            if (handler && ((named(method, "handleParticles", "func_147289_a", "a")
+                    && (method.desc.equals("(Lnet/minecraft/network/play/server/S2APacketParticles;)V") || method.desc.equals("(Lgr;)V")))
+                    || (named(method, "handlePlayerPosLook", "func_147258_a", "a")
+                    && (method.desc.equals("(Lnet/minecraft/network/play/server/S08PacketPlayerPosLook;)V") || method.desc.equals("(Lfi;)V"))))) {
+                guard(method, "dev/vibe/network/InboundSafety", "reject", true, false);
+            }
             if (minecraft && method.desc.equals("()V") && named(method, "rightClickMouse", "func_147121_ag", "ax")) {
                 guard(method, AURA, "hypixelRightClickHook", false, false);
             }
@@ -37,6 +43,9 @@ public final class RavenFeatureTransformer implements net.minecraft.launchwrappe
             if (!renderer) continue;
             if (method.desc.equals("(F)V") && named(method, "hurtCameraEffect", "func_78482_e", "d")) {
                 guard(method, "dev/vibe/module/impl/visual/NoHurtCamModule", "suppressHook", false, false);
+            }
+            if (method.desc.equals("(F)V") && named(method, "setupViewBobbing", "func_78475_f", "e")) {
+                guard(method, "dev/vibe/module/impl/visual/NoBobModule", "suppressHook", false, false);
             }
             if (method.desc.equals("()Z") && named(method, "isShaderActive", "func_147702_a", "a")) {
                 for (AbstractInsnNode instruction : method.instructions.toArray()) if (instruction.getOpcode() == IRETURN)

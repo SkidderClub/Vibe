@@ -11,9 +11,12 @@ import org.lwjgl.input.Keyboard;
 public final class QolModule extends Module {
     public final dev.vibe.setting.BooleanSetting dropConfirm=addSetting(new dev.vibe.setting.BooleanSetting("Drop confirm",false));
     public static final String REAL_REWOUND_PLAYERS="RealRewoundPlayers";
+    public static final String ANTI_CRASH = "AntiCrash";
+    public static final String VISIBLE_BARRIERS = "Visible Barriers";
 
     private final MultiSelectSetting features = addSetting(new MultiSelectSetting("Features",
-            Arrays.asList("Hide Black Background", "AntiInvisibility", REAL_REWOUND_PLAYERS), Arrays.asList("Hide Black Background")));
+            Arrays.asList("Hide Black Background", "AntiInvisibility", REAL_REWOUND_PLAYERS, VISIBLE_BARRIERS, ANTI_CRASH),
+            Arrays.asList("Hide Black Background", ANTI_CRASH)));
     private final MultiSelectSetting realPlayerViews=addSetting(new MultiSelectSetting("RealRewoundPlayers Views",
             Arrays.asList("ESP","Tab"),Arrays.asList("ESP","Tab"),()->features.isSelected(REAL_REWOUND_PLAYERS)));
     public MultiSelectSetting getRealPlayerViews(){return realPlayerViews;}
@@ -42,5 +45,14 @@ public final class QolModule extends Module {
 
     public NumberSetting getInvisibleAlpha() {
         return invisibleAlpha;
+    }
+
+    public static boolean active(String feature) {
+        QolModule module = dev.vibe.features.FeatureModule.module(QolModule.class);
+        return module != null && module.isEnabled() && module.features.isSelected(feature);
+    }
+
+    public static boolean barrierParticles(boolean vanilla) {
+        return vanilla || active(VISIBLE_BARRIERS);
     }
 }

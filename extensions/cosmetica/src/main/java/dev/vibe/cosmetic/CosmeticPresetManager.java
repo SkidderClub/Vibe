@@ -60,7 +60,7 @@ public final class CosmeticPresetManager {
     }
     public synchronized CosmeticPreset resolve(EntityPlayer player, FriendManager friends) {
         if (player == null) return null;
-        if (player == Minecraft.getMinecraft().thePlayer) return getSelected();
+        if (player == Minecraft.getMinecraft().thePlayer || dev.vibe.module.impl.visual.FakePlayerModule.isDummy(player)) return getSelected();
         return resolveFriend(player.getGameProfile().getName(), friends);
     }
 

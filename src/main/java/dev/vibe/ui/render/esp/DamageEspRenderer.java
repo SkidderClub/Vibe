@@ -100,7 +100,7 @@ public final class DamageEspRenderer implements AutoCloseable {
     @Override public void close() { for (int i = 0; i < fonts.length; i++) if (fonts[i] != null) { fonts[i].close(); fonts[i] = null; } }
 
     /** Restore driver state AND the Minecraft caches changed by both font renderers. */
-    private static final class FontState implements AutoCloseable {
+    static final class FontState implements AutoCloseable {
         final int active = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE), program = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
         final boolean blend = GL11.glIsEnabled(GL11.GL_BLEND), alpha = GL11.glIsEnabled(GL11.GL_ALPHA_TEST);
         final int source = GL11.glGetInteger(GL14.GL_BLEND_SRC_RGB), destination = GL11.glGetInteger(GL14.GL_BLEND_DST_RGB);

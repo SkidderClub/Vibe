@@ -16,7 +16,7 @@ public final class ClickGuiModule extends Module {
 
     // Each style renders through VibeClickGui's shared Module/Setting model,
     // so switching the look never changes bindings, values, or config data.
-    private final ModeSetting theme = addSetting(new ModeSetting("Theme", "Skeet", "Skeet", "Futuristic", "NeverLose", "Augustus", "Xanax", "PacketV3", "Novoline", "SuizideX", "Breeze", "Lavalamp", "Wurst", "Diablo", "Adjust"));
+    private final ModeSetting theme = addSetting(new ModeSetting("Theme", "Skeet", "Skeet", "Futuristic", "NeverLose", "Augustus", "Xanax", "PacketV3", "Novoline", "SuizideX", "Breeze", "Lavalamp", "Wurst", "Diablo", "Adjust", "Fan"));
     private final ModeSetting moduleSorting = addSetting(new ModeSetting("Module Sorting", "Normal", "Normal", "Alphabetic"));
     private final ModeSetting breezePalette = addSetting(new ModeSetting("Breeze Theme", "Default", () -> theme.is("Breeze"), "Default", "Fancy", "Silence", "Flarial", "Leaf", "Pink", "Quantum", "Hello Kitty"));
     private final dev.vibe.setting.StringSetting breezeFavorites = addSetting(new dev.vibe.setting.StringSetting("Breeze Favorites", "", 8192, () -> false));
@@ -57,7 +57,7 @@ public final class ClickGuiModule extends Module {
     }
     public ModeSetting getBreezePalette() { return breezePalette; }
     public dev.vibe.setting.StringSetting getBreezeFavorites() { return breezeFavorites; }
-    private boolean isDropdownTheme(){return theme.is("Diablo")||theme.is("PacketV3")||theme.is("Novoline")||theme.is("SuizideX");}
+    private boolean isDropdownTheme(){return theme.is("Diablo")||theme.is("PacketV3")||theme.is("Novoline")||theme.is("SuizideX")||theme.is("Fan");}
     public ColorSetting getPrimaryColor() { return primaryColor; }
     public ColorSetting getSecondaryColor() { return secondaryColor; }
     public BooleanSetting getAugustusRoundedCorners() { return augustusRoundedCorners; }

@@ -66,6 +66,8 @@ public final class InventoryManagerModule extends Module {
     }
 
     public void tick() {
+        AutoCrafterModule crafter = dev.vibe.features.FeatureModule.module(AutoCrafterModule.class);
+        if (crafter != null && crafter.ownsInventoryCraft()) { resetRuntime(); return; }
         if (dev.vibe.inventory.PlayerInventorySession.isBusy()&&!session.valid()) return;
         if (!isEnabled() || minecraft.thePlayer == null || minecraft.theWorld==null || !canManage()) {
             resetRuntime();

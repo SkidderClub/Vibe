@@ -643,6 +643,11 @@ public final class MoveFixModule extends Module {
             dev.vibe.module.impl.world.NoteBotModule noteBot =
                     Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.world.NoteBotModule.class);
             if (noteBot != null) noteBot.afterWalking(entity, module);
+            if (entity == Minecraft.getMinecraft().thePlayer) {
+                dev.vibe.module.impl.world.ChestStealerModule stealer =
+                        Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.world.ChestStealerModule.class);
+                if (stealer != null) stealer.afterWalking();
+            }
         }
     }
 

@@ -17,6 +17,18 @@ import org.lwjgl.input.Keyboard;
 /** Supplies normal walking input before MoveFix; Path owns the shared bounded route search. */
 public final class AutoWalkModule extends Module {
     public final ModeSetting mode=addSetting(new ModeSetting("Mode","Forward","Forward","Path"));
+    public final ModeSetting pathMode=addSetting(new ModeSetting("Path Mode","Player",()->mode.is("Path"),"Player","Position"));
+    public final BlockCoordinateSetting positionX=coordinate("Position X",0),positionY=coordinate("Position Y",64),positionZ=coordinate("Position Z",0);
+    public final BooleanSetting patrol=addSetting(new BooleanSetting("Patrol",false,this::positionMode));
+    public final NumberSetting patrolRadius=addSetting(new NumberSetting("Patrol Radius",6,1,128,.5,()->positionMode()&&patrol.isEnabled()));
+    private BlockCoordinateSetting coordinate(String name,int initial){return addSetting(new BlockCoordinateSetting(name,initial,this::positionMode));}
+    private boolean positionMode(){return mode.is("Path")&&pathMode.is("Position");}
+    public BlockPos getPosition(){return new BlockPos(positionX.getInt(),positionY.getInt(),positionZ.getInt());}
+    public void setPosition(BlockPos pos){positionX.setInt(pos.getX());positionY.setInt(pos.getY());positionZ.setInt(pos.getZ());resetPosition();}
+    private BlockPos positionCenter;
+    private Vec3 positionGoal;
+    private double patrolAngle,previousRadius;
+    private boolean previousPatrol;
     public final BooleanSetting autoJump=addSetting(new BooleanSetting("Auto Jump",true));
     public final BooleanSetting sprint=addSetting(new BooleanSetting("Sprint",false));
     public final BooleanSetting noRotate=addSetting(new BooleanSetting("NoRotate",false,()->mode.is("Path")));
@@ -54,14 +66,14 @@ public final class AutoWalkModule extends Module {
     }}
     public boolean ownsNavigation(Object owner){return navigationOwner==owner;}
 
-    public AutoWalkModule(){super("AutoWalk","Walk forward or follow Path to a filtered opponent",Category.MOVEMENT,Keyboard.KEY_NONE);}
+    public AutoWalkModule(){super("AutoWalk","Walk forward, follow a player or navigate to coordinates",Category.MOVEMENT,Keyboard.KEY_NONE);}
     @Override protected void onDisable(){release();}
     public void tick(){
         Minecraft mc=Minecraft.getMinecraft(); driving=false;jump=false;rotated=false;preparingJump=aligningApproach=false;
         path=Vibe.getInstance()==null?null:Vibe.getInstance().getModuleManager().getModule(PathModule.class);
         FreecamModule freecam=Vibe.getInstance()==null?null:Vibe.getInstance().getModuleManager().getModule(FreecamModule.class);
         MoveFixModule fix=Vibe.getInstance()==null?null:Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
-        if(isSuspended()||(!isEnabled()&&navigationOwner==null)||mc==null||mc.thePlayer==null||mc.theWorld==null||mc.thePlayer.isDead||mc.currentScreen!=null
+        if(isSuspended()||(!isEnabled()&&navigationOwner==null)||mc==null||mc.thePlayer==null||mc.theWorld==null||mc.thePlayer.isDead||!guiAllowed(mc)
                 ||mc.isGamePaused()||mc.thePlayer.isRiding()||freecam!=null&&freecam.isEnabled()||fix!=null&&fix.hasForcedMovement()){
             release();status=isEnabled()?"Paused":"Idle";return;
         }
@@ -70,7 +82,7 @@ public final class AutoWalkModule extends Module {
         if(path!=null)path.requestWalking(navigationOwner!=null||mode.is("Path"),autoJump.isEnabled(),showPath.isEnabled());
         if(navigationOwner!=null&&navigationTarget==null){stop("Waiting for service");return;}
         if(navigationOwner==null&&mode.is("Forward")){
-            route=null;driving=true;status="Walking forward";jump=player.isInWater();
+            resetPosition();route=null;driving=true;status="Walking forward";jump=player.isInWater();
             if(!jump&&autoJump.isEnabled()&&player.onGround&&player.isCollidedHorizontally){
                 double angle=Math.toRadians(player.rotationYaw);
                 BlockPos feet=new BlockPos(player.posX,player.posY+.05,player.posZ);
@@ -83,19 +95,29 @@ public final class AutoWalkModule extends Module {
             return;
         }
         if(path==null){stop("Path module is unavailable");return;}
-        EntityLivingBase target=navigationOwner==null?path.getTarget():navigationTarget;
-        if(target==null||target.worldObj!=world||target.isDead||!target.isEntityAlive()||world.getEntityByID(target.getEntityId())!=target){stop("Looking for an opponent");return;}
+        boolean fixed=navigationOwner==null&&positionMode();
+        EntityLivingBase target=fixed?null:navigationOwner==null?path.getTarget():navigationTarget;
+        if(fixed){
+            updatePositionGoal();path.requestPosition(this,new BlockPos(positionGoal.xCoord,positionGoal.yCoord+.05,positionGoal.zCoord));
+        }else{
+            resetPosition();
+            if(target==null||target.worldObj!=world||target.isDead||!target.isEntityAlive()||world.getEntityByID(target.getEntityId())!=target){stop("Looking for an opponent");return;}
+        }
         if(routeTarget!=target){route=null;waypoint=0;routeTarget=target;}
+        double destinationX=fixed?positionGoal.xCoord:target.posX,destinationY=fixed?positionGoal.yCoord:target.posY,destinationZ=fixed?positionGoal.zCoord:target.posZ;
         BlockPos feet=new BlockPos(player.posX,player.posY+.05,player.posZ);
-        BlockPos targetFeet=new BlockPos(target.posX,target.posY+.05,target.posZ);
+        BlockPos targetFeet=new BlockPos(destinationX,destinationY+.05,destinationZ);
+        if(fixed){for(int down=0;down<=3;down++)if(terrain.canStand(targetFeet.down(down))){targetFeet=targetFeet.down(down);destinationY=terrain.standingY(targetFeet);break;}}
         // Follow the actual player within the final cells, including a one-node
         // route. A block-centre endpoint must not become a stopping distance.
-        double targetX=target.posX-player.posX,targetZ=target.posZ-player.posZ;
+        double targetX=destinationX-player.posX,targetZ=destinationZ-player.posZ;
         double targetY=terrain.standingY(targetFeet);
+        if(fixed&&!patrol.isEnabled()&&targetX*targetX+targetZ*targetZ<=.1225&&Math.abs(destinationY-player.posY)<.65){stop("At position");return;}
         boolean raisedTarget=!player.isInWater()&&targetY-player.getEntityBoundingBox().minY>player.stepHeight+.05;
         if(navigationOwner==null&&targetX*targetX+targetZ*targetZ<=4&&terrain.canStand(targetFeet)&&terrain.canMove(feet,targetFeet)
-                &&(!raisedTarget||terrain.canJumpFrom(player.getEntityBoundingBox(),target.posX,targetY,target.posZ))){
-            steer(target.posX,target.posZ,targetY,target);return;
+                &&(!fixed||safePositionApproach(destinationX,destinationZ,targetY))
+                &&(!raisedTarget||terrain.canJumpFrom(player.getEntityBoundingBox(),destinationX,targetY,destinationZ))){
+            steer(destinationX,destinationZ,targetY,target);return;
         }
         PathRoute nextRoute=path.getRoute();
         if(nextRoute.nodes.isEmpty() && route==null){followTarget(target);return;}
@@ -167,6 +189,7 @@ public final class AutoWalkModule extends Module {
     }
     private void followTarget(EntityLivingBase target){
         if(navigationOwner!=null){stop("Waiting for a safe service route");return;}
+        if(target==null){stop("Waiting for a safe position route");return;}
         BlockPos feet=new BlockPos(target.posX,target.posY+.05,target.posZ);
         double y=terrain.standingY(feet);
         steer(target.posX,target.posZ,Double.isNaN(y)?player.posY:y,target);
@@ -180,13 +203,13 @@ public final class AutoWalkModule extends Module {
         preparingJump=!player.isInWater()&&autoJump.isEnabled()&&rise>player.stepHeight+.05;
         jump=player.isInWater() || preparingJump&&player.onGround&&dx*dx+dz*dz<=1.44
                 &&terrain.canJumpFrom(player.getEntityBoundingBox(),x,nextY,z);
-        driving=true;status="Following "+target.getName();
+        driving=true;status=target!=null?"Following "+target.getName():patrol.isEnabled()?"Patrolling position":"Walking to position";
     }
     /** The input wrapper calls this before silent movement correction and normal player physics. */
     public boolean apply(MovementInput input){
         if(isSuspended()||(!isEnabled()&&navigationOwner==null)||player==null)return false;
         Minecraft mc=Minecraft.getMinecraft();
-        if(mc.thePlayer!=player||mc.currentScreen!=null)return false;
+        if(mc.thePlayer!=player||!guiAllowed(mc)){releaseSprint();return false;}
         // Surfacing is independent of a completed route or a selected target.
         if(player.isInWater())input.jump=true;
         if(!driving){if(navigationOwner!=null)input.moveForward=input.moveStrafe=0;return false;}
@@ -245,7 +268,7 @@ public final class AutoWalkModule extends Module {
         Vibe vibe=Vibe.getInstance();AutoWalkModule module=vibe==null||vibe.getModuleManager()==null?null:vibe.getModuleManager().getModule(AutoWalkModule.class);
         Minecraft mc=Minecraft.getMinecraft();
         return module!=null&&(module.navigationOwner!=null||module.isEnabled()&&module.driving&&(module.preparingJump||module.navigationJump))
-                &&mc!=null&&mc.thePlayer==module.player&&mc.theWorld==module.world&&mc.currentScreen==null;
+                &&mc!=null&&mc.thePlayer==module.player&&mc.theWorld==module.world&&guiAllowed(mc);
     }
     public static float turn(float current,float target,float limit){return current+Math.max(-limit,Math.min(limit,MathHelper.wrapAngleTo180_float(target-current)));}
     private void stop(String reason){driving=false;jump=false;releaseSprint();status=reason;}
@@ -254,7 +277,38 @@ public final class AutoWalkModule extends Module {
         if(ownedSprint&&player!=null&&(mc==null||mc.gameSettings==null||!mc.gameSettings.keyBindSprint.isKeyDown()))player.setSprinting(false);
         ownedSprint=false;
     }
+    private static boolean guiAllowed(Minecraft mc){return mc.currentScreen==null||GuiMoveModule.allowsAutoWalk();}
+    private boolean safePositionApproach(double x,double z,double y){
+        int samples=Math.max(1,(int)Math.ceil(Math.hypot(x-player.posX,z-player.posZ)/.2));
+        for(int i=1;i<=samples;i++){double t=i/(double)samples;BlockPos p=new BlockPos(player.posX+(x-player.posX)*t,player.posY+(y-player.posY)*t+.05,player.posZ+(z-player.posZ)*t);if(!terrain.canStand(p))return false;}
+        return true;
+    }
+    private void resetPosition(){
+        if(positionCenter!=null){if(path!=null)path.releasePosition(this);positionCenter=null;positionGoal=null;route=null;waypoint=0;}
+    }
+    private void updatePositionGoal(){
+        BlockPos center=getPosition();double radius=patrolRadius.getDouble();boolean circling=patrol.isEnabled();
+        if(!center.equals(positionCenter)||circling!=previousPatrol||radius!=previousRadius){
+            resetPosition();positionCenter=center;previousPatrol=circling;previousRadius=radius;
+            patrolAngle=Math.atan2(player.posZ-(center.getZ()+.5),player.posX-(center.getX()+.5));
+            positionGoal=circling?patrolPoint(center,radius,patrolAngle):new Vec3(center.getX()+.5,center.getY(),center.getZ()+.5);
+        }
+        if(circling){double dx=positionGoal.xCoord-player.posX,dz=positionGoal.zCoord-player.posZ;
+            double tolerance=Math.min(.65,radius*.25);
+            if(dx*dx+dz*dz<=tolerance*tolerance&&Math.abs(positionGoal.yCoord-player.posY)<1){
+                patrolAngle+=Math.min(Math.PI/4,1.5/radius);
+                positionGoal=patrolPoint(center,radius,patrolAngle);
+            }
+        }
+    }
+    private Vec3 patrolPoint(BlockPos center,double radius,double angle){
+        double x=center.getX()+.5+Math.cos(angle)*radius,z=center.getZ()+.5+Math.sin(angle)*radius;
+        BlockPos feet=new BlockPos(x,center.getY()+.05,z);double y=Double.NaN;
+        for(int down=0;down<=3;down++)if(terrain.canStand(feet.down(down))){y=terrain.standingY(feet.down(down));break;}
+        return new Vec3(x,Double.isNaN(y)?center.getY():y,z);
+    }
     private void release(){
+        resetPosition();
         if(path!=null)path.requestWalking(false,true,false);
         releaseSprint();driving=jump=rotated=preparingJump=aligningApproach=navigationJump=false;world=null;player=null;terrain=null;route=null;routeTarget=null;waypoint=0;
     }

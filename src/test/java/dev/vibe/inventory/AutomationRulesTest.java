@@ -118,10 +118,32 @@ public class AutomationRulesTest {
             inv[1]=null;assertNull("Sword resources stay reserved while its stick is missing",p.next(inv,usable,all,"Diamond"));
         }
     }
+    @Test public void inventoryConvertsLogsForTheVanillaBoatRecipe() throws Exception {
+        try (AutomationFixture f = new AutomationFixture()) {
+            CraftingPlanner planner = new CraftingPlanner();
+            ItemStack[] inventory = new ItemStack[40];
+            boolean[] usable = new boolean[40];
+            Arrays.fill(usable, true);
+            Set<String> boat = Collections.singleton("Boat");
+            inventory[0] = new ItemStack(Blocks.log2, 2, 1);
+            Recipe planks = planner.nextInventoryRecipe(inventory, usable, boat);
+            assertEquals(5, planks.output.getMetadata());
+            verifyRecipe(planks, f);
+            inventory[1] = new ItemStack(Blocks.planks, 8, 5);
+            assertNull(planner.nextInventoryRecipe(inventory, usable, boat));
+            Recipe result = planner.next(inventory, usable, boat, "Best Available");
+            assertEquals(Items.boat, result.output.getItem());
+            verifyRecipe(result, f);
+            inventory[2] = new ItemStack(Items.boat);
+            assertNull(planner.next(inventory, usable, boat, "Best Available"));
+        }
+    }
+
     private static void verifyRecipe(Recipe recipe,AutomationFixture f) {
         Container container=new Container(){@Override public boolean canInteractWith(net.minecraft.entity.player.EntityPlayer player){return true;}};
-        InventoryCrafting grid=new InventoryCrafting(container,3,3);
-        for(int i=0;i<9;i++)if(recipe.grid[i]!=null) {
+        int side = recipe.grid.length == 4 ? 2 : 3;
+        InventoryCrafting grid=new InventoryCrafting(container,side,side);
+        for(int i=0;i<recipe.grid.length;i++)if(recipe.grid[i]!=null) {
             Ingredient item=recipe.grid[i];grid.setInventorySlotContents(i,new ItemStack(item.item,1,Math.max(0,item.metadata)));
         }
         ItemStack actual=CraftingManager.getInstance().findMatchingRecipe(grid,f.mc.theWorld);

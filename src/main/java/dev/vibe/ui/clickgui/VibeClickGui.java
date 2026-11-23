@@ -104,6 +104,7 @@ public final class VibeClickGui extends GuiScreen {
         if(isDropdownTheme()){
             commitEditing();editing=null;textEditor=null;draggingSlider=null;rangeDrag=null;
             colorPopup=null;draggingColor=null;bindingModule=null;dropdown.release();
+            dropdown.opened();
         }
         int columns = width >= 1000 ? Category.values().length : (width >= 650 ? 3 : 2);
         int index = 0;
@@ -169,7 +170,7 @@ public final class VibeClickGui extends GuiScreen {
         ClickGuiModule settings=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
         if(mc.theWorld==null)Gui.drawRect(0,0,width,height,0xFF171923);
         if(settings.getTheme().is("Diablo"))DropdownStyle.verticalGradient(0,0,width,height,0x990E0E0E,0x00000000);
-        else Gui.drawRect(0,0,width,height,settings.getTheme().is("Novoline")?0x78000000:settings.getTheme().is("PacketV3")?0x36000000:0x16000000);
+        else Gui.drawRect(0,0,width,height,settings.getTheme().is("Novoline")?0x78000000:settings.getTheme().is("PacketV3")?0x36000000:settings.getTheme().is("Fan")?0x660F1121:0x16000000);
         clickGuiParticles.draw(this);targets.clear();
         if(draggingSlider!=null&&!draggingSlider.setting.isVisible()){draggingSlider=null;rangeDrag=null;}
         if(colorPopup!=null&&!colorPopup.setting.isVisible()){colorPopup=null;draggingColor=null;editing=null;}
@@ -218,7 +219,7 @@ public final class VibeClickGui extends GuiScreen {
         if(style.suizide)DropdownStyle.roundedGradient(x,y,w,h,6,
                 style.light?style.accent(0,y):RenderUtils.blend(style.body,style.accent(0,y),.16F),
                 style.light?style.accent(1,y):RenderUtils.blend(style.body,style.accent(1,y),.16F));
-        else DropdownStyle.rect(x,y,w,h,style.packet?5:0,style.diablo?0xFF252525:style.novo?0xFF282828:0xD5111114);
+        else DropdownStyle.rect(x,y,w,h,style.packet||style.fan?5:0,style.fan?0xFF232637:style.diablo?0xFF252525:style.novo?0xFF282828:0xD5111114);
         for(Setting<?> setting:module.getSettings())if(setting.isVisible()){drawDropdownSetting(setting,x,y,w,style,owner);y+=dropdownSettingHeight(setting);}
     }
     private void drawDropdownSetting(Setting<?> setting,int x,int y,int w,DropdownStyle style,String owner){
@@ -1499,7 +1500,7 @@ public final class VibeClickGui extends GuiScreen {
     }
     private boolean isDropdownTheme(){
         ClickGuiModule settings=Vibe.getInstance().getModuleManager().getModule(ClickGuiModule.class);
-        return settings!=null&&(settings.getTheme().is("Diablo")||settings.getTheme().is("PacketV3")||settings.getTheme().is("Novoline")||settings.getTheme().is("SuizideX")||settings.getTheme().is("Wurst"));
+        return settings!=null&&(settings.getTheme().is("Diablo")||settings.getTheme().is("PacketV3")||settings.getTheme().is("Novoline")||settings.getTheme().is("SuizideX")||settings.getTheme().is("Wurst")||settings.getTheme().is("Fan"));
     }
 
     private boolean isSkeetTheme() {

@@ -22,6 +22,61 @@ public class AutoWalkModuleTest {
     }
     @After public void cleanup()throws Exception{if(walk!=null)walk.setEnabled(false);if(fixture!=null)fixture.close();}
     private MovementInput input(){fixture.player.movementInput.updatePlayerMoveState();return fixture.player.movementInput;}
+    @Test public void playerRemainsDefaultAndCoordinateSettingsFollowTheSelectedMode(){
+        assertEquals("Player",walk.pathMode.getValue());assertFalse(walk.positionX.isVisible());
+        walk.mode.setValue("Path");assertFalse(walk.positionX.isVisible());walk.pathMode.setValue("Position");assertTrue(walk.positionX.isVisible());assertTrue(walk.patrol.isVisible());assertFalse(walk.patrolRadius.isVisible());walk.patrol.setEnabled(true);assertTrue(walk.patrolRadius.isVisible());
+    }
+    @Test public void positionRoutesWithoutAnEnemyAndStopsAtTheDestination()throws Exception{
+        position(7,64,0);walk.noRotate.setEnabled(true);
+        for(int i=0;i<180&&!walk.getStatus().equals("At position");i++)simulate(i);
+        assertEquals("At position",walk.getStatus());assertEquals(7.5,fixture.player.posX,.36);assertEquals(.5,fixture.player.posZ,.36);assertFalse(walk.isDriving());assertEquals(0,input().moveForward,0);assertNull(fixture.module.getTarget());assertTrue(fixture.module.shouldRender());
+        walk.setEnabled(false);assertNull(fixture.module.getWalkingPosition());assertFalse(fixture.module.shouldRender());
+    }
+    @Test public void positionUsesTheReachableGroundBelowAnAirCoordinate()throws Exception{
+        position(5,67,0);walk.noRotate.setEnabled(true);for(int i=0;i<160&&!walk.getStatus().equals("At position");i++)simulate(i);
+        assertEquals("At position",walk.getStatus());assertEquals(5.5,fixture.player.posX,.36);
+    }
+    @Test public void switchingBackToPlayerModeReleasesTheCoordinateRoute()throws Exception{
+        position(7,64,0);walk.tick();fixture.finishRoute();assertNotNull(fixture.module.getWalkingPosition());
+        PathTestFixture.Player target=fixture.addPlayer(2,"Opponent",2.5,64,.5);walk.pathMode.setValue("Player");walk.tick();fixture.module.tick();walk.tick();
+        assertNull(fixture.module.getWalkingPosition());assertSame(target,fixture.module.getTarget());assertTrue(walk.isDriving());
+    }
+    @Test public void positionFollowsThePlannerAroundSolidWalls()throws Exception{
+        position(7,64,0);walk.noRotate.setEnabled(true);for(int z=-1;z<=1;z++)for(int y=64;y<=65;y++)fixture.block(2,y,z,Blocks.stone.getDefaultState());
+        for(int i=0;i<300&&!walk.getStatus().equals("At position");i++){simulate(i);assertTrue("Walked through wall",clear(fixture.player.posX,fixture.player.posZ));}
+        assertEquals("At position",walk.getStatus());
+    }
+    @Test public void patrolCompletesACircleAndKeepsTheRequestedRadius()throws Exception{
+        position(0,64,0);walk.noRotate.setEnabled(true);walk.patrol.setEnabled(true);walk.patrolRadius.setValue(4D);fixture.player.setPosition(4.5,64,.5);
+        double previous=0,angle=0;int moving=0;
+        for(int i=0;i<500;i++){simulate(i);double a=Math.atan2(fixture.player.posZ-.5,fixture.player.posX-.5);angle+=MathHelper.wrapAngleTo180_double(Math.toDegrees(a-previous));previous=a;if(walk.isDriving())moving++;assertEquals("Patrol radius drifted",4,Math.hypot(fixture.player.posX-.5,fixture.player.posZ-.5),.9);}
+        assertTrue("Patrol did not complete a full circle: "+angle,angle>360);assertTrue("Patrol stopped repeatedly",moving>450);assertNull(fixture.module.getTarget());
+    }
+    @Test public void fixedPositionDoesNotBlindlyWalkTowardVoidOrUnloadedGoals()throws Exception{
+        for(int x=1;x<=4;x++)for(int z=-12;z<=12;z++)for(int y=60;y<=63;y++)fixture.world.blocks.remove(new BlockPos(x,y,z));
+        position(2,64,0);walk.tick();fixture.finishRoute();for(int i=0;i<20;i++){walk.tick();assertFalse(walk.isDriving());assertEquals(0,input().moveForward,0);}
+        walk.setPosition(new BlockPos(200,64,0));fixture.world.loaded=false;walk.tick();fixture.module.tick();walk.tick();assertFalse(walk.isDriving());
+    }
+    @Test public void guiMoveAllowsBothWalkModesOnlyInSelectedNonTypingScreens()throws Exception{
+        GuiMoveModule gui=new GuiMoveModule();fixture.modules.registerDynamic(gui);gui.setEnabled(true);fixture.mc.currentScreen=PathTestFixture.allocate(net.minecraft.client.gui.inventory.GuiInventory.class);
+        walk.tick();assertFalse(walk.isDriving());gui.allowAutoWalk.setEnabled(true);walk.tick();assertEquals(1,input().moveForward,0);
+        position(4,64,0);walk.tick();fixture.finishRoute();walk.tick();assertTrue(walk.isDriving());assertTrue(input().moveForward!=0||input().moveStrafe!=0);
+        fixture.mc.currentScreen=new net.minecraft.client.gui.GuiChat();walk.tick();assertFalse(walk.isDriving());assertEquals(0,input().moveForward,0);
+        fixture.mc.currentScreen=PathTestFixture.allocate(net.minecraft.client.gui.inventory.GuiChest.class);walk.tick();assertFalse(walk.isDriving());gui.screens.toggle("Chests");walk.tick();fixture.finishRoute();walk.tick();assertTrue(walk.isDriving());
+        gui.setEnabled(false);assertEquals(0,input().moveForward,0);
+    }
+    private void position(int x,int y,int z){walk.mode.setValue("Path");walk.pathMode.setValue("Position");walk.setPosition(new BlockPos(x,y,z));}
+    private void simulate(int tick)throws Exception{
+        walk.tick();fixture.module.tick();walk.tick();MovementInput movement=input();double yaw=Math.toRadians(fixture.player.rotationYaw),normal=Math.max(1,Math.hypot(movement.moveForward,movement.moveStrafe));
+        double dx=(-Math.sin(yaw)*movement.moveForward+Math.cos(yaw)*movement.moveStrafe)*.16/normal,dz=(Math.cos(yaw)*movement.moveForward+Math.sin(yaw)*movement.moveStrafe)*.16/normal;
+        double x=fixture.player.posX,z=fixture.player.posZ;if(collisionFree(x+dx,z))x+=dx;if(collisionFree(x,z+dz))z+=dz;
+        fixture.player.setPosition(x,64,z);fixture.player.ticksExisted++;
+        if(tick%4==3)fixture.forceReplan();
+    }
+    private boolean collisionFree(double x,double z){
+        AxisAlignedBB body=new AxisAlignedBB(x-.3,64.001,z-.3,x+.3,65.8,z+.3);
+        for(BlockPos p:BlockPos.getAllInBox(new BlockPos(body.minX,body.minY,body.minZ),new BlockPos(body.maxX,body.maxY,body.maxZ))){net.minecraft.block.state.IBlockState state=fixture.world.getBlockState(p);AxisAlignedBB b=state.getBlock().getCollisionBoundingBox(fixture.world,p,state);if(b!=null&&b.intersectsWith(body))return false;}return true;
+    }
     @Test public void forwardActsLikeWAndReleasesWithoutStuckKeys(){
         walk.tick();assertEquals(1,input().moveForward,0);assertEquals(0,fixture.player.rotationYaw,0);
         keys.forward=-1;walk.tick();assertEquals(0,input().moveForward,0);

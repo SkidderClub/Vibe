@@ -1,6 +1,6 @@
 # Path (Visual)
 
-**Movement → AutoWalk → Path** can follow this route and display its line without
+**Movement → AutoWalk → Path → Player** can follow this route and display its line without
 changing the Path toggle. See [AutoWalk](AUTOWALK.md) for walking, rotation speed
 and autojump settings. Path itself still only calculates and renders the route.
 

@@ -79,7 +79,8 @@ public final class TargetsModule extends Module {
     }
 
     public boolean canTarget(EntityLivingBase entity) {
-        if (entity == null || !entity.isEntityAlive() || entity.isDead) {
+        if (entity == null || !entity.isEntityAlive() || entity.isDead
+                || dev.vibe.module.impl.visual.FakePlayerModule.isDummy(entity)) {
             return false;
         }
         if(dev.vibe.module.impl.meme.RewoundPitModule.reservesActions())return false;

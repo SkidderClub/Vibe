@@ -88,17 +88,39 @@ public final class CraftingPlanner {
                 }
             }
         }
-        return best;
+        if (best != null) return best;
+        if (gear.contains("Boat") && !has(inventory, Items.boat)) {
+            Ingredient wood = new Ingredient(Item.getItemFromBlock(Blocks.planks), -1);
+            if (count(inventory, usable, wood) >= 5) {
+                return shaped("Boat", new ItemStack(Items.boat), wood, new int[]{0, 2, 3, 4, 5}, null, new int[0]);
+            }
+            return planks(inventory, usable, 9);
+        }
+        return gear.contains("Planks") ? planks(inventory, usable, 9) : null;
+    }
+    public Recipe nextInventoryRecipe(ItemStack[] inventory, boolean[] usable, Set<String> gear) {
+        Ingredient wood = new Ingredient(Item.getItemFromBlock(Blocks.planks), -1);
+        boolean boatNeedsWood = gear.contains("Boat") && !has(inventory, Items.boat) && count(inventory, usable, wood) < 5;
+        return gear.contains("Planks") || boatNeedsWood ? planks(inventory, usable, 4) : null;
+    }
+    private static boolean has(ItemStack[] inventory, Item item) {
+        for (ItemStack stack : inventory) if (stack != null && stack.getItem() == item && stack.stackSize > 0) return true;
+        return false;
     }
     private static int rank(ItemArmor.ArmorMaterial material) {
         switch (material) { case DIAMOND:return 4;case IRON:return 3;case CHAIN:return 2;case GOLD:return 1;default:return 0; }
     }
     private static Recipe planks(ItemStack[] inventory, boolean[] usable) {
+        return planks(inventory, usable, 9);
+    }
+    private static Recipe planks(ItemStack[] inventory, boolean[] usable, int gridSize) {
         for (int i = 0; i < inventory.length; i++) if (usable[i] && inventory[i] != null) {
             ItemStack log = inventory[i]; Item item = log.getItem();
             if (item == Item.getItemFromBlock(Blocks.log) || item == Item.getItemFromBlock(Blocks.log2)) {
                 int metadata = (log.getMetadata() & 3) + (item == Item.getItemFromBlock(Blocks.log2) ? 4 : 0);
-                return shaped("Planks", new ItemStack(Blocks.planks, 4, metadata), new Ingredient(item, log.getMetadata()), new int[]{4}, null, new int[0]);
+                Ingredient[] grid = new Ingredient[gridSize];
+                grid[gridSize == 9 ? 4 : 0] = new Ingredient(item, log.getMetadata());
+                return new Recipe("Planks", new ItemStack(Blocks.planks, 4, metadata), grid);
             }
         }
         return null;

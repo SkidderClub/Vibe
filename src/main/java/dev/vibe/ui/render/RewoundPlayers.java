@@ -33,6 +33,7 @@ public final class RewoundPlayers {
         return starred(name);
     }
     public static boolean showEsp(Entity entity) {
+        if(dev.vibe.module.impl.visual.FakePlayerModule.isDummy(entity))return true;
         if(!(entity instanceof EntityPlayer)||!filtering("ESP"))return true;
         Minecraft mc=Minecraft.getMinecraft();
         return mc!=null&&mc.getNetHandler()!=null&&real(mc.getNetHandler().getPlayerInfo(entity.getUniqueID()));

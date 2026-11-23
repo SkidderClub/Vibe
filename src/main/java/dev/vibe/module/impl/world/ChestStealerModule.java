@@ -31,6 +31,7 @@ public final class ChestStealerModule extends Module {
     private final ModeSetting selection = addSetting(new ModeSetting("Selection", "Random", () -> mode.is("Default"), "Random", "Left To Right"));
     private final RangeSetting advancedSpeed = addSetting(new RangeSetting("Cursor Speed", 175.0D, 260.0D, 25.0D, 900.0D, 5.0D,
             () -> mode.is("Advanced")));
+    private final ChestAura aura = new ChestAura(this);
 
     private final Minecraft minecraft = Minecraft.getMinecraft();
     private final Random random = new Random();
@@ -46,7 +47,7 @@ public final class ChestStealerModule extends Module {
     private final ContainerClickDispatcher clicks = new ContainerClickDispatcher();
 
     public ChestStealerModule() {
-        super("ChestStealer", "Loot useful chest items with Default or cursor-based timing", Category.WORLD, Keyboard.KEY_NONE);
+        super("ChestStealer", "Loot useful items and optionally open nearby chests", Category.WORLD, Keyboard.KEY_NONE);
     }
 
     public void tick() {
@@ -98,8 +99,14 @@ public final class ChestStealerModule extends Module {
 
     @Override
     protected void onDisable() {
+        aura.clearPending();
         reset();
     }
+
+    public void applyRotation() { if (isEnabled()) aura.aim(); }
+    public void afterWalking() { if (isEnabled()) aura.open(); }
+
+    <T extends dev.vibe.setting.Setting<?>> T auraSetting(T setting) { return addSetting(setting); }
 
     private ContainerChest activeChest() {
         if (!(minecraft.currentScreen instanceof GuiChest) || minecraft.thePlayer == null

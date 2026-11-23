@@ -17,7 +17,7 @@ import org.lwjgl.input.Keyboard;
 /** Local dot-prefixed commands. They never leave the client as chat messages. */
 public final class CommandManager {
 
-    private static final List<String> ROOTS = Arrays.asList(".toggle", ".t", ".bind", ".b", ".binds", ".config", ".c", ".onlineconfig", ".ign", ".waifu", ".friend", ".f", ".target", ".pos1", ".pos2", ".vomit", ".clear", ".clearinv", ".clearinventory", ".notebot", ".script", ".scripts", ".models", ".model", ".extensions", ".source", ".help");
+    private static final List<String> ROOTS = Arrays.asList(".toggle", ".t", ".bind", ".b", ".binds", ".config", ".c", ".onlineconfig", ".ign", ".waifu", ".friend", ".f", ".target", ".pos", ".pos1", ".pos2", ".vomit", ".clear", ".clearinv", ".clearinventory", ".notebot", ".script", ".scripts", ".models", ".model", ".extensions", ".source", ".help");
     private static final List<String> NOTEBOT_ACTIONS = Arrays.asList("play", "preview", "stop", "list", "openFolder");
     private final dev.vibe.inventory.InventoryDropper inventoryDropper = new dev.vibe.inventory.InventoryDropper(this::say);
 
@@ -32,6 +32,8 @@ public final class CommandManager {
         if (".vomit".equals(command) || ".clear".equals(command) || ".clearinv".equals(command) || ".clearinventory".equals(command)) {
             if (parts.length != 1) say("Usage: §b" + command + "§7 — drop all inventory items, including armor");
             else inventoryDropper.start();
+        } else if (".pos".equals(command)) {
+            walkPosition(parts);
         } else if (".pos1".equals(command) || ".pos2".equals(command)) {
             position(parts, command.equals(".pos1") ? 1 : 2);
         } else if (".e".equals(command)) {
@@ -106,7 +108,10 @@ public final class CommandManager {
         }
         String root = parts[0].toLowerCase();
         String needle = parts[parts.length - 1].toLowerCase();
-        if (".e".equals(root)) {
+        if (".pos".equals(root)) {
+            Minecraft mc=Minecraft.getMinecraft();
+            if(mc.thePlayer!=null&&parts.length<=4){net.minecraft.util.BlockPos pos=mc.thePlayer.getPosition();int[] coordinates={pos.getX(),pos.getY(),pos.getZ()};String value=Integer.toString(coordinates[parts.length-2]);if(value.startsWith(needle))results.add(replaceLastToken(input,value));}
+        } else if (".e".equals(root)) {
             for (String event : dev.vibe.easter.HolidayTimeline.TEST_NAMES)
                 if (event.startsWith(needle)) results.add(".e " + event);
         } else if (".toggle".equals(root) || ".t".equals(root)) {
@@ -308,6 +313,23 @@ public final class CommandManager {
         } else say("Usage: §b.onlineconfig <list|load <name>>");
     }
 
+    private void walkPosition(String[] parts){
+        Minecraft mc=Minecraft.getMinecraft();
+        if(parts.length!=1&&parts.length!=4){say("Usage: .pos [x y z]");return;}
+        dev.vibe.module.impl.movement.AutoWalkModule walk=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.movement.AutoWalkModule.class);
+        if(walk==null){say("AutoWalk is unavailable.");return;}
+        net.minecraft.util.BlockPos pos;
+        if(parts.length==1){if(mc.thePlayer==null||mc.theWorld==null){say("Join a world or provide coordinates: .pos x y z");return;}pos=mc.thePlayer.getPosition();}
+        else try{
+            int x=Integer.parseInt(parts[1]),y=Integer.parseInt(parts[2]),z=Integer.parseInt(parts[3]);
+            if(Math.abs((long)x)>30000000||Math.abs((long)y)>30000000||Math.abs((long)z)>30000000)throw new IllegalArgumentException();
+            pos=new net.minecraft.util.BlockPos(x,y,z);
+        }catch(IllegalArgumentException invalid){say("Coordinates must be whole numbers between -30000000 and 30000000.");return;}
+        walk.setPosition(pos);
+        if(Vibe.getInstance().getConfig()!=null)Vibe.getInstance().getConfig().save(Vibe.getInstance().getModuleManager());
+        say("AutoWalk position: "+pos.getX()+", "+pos.getY()+", "+pos.getZ()+". Use AutoWalk's Path mode with Path Mode set to Position.");
+    }
+
     private void position(String[] parts, int corner) {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.thePlayer == null || mc.theWorld == null) { say("Join a world to set a target area."); return; }
@@ -326,6 +348,7 @@ public final class CommandManager {
 
     private void help() {
         say("§b.vomit§7 — drop all inventory items, including armor; aliases: §b.clear§7, §b.clearinv§7, §b.clearinventory");
+        say("§b.pos [x y z]§7 — set AutoWalk’s destination or patrol center; without coordinates, use your current block");
         say("§b.pos1 / .pos2 [x y z]§7 — set the block corners of Targets' 3D area");
         say("§b.extensions§7 — list loaded extensions and load errors");
         say(".source - source archive, repository and GPLv3/AGPLv3 licenses");

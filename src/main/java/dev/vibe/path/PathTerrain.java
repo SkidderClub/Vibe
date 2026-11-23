@@ -69,4 +69,18 @@ public final class PathTerrain implements WalkPathfinder.Terrain {
         }
         return null;
     }
+    /** Walk toward a distant coordinate in loaded, player-centred segments. Unloaded cells stay unavailable. */
+    public BlockPos coordinateGoal(BlockPos feet,BlockPos destination,int range){
+        int dx=destination.getX()-feet.getX(),dz=destination.getZ()-feet.getZ();
+        double distance=Math.hypot(dx,dz),span=Math.max(Math.abs(dx),Math.abs(dz));
+        if(span<=range-2&&Math.abs(destination.getY()-feet.getY())<=24)return grounded(destination);
+        if(distance<1)return null;
+        double length=Math.min(distance,range-2);
+        for(double step=length;step>=2;step-=1){
+            int x=(int)Math.round(feet.getX()+dx/distance*step),z=(int)Math.round(feet.getZ()+dz/distance*step);
+            int y=feet.getY()+(int)Math.round(Math.max(-20,Math.min(20,destination.getY()-feet.getY()))*step/distance);
+            BlockPos p=grounded(new BlockPos(x,y,z));if(p!=null)return p;
+        }
+        return null;
+    }
 }

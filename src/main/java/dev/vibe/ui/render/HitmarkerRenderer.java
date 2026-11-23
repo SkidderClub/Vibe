@@ -17,6 +17,7 @@ public final class HitmarkerRenderer {
     private final dev.vibe.ui.effect.TorusRenderer torus = new dev.vibe.ui.effect.TorusRenderer();
     private final HologramRenderer hologram = new HologramRenderer();
     private final HitParticleRenderer particles=new HitParticleRenderer();
+    private final dev.vibe.ui.render.esp.ComicHitRenderer comic = new dev.vibe.ui.render.esp.ComicHitRenderer();
     public void installLayers(){hologram.installLayers();}
 
     public void renderOverlay() {
@@ -66,6 +67,7 @@ public final class HitmarkerRenderer {
             }
         }
         if (module.getModes().isSelected("Particle")) particles.render(module,event.partialTicks);
+        if (module.getModes().isSelected(HitmarkerModule.COMIC)) comic.render(module);
         if (module.getModes().isSelected("Torus")) torus.render(module);
         if (module.getModes().isSelected("Hologram")) hologram.render(module);
     }

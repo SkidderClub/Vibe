@@ -16,6 +16,8 @@ public final class GuiMoveModule extends dev.vibe.module.Module {
     public final MultiSelectSetting screens=addSetting(new MultiSelectSetting("GUIs",Arrays.asList("ClickGUI","Inventory","Chests","Other Vanilla GUIs"),Arrays.asList("ClickGUI","Inventory")));
     public final BooleanSetting jump=addSetting(new BooleanSetting("Allow Jumping",true));
     public final BooleanSetting sprint=addSetting(new BooleanSetting("Allow Sprinting",true));
+    public final BooleanSetting allowKillaura=addSetting(new BooleanSetting("Allow Killaura",false));
+    public final BooleanSetting allowAutoWalk=addSetting(new BooleanSetting("Allow AutoWalk",false));
     private final Set<KeyBinding> owned=Collections.newSetFromMap(new IdentityHashMap<>());
     public GuiMoveModule(){super("GUI Move","Move in selected GUIs; pauses while typing or binding keys",Category.MOVEMENT,Keyboard.KEY_NONE);}
     public boolean allows(GuiScreen screen){
@@ -26,9 +28,18 @@ public final class GuiMoveModule extends dev.vibe.module.Module {
         if(screen instanceof GuiChest)return screens.isSelected("Chests");
         return screen.getClass().getName().startsWith("net.minecraft.client.gui.")&&screens.isSelected("Other Vanilla GUIs");
     }
+    /** All GUI automation shares the selected-screen, typing and window-focus guards. */
+    private static boolean automationAllowed(boolean aura){
+        Minecraft mc=Minecraft.getMinecraft();GuiMoveModule module=dev.vibe.features.FeatureModule.module(GuiMoveModule.class);
+        return mc!=null&&module!=null&&module.isEnabled()&&(aura?module.allowKillaura:module.allowAutoWalk).isEnabled()
+                &&windowActive(mc)&&module.allows(mc.currentScreen);
+    }
+    private static boolean windowActive(Minecraft mc){return mc.displayWidth<=0||mc.displayHeight<=0||!Display.isCreated()||Display.isActive();}
+    public static boolean allowsKillaura(){return automationAllowed(true);}
+    public static boolean allowsAutoWalk(){return automationAllowed(false);}
     public void tick(){
         Minecraft mc=Minecraft.getMinecraft();
-        if(!isEnabled()||mc.thePlayer==null||mc.theWorld==null||Display.isCreated()&&!Display.isActive()||!allows(mc.currentScreen)){release();return;}
+        if(!isEnabled()||mc.thePlayer==null||mc.theWorld==null||!windowActive(mc)||!allows(mc.currentScreen)){release();return;}
         KeyBinding[] keys={mc.gameSettings.keyBindForward,mc.gameSettings.keyBindBack,mc.gameSettings.keyBindLeft,mc.gameSettings.keyBindRight,mc.gameSettings.keyBindJump,mc.gameSettings.keyBindSprint};
         for(int i=0;i<keys.length;i++){boolean allowed=i<4||i==4&&jump.isEnabled()||i==5&&sprint.isEnabled();owned.add(keys[i]);KeyBinding.setKeyBindState(keys[i].getKeyCode(),allowed&&VanillaClicks.physicallyDown(keys[i]));}
     }

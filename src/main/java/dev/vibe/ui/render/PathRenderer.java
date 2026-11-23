@@ -30,6 +30,8 @@ public final class PathRenderer {
         Vec3 player = interpolate(mc.thePlayer, event.partialTicks);
         Vec3 origin = new Vec3(mc.getRenderManager().viewerPosX, mc.getRenderManager().viewerPosY, mc.getRenderManager().viewerPosZ);
         EntityLivingBase target = module.getTarget();
+        BlockPos position=module.getWalkingPosition();
+        if(position!=null)draw(module.getRoute(),module,player,new Vec3(position.getX()+.5,position.getY(),position.getZ()+.5),origin,0,false);
         HypixelModule hypixel = Vibe.getInstance().getModuleManager().getModule(HypixelModule.class);
         if (target != null && target.worldObj == mc.theWorld && !target.isDead
                 && mc.theWorld.getEntityByID(target.getEntityId()) == target) {

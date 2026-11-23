@@ -23,17 +23,34 @@ public final class WorldClientEntityTransformer implements IClassTransformer, Op
 
         ClassNode type = new ClassNode();
         new ClassReader(bytes).accept(type, 0);
+        boolean changed = false;
         for (Object entry : type.methods) {
             MethodNode method = (MethodNode) entry;
-            if (!("(ILnet/minecraft/entity/Entity;)V".equals(method.desc) || "(ILpk;)V".equals(method.desc))
-                    || !named(method.name, "addEntityToWorld", "func_73027_a", "a")) continue;
-            if (!assignIdBeforeTracking(type.name, method)) continue;
-
-            ClassWriter writer = new ClassWriter(0);
-            type.accept(writer);
-            return writer.toByteArray();
+            if (("(ILnet/minecraft/entity/Entity;)V".equals(method.desc) || "(ILpk;)V".equals(method.desc))
+                    && named(method.name, "addEntityToWorld", "func_73027_a", "a")) {
+                changed |= assignIdBeforeTracking(type.name, method);
+            }
+            if ("(III)V".equals(method.desc) && named(method.name, "doVoidFogParticles", "func_73029_E", "b")) {
+                // Attach to the predicate, after the first read of Blocks.barrier.
+                boolean predicate = false;
+                for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                    if (instruction instanceof FieldInsnNode && instruction.getOpcode() == GETSTATIC) {
+                        FieldInsnNode field = (FieldInsnNode) instruction;
+                        if (("net/minecraft/init/Blocks".equals(field.owner) || "afi".equals(field.owner))
+                                && named(field.name, "barrier", "field_180401_cv", "cv")) predicate = true;
+                    }
+                    if (!predicate || instruction.getOpcode() != ISTORE) continue;
+                    method.instructions.insertBefore(instruction, new MethodInsnNode(INVOKESTATIC,
+                            "dev/vibe/module/impl/client/QolModule", "barrierParticles", "(Z)Z", false));
+                    changed = true;
+                    break;
+                }
+            }
         }
-        return bytes;
+        if (!changed) return bytes;
+        ClassWriter writer = new ClassWriter(0);
+        type.accept(writer);
+        return writer.toByteArray();
     }
 
     private static boolean assignIdBeforeTracking(String world, MethodNode method) {

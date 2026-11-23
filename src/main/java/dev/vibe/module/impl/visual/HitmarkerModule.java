@@ -21,9 +21,17 @@ import org.lwjgl.input.Keyboard;
 
 /** Client feedback for successful local attacks. */
 public final class HitmarkerModule extends Module {
+    public static final String COMIC = "Comic";
 
     private final MultiSelectSetting modes = addSetting(new MultiSelectSetting("Modes",
-            Arrays.asList("2D (Crosshair)", "3D (World)", "Torus", "Hologram", "Particle"), Arrays.asList("2D (Crosshair)")));
+            Arrays.asList("2D (Crosshair)", "3D (World)", "Torus", "Hologram", "Particle", COMIC), Arrays.asList("2D (Crosshair)")));
+    public final NumberSetting comicDuration = addSetting(new NumberSetting("Comic Duration (ms)", 550, 150, 1500, 25, () -> modes.isSelected(COMIC)));
+    public final NumberSetting comicSize = addSetting(new NumberSetting("Comic Size", 1, .4, 2.5, .05, () -> modes.isSelected(COMIC)));
+    public final NumberSetting comicCount = addSetting(new NumberSetting("Comic Words Per Hit", 2, 1, 5, 1, () -> modes.isSelected(COMIC)));
+    public final ColorSetting comicColor = addSetting(new ColorSetting("Comic Color", 0xFFFFCC55, () -> modes.isSelected(COMIC)));
+    public final BooleanSetting comicWalls = addSetting(new BooleanSetting("Comic Through Walls", false, () -> modes.isSelected(COMIC)));
+    private final java.util.ArrayDeque<ComicWord> comicWords = new java.util.ArrayDeque<>();
+    private static final String[] WORDS = {"POW!", "BAM!", "WHAM!", "KAPOW!", "BONK!"};
     public final dev.vibe.hitmarker.HitParticleSettings particleSettings=new dev.vibe.hitmarker.HitParticleSettings(this::addSetting,()->modes.isSelected("Particle"));
     public final dev.vibe.hitmarker.HitParticles particles=new dev.vibe.hitmarker.HitParticles();
     public final NumberSetting hologramLifetime=addSetting(new NumberSetting("Hologram Lifetime",1000,100,5000,50,()->modes.isSelected("Hologram")));
@@ -96,6 +104,17 @@ public final class HitmarkerModule extends Module {
         lastHit = System.currentTimeMillis();
         hitTarget = target;
         captureHitPoint(target);
+        if (modes.isSelected(COMIC)) {
+            java.util.concurrent.ThreadLocalRandom random = java.util.concurrent.ThreadLocalRandom.current();
+            int firstWord = random.nextInt(WORDS.length);
+            for (int i = 0; i < comicCount.getInt(); i++) {
+                double spread = (i - (comicCount.getInt() - 1) * .5) * .27;
+                comicWords.addLast(new ComicWord(WORDS[(firstWord + i) % WORDS.length],
+                        target.posX, target.posY + target.height * .75, target.posZ, spread,
+                        random.nextFloat() * 26 - 13, lastHit));
+            }
+            while (comicWords.size() > 40) comicWords.removeFirst();
+        }
         Minecraft mc=Minecraft.getMinecraft();
         if(modes.isSelected("Particle")&&mc.theWorld!=null&&target.worldObj==mc.theWorld)
             particles.emit(mc.theWorld,particleSettings,new Vec3(lastX,lastY,lastZ),new Vec3(lastLookX,lastLookY,lastLookZ),lastHit);
@@ -180,7 +199,27 @@ public final class HitmarkerModule extends Module {
     }
 
     @Override protected void onDisable() { clear(); }
-    public void clear() { particles.clear();markers.clear(); torusMarkers.clear(); hologramPoses.clear();pendingHolograms.clear();holograms.clear();lastHologram=0;lastHit = lastTorus = 0; hitTarget = null; }
+    public void clear() { comicWords.clear();particles.clear();markers.clear(); torusMarkers.clear(); hologramPoses.clear();pendingHolograms.clear();holograms.clear();lastHologram=0;lastHit = lastTorus = 0; hitTarget = null; }
+
+    public Iterable<ComicWord> comicWords(long now) {
+        while (!comicWords.isEmpty() && now - comicWords.peekFirst().created >= comicDuration.getInt()) comicWords.removeFirst();
+        return comicWords;
+    }
+
+    public static final class ComicWord {
+        public final String text;
+        public final double x, y, z, spread;
+        public final float tilt;
+        public final long created;
+
+        private ComicWord(String text, double x, double y, double z, double spread, float tilt, long created) {
+            this.text = text;
+            this.x = x; this.y = y; this.z = z;
+            this.spread = spread;
+            this.tilt = tilt;
+            this.created = created;
+        }
+    }
     public void tickParticles(){Minecraft mc=Minecraft.getMinecraft();if(!isEnabled()||!modes.isSelected("Particle")||mc.thePlayer==null){particles.clear();return;}if(!mc.isGamePaused())particles.tick(mc.theWorld,particleSettings);}
     public void captureHologram(net.minecraft.entity.player.EntityPlayer player,dev.vibe.ui.render.HologramPose pose){
         if(!isEnabled()||!modes.isSelected("Hologram"))return;

@@ -69,6 +69,8 @@ public final class PathModule extends Module {
     private Object navigationOwner;
     private EntityLivingBase navigationTarget;
     private java.util.function.Predicate<BlockPos> navigationArea=p->true;
+    private Object positionOwner;
+    private BlockPos walkingPosition;
 
     public PathModule() {
         super("Path", "Draw a walking route to a nearby player or selected target", Category.VISUAL, Keyboard.KEY_NONE);
@@ -91,6 +93,7 @@ public final class PathModule extends Module {
             mainPath.clear(); goldPath.clear(); nextSelection = 0; searchOptions = options;
         }
         if(navigationOwner!=null){target=navigationTarget;goldTarget=null;}
+        else if(walkingPosition!=null){target=null;goldTarget=null;}
         else if (now >= nextSelection || targetMode.is("Combat Target") || target != null && !eligible(target, mc)
                 || goldTarget != null && !eligibleGold(goldTarget, mc)) {
             target = selectTarget(mc);
@@ -100,31 +103,34 @@ public final class PathModule extends Module {
         int routes = target != null && goldTarget != null ? 2 : 1;
         int nodes = Math.max(1, nodesPerTick.getInt() / routes);
         long nanos = (long) (timeBudget.getDouble() * 1_000_000 / routes);
-        mainPath.tick(mc, target, now, nodes, nanos);
-        goldPath.tick(mc, goldTarget, now, nodes, nanos);
+        mainPath.tick(mc, target, navigationOwner==null?walkingPosition:null, now, nodes, nanos);
+        goldPath.tick(mc, goldTarget, null, now, nodes, nanos);
     }
 
     /** Both routes share the same collision checks, replan rules and total tick budget. */
     private final class RouteState {
         private Entity destination;
+        private boolean fixedDestination;
         private PathRoute route = PathRoute.EMPTY;
         private PathPlanner search;
         private PathTerrain terrain;
-        private BlockPos searchStart, searchGoal;
+        private BlockPos searchStart, searchGoal, searchDestination;
         private long nextSearch, nextOptimize, searchSince, routeSince;
 
-        void tick(Minecraft mc, Entity chosen, long now, int nodes, long nanos) {
-            if (destination != chosen) { clear(); destination = chosen; }
-            if (destination == null) return;
+        void tick(Minecraft mc, Entity chosen, BlockPos fixed, long now, int nodes, long nanos) {
+            if (destination != chosen || fixedDestination!=(fixed!=null)) { clear(); destination = chosen; fixedDestination=fixed!=null; }
+            if (destination == null && fixed==null) return;
             BlockPos feet = new BlockPos(mc.thePlayer.posX, mc.thePlayer.posY + .05, mc.thePlayer.posZ);
-            BlockPos goal = new BlockPos(destination.posX, destination.posY + .05, destination.posZ);
-            if (search != null && (searchStart.distanceSq(feet) > 16 || searchGoal.distanceSq(goal) > 9)) {
+            BlockPos goal = fixed!=null?fixed:new BlockPos(destination.posX, destination.posY + .05, destination.posZ);
+            if (search != null && (searchStart.distanceSq(feet) > 16 || searchDestination.distanceSq(goal) > 9)) {
                 cancelSearch(); nextSearch = 0;
             }
             if (routeSince != 0 && now - routeSince > 1_500_000_000L) route = PathRoute.EMPTY;
             if (search == null && now >= nextSearch) {
                 terrain = new PathTerrain(mc.theWorld, mc.thePlayer,navigationOwner==null?p->true:navigationArea);
-                searchStart = terrain.grounded(feet); searchGoal = navigationOwner==null?terrain.grounded(goal):terrain.interactionGoal(destination);
+                searchDestination=goal;
+                searchStart = terrain.grounded(feet);
+                searchGoal = fixed!=null?terrain.coordinateGoal(feet,goal,range.getInt()):navigationOwner==null?terrain.grounded(goal):terrain.interactionGoal(destination);
                 nextSearch = now + updateInterval.getInt() * 1_000_000L;
                 if (searchStart == null || searchGoal == null) {
                     // Neither void nor unloaded terrain is connected by a fictitious straight tracer.
@@ -143,15 +149,15 @@ public final class PathModule extends Module {
             if (search.isDone() || now - searchSince >= 1_000_000_000L) {
                 List<BlockPos> steps = search.path();
                 route = !steps.isEmpty() || search.reachedGoal()
-                        ? PathRoute.build(searchStart, steps, terrain, search.reachedGoal()) : PathRoute.EMPTY;
+                        ? PathRoute.build(searchStart, steps, terrain, search.reachedGoal()&&(fixed==null||searchGoal.equals(terrain.grounded(goal)))) : PathRoute.EMPTY;
                 routeSince = now;
                 cancelSearch(); nextSearch = now + updateInterval.getInt() * 1_000_000L;
             }
         }
 
-        private void cancelSearch() { search = null; terrain = null; searchStart = searchGoal = null; searchSince = 0; }
+        private void cancelSearch() { search = null; terrain = null; searchStart = searchGoal = searchDestination = null; searchSince = 0; }
         private void clear() {
-            cancelSearch(); destination = null; route = PathRoute.EMPTY;
+            cancelSearch(); destination = null; fixedDestination=false; route = PathRoute.EMPTY;
             nextSearch = nextOptimize = routeSince = 0;
         }
     }
@@ -253,6 +259,15 @@ public final class PathModule extends Module {
     }
 
     public PathRoute getRoute() { return mainPath.route; }
+    /** Coordinate navigation uses the same bounded planner without inventing an entity in the world. */
+    public void requestPosition(Object owner,BlockPos position){
+        if(owner==null||position==null)return;
+        if(positionOwner!=owner||walkingPosition==null||walkingPosition.distanceSq(position)>9)mainPath.clear();
+        else if(!walkingPosition.equals(position)&&mainPath.search==null)mainPath.nextSearch=0;
+        positionOwner=owner;walkingPosition=position;
+    }
+    public void releasePosition(Object owner){if(positionOwner==owner){positionOwner=null;walkingPosition=null;mainPath.clear();nextSelection=0;}}
+    public BlockPos getWalkingPosition(){return navigationOwner==null?walkingPosition:null;}
     /** An explicit service destination bypasses combat filters, while retaining bounded search and collision checks. */
     public void requestNavigation(Object owner,EntityLivingBase destination,java.util.function.Predicate<BlockPos> allowed){
         if(navigationOwner!=owner||navigationTarget!=destination){mainPath.clear();goldPath.clear();target=destination;goldTarget=null;}

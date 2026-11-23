@@ -73,8 +73,14 @@ final class DropdownWorkspace {
             int minimum=style.headerHeight+style.rowHeight+style.footerHeight()+2;
             if(!p.collapsed)p.y=clamp(p.y,4,height-minimum-margin);
             int available=Math.max(minimum,height-p.y-margin);
-            p.h=p.collapsed?style.headerHeight:Math.min(available,style.headerHeight+p.content+style.footerHeight());
-            p.max=Math.max(0,p.content-Math.max(0,p.h-style.headerHeight-style.footerHeight()));p.target=Math.max(0,Math.min(p.max,p.target));p.scroll=Math.max(0,Math.min(p.max,p.scroll+(p.target-p.scroll)*ease));
+            int fullHeight=Math.min(available,style.headerHeight+p.content+style.footerHeight());
+            int goal=p.collapsed?style.headerHeight:fullHeight;
+            if(style.fan){
+                if(p.animatedHeight==0)p.animatedHeight=style.headerHeight;
+                p.animatedHeight+=(goal-p.animatedHeight)*ease;
+                p.h=Math.round(p.animatedHeight);
+            }else p.h=goal;
+            p.max=Math.max(0,p.content-Math.max(0,(style.fan?fullHeight:p.h)-style.headerHeight-style.footerHeight()));p.target=Math.max(0,Math.min(p.max,p.target));p.scroll=Math.max(0,Math.min(p.max,p.scroll+(p.target-p.scroll)*ease));
         }
         for(Panel p:panels)drawPanelGlow(p);
         for(Panel p:panels) drawPanel(host,p,mx,my,ease,now);
@@ -84,9 +90,9 @@ final class DropdownWorkspace {
         if(mode==null&&dragging==null&&hovered!=null&&System.currentTimeMillis()-hoverAt>750)host.dropdownTooltip(hovered,mx,my);
     }
     private int settingsHeight(VibeClickGui host,Module module){
-        if(!style.diablo)return !style.wurst&&host.dropdownExpanded(module)?host.dropdownSettingsHeight(module):0;
+        if(!style.diablo&&!style.fan)return !style.wurst&&host.dropdownExpanded(module)?host.dropdownSettingsHeight(module):0;
         int target=host.dropdownExpanded(module)?host.dropdownSettingsHeight(module):0;
-        float previous=diabloSettings.getOrDefault(module,(float)target),delta=Math.max(200,Math.abs(target-previous)/.22F)*frameSeconds;
+        float previous=diabloSettings.getOrDefault(module,style.fan?0F:(float)target),delta=Math.max(200,Math.abs(target-previous)/.22F)*frameSeconds;
         float next=previous<target?Math.min(target,previous+delta):Math.max(target,previous-delta);diabloSettings.put(module,next);return Math.round(next);
     }
     private void drawPanelGlow(Panel p){
@@ -112,6 +118,11 @@ final class DropdownWorkspace {
         }
         if(style.diablo){try(GuiClip clip=GuiClip.local(x,y,panelWidth,style.headerHeight)){rect(x,y,panelWidth,style.headerHeight+5,5,style.accent(0,y));}} else if(style.suizide) {
             try(GuiClip clip=GuiClip.local(x,y,panelWidth,style.headerHeight)){roundedGradient(x,y,panelWidth,style.headerHeight+(p.collapsed?0:radius),radius,style.accent(0,y),style.accent(1,y));}
+        } else if(style.fan) {
+            try(GuiClip clip=GuiClip.local(x,y,panelWidth,style.headerHeight)){
+                roundedGradient(x,y,panelWidth,style.headerHeight+(p.h>style.headerHeight?radius:0),radius,0xFF34385C,0xFF2D3150);
+                rect(x+8,y+6,3,13,2,style.accent(0,y));
+            }
         } else {
             try(GuiClip clip=GuiClip.local(x,y,panelWidth,style.headerHeight)){rect(x,y,panelWidth,style.headerHeight+(p.collapsed?0:radius),radius,style.novo?0xFF1D1D1D:0xF7111113);}
         }
@@ -126,9 +137,11 @@ final class DropdownWorkspace {
             String icon=p.category==Category.COMBAT?"D":p.category==Category.MOVEMENT?"A":p.category==Category.VISUAL?"C":p.category==Category.WORLD?"B":p.category==Category.MEME?"F":"G";
             dev.vibe.ui.novoline.NovolineFonts.ICON.draw(icon,x+88,y+1,0xFFFFFFFF);
         }
+        else if(style.fan){ScrollingText.draw(HEADER,title,x+16,y+4,panelWidth-35,style.text,ScrollingText.Alignment.LEFT);NeverLoseStyle.chevron(x+panelWidth-13,y+11,!p.collapsed,style.muted);}
         else ScrollingText.draw(HEADER,title,x+9,y+4,panelWidth-(p.collapsed?30:18),0xFFF7F7F9,ScrollingText.Alignment.CENTER);
-        if(p.collapsed){if(style.diablo)RenderUtils.roundedOutline(x,y,x+panelWidth,y+p.h,5,4,style.accent(0,y));if(!style.wurst&&!style.novo&&!style.diablo)NeverLoseStyle.chevron(x+panelWidth-12,y+11,false,0xFFAAAAAE);return;}
+        if(p.collapsed&&(!style.fan||p.h<=style.headerHeight+style.footerHeight())){if(style.diablo)RenderUtils.roundedOutline(x,y,x+panelWidth,y+p.h,5,4,style.accent(0,y));if(!style.wurst&&!style.novo&&!style.diablo&&!style.fan)NeverLoseStyle.chevron(x+panelWidth-12,y+11,false,0xFFAAAAAE);return;}
         int top=y+style.headerHeight,bottom=y+p.h-style.footerHeight();
+        if (bottom <= top) return;
         host.dropdownClip(p.name,top,bottom);
         try(GuiClip clip=GuiClip.local(x,top,panelWidth,bottom-top)) {
             if(p.detail!=null)host.drawDropdownSettings(p.detail,x+4,top+2-Math.round(p.scroll),panelWidth-8,style,p.name);
@@ -139,7 +152,12 @@ final class DropdownWorkspace {
                 float hover=hovering.getOrDefault(module,0F);hover+=((over?1:0)-hover)*ease;hovering.put(module,hover);
                 if(rowY+style.rowHeight>=top&&rowY<bottom) {
                     int inset=style.suizide?4:0,rx=x+inset,rw=panelWidth-inset*2;
-                    if(style.diablo){Gui.drawRect(rx,rowY,rx+rw,rowY+style.rowHeight,module.isEnabled()?style.accent(0,rowY):over?0xFF1C1C1C:0xFF1A1A1A);} else if(style.packet) {
+                    if(style.fan){
+                        int tile=RenderUtils.blend(0xFF292C3D,0xFF363D57,hover);
+                        roundedGradient(rx+4,rowY+1,rw-8,style.rowHeight-2,4,
+                                RenderUtils.blend(tile,style.accent(0,rowY),on*.72F),RenderUtils.blend(tile,0xFF383E7B,on));
+                        if(on>.01F)rect(rx+6,rowY+5,2,style.rowHeight-10,1,RenderUtils.alpha(style.accent(1,rowY),Math.round(255*on)));
+                    } else if(style.diablo){Gui.drawRect(rx,rowY,rx+rw,rowY+style.rowHeight,module.isEnabled()?style.accent(0,rowY):over?0xFF1C1C1C:0xFF1A1A1A);} else if(style.packet) {
                         if(on>.01F) {
                             int c1=RenderUtils.blend(body,style.accent(0,rowY),on),c2=RenderUtils.blend(body,style.accent(1,rowY),on);
                             gradient(rx,rowY,rw,style.rowHeight,c1,c2);
@@ -157,13 +175,14 @@ final class DropdownWorkspace {
                     if(style.wurst){Gui.drawRect(rx,rowY,rx+rw,rowY+style.rowHeight, module.isEnabled()?0xB040AA40:over?0xB0606060:0x70404040);Gui.drawRect(rx,rowY,rx+rw,rowY+1,0x80101010);net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.drawString(net.minecraft.client.Minecraft.getMinecraft().fontRendererObj.trimStringToWidth(name,rw-17),rx+3,rowY+4,0xFFF0F0F0);}
                     else if(style.diablo)dev.vibe.ui.diablo.DiabloFonts.text(dev.vibe.ui.diablo.DiabloFonts.LABEL,name,rx+3,rowY+.5F+(style.rowHeight-dev.vibe.ui.diablo.DiabloFonts.height(dev.vibe.ui.diablo.DiabloFonts.LABEL))/2F,rw-6,module.isEnabled()?0xFFFFFFFF:0x80FFFFFF);
                     else if(style.novo)dev.vibe.ui.novoline.NovolineFonts.text(dev.vibe.ui.novoline.NovolineFonts.LABEL,name,rx+2,rowY+4,rw-arrowSpace-4,color);
+                    else if(style.fan)label(name,rx+12,rowY+(style.rowHeight-14)/2,rw-arrowSpace-20,color);
                     else center(name,rx+leftReserve,rowY+(style.rowHeight-14)/2,rw-arrowSpace-leftReserve,color);
                     if(arrowSpace>0)NeverLoseStyle.chevron(rx+rw-11,rowY+style.rowHeight/2-1,expanded,color);
                     host.dropdownModuleTarget(module,x,rowY,x+panelWidth,rowY+style.rowHeight,p.name);
                     if(over)hovered=module;
                 }
                 rowY+=style.rowHeight;
-                int shown=style.diablo?Math.round(diabloSettings.getOrDefault(module,0F)):expanded?host.dropdownSettingsHeight(module):0;
+                int shown=style.diablo||style.fan?Math.round(diabloSettings.getOrDefault(module,0F)):expanded?host.dropdownSettingsHeight(module):0;
                 if(shown>0){
                     if(rowY+shown>=top&&rowY<bottom){
                         host.dropdownClip(p.name,Math.max(top,rowY),Math.min(bottom,rowY+shown));host.dropdownInput(expanded);
@@ -248,10 +267,12 @@ final class DropdownWorkspace {
     private void drawNavigation(int mx,int my){int tab=Math.max(1,navigationWidth()/panels.size());for(Panel p:panels){int x=p.order*tab;boolean selected=screenX(p)>=0&&screenX(p)+panelWidth<=width;
         rect(x+2,height-26,tab-4,22,4,style.light?0xEBF0F4F3:0xED17171E);label(p.detail==null?p.category.getLabel():p.detail.getName(),x+7,height-22,tab-13,selected?style.accent(.5F,0):style.muted);}}
     void release(){dragging=scrolling=null;scrollbar=null;}
+    void opened(){opened=System.nanoTime();for(Panel panel:panels)panel.animatedHeight=0;}
     void close(){for(Panel p:panels)p.target=p.scroll;targetHorizontal=horizontal;save();release();if(!inlineMode())mode=null;}
     private void save(){if(theme.isEmpty())return;Map<String,int[]> values=new HashMap<>();for(Panel p:panels)if(p.detail==null)values.put(p.category.name(),new int[]{p.x,p.y,p.collapsed?1:0,Math.round(p.scroll)});SAVED.put(theme,values);SAVED_SIZES.put(theme,new int[]{width,height});SAVED_HORIZONTAL.put(theme,horizontal);}
     private static int clamp(int n,int min,int max){return Math.max(min,Math.min(Math.max(min,max),n));}
     private static final class Panel {
+        float animatedHeight;
         Module detail;final Category category;String name;final int order;int x,y,h,max,content;boolean collapsed;float scroll,target;final List<Module> modules=new ArrayList<>();
         Panel(Category category,int order,int x,int y){this.category=category;this.name=category.name().substring(0,1)+category.name().substring(1).toLowerCase(Locale.ROOT);this.order=order;this.x=x;this.y=y;}
     }

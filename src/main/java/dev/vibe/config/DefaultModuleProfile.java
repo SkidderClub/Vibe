@@ -107,6 +107,7 @@ final class DefaultModuleProfile {
             if ("blur".equalsIgnoreCase(id)) add(settings, "Blur Elements", "memegames");
             else if ("particles".equalsIgnoreCase(id)) add(settings, "Show In", "Meme Games");
             else if ("waifu".equalsIgnoreCase(id)) add(settings, "Show In", "Meme Games");
+            else if ("qol".equalsIgnoreCase(id)) module.addProperty("enabled", true);
         }
     }
 

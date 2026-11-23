@@ -9,7 +9,7 @@ public abstract class Setting<T> {
     private final String name;
     private final BooleanSupplier visibleWhen;
     private final T defaultValue;
-    private T value;
+    private volatile T value;
 
     protected Setting(String name, T defaultValue) {
         this(name, defaultValue, null);

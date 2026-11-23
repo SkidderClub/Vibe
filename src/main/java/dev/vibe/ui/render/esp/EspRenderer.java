@@ -89,7 +89,9 @@ public final class EspRenderer {
         }
         boolean draw3d = esp.getModes().isSelected("3D");
         boolean capture2d = esp.getModes().isSelected("2D");
-        if (!draw3d && !capture2d) return;
+        boolean images = esp.getModes().isSelected(EspModule.IMAGE);
+        if (!draw3d && !capture2d && !images) return;
+        java.util.List<ImageEspRenderer.Sprite> sprites = images ? new java.util.ArrayList<>() : java.util.Collections.emptyList();
         if (capture2d) {
             captureMatrices();
         }
@@ -114,8 +116,15 @@ public final class EspRenderer {
                     continue;
                 }
                 AxisAlignedBB box = renderBox(player, event.partialTicks);
-                EspModule.Style style = esp.getStyleFor(player);
+                if (images && !local) {
+                    EspModule.ImageSettings image = esp.getImage(esp.profileFor(player));
+                    if (minecraft.thePlayer.getDistanceSqToEntity(player) <= image.range.getDouble() * image.range.getDouble()) {
+                        sprites.add(new ImageEspRenderer.Sprite((box.minX + box.maxX) / 2, box.maxY,
+                                (box.minZ + box.maxZ) / 2, antiInvisible ? qol.getInvisibleAlpha().getFloat() / 255F : 1, image));
+                    }
+                }
                 if (draw3d) {
+                    EspModule.Style style = esp.getStyleFor(player);
                     int profile=esp.resolvedProfile(esp.profileFor(player));
                     if(esp.getThroughWalls(profile).isEnabled())net.minecraft.client.renderer.GlStateManager.disableDepth();else net.minecraft.client.renderer.GlStateManager.enableDepth();
                     int outline = applyVisibilityAlpha(style.getOutline(), antiInvisible, qol);
@@ -151,6 +160,7 @@ public final class EspRenderer {
                 WorldRenderUtils.end(true);
             }
         }
+        if (images) ImageEspRenderer.INSTANCE.drawWorld(sprites);
     }
 
     /** True only for a current, enabled 2D world pass (also used by Freecam's clean view). */
