@@ -111,13 +111,14 @@ public final class PacketDelayService {
             if (cuteVisuals != null) cuteVisuals.onDigging((C07PacketPlayerDigging) packet);
         }
         dev.vibe.module.impl.combat.CriticalsModule criticals=dev.vibe.features.FeatureModule.module(dev.vibe.module.impl.combat.CriticalsModule.class);
-        if(criticals!=null)criticals.outbound(packet);
+        boolean criticalsGround = dev.vibe.movement.RewoundHooks.takeCriticalsGround(packet);
+        if (criticals != null && criticals.outbound(packet)) criticalsGround = true;
         dev.vibe.module.impl.world.ScaffoldModule scaffold=dev.vibe.features.FeatureModule.module(dev.vibe.module.impl.world.ScaffoldModule.class);
         if(scaffold!=null&&scaffold.novolineOutbound(packet,ctx,promise))return true;
-        // Explicit NoFall policies retain the final say over ground state.
+        // NoFall applies its policy only when Criticals did not claim this movement update.
         NoFallModule noFall = Vibe.getInstance() == null ? null
                 : Vibe.getInstance().getModuleManager().getModule(NoFallModule.class);
-        if (noFall != null) noFall.handleOutbound(packet);
+        if (noFall != null) noFall.handleOutbound(packet, criticalsGround);
         ScriptRuntime scripts = Vibe.getInstance() == null ? null : Vibe.getInstance().getScriptRuntime();
         if (scripts != null && !scripts.outbound(packet)) {
             // Cancelling at the Netty boundary must also complete the promise;

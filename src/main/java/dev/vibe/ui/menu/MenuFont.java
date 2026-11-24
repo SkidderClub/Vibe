@@ -53,6 +53,13 @@ public final class MenuFont {
         draw(text,x+(width-label.inkWidth)*.5F-label.bearing,y+(height-label.height)*.5F,color);
     }
     public void middle(String text,float x,float y,float height,int color){draw(text,x,y+(height-inkHeight(text))*.5F,color);}
+    public void drawOnLine(String text, float x, float y, float height, int color) {
+        float scale = scale();
+        Label reference = label("Ag", scale);
+        Label content = label(clean(text), scale);
+        float baseline = y + (height - reference.height) * .5F - reference.ink.y / scale;
+        draw(text, x, baseline + content.ink.y / scale, color);
+    }
     public void centerX(String text,float center,float y,int color){Label label=label(clean(text),scale());draw(text,center-label.inkWidth*.5F-label.bearing,y,color);}
     public void draw(String text,float x,float y,int color){
         text=LanguageManager.scriptFontText(text==null?"":text);

@@ -25,7 +25,7 @@ public final class RewoundProductionCheck {
                 if (call.owner.equals("dev/vibe/module/impl/movement/NoRotateSetModule")) hooks.add("NoRotateSet." + call.name);
             }
         }
-        for (String hook : new String[] {"move", "afterMove", "beforeWalking", "afterWalking", "endWalking", "ground", "correction", "preUpdate", "preStepHeight", "stepHeight", "postStep", "confirmAdjustStep", "NoRotateSet.capture", "NoRotateSet.restore", "walkingY", "positionTicks"}) {
+        for (String hook : new String[] {"move", "afterMove", "beforeWalking", "afterWalking", "endWalking", "ground", "trackWalkingPacket", "correction", "preUpdate", "preStepHeight", "stepHeight", "postStep", "confirmAdjustStep", "NoRotateSet.capture", "NoRotateSet.restore", "walkingY", "positionTicks"}) {
             if (!hooks.contains(hook)) throw new AssertionError("Missing production Rewound hook: " + hook + " in " + hooks);
         }
         Class.forName("net.minecraft.client.renderer.ItemRenderer",false,loader).getDeclaredMethods();

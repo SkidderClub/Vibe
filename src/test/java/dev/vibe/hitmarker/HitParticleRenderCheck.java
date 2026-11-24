@@ -1,13 +1,25 @@
 package dev.vibe.hitmarker;
 
 import dev.vibe.path.PathTestFixture;
+import dev.vibe.module.impl.visual.BlockDebrisModule;
 import dev.vibe.ui.render.HitParticleRenderer;
 import java.awt.image.BufferedImage;
 import java.nio.*;
 import java.nio.file.*;
 import java.util.Random;
 import javax.imageio.ImageIO;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.BlockModelShapes;
+import net.minecraft.client.renderer.BlockRendererDispatcher;
 import net.minecraft.client.renderer.OpenGlHelper;
+import net.minecraft.client.renderer.entity.RenderManager;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.client.renderer.texture.TextureMap;
+import net.minecraft.init.Blocks;
+import net.minecraft.util.BlockPos;
 import net.minecraft.util.Vec3;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.*;
@@ -46,8 +58,55 @@ public final class HitParticleRenderCheck {
             scene(1);long start=System.nanoTime();for(int i=0;i<120;i++)renderer.render(particles.particles(),s,.5,64.7,.5,.5F);GL11.glFinish();
             System.out.printf(java.util.Locale.ROOT,"HitMarker Particle: 512 particles, %.2f ms/warm frame on %s%n",(System.nanoTime()-start)/120e6,GL11.glGetString(GL11.GL_RENDERER));
             check(GL11.glGetError()==0,"Particle rendering left a GL error");
+            verifyBlockDebris(f, output);
             System.out.println("HitMarker particle GPU checks passed: glow, depth, fade, roll, settling, bounded bursts and driver state.");
         }finally{buffer.destroy();}
+    }
+    private static void verifyBlockDebris(PathTestFixture f, Path output) throws Exception {
+        TextureAtlasSprite sprite = new TextureAtlasSprite("test-stone") {};
+        sprite.setIconWidth(16);
+        sprite.setIconHeight(16);
+        sprite.initSprite(16, 16, 0, 0, false);
+        BlockModelShapes shapes = new BlockModelShapes(null) {
+            @Override public TextureAtlasSprite getTexture(IBlockState state) { return sprite; }
+        };
+        BlockRendererDispatcher blocks = PathTestFixture.allocate(BlockRendererDispatcher.class);
+        PathTestFixture.set(BlockRendererDispatcher.class, blocks, "blockModelShapes", shapes);
+        PathTestFixture.set(Minecraft.class, f.mc, "blockRenderDispatcher", blocks);
+        RenderManager camera = PathTestFixture.allocate(RenderManager.class);
+        camera.viewerPosX = .5;
+        camera.viewerPosY = 64.3;
+        camera.viewerPosZ = .5;
+        PathTestFixture.set(Minecraft.class, f.mc, "renderManager", camera);
+        f.mc.renderEngine = new TextureManager(null);
+        DynamicTexture atlas = new DynamicTexture(16, 16);
+        java.util.Arrays.fill(atlas.getTextureData(), 0xFFFF8040);
+        atlas.updateDynamicTexture();
+        f.mc.renderEngine.loadTexture(TextureMap.locationBlocksTexture, atlas);
+
+        BlockDebrisModule debris = new BlockDebrisModule();
+        f.modules.registerDynamic(debris);
+        debris.setEnabled(true);
+        debris.particles.glow.setEnabled(false);
+        BlockPos pos = new BlockPos(0, 64, 0);
+        IBlockState stone = Blocks.stone.getDefaultState();
+        f.world.blocks.put(pos, stone);
+        check(BlockDebrisModule.destroyHook(pos, stone), "Block Debris did not take the destruction effect");
+        debris.tick();
+        scene(1);
+        debris.render(1);
+        check(brightness() == 0, "Block Debris spawned before Minecraft removed the block");
+
+        f.world.blocks.remove(pos);
+        debris.tick();
+        debris.render(1);
+        check(brightness() > 1000, "No textured fragments appeared after the block was removed");
+        save(output.resolve("block-debris.png"));
+        debris.setEnabled(false);
+        scene(1);
+        debris.render(1);
+        check(brightness() == 0, "Disabling Block Debris left fragments behind");
+        f.mc.renderEngine.deleteTexture(TextureMap.locationBlocksTexture);
     }
     private static void scene(double depth){GL13.glActiveTexture(GL13.GL_TEXTURE0);GL11.glViewport(0,0,W,H);GL11.glDepthMask(true);GL11.glClearColor(0,0,0,1);GL11.glClearDepth(depth);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);GL11.glDisable(GL11.GL_SCISSOR_TEST);GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GL11.glOrtho(-2,2,-.6,2.4,-8,8);GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glLoadIdentity();}
     private static ByteBuffer pixels(){ByteBuffer b=BufferUtils.createByteBuffer(W*H*4);GL11.glReadPixels(0,0,W,H,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,b);return b;}

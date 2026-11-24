@@ -11,11 +11,20 @@ import dev.vibe.module.impl.movement.AntiVoidModule;
 import dev.vibe.module.impl.movement.NoFallModule;
 import dev.vibe.module.impl.movement.NoSlowModule;
 import dev.vibe.module.impl.movement.SpeedModule;
+import java.util.Collections;
+import java.util.Set;
+import java.util.WeakHashMap;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.client.C03PacketPlayer;
 import net.minecraft.network.play.server.S08PacketPlayerPosLook;
 
 /** Main-thread adapters for the three native phases used by the imported modes. */
 public final class RewoundHooks {
+    // The native walking scope ends before Netty necessarily writes the packet.
+    private static final Set<Packet<?>> CRITICALS_GROUND = Collections.newSetFromMap(
+            Collections.synchronizedMap(new WeakHashMap<>()));
+
     private RewoundHooks() { }
     private static <T extends Module> T module(Class<T> type) {
         Vibe vibe = Vibe.getInstance();
@@ -95,7 +104,7 @@ public final class RewoundHooks {
         KillAuraModule aura = KillAuraModule.activeController();
         if(aura!=null)aura.novolineBeforeWalking(entity);
         NoFallModule fall = module(NoFallModule.class);
-        if (fall != null) fall.beforeWalking(entity);
+        if (fall != null && (criticals == null || !criticals.ownsWalkingGround(entity))) fall.beforeWalking(entity);
         NoSlowModule slow = module(NoSlowModule.class);
         if (slow != null) slow.beforeWalking(entity);
     }
@@ -105,7 +114,7 @@ public final class RewoundHooks {
         CriticalsModule criticals = module(CriticalsModule.class);
         if (criticals != null) vanilla = criticals.rewoundGround(entity, vanilla);
         NoFallModule fall = module(NoFallModule.class);
-        vanilla = fall == null ? vanilla : fall.walkingGround(entity, vanilla);
+        if (fall != null && (criticals == null || !criticals.ownsWalkingGround(entity))) vanilla = fall.walkingGround(entity, vanilla);
         dev.vibe.module.impl.world.ScaffoldModule scaffold=module(dev.vibe.module.impl.world.ScaffoldModule.class);
         return scaffold==null?vanilla:scaffold.novolineGround(entity,vanilla);
     }
@@ -117,6 +126,17 @@ public final class RewoundHooks {
         CriticalsModule criticals = module(CriticalsModule.class);
         return criticals == null ? vanilla : criticals.rewoundPositionTicks(vanilla);
     }
+
+    public static void trackWalkingPacket(Object packet, Object entity) {
+        if (!(packet instanceof C03PacketPlayer)) return;
+        CriticalsModule criticals = module(CriticalsModule.class);
+        if (criticals != null && criticals.ownsWalkingGround(entity)) CRITICALS_GROUND.add((Packet<?>) packet);
+    }
+
+    public static boolean takeCriticalsGround(Packet<?> packet) {
+        return packet instanceof C03PacketPlayer && CRITICALS_GROUND.remove(packet);
+    }
+
     public static void afterWalking(Object entity) {
         if (entity != Minecraft.getMinecraft().thePlayer) return;
         try {

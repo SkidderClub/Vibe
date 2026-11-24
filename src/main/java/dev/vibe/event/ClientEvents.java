@@ -1128,7 +1128,7 @@ public final class ClientEvents {
     @SubscribeEvent
     public void onScriptWorldJoin(EntityJoinWorldEvent event) {
         ScriptRuntime scripts = Vibe.getInstance().getScriptRuntime();
-        if (scripts != null && event.entity != null) scripts.worldJoin(keystrokesmod.script.model.Entity.convert(event.entity));
+        if (scripts != null) scripts.worldJoin(event.entity);
     }
 
     @SubscribeEvent

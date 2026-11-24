@@ -10,6 +10,7 @@ import org.objectweb.asm.tree.*;
 public final class GameplayProductionCheck {
     public static void verify(LaunchClassLoader loader) throws Exception {
         java.lang.reflect.Field field=LaunchClassLoader.class.getDeclaredField("tempFolder");field.setAccessible(true);File dumps=(File)field.get(null);
+        verifyWorldLoadCollections(loader, dumps);
         verifyWorldEntityTracking(loader, dumps);
         verifyClientHook(loader, dumps, "net.minecraft.client.multiplayer.WorldClient", "func_73029_E",
                 "dev/vibe/module/impl/client/QolModule", "barrierParticles", 1);
@@ -73,6 +74,31 @@ public final class GameplayProductionCheck {
         for(String name:new String[]{"dev.vibe.module.impl.world.NoEscMenuModule","dev.vibe.module.impl.movement.TargetStrafeModule","dev.vibe.module.impl.world.ScaffoldModule","dev.vibe.module.impl.combat.AutoBuffModule",
                 "dev.vibe.module.impl.meme.RewoundPitModule","dev.vibe.pit.PitStatus","dev.vibe.pit.PitMenus","dev.vibe.pit.PitPerk",
                 "dev.vibe.module.impl.combat.KeepSprintModule","dev.vibe.module.impl.movement.JesusModule","dev.vibe.module.impl.movement.PhaseModule","dev.vibe.module.impl.client.DisablerModule"})Class.forName(name,false,loader).getDeclaredMethods();
+    }
+
+    private static void verifyWorldLoadCollections(LaunchClassLoader loader, File dumps) throws Exception {
+        String name = "net.minecraft.client.Minecraft";
+        Class.forName(name, false, loader).getDeclaredMethods();
+        ClassNode type = new ClassNode();
+        new ClassReader(Files.readAllBytes(new File(dumps, name.replace('.', '/') + ".class").toPath())).accept(type, 0);
+        int transitionMethods = 0;
+        int otherCollections = 0;
+        for (Object entry : type.methods) {
+            MethodNode method = (MethodNode) entry;
+            boolean transition = method.name.equals("func_71353_a") || method.name.equals("func_71403_a")
+                    || method.name.equals("func_71371_a");
+            if (transition) transitionMethods++;
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof MethodInsnNode)) continue;
+                MethodInsnNode call = (MethodInsnNode) instruction;
+                if (!"java/lang/System".equals(call.owner) || !"gc".equals(call.name)) continue;
+                if (transition) throw new AssertionError("Forced collection during world load: " + method.name);
+                otherCollections++;
+            }
+        }
+        if (transitionMethods != 3 || otherCollections == 0) {
+            throw new AssertionError("Unexpected world load methods or unrelated collections");
+        }
     }
 
     private static void verifyClientHook(LaunchClassLoader loader, File dumps, String className, String methodName,

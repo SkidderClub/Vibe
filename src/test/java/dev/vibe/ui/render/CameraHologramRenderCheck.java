@@ -87,6 +87,7 @@ public final class CameraHologramRenderCheck {
     private static void camera(PathTestFixture f)throws Exception{
         SmoothF5Module smooth=new SmoothF5Module();f.modules.registerDynamic(smooth);smooth.setEnabled(true);mc.gameSettings.thirdPersonView=0;smooth.frameTick(1);
         Field field=SmoothF5Module.class.getDeclaredField("transition");field.setAccessible(true);PerspectiveTransition t=(PerspectiveTransition)field.get(smooth);long now=System.nanoTime();t.reset(0);t.update(1,now-500000000,1,"Sine","Top");mc.gameSettings.thirdPersonView=1;
+        smooth.frameTick(1);
         double[] body={f.player.posX,f.player.posY,f.player.posZ,f.player.rotationYaw,f.player.rotationPitch,f.player.motionX,f.player.motionY,f.player.motionZ};
         GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glLoadIdentity();check(SmoothF5Module.orientCameraHook(1),"SmoothF5 did not replace the intermediate camera matrix");FloatBuffer values=BufferUtils.createFloatBuffer(16);GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX,values);for(int i=0;i<16;i++)check(Float.isFinite(values.get(i)),"Camera matrix was not finite");
         double[] after={f.player.posX,f.player.posY,f.player.posZ,f.player.rotationYaw,f.player.rotationPitch,f.player.motionX,f.player.motionY,f.player.motionZ};check(Arrays.equals(body,after),"SmoothF5 changed player movement or rotations");smooth.setEnabled(false);check(!SmoothF5Module.orientCameraHook(1),"Disabled SmoothF5 kept overriding the camera");mc.gameSettings.thirdPersonView=0;

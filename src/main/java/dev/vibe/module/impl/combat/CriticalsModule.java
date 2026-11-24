@@ -26,6 +26,8 @@ public final class CriticalsModule extends FeatureModule {
     private final dev.vibe.movement.DiabloCriticals diablo=new dev.vibe.movement.DiabloCriticals();
     private final AdjustCriticals adjust = new AdjustCriticals();
     private boolean adjustWalking;
+    private EntityPlayerSP jumpingPlayer;
+    private boolean jumpWalking;
     private volatile boolean spoof;
     private boolean prime=true;
     private int attackTicks;
@@ -41,11 +43,30 @@ public final class CriticalsModule extends FeatureModule {
             &&(fly==null||!fly.isEnabled())&&!mc.thePlayer.isInWater()&&!mc.thePlayer.isInLava()&&!mc.thePlayer.isRiding()
             &&MovementForecast.loaded(mc.thePlayer.getEntityBoundingBox())&&!mc.thePlayer.isOnLadder()&&!dev.vibe.combat.CombatRangeSupport.isInWeb(mc.thePlayer)
             &&!mc.thePlayer.isPotionActive(net.minecraft.potion.Potion.blindness)&&!mc.thePlayer.isUsingItem()&&!ScaffoldModule.isActive()&&!dev.vibe.module.impl.world.AutoWaterModule.reserving();}
-    @Override public void tick(){if(!mode.getValue().equals(previousMode)){previousMode=mode.getValue();diablo.reset();prime=mode.is("NoGround");attackTicks=0;resetRewound();}prepareDiablo();if(attackTicks>0)attackTicks--;spoof=mode.is("NoGround")&&allowed();if(!playing()){attackTicks=0;prime=mode.is("NoGround");}if(!(mode.is("Rewound")||mode.is("RewoundAdjust"))||!playing()||rewoundPlayer!=mc.thePlayer)resetRewound();}
+    @Override public void tick() {
+        if (!mode.getValue().equals(previousMode)) {
+            previousMode = mode.getValue();
+            diablo.reset();
+            prime = mode.is("NoGround");
+            attackTicks = 0;
+            jumpingPlayer = null;
+            resetRewound();
+        }
+        prepareDiablo();
+        if (attackTicks > 0) attackTicks--;
+        spoof = mode.is("NoGround") && allowed();
+        if (!playing()) {
+            attackTicks = 0;
+            prime = mode.is("NoGround");
+            jumpingPlayer = null;
+        }
+        if (!(mode.is("Rewound") || mode.is("RewoundAdjust")) || !playing() || rewoundPlayer != mc.thePlayer) resetRewound();
+    }
     @Override public void input(MovementInput input){if(mode.is("RewoundAdjust")||mode.is("Rewound")||mode.is("RewoundDiablo")||!allowed()||input.sneak||!mc.thePlayer.onGround)return;
         boolean wants=mode.is("NoGround")?prime:attackTicks>0||combatTarget()!=null;
         if(!wants||!mc.theWorld.getCollidingBoundingBoxes(mc.thePlayer,mc.thePlayer.getEntityBoundingBox().offset(0,.42,0)).isEmpty())return;
         input.jump=true;prime=false;
+        if (mode.is("Jump")) jumpingPlayer = mc.thePlayer;
     }
     private EntityLivingBase combatTarget(){AIAuraModule ai=module(AIAuraModule.class);KillAuraModule aura=module(KillAuraModule.class);EntityLivingBase target=ai!=null&&ai.isEnabled()?ai.getTarget():null;if(target==null&&aura!=null&&aura.isEnabled())target=aura.getTarget();return target!=null&&target.isEntityAlive()&&target.worldObj==mc.theWorld&&dev.vibe.combat.CombatRangeSupport.distanceToBox(target)<=3?target:null;}
     private void prepareDiablo(){
@@ -53,8 +74,12 @@ public final class CriticalsModule extends FeatureModule {
         KillAuraModule aura=KillAuraModule.activeController();
         diablo.prepare(mc.thePlayer,mc.theWorld,mc.thePlayer.onGround,aura!=null&&aura.getTarget()!=null,mc.thePlayer.posY);
     }
-    public void outbound(Packet<?> packet){if(isEnabled()&&mode.is("RewoundDiablo")&&packet instanceof C03PacketPlayer){diablo.outbound((C03PacketPlayer)packet);return;}if(!isEnabled()||!mode.is("NoGround")||!spoof||!(packet instanceof C03PacketPlayer))return;
+    public boolean outbound(Packet<?> packet) {
+        if (!isEnabled() || !(packet instanceof C03PacketPlayer)) return false;
+        if (mode.is("RewoundDiablo")) return diablo.outbound((C03PacketPlayer) packet);
+        if (!mode.is("NoGround") || !spoof) return false;
         try{if(ground==null){ground=net.minecraftforge.fml.relauncher.ReflectionHelper.findField(C03PacketPlayer.class,"onGround","field_149474_g");ground.setAccessible(true);}ground.setBoolean(packet,false);}catch(IllegalAccessException failure){throw new IllegalStateException("Criticals movement ground field",failure);}
+        return true;
     }
     public static void attackHook(Object target){CriticalsModule module=module(CriticalsModule.class);
         if (module != null && module.isEnabled() && module.mode.is("RewoundAdjust") && target instanceof EntityLivingBase
@@ -75,6 +100,11 @@ public final class CriticalsModule extends FeatureModule {
     public void rewoundBeforeWalking(Object entity){
         prepareDiablo();endRewoundWalking();
         if(dev.vibe.movement.AdjustJesus.standing())return;
+        if (entity == mc.thePlayer && mode.is("Jump")) {
+            jumpWalking = jumpingPlayer == entity && allowed();
+            if (!jumpWalking || mc.thePlayer.onGround) jumpingPlayer = null;
+            return;
+        }
         if (isEnabled() && mode.is("RewoundAdjust") && entity == mc.thePlayer && playing()) {
             if (rewoundPlayer != mc.thePlayer || rewoundWorld != mc.theWorld) {
                 resetRewound();
@@ -102,6 +132,10 @@ public final class CriticalsModule extends FeatureModule {
         return rewoundReady(entity) && forcePosition ? false : vanilla;
     }
 
+    public boolean ownsWalkingGround(Object entity) {
+        return entity == mc.thePlayer && isEnabled() && (adjustWalking || jumpWalking || forcePosition);
+    }
+
     public double rewoundWalkingY(final double vanilla) {
         if (adjustWalking) return vanilla + adjust.offset;
         return isEnabled() && mode.is("Rewound") && forcePosition ? vanilla + walkingOffset : vanilla;
@@ -113,10 +147,10 @@ public final class CriticalsModule extends FeatureModule {
     }
 
     public void endRewoundWalking() {
-        adjustWalking = forcePosition = false;
+        adjustWalking = jumpWalking = forcePosition = false;
         walkingOffset = 0;
     }
     private void resetRewound(){adjust.reset();rewoundPlayer=null;rewoundWorld=null;groundTicks=0;endRewoundWalking();}
-    @Override protected void onEnable(){diablo.reset();prime=true;previousMode=mode.getValue();attackTicks=0;spoof=false;resetRewound();}
-    @Override protected void onDisable(){diablo.reset();attackTicks=0;spoof=false;prime=false;resetRewound();}
+    @Override protected void onEnable(){diablo.reset();prime=true;previousMode=mode.getValue();attackTicks=0;spoof=false;jumpingPlayer=null;resetRewound();}
+    @Override protected void onDisable(){diablo.reset();attackTicks=0;spoof=false;prime=false;jumpingPlayer=null;resetRewound();}
 }

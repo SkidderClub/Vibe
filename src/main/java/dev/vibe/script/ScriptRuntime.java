@@ -9,7 +9,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -351,14 +350,26 @@ public final class ScriptRuntime {
     }
 
     private Object invoke(Program program, String methodName, Object... args) {
+        Method method = callback(program, methodName, args.length);
+        return method == null ? null : invokeCallback(program, method, args);
+    }
+
+    private static Method callback(Program program, String methodName, int parameters) {
         if (program.instance == null) return null;
         for (Method method : program.type.getDeclaredMethods()) {
-            if (!method.getName().equalsIgnoreCase(methodName) || method.getParameterTypes().length != args.length) continue;
-            try { method.setAccessible(true); return method.invoke(program.instance, args); }
-            catch (InvocationTargetException exception) { diagnostic(describeFailure(program, methodName, exception)); return null; }
-            catch (Exception exception) { diagnostic(describeFailure(program, methodName, exception)); return null; }
+            if (method.getName().equalsIgnoreCase(methodName) && method.getParameterCount() == parameters) return method;
         }
         return null;
+    }
+
+    private Object invokeCallback(Program program, Method method, Object... args) {
+        try {
+            method.setAccessible(true);
+            return method.invoke(program.instance, args);
+        } catch (Exception exception) {
+            diagnostic(describeFailure(program, method.getName(), exception));
+            return null;
+        }
     }
 
     public void tickStart() {
@@ -389,7 +400,17 @@ public final class ScriptRuntime {
     public boolean mouse(int button, boolean state) { return invokeBooleanAll("onMouse", button, state); }
     public boolean attack(Entity target, Entity attacker) { return invokeBooleanAll("onAttackEntity", target, attacker) && invokeBooleanAll("onPreAttack"); }
     public void gui(String name, boolean opened) { invokeAll("onGuiUpdate", name, opened); }
-    public void worldJoin(Entity entity) { invokeAll("onWorldJoin", entity); }
+    public synchronized void worldJoin(net.minecraft.entity.Entity entity) {
+        if (programs.isEmpty() || entity == null) return;
+        Entity wrapper = null;
+        for (Program program : new ArrayList<>(programs.values())) {
+            if (!program.module.isEnabled()) continue;
+            Method method = callback(program, "onWorldJoin", 1);
+            if (method == null) continue;
+            if (wrapper == null) wrapper = Entity.convert(entity);
+            invokeCallback(program, method, wrapper);
+        }
+    }
     public void disconnect() { invokeAll("onDisconnect"); }
     public void playerInteract() { invokeAll("onPrePlayerInteract"); }
     public void antiCheatFlag(String flag, Entity entity) { invokeAll("onAntiCheatFlag", flag, entity); }

@@ -32,6 +32,8 @@ final class LavalampWorkspace {
     private final Map<String,Float> hoverValues=new HashMap<>();
     private Category category=Category.COMBAT;
     private Module selected,binding;
+    private Module hoveredModule;
+    private float moduleHover;
     private MenuTextField search,editor;
     private Setting<?> editing;
     private Hit slider;
@@ -56,8 +58,8 @@ final class LavalampWorkspace {
         bodyTop=y+61;listTop=bodyTop+39;cy=bodyTop+96;bottom=y+h-17;
         if(scrolling)dragScroll(my,scrollingList);
         listScroll=ease(listScroll,listTarget,19);scroll=ease(scroll,target,19);
-        if(search==null){search=new MenuTextField(0,mc.fontRendererObj,0,0,100,22);search.setEnableBackgroundDrawing(false);search.setMaxStringLength(80);}
-        search.xPosition=x+39;search.yPosition=bodyTop+4;search.width=side-52;
+        if(search==null){search=new MenuTextField(0,mc.fontRendererObj,0,0,100,30);search.setEnableBackgroundDrawing(false);search.setMaxStringLength(80);search.placeholder("Search",MUTED);}
+        search.xPosition=x+43;search.yPosition=bodyTop;search.width=side-59;
         String query=search.getText().trim();
         if(!query.equals(lastQuery)){if(lastQuery.isEmpty())moduleScroll.put(category,listTarget);lastQuery=query;listScroll=listTarget=0;}
         List<Module> modules=visibleModules(ClickGuiModule.sortedModules(Vibe.getInstance().getModuleManager().getModules()),category,query);
@@ -75,7 +77,6 @@ final class LavalampWorkspace {
             line(x+side+6,bodyTop+2,x+side+6,bottom,RenderUtils.alpha(accent,55));
             material("search",x+15,bodyTop,side-23,30,8,0,false);
             BreezeIcons.draw("search",x+23,bodyTop+8,14,MUTED);search.palette(TEXT,accent);search.drawTextBox();
-            if(query.isEmpty()&&!search.isFocused())FONT.middle("Search",search.xPosition,search.yPosition,22,MUTED);
             moduleList(modules);
             if(selected!=null){settingsHeader();settings();}
             else{maxScroll=0;FONT.centered(query.isEmpty()?"Choose a module":"No matches",cx,bodyTop,cw,bottom-bodyTop,MUTED);}
@@ -122,11 +123,17 @@ final class LavalampWorkspace {
     }
     private void moduleList(List<Module> modules){
         clipping(x+13,listTop,side-16,bottom-listTop);
+        Module underPointer = null;
         try(GuiClip clip=GuiClip.local(clipLeft,clipTop,clipRight-clipLeft,clipBottom-clipTop)){
             int row=listTop-Math.round(listScroll);
             for(Module module:modules){
                 if(row+31>=listTop&&row<bottom){
-                    boolean on=selected==module;float hot=hover("module:"+module.getId(),x+15,row,side-23,31);
+                    boolean on=selected==module;
+                    float hot=0;
+                    if(mx>=x+15&&mx<x+side-8&&my>=Math.max(row,clipTop)&&my<Math.min(row+31,clipBottom)){
+                        underPointer=module;
+                        hot=moduleHover=ease(hoveredModule==module?moduleHover:0,1,19);
+                    }
                     if(on||hot>.005F)material("module:"+module.getId(),x+15,row,side-23,31,8,hot,on);
                     text(on?BOLD:FONT,module.getName(),x+25,row+10,side-55,module.isEnabled()||on?TEXT:MUTED);
                     glowDot(x+side-19,row+16,2.5F,animated(module,module.isEnabled()),accent);
@@ -134,6 +141,8 @@ final class LavalampWorkspace {
                 }row+=35;
             }
         }
+        hoveredModule=underPointer;
+        if(underPointer==null)moduleHover=0;
         clipping(x+4,y+4,w-8,h-8);
     }
     private void settingsHeader(){
@@ -318,7 +327,7 @@ final class LavalampWorkspace {
         return search!=null&&search.textboxKeyTyped(character,key);
     }
     void tick(){if(search!=null)search.updateCursorCounter();if(editor!=null)editor.updateCursorCounter();}
-    void close(){remember();commit();release(0);binding=null;last=System.nanoTime();if(search!=null)search.setFocused(false);}
+    void close(){remember();commit();release(0);binding=null;hoveredModule=null;moduleHover=0;last=System.nanoTime();if(search!=null)search.setFocused(false);}
     private static String keyName(int key){String name=key==0?null:Keyboard.getKeyName(key);return name==null?"Unbound":name;}
     private static float clamp(float value,float min,float max){return Math.max(min,Math.min(max,value));}
     private static String number(double n){return java.math.BigDecimal.valueOf(n).stripTrailingZeros().toPlainString();}

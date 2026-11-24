@@ -29,15 +29,16 @@ public final class SmoothF5Module extends dev.vibe.module.Module {
             world=null;entity=null;frame=null;transition.reset(mc.gameSettings.thirdPersonView);return;
         }
         if(world!=mc.theWorld||entity!=view){world=mc.theWorld;entity=view;transition.reset(mc.gameSettings.thirdPersonView);}
-        transition.update(mc.gameSettings.thirdPersonView,System.nanoTime(),speed.getDouble(),easing.getValue(),direction.getValue());
-        frame=transition.frame(dev.vibe.module.impl.combat.AIAuraModule.cameraYawHook(view,view.prevRotationYaw+(view.rotationYaw-view.prevRotationYaw)*partial),dev.vibe.module.impl.combat.AIAuraModule.cameraPitchHook(view,view.prevRotationPitch+(view.rotationPitch-view.prevRotationPitch)*partial));
+        frame=transition.update(mc.gameSettings.thirdPersonView,System.nanoTime(),speed.getDouble(),easing.getValue(),direction.getValue())
+                ? transition.frame(dev.vibe.module.impl.combat.AIAuraModule.cameraYawHook(view,view.prevRotationYaw+(view.rotationYaw-view.prevRotationYaw)*partial),dev.vibe.module.impl.combat.AIAuraModule.cameraPitchHook(view,view.prevRotationPitch+(view.rotationPitch-view.prevRotationPitch)*partial))
+                : null;
     }
-    private boolean transitioning(){return isEnabled()&&frame!=null&&entity==Minecraft.getMinecraft().getRenderViewEntity()&&world==Minecraft.getMinecraft().theWorld&&transition.active(System.nanoTime());}
+    private boolean transitioning(){return isEnabled()&&frame!=null&&entity==Minecraft.getMinecraft().getRenderViewEntity()&&world==Minecraft.getMinecraft().theWorld;}
     private static SmoothF5Module active(){Vibe vibe=Vibe.getInstance();if(vibe==null||vibe.getModuleManager()==null)return null;SmoothF5Module module=vibe.getModuleManager().getModule(SmoothF5Module.class);return module!=null&&module.transitioning()?module:null;}
     public static boolean orientCameraHook(float partial){
         Vibe vibe=Vibe.getInstance();if(vibe==null||vibe.getModuleManager()==null)return false;
         SmoothF5Module module=vibe.getModuleManager().getModule(SmoothF5Module.class);if(module==null||!module.isEnabled())return false;
-        module.frameTick(partial);if(!module.transitioning())return false;
+        if(!module.transitioning())return false;
         Entity player=module.entity;double[] f=module.frame;float eye=player.getEyeHeight();
         double x=player.lastTickPosX+(player.posX-player.lastTickPosX)*partial,y=player.lastTickPosY+(player.posY-player.lastTickPosY)*partial+eye,z=player.lastTickPosZ+(player.posZ-player.lastTickPosZ)*partial;
         Vec3 origin=new Vec3(x,y,z);double fraction=1,length=module.transition.distance();

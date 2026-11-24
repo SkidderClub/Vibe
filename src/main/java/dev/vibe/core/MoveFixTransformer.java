@@ -198,7 +198,10 @@ public final class MoveFixTransformer implements net.minecraft.launchwrapper.ICl
         public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
             if (opcode == Opcodes.PUTFIELD && "I".equals(descriptor) && (MINECRAFT.equals(owner) || "ave".equals(owner))
                     && ("leftClickCounter".equals(name) || "field_71429_W".equals(name) || "ag".equals(name))) {
-                super.visitMethodInsn(Opcodes.INVOKESTATIC, AURA_HOOK, "guiClickCounterHook", "(I)I", false);
+                super.visitInsn(Opcodes.DUP2);
+                super.visitInsn(Opcodes.POP);
+                super.visitFieldInsn(Opcodes.GETFIELD, owner, name, descriptor);
+                super.visitMethodInsn(Opcodes.INVOKESTATIC, AURA_HOOK, "guiClickCounterHook", "(II)I", false);
             }
             super.visitFieldInsn(opcode, owner, name, descriptor);
             if (opcode == Opcodes.GETFIELD && "Z".equals(descriptor)

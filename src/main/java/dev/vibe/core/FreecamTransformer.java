@@ -46,9 +46,12 @@ public final class FreecamTransformer implements IClassTransformer, Opcodes {
                         }
                     }
                 }
-                if ((method.desc.equals("(FI)V") && named(method.name, "renderHand", "func_78476_b", "b"))
-                        || (method.desc.equals("(F)V") && named(method.name, "hurtCameraEffect", "func_78482_e", "d",
-                                "setupViewBobbing", "func_78475_f", "e"))) guardActive(method);
+                if (method.desc.equals("(FI)V") && named(method.name, "renderHand", "func_78476_b", "b")) {
+                    thirdPersonReads(method);
+                    guardActive(method);
+                }
+                if (method.desc.equals("(F)V") && named(method.name, "hurtCameraEffect", "func_78482_e", "d",
+                        "setupViewBobbing", "func_78475_f", "e")) guardActive(method);
                 if (method.desc.equals("(FZ)F") && named(method.name, "getFOVModifier", "func_78481_a", "a")) {
                     for (AbstractInsnNode instruction : method.instructions.toArray()) {
                         if (instruction.getOpcode() == FRETURN) method.instructions.insertBefore(instruction, call("fovHook", "(F)F"));

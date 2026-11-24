@@ -199,6 +199,42 @@ public class RewoundExtraModesTest {
     }
 
     private static <T extends Module> T register(T module) { Vibe.getInstance().getModuleManager().registerDynamic(module); return module; }
+
+    @Test public void noFallYieldsToAnOwnedCriticalsUpdateAfterTheWalkingScopeEnds() throws Exception {
+        try (RewoundModesTest.Fixture f = new RewoundModesTest.Fixture()) {
+            f.fall.getSettings().stream().filter(s -> s.getRawName().equals("Mode"))
+                    .forEach(s -> ((dev.vibe.setting.ModeSetting) s).setValue("Always On Ground"));
+            f.fall.setEnabled(true);
+            CriticalsModule criticals = register(new CriticalsModule());
+            criticals.mode.setValue("RewoundAdjust");
+            criticals.setEnabled(true);
+            f.player.onUpdateWalkingPlayer();
+            C03PacketPlayer walking = (C03PacketPlayer) f.queue.packets.get(0);
+            assertFalse(criticals.ownsWalkingGround(f.player));
+
+            Method outbound = PacketDelayService.class.getDeclaredMethod("delayOutbound", Packet.class,
+                    io.netty.channel.ChannelHandlerContext.class, io.netty.channel.ChannelPromise.class);
+            outbound.setAccessible(true);
+            PacketDelayService service = PacketDelayService.getInstance();
+            C03PacketPlayer other = new C03PacketPlayer(false);
+            assertEquals(false, outbound.invoke(service, other, null, null));
+            assertTrue(other.isOnGround());
+            assertEquals(false, outbound.invoke(service, walking, null, null));
+            assertFalse(walking.isOnGround());
+
+            criticals.mode.setValue("NoGround");
+            f.mc.inGameHasFocus = true;
+            criticals.tick();
+            C03PacketPlayer noGround = new C03PacketPlayer(true);
+            assertEquals(false, outbound.invoke(service, noGround, null, null));
+            assertFalse(noGround.isOnGround());
+
+            criticals.setEnabled(false);
+            C03PacketPlayer plain = new C03PacketPlayer(false);
+            assertEquals(false, outbound.invoke(service, plain, null, null));
+            assertTrue(plain.isOnGround());
+        }
+    }
     private static VoidWorld voidWorld() throws Exception {
         VoidWorld world = PathTestFixture.allocate(VoidWorld.class); world.loaded = true; world.chunks = new HashMap<>();
         world.provider = (IChunkProvider) Proxy.newProxyInstance(RewoundExtraModesTest.class.getClassLoader(), new Class<?>[] {IChunkProvider.class}, (proxy, method, args) -> {

@@ -1,7 +1,9 @@
 package keystrokesmod.script.model;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.EntityLivingBase;
@@ -17,14 +19,25 @@ public class Entity {
     public String type;
     public int entityId;
     public boolean isLiving, isPlayer, isUser;
-    private static final HashMap<Integer, Entity> CACHE = new HashMap<Integer, Entity>();
+    // A wrapper owns its native entity. Weak values keep the cache from pinning that entity and its world.
+    private static final LoadingCache<net.minecraft.entity.Entity, Entity> CACHE = CacheBuilder.newBuilder()
+            .weakKeys()
+            .weakValues()
+            .build(new CacheLoader<net.minecraft.entity.Entity, Entity>() {
+                @Override public Entity load(net.minecraft.entity.Entity entity) { return new Entity(entity); }
+            });
     public Entity(net.minecraft.entity.Entity value) {
         entity=value; if(value==null)return; type=value.getClass().getSimpleName(); entityId=value.getEntityId();
         isLiving=value instanceof EntityLivingBase; isPlayer=value instanceof EntityPlayer;
         isUser=isPlayer && Minecraft.getMinecraft().thePlayer != null && value.getUniqueID().equals(Minecraft.getMinecraft().thePlayer.getUniqueID());
     }
-    public static Entity convert(net.minecraft.entity.Entity value) { if(value==null)return null; int key=value.getEntityId()+System.identityHashCode(value); Entity cached=CACHE.get(key); if(cached==null){cached=new Entity(value);CACHE.put(key,cached);} return cached; }
-    public static void clearCache(){CACHE.clear();}
+    public static Entity convert(net.minecraft.entity.Entity value) {
+        if (value == null) return null;
+        Entity wrapper = CACHE.getUnchecked(value);
+        wrapper.entityId = value.getEntityId();
+        return wrapper;
+    }
+    public static void clearCache() { CACHE.invalidateAll(); }
     public boolean allowEditing(){return entity instanceof EntityPlayer && ((EntityPlayer)entity).capabilities.allowEdit;}
     public double distanceTo(Vec3 pos){return entity.getDistance(pos.x,pos.y,pos.z);} public double distanceToSq(Vec3 pos){return entity.getDistanceSq(pos.x,pos.y,pos.z);}
     public double distanceToGround(){ if(entity==null||Minecraft.getMinecraft().theWorld==null)return 0; double y=entity.posY; while(y>0&&!Minecraft.getMinecraft().theWorld.isAirBlock(new net.minecraft.util.BlockPos(entity.posX,y-1,entity.posZ))) y--; return entity.posY-y; }

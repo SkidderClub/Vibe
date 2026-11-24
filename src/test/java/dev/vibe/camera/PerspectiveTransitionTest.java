@@ -13,11 +13,22 @@ public class PerspectiveTransitionTest {
     @Test public void topPassesAboveTheHeadAndSideRoutesUseOppositeSides(){
         double[][] frames=new double[3][];String[] modes={"Top","Left","Right"};
         for(int i=0;i<3;i++){PerspectiveTransition t=new PerspectiveTransition();t.reset(1);t.update(2,0,2,"Linear",modes[i]);t.update(2,250000000,2,"Linear",modes[i]);frames[i]=t.frame(0,0);}
-        assertEquals(4,frames[0][1],1e-6);assertEquals(-4,frames[1][0],1e-6);assertEquals(4,frames[2][0],1e-6);
+        assertTrue(frames[0][1]>3.8);assertEquals(-4,frames[1][0],1e-6);assertEquals(4,frames[2][0],1e-6);
+    }
+    @Test public void firstPersonToRearViewOnlyChangesDistance(){
+        for(String direction:new String[]{"Top","Left","Right"}){
+            PerspectiveTransition t=new PerspectiveTransition();t.reset(0);
+            double[] first=t.frame(135,-33);
+            t.update(1,0,1,"Linear",direction);
+            t.update(1,500000000,1,"Linear",direction);
+            double[] halfway=t.frame(135,-33);
+            assertEquals(2,t.distance(),1e-9);
+            for(int i=3;i<9;i++)assertEquals(first[i],halfway[i],1e-9);
+        }
     }
     @Test public void retargetingDuringAnimationKeepsPositionAndOrientationContinuous(){
         PerspectiveTransition t=new PerspectiveTransition();t.reset(1);t.update(2,0,2,"Cubic","Top");t.update(2,200000000,2,"Cubic","Top");double[] before=t.frame(32,-12);
-        t.update(0,200000000,2,"Cubic","Top");assertArrayEquals(before,t.frame(32,-12),1e-9);
+        t.update(0,200000000,2,"Cubic","Left");assertArrayEquals(before,t.frame(32,-12),1e-9);
         t.update(0,700000000,2,"Cubic","Top");assertEquals(0,t.distance(),0);assertEquals(0,t.angle(),0);
     }
     @Test public void cameraBasisStaysFiniteUnitLengthAndOrthogonalAcrossThePole(){
@@ -25,7 +36,7 @@ public class PerspectiveTransitionTest {
             PerspectiveTransition t=new PerspectiveTransition();t.reset(1);t.update(2,0,1,"Sine",direction);
             for(int frame=0;frame<=100;frame++){t.update(2,frame*10000000L,1,"Sine",direction);double[] f=t.frame(125,34);double look=0,up=0,dot=0;
                 for(int i=0;i<3;i++){assertTrue(Double.isFinite(f[i]));look+=f[3+i]*f[3+i];up+=f[6+i]*f[6+i];dot+=f[3+i]*f[6+i];}
-                assertEquals(1,look,1e-8);assertEquals(1,up,1e-8);assertEquals(0,dot,1e-8);
+                assertEquals(1,look,1e-8);assertEquals(1,up,1e-8);assertEquals(0,dot,1e-8);assertTrue(f[7]>=0);
             }
         }
     }

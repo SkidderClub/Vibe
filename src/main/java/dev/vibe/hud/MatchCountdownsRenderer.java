@@ -1,9 +1,7 @@
 package dev.vibe.hud;
 
 import dev.vibe.module.impl.client.HudModule;
-import dev.vibe.ui.NeverLoseFont;
 import dev.vibe.ui.RenderUtils;
-import dev.vibe.ui.adjust.AdjustFonts;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
@@ -34,20 +32,19 @@ final class MatchCountdownsRenderer {
         element.setBounds(x, y, width, height);
 
         HudOverlayRenderer.panel(manager, hud, element, settings, x, y, width, height);
-        FontRenderer nativeFont = Minecraft.getMinecraft().fontRendererObj;
-        NeverLoseFont body = adjust ? AdjustFonts.SMALL : NeverLoseFont.REGULAR;
-        NeverLoseFont heading = adjust ? AdjustFonts.LABEL : NeverLoseFont.BOLD;
+        FontRenderer font = Minecraft.getMinecraft().fontRendererObj;
         int accent = settings.accent.getArgb();
         int ink = settings.text.getArgb();
-        int top = y + (adjust ? 6 : 8);
         boolean shadow = settings.shadow.isEnabled();
-        clock(x + 13, top + (adjust ? 3 : 4), accent);
+        int headerY = y + (header - 2) / 2;
+        int titleLeft = x + (width - font.getStringWidth(MatchCountdowns.TITLE) - 14) / 2;
+        clock(titleLeft + 4, headerY, accent);
         int rail = RenderUtils.alpha(accent, 80);
         Gui.drawRect(x + 8, y + header - 3, x + width - 8, y + header - 2, rail);
         // The shared glass and outline passes can restore the driver's blend state independently of Minecraft's cache.
         GlStateManager.disableBlend();
         GlStateManager.enableBlend();
-        text(nativeFont, heading, skeet, MatchCountdowns.TITLE, x + 22, top, ink, shadow);
+        font.drawString(MatchCountdowns.TITLE, titleLeft + 14, headerY - font.FONT_HEIGHT / 2, ink, shadow);
 
         for (int i = 0; i < rows; i++) {
             MatchCountdowns.Timer timer = timers.get(i);
@@ -57,20 +54,19 @@ final class MatchCountdownsRenderer {
                 Gui.drawRect(x + 7, rowY + 2, x + 9, rowY + rowHeight - 1, rail);
             }
             String time = timer.label(now);
-            float timeX = x + width - 11 - width(nativeFont, body, skeet, time);
+            int timeX = x + width - 11 - font.getStringWidth(time);
             int textX = x + (adjust ? 15 : 12);
-            int textY = rowY + (adjust ? 4 : 5);
+            int textY = rowY + (rowHeight - font.FONT_HEIGHT) / 2;
             if (timer.kind != MatchCountdowns.Kind.MATCH) {
-                NeverLoseFont badge = adjust ? AdjustFonts.HUD : AdjustFonts.SMALL;
                 String type = timer.kind.badge;
-                float pillWidth = width(nativeFont, badge, skeet, type) + 8;
+                int pillWidth = font.getStringWidth(type) + 8;
                 HudShapes.round(textX - 2, rowY + 2, pillWidth, rowHeight - 4, skeet ? 1 : 3, RenderUtils.alpha(accent, 35));
-                text(nativeFont, badge, skeet, type, textX + 2, textY + (skeet ? 0 : 1), accent, shadow);
-                textX += (int) Math.ceil(pillWidth) + 3;
+                font.drawString(type, textX + 2, textY, accent, shadow);
+                textX += pillWidth + 3;
             }
-            String name = fit(nativeFont, body, skeet, timer.name, timeX - textX - 8);
-            text(nativeFont, body, skeet, name, textX, textY, ink, shadow);
-            text(nativeFont, body, skeet, time, timeX, textY, accent, shadow);
+            String name = fit(font, timer.name, timeX - textX - 8);
+            font.drawString(name, textX, textY, ink, shadow);
+            font.drawString(time, timeX, textY, accent, shadow);
         }
         if (adjust) Gui.drawRect(x + 4, y + height - 2, x + width - 4, y + height - 1, accent);
     }
@@ -81,26 +77,10 @@ final class MatchCountdownsRenderer {
         HudShapes.line(x, y, x + 1.5F, y + 1, 1F, color);
     }
 
-    private static float width(FontRenderer nativeFont, NeverLoseFont smooth, boolean skeet, String text) {
-        return skeet ? nativeFont.getStringWidth(text) : smooth.width(text);
-    }
-
-    private static String fit(FontRenderer nativeFont, NeverLoseFont smooth, boolean skeet, String text, float width) {
-        if (width(nativeFont, smooth, skeet, text) <= width) return text;
-        String end = "…";
-        while (!text.isEmpty() && width(nativeFont, smooth, skeet, text + end) > width) {
-            text = text.substring(0, text.offsetByCodePoints(text.length(), -1));
-        }
-        return text.isEmpty() ? "" : text + end;
-    }
-
-    private static void text(FontRenderer nativeFont, NeverLoseFont smooth, boolean skeet, String text,
-                             float x, float y, int color, boolean shadow) {
-        if (skeet) {
-            nativeFont.drawString(text, x, y, color, shadow);
-        } else {
-            if (shadow) smooth.draw(text, x + .6F, y + .6F, (color >>> 25) << 24);
-            smooth.draw(text, x, y, color);
-        }
+    private static String fit(FontRenderer font, String text, int width) {
+        if (font.getStringWidth(text) <= width) return text;
+        String end = "...";
+        int available = width - font.getStringWidth(end);
+        return available > 0 ? font.trimStringToWidth(text, available) + end : "";
     }
 }

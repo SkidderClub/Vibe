@@ -8,7 +8,7 @@ import net.minecraft.network.play.client.C08PacketPlayerBlockPlacement;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.EnumFacing;
 
-/** Exire KillAuraNcpAutoBlock and IAutoBlock.unblock: post-hit C08, release when done. */
+/** Acquires and refreshes sword blocking while an eligible target is in range. */
 final class RewoundAutoblock {
     private EntityPlayerSP owner;
     private int slot;
@@ -19,7 +19,7 @@ final class RewoundAutoblock {
                 && p.getHeldItem() != null && p.getHeldItem().getItem() instanceof ItemSword;
     }
 
-    void afterAttack() {
+    void block() {
         EntityPlayerSP p = Minecraft.getMinecraft().thePlayer;
         if (p == null || p.sendQueue == null || p.getHeldItem() == null || !(p.getHeldItem().getItem() instanceof ItemSword)) return;
         p.sendQueue.addToSendQueue(new C08PacketPlayerBlockPlacement(p.getHeldItem()));

@@ -15,15 +15,16 @@ public final class DiabloCriticals {
         if(this.player!=player||this.world!=world){stage=false;this.player=player;this.world=world;}
         frame=new Frame(onGround,target,positionY);
     }
-    public synchronized void outbound(C03PacketPlayer packet){
-        Frame f=frame;if(f==null||!f.ground)return;
-        if(!f.target){stage=false;return;}
+    public synchronized boolean outbound(C03PacketPlayer packet){
+        Frame f=frame;if(f==null||!f.ground)return false;
+        if(!f.target){stage=false;return false;}
         stage=!stage;
         try{
             if(y==null){y=ReflectionHelper.findField(C03PacketPlayer.class,"y","field_149477_b");y.setAccessible(true);}
             if(ground==null){ground=ReflectionHelper.findField(C03PacketPlayer.class,"onGround","field_149474_g");ground.setAccessible(true);}
             y.setDouble(packet,f.y+(stage?.01:.007));ground.setBoolean(packet,false);
         }catch(IllegalAccessException error){throw new IllegalStateException("Diablo critical packet fields",error);}
+        return true;
     }
     private static final class Frame {final boolean ground,target;final double y;Frame(boolean g,boolean t,double y){ground=g;target=t;this.y=y;}}
 }

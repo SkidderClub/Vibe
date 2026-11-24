@@ -625,7 +625,7 @@ public class KillAuraModule extends Module {
     }
     public boolean isRewoundBlocking() { return isEnabled() && autoblock.is("Rewound") && rewoundBlock.blocking(); }
 
-    /** Native swing/controller order from Exire's Post attack branch, then its NCP block. */
+    /** Start guarding in block range and refresh after the native attack. */
     public void rewoundAfterWalking(Object entity) {
         if (!autoblock.is("Rewound") || entity != minecraft.thePlayer) return;
         if (!canOperate() || isBreakingBlock() || ScaffoldModule.isActive() || BedAuraModule.ownsMiningInput()
@@ -637,6 +637,7 @@ public class KillAuraModule extends Module {
         }
         boolean canBlock = swordHeld() && distanceTo(target) <= blockingRange.getDouble();
         if (!canBlock) rewoundBlock.release();
+        else if (!rewoundBlock.blocking()) rewoundBlock.block();
         long now = System.nanoTime() / 1000000L;
         boolean inRange = distanceTo(target) <= clickRange();
         if (!inRange) clicks.reset();
@@ -646,7 +647,7 @@ public class KillAuraModule extends Module {
             if (hit.entityHit == target) {
                 minecraft.thePlayer.swingItem();
                 minecraft.playerController.attackEntity(minecraft.thePlayer, target);
-                if (canBlock) rewoundBlock.afterAttack();
+                if (canBlock) rewoundBlock.block();
             }
         }
         visualBlocking = rewoundBlock.blocking();
@@ -727,13 +728,14 @@ public class KillAuraModule extends Module {
                 && ((aura.canOperate() && aura.target != null) || aura.blockOwned));
     }
 
-    public static int guiClickCounterHook(int vanilla) {
+    public static int guiClickCounterHook(int vanilla, int previous) {
         KillAuraModule aura = module();
         // GuiContainer normally installs a 10,000-tick attack lock. Only the
         // explicit GUI permissions remove that GUI lock; ordinary
         // vanilla miss cooldowns are left alone.
         return vanilla == 10000 && aura != null && aura.canOperate() && aura.target != null
-                && aura.minecraft.currentScreen != null && aura.guiCombatAllowed() ? 0 : vanilla;
+                && aura.minecraft.currentScreen != null && aura.guiCombatAllowed()
+                ? (previous >= 9999 ? 0 : previous) : vanilla;
     }
 
     public static KillAuraModule activeController(){return module();}

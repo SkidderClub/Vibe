@@ -60,10 +60,11 @@ public final class NoFallModule extends Module {
     }
 
     /** Called at the Netty boundary before any queued packet module. */
-    public void handleOutbound(Packet<?> packet) {
+    public void handleOutbound(Packet<?> packet, boolean criticalsGround) {
         if (!isEnabled() || !(packet instanceof C03PacketPlayer)) return;
         C03PacketPlayer player = (C03PacketPlayer) packet;
         serverOnGround = readGround(player);
+        if (criticalsGround) return;
         if (mode.is("No Ground")) writeGround(player, false);
         else if (mode.is("Always On Ground")) writeGround(player, true);
     }

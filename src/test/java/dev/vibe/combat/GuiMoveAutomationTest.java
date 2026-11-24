@@ -17,10 +17,12 @@ public class GuiMoveAutomationTest {
             f.base.modules.registerDynamic(gui);f.base.modules.registerDynamic(fix);f.base.modules.registerDynamic(aura);gui.setEnabled(true);fix.setEnabled(true);aura.setEnabled(true);
             f.base.mc.currentScreen=PathTestFixture.allocate(GuiInventory.class);f.base.mc.inGameHasFocus=false;
             aura.tickStart();assertNull(aura.getTarget());assertFalse(KillAuraModule.allowInputHook(false));
-            gui.allowKillaura.setEnabled(true);aura.tickStart();assertNotNull(aura.getTarget());assertTrue(fix.ownsRotation(aura.getId()));assertTrue(KillAuraModule.allowInputHook(false));assertEquals(0,KillAuraModule.guiClickCounterHook(10000));assertEquals(7,KillAuraModule.guiClickCounterHook(7));
+            gui.allowKillaura.setEnabled(true);aura.tickStart();assertNotNull(aura.getTarget());assertTrue(fix.ownsRotation(aura.getId()));assertTrue(KillAuraModule.allowInputHook(false));assertEquals(0,KillAuraModule.guiClickCounterHook(10000,10000));assertEquals(7,KillAuraModule.guiClickCounterHook(10000,7));assertEquals(7,KillAuraModule.guiClickCounterHook(7,0));
             KillAuraModule.prepareInputHook();assertTrue("Aura must use the normal attack key's press queue in a GUI",f.base.mc.gameSettings.keyBindAttack.isPressed());aura.tickEnd();
             f.base.mc.currentScreen=PathTestFixture.allocate(GuiChest.class);aura.tickStart();assertNull(aura.getTarget());gui.screens.toggle("Chests");aura.tickStart();assertNotNull(aura.getTarget());
             f.base.mc.currentScreen=new GuiChat();aura.tickStart();assertNull(aura.getTarget());assertFalse(KillAuraModule.allowInputHook(false));
+            gui.allowCombatInChat.setEnabled(true);aura.tickStart();assertNotNull(aura.getTarget());assertTrue(fix.ownsRotation(aura.getId()));assertTrue(KillAuraModule.allowInputHook(false));
+            assertFalse(gui.allows(f.base.mc.currentScreen));assertFalse(GuiMoveModule.allowsAutoWalk());
             f.base.mc.currentScreen=PathTestFixture.allocate(GuiEditSign.class);assertFalse(GuiMoveModule.allowsKillaura());
             f.base.mc.currentScreen=PathTestFixture.allocate(GuiInventory.class);gui.setEnabled(false);aura.tickStart();assertNull(aura.getTarget());aura.setEnabled(false);
         }

@@ -38,6 +38,7 @@ public final class RewoundTransformer implements net.minecraft.launchwrapper.ICl
                 if (!"()V".equals(method.desc) || !("onUpdateWalkingPlayer".equals(method.name) || "func_175161_p".equals(method.name) || "p".equals(method.name))) continue;
                 movementName = "p".equals(method.name) ? "d" : "func_175161_p".equals(method.name) ? "func_70091_d" : "moveEntity";
                 groundReads(method);
+                trackWalkingPackets(method);
                 wrapWalking(node, method);
             }
             // Forge's vanilla local player inherits moveEntity. Keeping the override
@@ -88,6 +89,21 @@ public final class RewoundTransformer implements net.minecraft.launchwrapper.ICl
                     || !(field.name.equals("onGround") || field.name.equals("field_70122_E") || field.name.equals("C"))) continue;
             method.instructions.insertBefore(field, new InsnNode(DUP));
             method.instructions.insert(field, new MethodInsnNode(INVOKESTATIC, HOOK, "ground", "(Ljava/lang/Object;Z)Z", false));
+        }
+    }
+
+    private static void trackWalkingPackets(MethodNode method) {
+        for (AbstractInsnNode instruction : method.instructions.toArray()) {
+            if (!(instruction instanceof MethodInsnNode)) continue;
+            MethodInsnNode call = (MethodInsnNode) instruction;
+            if (!(call.owner.equals("net/minecraft/client/network/NetHandlerPlayClient") || call.owner.equals("bcy"))
+                    || !(call.name.equals("addToSendQueue") || call.name.equals("func_147297_a") || call.name.equals("a"))
+                    || !(call.desc.equals("(Lnet/minecraft/network/Packet;)V") || call.desc.equals("(Lff;)V"))) continue;
+            InsnList hook = new InsnList();
+            hook.add(new InsnNode(DUP));
+            hook.add(new VarInsnNode(ALOAD, 0));
+            hook.add(new MethodInsnNode(INVOKESTATIC, HOOK, "trackWalkingPacket", "(Ljava/lang/Object;Ljava/lang/Object;)V", false));
+            method.instructions.insertBefore(call, hook);
         }
     }
 

@@ -296,7 +296,32 @@ public class RewoundModesTest implements Opcodes {
         }
     }
 
-    @Test public void auraPostHitBlocksAndNextNoSlowUpdateWrapsItsServerSideBlock() throws Exception {
+    @Test public void auraStartsAndKeepsBlockingWithVanillaNoSlow() throws Exception {
+        try (Fixture f = new Fixture()) {
+            select(f.aura, "Autoblock Mode", "Rewound");
+            f.slow.getMode().setValue("Vanilla");
+            f.slow.setEnabled(true);
+            for (Setting<?> setting : f.aura.getSettings()) {
+                if (setting.getRawName().equals("Blocking Range")) ((NumberSetting) setting).setValue(6.0);
+            }
+            f.aura.setEnabled(true);
+            Player target = PathTestFixture.allocate(Player.class); target.effects = new HashMap<>(); target.worldObj = f.world;
+            health(target);
+            target.setEntityBoundingBox(new AxisAlignedBB(-.3, 64, 5.2, .3, 65.8, 5.8)); target.posY = 64; target.posZ = 5.5; target.setEntityId(42);
+            PathTestFixture.set(KillAuraModule.class, f.aura, "target", target);
+            f.mc.playerController.updateController();
+            f.queue.packets.clear();
+            f.player.onUpdateWalkingPlayer();
+            assertSequence(f.queue.packets, C03PacketPlayer.class, C08PacketPlayerBlockPlacement.class);
+            assertTrue(f.aura.isRewoundBlocking());
+            f.queue.packets.clear();
+            f.player.onUpdateWalkingPlayer();
+            assertSequence(f.queue.packets, C03PacketPlayer.class);
+            assertTrue(f.aura.isRewoundBlocking());
+        }
+    }
+
+    @Test public void auraBlocksBeforeFirstHitAndNextNoSlowUpdateWrapsItsServerSideBlock() throws Exception {
         try (Fixture f = new Fixture()) {
             select(f.aura, "Autoblock Mode", "Rewound"); f.aura.setEnabled(true);
             Player target = PathTestFixture.allocate(Player.class); target.effects = new HashMap<>(); target.worldObj = f.world;
@@ -305,7 +330,8 @@ public class RewoundModesTest implements Opcodes {
             PathTestFixture.set(KillAuraModule.class, f.aura, "target", target);
             f.mc.playerController.updateController(); f.queue.packets.clear();
             f.player.onUpdateWalkingPlayer();
-            assertSequence(f.queue.packets, C03PacketPlayer.class, C0APacketAnimation.class, C02PacketUseEntity.class, C08PacketPlayerBlockPlacement.class);
+            assertSequence(f.queue.packets, C03PacketPlayer.class, C08PacketPlayerBlockPlacement.class,
+                    C0APacketAnimation.class, C02PacketUseEntity.class, C08PacketPlayerBlockPlacement.class);
             assertTrue(f.aura.isRewoundBlocking()); assertFalse(f.player.isUsingItem());
             select(f.slow, "Mode", "Rewound"); f.slow.setEnabled(true); f.queue.packets.clear();
             f.player.onUpdateWalkingPlayer();

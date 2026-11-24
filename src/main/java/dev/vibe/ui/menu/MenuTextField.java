@@ -7,7 +7,10 @@ public final class MenuTextField extends GuiTextField {
     private final int height;
     private int first,blink;
     private Integer paletteText,paletteAccent;
+    private String placeholder = "";
+    private int placeholderColor;
     public void palette(int text,int accent){paletteText=text;paletteAccent=accent;}
+    public void placeholder(String text, int color){placeholder=text;placeholderColor=color;}
     public MenuTextField(int id,FontRenderer font,int x,int y,int width,int height){super(id,font,x,y,width,height);this.height=height;}
     @Override public void updateCursorCounter(){super.updateCursorCounter();blink++;}
     @Override public void drawTextBox(){
@@ -15,11 +18,11 @@ public final class MenuTextField extends GuiTextField {
         MenuFont font=AccountScreenStyle.BODY_FONT;String text=getText();int cursor=getCursorPosition();first=Math.min(first,cursor);
         while(first<cursor&&font.width(text.substring(first,cursor))>getWidth()-3)first++;
         String visible=font.fit(text.substring(first),getWidth());if(visible.endsWith("…"))visible=visible.substring(0,visible.length()-1);
-        float top=yPosition+(height-font.inkHeight("Ag"))*.5F;
         int end=Math.min(text.length(),first+visible.length());
         int a=Math.max(first,Math.min(cursor,getSelectionEnd())),b=Math.min(end,Math.max(cursor,getSelectionEnd()));
         if(a<b){int left=xPosition+(int)font.width(text.substring(first,a)),right=xPosition+(int)Math.ceil(font.width(text.substring(first,b)));dev.vibe.ui.MenuRoundedRenderer.rect(left,yPosition,right-left,height,0,0x554D92DD);}
-        font.draw(visible,xPosition,top,paletteText==null?AccountScreenStyle.TEXT:paletteText);
+        if(text.isEmpty()&&!isFocused())font.drawOnLine(placeholder,xPosition,yPosition,height,placeholderColor);
+        else font.drawOnLine(visible,xPosition,yPosition,height,paletteText==null?AccountScreenStyle.TEXT:paletteText);
         if(isFocused()&&(blink/6)%2==0){int caret=xPosition+Math.round(font.width(text.substring(first,cursor)));Gui.drawRect(caret,yPosition+1,caret+1,yPosition+height-1,paletteAccent==null?AccountScreenStyle.ACCENT:paletteAccent);}
     }
     @Override public void mouseClicked(int x,int y,int button){

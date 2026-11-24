@@ -17,6 +17,7 @@ public final class GuiMoveModule extends dev.vibe.module.Module {
     public final BooleanSetting jump=addSetting(new BooleanSetting("Allow Jumping",true));
     public final BooleanSetting sprint=addSetting(new BooleanSetting("Allow Sprinting",true));
     public final BooleanSetting allowKillaura=addSetting(new BooleanSetting("Allow Killaura",false));
+    public final BooleanSetting allowCombatInChat=addSetting(new BooleanSetting("Killaura and MoveFix in Chat",false));
     public final BooleanSetting allowAutoWalk=addSetting(new BooleanSetting("Allow AutoWalk",false));
     private final Set<KeyBinding> owned=Collections.newSetFromMap(new IdentityHashMap<>());
     public GuiMoveModule(){super("GUI Move","Move in selected GUIs; pauses while typing or binding keys",Category.MOVEMENT,Keyboard.KEY_NONE);}
@@ -31,8 +32,9 @@ public final class GuiMoveModule extends dev.vibe.module.Module {
     /** All GUI automation shares the selected-screen, typing and window-focus guards. */
     private static boolean automationAllowed(boolean aura){
         Minecraft mc=Minecraft.getMinecraft();GuiMoveModule module=dev.vibe.features.FeatureModule.module(GuiMoveModule.class);
-        return mc!=null&&module!=null&&module.isEnabled()&&(aura?module.allowKillaura:module.allowAutoWalk).isEnabled()
-                &&windowActive(mc)&&module.allows(mc.currentScreen);
+        if(mc==null||module==null||!module.isEnabled()||!windowActive(mc))return false;
+        if(mc.currentScreen instanceof GuiChat)return aura&&module.allowCombatInChat.isEnabled();
+        return (aura?module.allowKillaura:module.allowAutoWalk).isEnabled()&&module.allows(mc.currentScreen);
     }
     private static boolean windowActive(Minecraft mc){return mc.displayWidth<=0||mc.displayHeight<=0||!Display.isCreated()||Display.isActive();}
     public static boolean allowsKillaura(){return automationAllowed(true);}
