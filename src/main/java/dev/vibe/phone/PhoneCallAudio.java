@@ -8,6 +8,7 @@ import javazoom.jl.player.*;
 /** Local MP3 decoding and audio-device work never run on the game thread. */
 public final class PhoneCallAudio implements PhoneCallPlayer {
     public static final String RESOURCE = "/assets/vibe/phone/call-ringing.mp3";
+    public static final String MAINLAND_RESOURCE = "/assets/vibe/phone/call-ringing-cn.mp3";
     private final Supplier<AudioDevice> devices;
     private volatile Session current;
 
@@ -18,17 +19,22 @@ public final class PhoneCallAudio implements PhoneCallPlayer {
         volatile boolean cancelled, finished;
         volatile float volume;
         volatile Player player;
+        volatile String resource = RESOURCE;
         volatile String error = "";
     }
 
     @Override public void start(float volume) {
         close();
-        Session session = new Session(); session.volume = gain(volume); current = session;
+        Session session = new Session(); session.volume = gain(volume);
+        // Mainland players get the local ringtone; the hinted answer is used
+        // immediately while the IP lookup finishes in the background.
+        session.resource = dev.vibe.core.ChinaRegion.mainlandChina() ? MAINLAND_RESOURCE : RESOURCE;
+        current = session;
         Thread worker = new Thread(() -> play(session), "VibeOS-Call");
         worker.setDaemon(true); worker.start();
     }
     private void play(Session session) {
-        try (InputStream resource = PhoneCallAudio.class.getResourceAsStream(RESOURCE)) {
+        try (InputStream resource = PhoneCallAudio.class.getResourceAsStream(session.resource)) {
             if (resource == null) throw new IOException("Missing call audio");
             try (InputStream input = new BufferedInputStream(resource)) {
                 AudioDevice device = devices.get();
