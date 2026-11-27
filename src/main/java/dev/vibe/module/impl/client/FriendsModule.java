@@ -9,11 +9,13 @@ import org.lwjgl.input.Keyboard;
 
 /** Always-on shared friend policy for all combat modules. */
 public final class FriendsModule extends Module {
-    private final BooleanSetting deathmatch = addSetting(new BooleanSetting("Deathmatch", false));
+    private final BooleanSetting noFriends = addSetting(new BooleanSetting("NoFriends", false));
+    private final BooleanSetting deathmatch = addSetting(new BooleanSetting("Deathmatch", false, () -> !noFriends.isEnabled()));
     public FriendsModule() { super("Friends", "Keep saved friends out of combat", Category.CLIENT, Keyboard.KEY_NONE); setEnabled(true); }
     @Override public boolean isToggleable() { return false; }
 
     public boolean shouldAttack(EntityPlayer player) {
+        if (noFriends.isEnabled()) return true;
         if (Vibe.getInstance().getFriendManager() == null || !Vibe.getInstance().getFriendManager().isFriend(player)) return true;
         if (!deathmatch.isEnabled() || player == null || player.worldObj == null) return false;
         // Friends become eligible only after every other alive player has

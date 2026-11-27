@@ -45,6 +45,11 @@ public final class PitStatus {
     }
 
     public static boolean inPitForChat(Minecraft mc) {
+        return inPit(mc, null);
+    }
+
+    /** Prefer the server's location over a sidebar that may linger during a game switch. */
+    public static boolean inPit(Minecraft mc, PitStatus sidebarStatus) {
         if (mc.theWorld == null || mc.thePlayer == null) return false;
         Boolean location = RewoundPitEvents.pitLocation(mc.getNetHandler());
         if (location != null) return location;
@@ -54,7 +59,7 @@ public final class PitStatus {
             String title = plain(objective.getDisplayName()).toUpperCase(Locale.ROOT);
             if (title.equals("PIT") || title.equals("THE PIT") || title.equals("REWOUND PIT")) return true;
         }
-        return read(mc).active;
+        return (sidebarStatus == null ? read(mc) : sidebarStatus).active;
     }
 
     private static ScoreObjective sidebar(Minecraft mc, Scoreboard board) {

@@ -108,11 +108,23 @@ public class RewoundPitTest {
     }
     @Test public void combatAreaInversionAndTemporaryEnforcementDoNotRewriteTargetSettings()throws Exception{
         try(Fixture f=new Fixture()){
+            assertTrue(f.pit.onlyInPit.isEnabled());
+            assertFalse(f.base.base.filters.isTargetAreaActive());
+            f.pit.onlyInPit.setEnabled(false);
+            assertTrue(f.base.base.filters.isTargetAreaActive());
+            f.pit.onlyInPit.setEnabled(true);
+            f.stats(103,2,15000);
+            f.tick();
             assertFalse(f.base.base.filters.targetArea.isEnabled());assertTrue(f.base.base.filters.isTargetAreaActive());
             f.base.base.filters.displayTargetArea.setEnabled(true);assertTrue(f.base.base.filters.shouldDisplayTargetArea());
-            f.stats(103,2,15000);f.villager(false,1.5,64,.5);f.player.setPosition(8.5,64,.5);f.tick();assertFalse(f.pit.busy());
+            f.villager(false,1.5,64,.5);f.player.setPosition(8.5,64,.5);f.tick();assertFalse(f.pit.busy());
             f.base.base.filters.invertArea.setEnabled(true);f.tick();assertFalse("NPC outside the inverted spawn cannot be selected",f.pit.busy());
             f.villager(false,9.5,64,.5);f.time+=4000;f.tick();assertTrue(f.pit.busy());
+            f.board.setObjectiveInDisplaySlot(1,null);
+            f.tick();
+            assertFalse(f.pit.busy());
+            assertFalse(f.walk.ownsNavigation(f.pit));
+            assertFalse(f.base.base.filters.isTargetAreaActive());
             f.pit.setEnabled(false);assertFalse(f.base.base.filters.targetArea.isEnabled());assertFalse(f.base.base.filters.isTargetAreaActive());assertFalse(f.base.base.filters.shouldDisplayTargetArea());
         }
     }

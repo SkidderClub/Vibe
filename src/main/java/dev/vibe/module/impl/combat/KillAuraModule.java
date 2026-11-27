@@ -247,13 +247,14 @@ public class KillAuraModule extends Module {
             KeyBinding.setKeyBindState(attack.getKeyCode(), false);
             return;
         }
-        boolean inClickRange = distanceTo(target) <= clickRange();
+        double distance = distanceTo(target);
+        boolean inClickRange = distance <= clickRange();
         if (!inClickRange) clicks.reset();
         // your own right click with something that is not a sword - a block, a rod, water - is yours: no click and no
         // crosshair of the aura's this tick, or it would go to them instead
         boolean ownUse = VanillaClicks.physicallyDown(minecraft.gameSettings.keyBindUseItem) && !swordHeld();
         boolean clickDue = inClickRange && !ownUse && clickDue(now);
-        boolean inBlockRange = swordHeld() && distanceTo(target) <= blockingRange.getDouble();
+        boolean inBlockRange = swordHeld() && distance <= blockingRange.getDouble();
         visualBlocking = !autoblock.is("None") && inBlockRange
                 && (autoblock.is("Fake") || !onlyRightClick.isEnabled() || rightMouseDown());
         boolean wantsBlock = realBlockMode() && visualBlocking;
@@ -275,6 +276,11 @@ public class KillAuraModule extends Module {
         // Let vanilla abort an existing dig before combat takes over, even
         // when the user permits aura to interrupt block breaking.
         if (minecraft.playerController.getIsHittingBlock()) return;
+        MovingObjectPosition hit = clickDue || wantsBlock ? attackHit(attackReach()) : null;
+        // Keep a due melee click pending while the aim is still turning onto the target.
+        // Out-of-reach swings still use the configured Clicking Range.
+        if (clickDue && getClass() == KillAuraModule.class && distance <= reach.getMax()
+                && hit.entityHit != target) clickDue = false;
         // Vanilla releases use and discards attacks in this branch. Attack on
         // the following tick, never by injecting release+attack packets here.
         if (minecraft.thePlayer.isUsingItem()) {
@@ -285,7 +291,7 @@ public class KillAuraModule extends Module {
         }
         blockOwned = false;
         // the crosshair is the aura's only on ticks it clicks or blocks: on the others your own right click is untouched
-        if (clickDue || wantsBlock) overrideHit(attackHit(attackReach()));
+        if (clickDue || wantsBlock) overrideHit(hit);
         if (clickDue) {
             int count = pollClicks(now);
             for (int i = 0; i < count; i++) VanillaClicks.pulseAttack(attack);
@@ -408,6 +414,13 @@ public class KillAuraModule extends Module {
     }
 
     private int compare(EntityLivingBase first, EntityLivingBase second) {
+        if (getClass() == KillAuraModule.class) {
+            // A target in autoblock or projectile range can be tracked, but cannot
+            // keep a reachable opponent from being selected for melee.
+            double meleeRange = Math.min(reach.getMax(), clickRange());
+            int reachable = Boolean.compare(distanceTo(second) <= meleeRange, distanceTo(first) <= meleeRange);
+            if (reachable != 0) return reachable;
+        }
         int preferred=dev.vibe.target.TargetManager.comparePriority(first,second);if(preferred!=0)return preferred;
         int result = Double.compare(score(first), score(second));
         if (result == 0) result = Double.compare(distanceTo(first), distanceTo(second));
@@ -625,6 +638,13 @@ public class KillAuraModule extends Module {
     }
     public boolean isRewoundBlocking() { return isEnabled() && autoblock.is("Rewound") && rewoundBlock.blocking(); }
 
+    private boolean meleeClickReady(long now) {
+        if (getClass() != KillAuraModule.class) {
+            return pollClicks(now) > 0 && attackHit(attackReach()).entityHit == target;
+        }
+        return clickDue(now) && attackHit(attackReach()).entityHit == target && pollClicks(now) > 0;
+    }
+
     /** Start guarding in block range and refresh after the native attack. */
     public void rewoundAfterWalking(Object entity) {
         if (!autoblock.is("Rewound") || entity != minecraft.thePlayer) return;
@@ -642,13 +662,10 @@ public class KillAuraModule extends Module {
         boolean inRange = distanceTo(target) <= clickRange();
         if (!inRange) clicks.reset();
         // Preserve Vibe's item-use ownership and ray/reach policy.
-        if (inRange && (!minecraft.thePlayer.isUsingItem() || minecraft.thePlayer.isBlocking()) && pollClicks(now) > 0) {
-            MovingObjectPosition hit = attackHit(attackReach());
-            if (hit.entityHit == target) {
-                minecraft.thePlayer.swingItem();
-                minecraft.playerController.attackEntity(minecraft.thePlayer, target);
-                if (canBlock) rewoundBlock.block();
-            }
+        if (inRange && (!minecraft.thePlayer.isUsingItem() || minecraft.thePlayer.isBlocking()) && meleeClickReady(now)) {
+            minecraft.thePlayer.swingItem();
+            minecraft.playerController.attackEntity(minecraft.thePlayer, target);
+            if (canBlock) rewoundBlock.block();
         }
         visualBlocking = rewoundBlock.blocking();
     }
@@ -667,13 +684,11 @@ public class KillAuraModule extends Module {
         net.minecraft.client.entity.EntityPlayerSP p=minecraft.thePlayer;
         if(!novolineWantsBlock||p.movementInput.moveForward!=0||p.movementInput.moveStrafe!=0)novolineBlock.release();
         long now=System.nanoTime()/1000000L;
-        if(distanceTo(target)<=clickRange()&&(!p.isUsingItem()||p.isBlocking())&&pollClicks(now)>0){
-            MovingObjectPosition hit=attackHit(attackReach());
-            if(hit.entityHit==target){
-                if(dev.vibe.movement.NovolineSupport.hypixel()&&novolineWantsBlock)
-                    p.sendQueue.addToSendQueue(new net.minecraft.network.play.client.C02PacketUseEntity(target,net.minecraft.network.play.client.C02PacketUseEntity.Action.INTERACT));
-                p.swingItem();minecraft.playerController.attackEntity(p,target);
-            }
+        if (distanceTo(target) <= clickRange() && (!p.isUsingItem() || p.isBlocking()) && meleeClickReady(now)) {
+            if (dev.vibe.movement.NovolineSupport.hypixel() && novolineWantsBlock)
+                p.sendQueue.addToSendQueue(new net.minecraft.network.play.client.C02PacketUseEntity(target,net.minecraft.network.play.client.C02PacketUseEntity.Action.INTERACT));
+            p.swingItem();
+            minecraft.playerController.attackEntity(p, target);
         }
     }
     public void novolineAfterWalking(Object entity){

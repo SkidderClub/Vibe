@@ -1,25 +1,90 @@
 package dev.vibe.ui.render;
 
 import dev.vibe.Vibe;
+import dev.vibe.module.impl.meme.BigbrainModule;
 import dev.vibe.module.impl.visual.CustomCosmeticsModule;
-import dev.vibe.module.impl.movement.MoveFixModule;
 import dev.vibe.ui.RenderUtils;
 import dev.vibe.ui.WorldRenderUtils;
+import dev.vibe.ui.render.esp.ChamsRenderer;
 import java.awt.Color;
+import java.nio.FloatBuffer;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.IdentityHashMap;
+import java.util.Set;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.client.entity.EntityPlayerSP;
+import net.minecraft.client.model.ModelPlayer;
+import net.minecraft.client.model.ModelRenderer;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.entity.RenderPlayer;
+import net.minecraft.client.renderer.entity.layers.LayerRenderer;
+import net.minecraft.util.MathHelper;
 import net.minecraft.util.Vec3;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
+import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 
 /** State-safe world rendering for CustomCosmetics. */
 public final class CustomCosmeticsRenderer {
+    private static final float HAT_CLEARANCE_PIXELS = 9.1F;
+    private static final float PLAYER_RENDER_SCALE = 0.9375F;
     private final Minecraft minecraft = Minecraft.getMinecraft();
+    private final Set<RenderPlayer> hatLayers = Collections.newSetFromMap(new IdentityHashMap<RenderPlayer, Boolean>());
+    private final FloatBuffer hatPose = BufferUtils.createFloatBuffer(16);
+    private boolean hasHatPose;
+
+    public void beginFrame() {
+        hasHatPose = false;
+        if (minecraft.thePlayer == null || minecraft.getRenderManager() == null) return;
+        for (RenderPlayer renderer : minecraft.getRenderManager().getSkinMap().values()) {
+            if (!hatLayers.add(renderer)) continue;
+            renderer.addLayer(new LayerRenderer<AbstractClientPlayer>() {
+                @Override
+                public void doRenderLayer(AbstractClientPlayer player, float swing, float amount,
+                                          float partial, float age, float yaw, float pitch, float scale) {
+                    if (player != minecraft.thePlayer || !ChamsRenderer.worldRendering()) return;
+                    CustomCosmeticsModule module = cosmetics();
+                    if (module == null || !module.isEnabled() || !module.isActive("China Hat")) return;
+                    captureHatPose(player, renderer.getMainModel(), scale, module.getFollowHeadPitch().isEnabled());
+                }
+
+                @Override
+                public boolean shouldCombineTextures() { return false; }
+            });
+        }
+    }
+
+    private CustomCosmeticsModule cosmetics() {
+        return Vibe.getInstance().getModuleManager().getModule(CustomCosmeticsModule.class);
+    }
+
+    private void captureHatPose(AbstractClientPlayer player, ModelPlayer model, float scale, boolean followPitch) {
+        GL11.glPushMatrix();
+        try {
+            // Match ModelBiped's sneak translation and use the rendered head, including MoveFix and emote poses.
+            if (model.isSneak) GL11.glTranslatef(0, 0.2F, 0);
+            ModelRenderer head = model.bipedHead;
+            if (followPitch) {
+                BigbrainModule.postRenderHead(head, scale, player);
+            } else {
+                BigbrainModule bigbrain = Vibe.getInstance().getModuleManager().getModule(BigbrainModule.class);
+                if (bigbrain != null && bigbrain.isEnabled()) BigbrainModule.transform(head, scale, true);
+                GL11.glTranslatef(head.rotationPointX * scale, head.rotationPointY * scale, head.rotationPointZ * scale);
+            }
+            GL11.glTranslatef(0, -HAT_CLEARANCE_PIXELS * scale, 0);
+            GL11.glScalef(1, -1, 1);
+            hatPose.clear();
+            GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, hatPose);
+            hasHatPose = true;
+        } finally {
+            GL11.glPopMatrix();
+        }
+    }
 
     public void render(RenderWorldLastEvent event) {
-        CustomCosmeticsModule module = Vibe.getInstance().getModuleManager().getModule(CustomCosmeticsModule.class);
+        CustomCosmeticsModule module = cosmetics();
         if (module == null || !module.isEnabled() || minecraft.thePlayer == null || minecraft.theWorld == null) return;
         boolean thirdPerson = minecraft.gameSettings.thirdPersonView != 0;
         GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT | GL11.GL_LINE_BIT | GL11.GL_CURRENT_BIT);
@@ -61,21 +126,10 @@ public final class CustomCosmeticsRenderer {
     }
 
     private void drawHat(CustomCosmeticsModule module, float partial) {
-        EntityPlayerSP player = minecraft.thePlayer;
-        double x = player.lastTickPosX + (player.posX - player.lastTickPosX) * partial - minecraft.getRenderManager().viewerPosX;
-        double y = player.lastTickPosY + (player.posY - player.lastTickPosY) * partial - minecraft.getRenderManager().viewerPosY
-                + player.getEyeHeight() + 0.22D;
-        double z = player.lastTickPosZ + (player.posZ - player.lastTickPosZ) * partial - minecraft.getRenderManager().viewerPosZ;
         GL11.glPushMatrix();
         try {
-            GL11.glTranslated(x, y, z);
-            MoveFixModule moveFix = Vibe.getInstance().getModuleManager().getModule(MoveFixModule.class);
-            // Cosmetics follow the same server-facing rotation that Aura and
-            // MoveFix send, while retaining the existing pitch-follow option.
-            float yaw = moveFix == null ? player.rotationYaw : moveFix.getRotationYaw();
-            float pitch = moveFix == null ? player.rotationPitch : moveFix.getRotationPitch();
-            GL11.glRotatef(-yaw, 0, 1, 0);
-            if (module.getFollowHeadPitch().isEnabled()) GL11.glRotatef(pitch, 1, 0, 0);
+            if (hasHatPose) GL11.glLoadMatrix(hatPose);
+            else positionHatWithoutModel(module, partial);
             int segments = module.getHatSegments().getInt();
             double radius = module.getHatRadius().getDouble(), height = module.getHatHeight().getDouble();
             int oldShadeModel = GL11.glGetInteger(GL11.GL_SHADE_MODEL);
@@ -107,6 +161,24 @@ public final class CustomCosmeticsRenderer {
             }
             GL11.glShadeModel(oldShadeModel);
         } finally { GL11.glPopMatrix(); }
+    }
+
+    /** The local model is normally absent in first person. Apply the same head-relative offset there. */
+    private void positionHatWithoutModel(CustomCosmeticsModule module, float partial) {
+        EntityPlayerSP player = minecraft.thePlayer;
+        double x = player.lastTickPosX + (player.posX - player.lastTickPosX) * partial - minecraft.getRenderManager().viewerPosX;
+        double y = player.lastTickPosY + (player.posY - player.lastTickPosY) * partial - minecraft.getRenderManager().viewerPosY;
+        double z = player.lastTickPosZ + (player.posZ - player.lastTickPosZ) * partial - minecraft.getRenderManager().viewerPosZ;
+        double headPivot = 1.5078125D * PLAYER_RENDER_SCALE;
+        if (player.isSneaking()) headPivot -= 0.125D + (0.2D + 1.0D / 16) * PLAYER_RENDER_SCALE;
+        GL11.glTranslated(x, y + headPivot, z);
+        float yaw = player.prevRotationYaw + MathHelper.wrapAngleTo180_float(player.rotationYaw - player.prevRotationYaw) * partial;
+        GL11.glRotatef(-yaw, 0, 1, 0);
+        if (module.getFollowHeadPitch().isEnabled()) {
+            GL11.glRotatef(player.prevRotationPitch + (player.rotationPitch - player.prevRotationPitch) * partial, 1, 0, 0);
+        }
+        GL11.glTranslatef(0, HAT_CLEARANCE_PIXELS / 16 * PLAYER_RENDER_SCALE, 0);
+        GL11.glScalef(PLAYER_RENDER_SCALE, PLAYER_RENDER_SCALE, PLAYER_RENDER_SCALE);
     }
 
     private void drawTrail(CustomCosmeticsModule module) {

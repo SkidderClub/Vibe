@@ -61,6 +61,7 @@ public final class CameraHologramRenderCheck {
             renderer.render(module);check(GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE)==GL13.GL_TEXTURE2&&GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D)==caller2,"Lazy skin upload changed the caller texture unit");
             GlStateManager.setActiveTexture(GL13.GL_TEXTURE0);check(GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D)==caller0,"Lazy skin upload changed the caller skin binding");GlStateManager.setActiveTexture(GL13.GL_TEXTURE2);
             GlStateManager.bindTexture(skinTexture);check(GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D)==skinTexture,"Lazy upload left Minecraft's texture cache out of sync");GlStateManager.bindTexture(0);GlStateManager.setActiveTexture(GL13.GL_TEXTURE0);GlStateManager.bindTexture(0);GL11.glDeleteTextures(caller0);GL11.glDeleteTextures(caller2);
+            chinaHat(f, playerRenderer);
             camera(f);menus(f);module.setEnabled(false);check(module.getHolograms().isEmpty(),"Holograms survived module disable");
             check(GL11.glGetError()==0,"Camera/hologram rendering left a GL error");
             System.out.println("Camera/hologram GPU checks passed: actual RenderPlayer layers and frozen joints, normal/slim sneaking poses, skin UVs, luminance-only skin, transparency, shared glow, exact GL restoration, SmoothF5 matrix/body state and pause/chest button layouts.");
@@ -84,6 +85,47 @@ public final class CameraHologramRenderCheck {
         // The live model moves after impact; the retained pose must remain frozen.
         model.bipedRightArm.rotateAngleX=2.8F;
     }
+    @SuppressWarnings("unchecked")
+    private static void chinaHat(PathTestFixture f, RenderPlayer renderer) throws Exception {
+        CustomCosmeticsModule cosmetics = new CustomCosmeticsModule();
+        f.modules.registerDynamic(cosmetics);
+        cosmetics.setEnabled(true);
+        CustomCosmeticsRenderer cosmeticsRenderer = new CustomCosmeticsRenderer();
+        cosmeticsRenderer.beginFrame();
+
+        Field layers = RendererLivingEntity.class.getDeclaredField("layerRenderers");
+        layers.setAccessible(true);
+        List<LayerRenderer<AbstractClientPlayer>> renderLayers = (List<LayerRenderer<AbstractClientPlayer>>) layers.get(renderer);
+        LayerRenderer<AbstractClientPlayer> hat = renderLayers.get(renderLayers.size() - 1);
+        Field poseField = CustomCosmeticsRenderer.class.getDeclaredField("hatPose");
+        poseField.setAccessible(true);
+        FloatBuffer pose = (FloatBuffer) poseField.get(cosmeticsRenderer);
+        ModelPlayer model = renderer.getMainModel();
+        model.isSneak = true;
+        model.bipedHead.rotationPointY = 1;
+        model.bipedHead.rotateAngleY = model.bipedHead.rotateAngleZ = 0;
+        float scale = 1 / 16F;
+        float pivot = 0.2F + scale;
+        final float hairHeight = 8.5F * scale;
+
+        scene();
+        dev.vibe.ui.render.esp.ChamsRenderer.beginWorld();
+        try {
+            for (int pitch : new int[] {-90, 0, 90}) {
+                model.bipedHead.rotateAngleX = (float) Math.toRadians(pitch);
+                hat.doRenderLayer(f.player, 0, 0, 1, 0, 0, pitch, scale);
+                double alongHeadUp = (pose.get(13) - pivot) * pose.get(5) + pose.get(14) * pose.get(6);
+                check(alongHeadUp > hairHeight,
+                        "China Hat brim intersected the head at pitch " + pitch);
+                check(Math.abs(alongHeadUp - 9.1F * scale) < 1E-5,
+                        "China Hat clearance changed with pitch " + pitch);
+            }
+        } finally {
+            dev.vibe.ui.render.esp.ChamsRenderer.endWorld();
+            cosmetics.setEnabled(false);
+        }
+    }
+
     private static void camera(PathTestFixture f)throws Exception{
         SmoothF5Module smooth=new SmoothF5Module();f.modules.registerDynamic(smooth);smooth.setEnabled(true);mc.gameSettings.thirdPersonView=0;smooth.frameTick(1);
         Field field=SmoothF5Module.class.getDeclaredField("transition");field.setAccessible(true);PerspectiveTransition t=(PerspectiveTransition)field.get(smooth);long now=System.nanoTime();t.reset(0);t.update(1,now-500000000,1,"Sine","Top");mc.gameSettings.thirdPersonView=1;

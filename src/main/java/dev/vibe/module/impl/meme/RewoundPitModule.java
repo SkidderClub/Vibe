@@ -23,6 +23,7 @@ import net.minecraft.world.World;
 /** Spawn-only, acknowledged menu workflow. Never invents a purchase or advances on a sent click alone. */
 public final class RewoundPitModule extends FeatureModule {
     public static final String UPGRADE="Auto Upgrade",PRESTIGE="Auto Prestige";
+    public final BooleanSetting onlyInPit = addSetting(new BooleanSetting("Only in Pit", true));
     public final MultiSelectSetting modes=addSetting(new MultiSelectSetting("Modes",Arrays.asList(UPGRADE,PRESTIGE),Arrays.asList(UPGRADE,PRESTIGE)));
     public final BooleanSetting filterMessages=addSetting(new BooleanSetting("Filter Messages",true));
     public final BooleanSetting alwaysUseTargetArea=addSetting(new BooleanSetting("Always Use TargetArea",true));
@@ -41,6 +42,7 @@ public final class RewoundPitModule extends FeatureModule {
     private final ContainerClickDispatcher clicks;
     private World world;
     private EntityPlayer player;
+    private boolean inPit;
     private EntityVillager npc;
     private ContainerChest ownedMenu;
     private PitStatus stats=PitStatus.EMPTY,previous=PitStatus.EMPTY;
@@ -60,19 +62,22 @@ public final class RewoundPitModule extends FeatureModule {
     private boolean spawn(double x,double y,double z){TargetsModule t=targets();return t!=null&&!t.inConfiguredTargetArea(x,y,z);}
     public boolean atSpawn(){return mc.thePlayer!=null&&spawn(mc.thePlayer.posX,mc.thePlayer.posY,mc.thePlayer.posZ);}
     private boolean allowed(BlockPos p){return spawn(p.getX()+.5,p.getY()+.05,p.getZ()+.5);}
-    public boolean busy(){return isEnabled()&&phase!=Phase.IDLE&&stats.active&&world==mc.theWorld&&player==mc.thePlayer&&mc.thePlayer!=null&&!mc.thePlayer.isDead&&atSpawn();}
+    private boolean operatesHere() {
+        return isEnabled() && (!onlyInPit.isEnabled() || (inPit && world == mc.theWorld && player == mc.thePlayer));
+    }
+    public boolean busy(){return operatesHere()&&phase!=Phase.IDLE&&stats.active&&world==mc.theWorld&&player==mc.thePlayer&&mc.thePlayer!=null&&!mc.thePlayer.isDead&&atSpawn();}
     public static boolean reservesActions(){RewoundPitModule pit=module(RewoundPitModule.class);return pit!=null&&pit.busy();}
-    public static boolean forcesTargetArea(){RewoundPitModule pit=module(RewoundPitModule.class);return pit!=null&&pit.isEnabled()&&pit.alwaysUseTargetArea.isEnabled();}
+    public static boolean forcesTargetArea(){RewoundPitModule pit=module(RewoundPitModule.class);return pit!=null&&pit.alwaysUseTargetArea.isEnabled()&&pit.operatesHere();}
     public String getStatus(){return status;}
     public PitStatus getPitStatus(){return stats;}
-    public void fought(Entity entity){if(isEnabled()&&entity instanceof EntityPlayer&&entity!=mc.thePlayer)lastFight=clock.getAsLong();}
+    public void fought(Entity entity){if(operatesHere()&&entity instanceof EntityPlayer&&entity!=mc.thePlayer)lastFight=clock.getAsLong();}
     public boolean filterMessage(String text) {
         return isEnabled() && filterMessages.isEnabled() && PitMenus.noisyMessage(text) && PitStatus.inPitForChat(mc);
     }
 
     @Override public void tick(){
         try{tickAutomation();}finally{
-            if(isEnabled()&&mc.thePlayer!=null&&clock.getAsLong()>=nextReport&&!status.equals(reported)
+            if(operatesHere()&&mc.thePlayer!=null&&clock.getAsLong()>=nextReport&&!status.equals(reported)
                     &&(status.startsWith("Waiting")||status.startsWith("Looking")||status.equals("In combat area"))){
                 reported=status;nextReport=clock.getAsLong()+10000;
                 ClientChat.send("Rewound Pit: "+status+(status.equals("In combat area")?". Spawn is outside the configured combat area (inversion applies).":" (level "+stats.level+", gold "+stats.gold+")."));
@@ -85,9 +90,19 @@ public final class RewoundPitModule extends FeatureModule {
         MoveFixModule movement=module(MoveFixModule.class);if(movement!=null)movement.clearForcedMovement(getId());
         if(world!=mc.theWorld||player!=mc.thePlayer){finish(false,0);resetKnowledge();world=mc.theWorld;player=mc.thePlayer;previous=PitStatus.EMPTY;lastFight=now;nextSpawn=0;}
         if(!playing()||!mc.thePlayer.isEntityAlive()||mc.thePlayer.isSpectator()||mc.thePlayer.isRiding()||FreecamModule.cameraActiveHook()){
-            finish(false,0);stats=PitStatus.EMPTY;status="Paused";return;
+            finish(false,0);inPit=false;stats=PitStatus.EMPTY;status="Paused";return;
         }
         stats=PitStatus.read(mc);
+        inPit=PitStatus.inPit(mc, stats);
+        if (!operatesHere()) {
+            finish(false,0);
+            if (previous.active) resetKnowledge();
+            stats=previous=PitStatus.EMPTY;
+            lastFight=now;
+            nextSpawn=nextJob=0;
+            status="Outside Pit";
+            return;
+        }
         if(!stats.active){finish(false,0);status="Waiting for the Rewound Pit sidebar";return;}
         boolean reset=previous.active&&(stats.level<previous.level||stats.prestige>previous.prestige&&previous.prestige>=0);
         if(reset)resetKnowledge();previous=stats;
