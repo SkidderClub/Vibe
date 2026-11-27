@@ -1,7 +1,7 @@
 # Publishes Vibe and the Vibe Launcher as GitHub releases of this repository.
 #
 #   push to main        -> pre-release v<version>-dev.<run>, e.g. v0.0.6-dev.42 (selectable in the launcher)
-#   tag v<version>      -> full release of the version in build.gradle (the launcher's "Update to latest")
+#   tag v<version>      -> full release of the version in build.gradle
 #   tag launcher-v<x>   -> launcher release VibeLauncher.jar + .sha256 (the launcher's self-update)
 #
 # Only the newest KEEP_DEV_BUILDS commit pre-releases are kept, so the launcher's

@@ -308,7 +308,7 @@ final class PlayBar extends Stack.Panel {
             if (!version.isEmpty()) parts.add("Vibe " + version);
             VersionStore.Installed installed = controller.selectedVersion();
             if (installed != null && installed.installedAt > 0) parts.add(I18n.t("installed {0}", I18n.ago(installed.installedAt)));
-            if (controller.updateAvailable()) parts.add(controller.settings().autoUpdate() ? I18n.t("update installs on launch") : I18n.t("update available"));
+            if (controller.updateAvailable()) parts.add(controller.settings().followsLatestVibeVersion() ? I18n.t("update installs on launch") : I18n.t("update available"));
             return String.join("  ·  ", parts);
         }
 

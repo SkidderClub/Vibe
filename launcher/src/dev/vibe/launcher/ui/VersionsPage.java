@@ -65,7 +65,9 @@ final class VersionsPage extends JPanel {
         boolean idle = controller.state() == LauncherController.State.IDLE;
         refresh.setEnabled(!controller.releasesBusy() && idle);
         refresh.setText(controller.releasesBusy() ? I18n.t("Refreshing…") : I18n.t("Refresh"));
-        update.setVisible(controller.updateAvailable());
+        boolean pinned = !controller.settings().pinnedVibeVersion().isEmpty();
+        update.setText(pinned && controller.settings().autoUpdate() ? I18n.t("Follow latest") : I18n.t("Update to latest"));
+        update.setVisible(controller.updateAvailable() || pinned);
         update.setEnabled(idle);
         error.setText(controller.releasesError().isEmpty() ? ""
                 : I18n.t("GitHub is not reachable right now: {0}", controller.releasesError()));
@@ -117,6 +119,9 @@ final class VersionsPage extends JPanel {
             title.add(new Label(version.title(), Style.bodyBold(), Label.Tone.TEXT));
             title.add(new Label(version.displayVersion(), Style.small(), Label.Tone.FAINT));
             if (active) title.add(new Label(I18n.t("ACTIVE"), Style.smallBold(), Label.Tone.ACCENT));
+            if (version.tag.equalsIgnoreCase(controller.settings().pinnedVibeVersion())) {
+                title.add(new Label(I18n.t("Pinned"), Style.small(), Label.Tone.MUTED));
+            }
             if (version.prerelease) title.add(new Label(I18n.t("pre-release"), Style.small(), Label.Tone.WARNING));
             text.add(title);
             String meta = version.asset + "  ·  " + Text.bytes(version.size)

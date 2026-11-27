@@ -51,7 +51,7 @@ final class SettingsPage extends JPanel {
         // Updates
         Card updates = Pages.section(I18n.t("Updates"), Icons.DOWNLOAD);
         Toggle auto = new Toggle(settings.autoUpdate(), on -> { settings.setAutoUpdate(on); refresh(); });
-        updates.add(Pages.setting(I18n.t("Update Vibe automatically"), I18n.t("Before each launch, download the newest Vibe release from GitHub and switch to it."), auto));
+        updates.add(Pages.setting(I18n.t("Update Vibe automatically"), I18n.t("Before each launch, check for new builds, including pre-releases. A pinned version stays selected."), auto));
         updates.add(Pages.divider());
         updateVibe = new FlatButton(I18n.t("Update now"), Icons.DOWNLOAD, FlatButton.Kind.PRIMARY, controller::updateVibeNow);
         FlatButton check = new FlatButton(I18n.t("Check now"), Icons.REFRESH, FlatButton.Kind.SECONDARY, controller::checkForUpdates);
@@ -159,12 +159,12 @@ final class SettingsPage extends JPanel {
             source.append(I18n.t("Active: Vibe {0}", version));
             source.append('\n');
             if (!controller.releasesError().isEmpty()) source.append(I18n.t("GitHub not reachable: {0}", controller.releasesError()));
-            else if (controller.updateAvailable()) source.append(I18n.t("Version {0} is available.", controller.latestStable().version()));
+            else if (controller.updateAvailable()) source.append(I18n.t("Version {0} is available.", controller.latestRelease().version()));
             else source.append(I18n.t("Up to date."));
         }
         sourceStatus.setText(source.toString());
         sourceStatus.setTone(controller.updateAvailable() || !controller.releasesError().isEmpty() ? Label.Tone.WARNING : Label.Tone.MUTED);
-        updateVibe.setVisible(controller.updateAvailable() && !controller.settings().autoUpdate());
+        updateVibe.setVisible(controller.updateAvailable() && !controller.settings().followsLatestVibeVersion());
         updateVibe.setEnabled(idle);
 
         LauncherUpdater.Release release = controller.launcherUpdate();
