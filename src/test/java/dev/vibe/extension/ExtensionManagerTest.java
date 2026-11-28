@@ -110,7 +110,7 @@ public class ExtensionManagerTest {
     }
     @Test public void duplicateIdsInTheExtensionFolderAreBothRejectedBeforeLoadingCode() throws Exception {
         jar("vibe/extensions-jar/first.jar", metadata("same", Fixtures.Good.class), Fixtures.Good.class);
-        jar("vibe/extensions-jar/1.8.9/second.jar", metadata("same", Fixtures.Bad.class), Fixtures.Bad.class);
+        jar("vibe/extensions-jar/second.jar", metadata("same", Fixtures.Bad.class), Fixtures.Bad.class);
         manager.load(); assertTrue(manager.getStatus().toString(), manager.getLoaded().isEmpty()); assertTrue(manager.getStatus().toString(), loaders.isEmpty());
         assertTrue(manager.getStatus().toString().contains("Duplicate"));
     }
