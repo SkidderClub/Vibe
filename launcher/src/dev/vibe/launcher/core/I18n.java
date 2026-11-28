@@ -79,7 +79,7 @@ public final class I18n {
         de("Could not change the extension", "Erweiterung konnte nicht geändert werden");
         de("Could not remove the extension", "Erweiterung konnte nicht entfernt werden");
         de("Drop to add mods or extensions", "Loslassen, um Mods oder Erweiterungen hinzuzufügen");
-        de("JAR files are copied into Vibe's mods folder", "JAR-Dateien werden in Vibes Mods-Ordner kopiert");
+        de("JAR files are copied into Vibe's mods or extensions folder", "JAR-Dateien werden in Vibes Mods- oder Erweiterungsordner kopiert");
         de("{0}: Vibe extensions must be .jar files", "{0}: Vibe-Erweiterungen müssen JAR-Dateien sein");
         // Time
         de("just now", "gerade eben");
@@ -124,7 +124,7 @@ public final class I18n {
         de("{0}: Fabric mods do not work with Forge 1.8.9", "{0}: Fabric-Mods funktionieren nicht mit Forge 1.8.9");
         de("{0}: made for a newer Minecraft version", "{0}: für eine neuere Minecraft-Version gemacht");
         de("{0}: already installed", "{0}: bereits installiert");
-        de("{0} already exists in the mods folder.", "{0} existiert bereits im Mods-Ordner.");
+        de("{0} already exists in that folder.", "{0} existiert bereits in diesem Ordner.");
 
         // Interface
         de("Vibe Launcher is already open.", "Der Vibe Launcher ist bereits geöffnet.");

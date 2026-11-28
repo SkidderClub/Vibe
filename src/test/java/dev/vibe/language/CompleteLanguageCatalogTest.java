@@ -51,7 +51,7 @@ public class CompleteLanguageCatalogTest {
     @Test
     public void generatedVisibleSourcesAreTranslatedForEveryLanguage() throws Exception {
         Map<String, String> sources = englishSourceKeys();
-        List<String> visible = Arrays.asList("Reconnect", "Random username", "Operations", "Your army",
+        List<String> visible = Arrays.asList("Reconnect", "Random username", "OPERATIONS", "Your army",
                 "Global", "Encrypted local activity",
                 "Each account and every generated cracked profile remain separate in the encrypted local vault.");
         for (String key : visible) assertTrue("The English key list lost " + key, sources.containsValue(key));

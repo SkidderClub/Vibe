@@ -78,6 +78,11 @@ public final class ModLibrary {
 
     public Path folder() { return folder; }
 
+    /** True when the archive carries a Vibe extension descriptor; invalid files return false. */
+    public static boolean isExtensionArchive(File file) {
+        try { return inspect(file.toPath()).extension; } catch (IOException ignored) { return false; }
+    }
+
     public List<Mod> list() {
         List<Mod> result = new ArrayList<Mod>();
         List<Path> files = new ArrayList<Path>(FileUtil.children(folder));
@@ -155,7 +160,7 @@ public final class ModLibrary {
         String name = mod.fileName;
         String next = enabled ? name.substring(0, name.length() - DISABLED.length()) : name + DISABLED;
         Path target = mod.file.resolveSibling(next);
-        if (Files.exists(target)) throw new LauncherException(ErrorCode.MOD_NAME_TAKEN, I18n.t("{0} already exists in the mods folder.", next));
+        if (Files.exists(target)) throw new LauncherException(ErrorCode.MOD_NAME_TAKEN, I18n.t("{0} already exists in that folder.", next));
         Files.move(mod.file, target);
     }
 

@@ -509,7 +509,7 @@ public final class LauncherFrame extends JFrame {
                 g.draw(new java.awt.geom.RoundRectangle2D.Double(24, 24, w - 48, h - 48, 28, 28));
                 Icons.MODS.paint(g, w / 2.0 - 24, h / 2.0 - 58, 48, Style.accent());
                 Style.textCentered(g, I18n.t("Drop to add mods or extensions"), w / 2.0, h / 2.0, 30, Style.font(java.awt.Font.BOLD, 22f), Style.text());
-                Style.textCentered(g, I18n.t("JAR files are copied into Vibe's mods folder"), w / 2.0, h / 2.0 + 30, 22, Style.body(), Style.muted());
+                Style.textCentered(g, I18n.t("JAR files are copied into Vibe's mods or extensions folder"), w / 2.0, h / 2.0 + 30, 22, Style.body(), Style.muted());
             } finally {
                 g.dispose();
             }

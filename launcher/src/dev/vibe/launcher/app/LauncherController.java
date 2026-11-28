@@ -113,6 +113,7 @@ public final class LauncherController {
     private final SkinService skins;
     private final GameProfile profile;
     private final ModLibrary mods;
+    private final ModLibrary extensionMods;
     private final ExtensionLibrary extensions;
     private final ConsoleBuffer console = new ConsoleBuffer();
     private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<Listener>();
@@ -165,8 +166,9 @@ public final class LauncherController {
         this.skins = new SkinService(paths.skinCache(), log);
         this.profile = new GameProfile(paths.profile());
         this.mods = new ModLibrary(profile.mods());
-        this.extensions = new ExtensionLibrary(mods, profile.vibe().resolve("extensions.properties"));
-        this.extensionList = extensions.list(modList);
+        this.extensionMods = new ModLibrary(profile.vibe().resolve("extensions-jar"));
+        this.extensions = new ExtensionLibrary(extensionMods, profile.vibe().resolve("extensions.properties"));
+        this.extensionList = extensions.list(extensionMods.list());
         Theme shared = profile.readTheme();
         this.theme = shared != null ? shared : Theme.parse(settings.theme());
         this.mode = LaunchMode.parse(settings.launchMode());
@@ -674,11 +676,13 @@ public final class LauncherController {
 
     public void reloadMods() {
         modList = mods.list();
-        extensionList = extensions.list(modList);
+        extensionList = extensions.list(extensionMods.list());
         fire(Event.MODS);
     }
 
     public Path modsFolder() { return mods.folder(); }
+
+    public Path extensionsFolder() { return extensionMods.folder(); }
 
     public void importMods(final List<File> files) { importMods(files, null); }
 
@@ -686,7 +690,13 @@ public final class LauncherController {
         if (state == State.PREPARING) notice(Notice.Level.INFO, I18n.t("Mods queued"), I18n.t("They are added as soon as the current step has finished."), null, null);
         worker.execute(() -> {
             try {
-                ModLibrary.ImportResult result = mods.importFiles(files);
+                List<File> normal = new ArrayList<File>(), extensionFiles = new ArrayList<File>();
+                for (File file : files) {
+                    if (file != null && ModLibrary.isExtensionArchive(file)) extensionFiles.add(file);
+                    else normal.add(file);
+                }
+                ModLibrary.ImportResult result = mods.importFiles(normal);
+                merge(result, extensionMods.importFiles(extensionFiles));
                 extensions.imported(result.extensionIds);
                 reloadMods();
                 if (!result.added.isEmpty()) {
@@ -704,6 +714,15 @@ public final class LauncherController {
                 fail(I18n.t("Could not add mods"), error, ErrorCode.FILE_ERROR, false, null, null);
             }
         });
+    }
+
+    /** One notice covers both the normal mods and the extension JARs in their own folder. */
+    private static void merge(ModLibrary.ImportResult target, ModLibrary.ImportResult source) {
+        target.extensionsAdded += source.extensionsAdded;
+        target.extensionIds.addAll(source.extensionIds);
+        target.added.addAll(source.added);
+        target.rejected.addAll(source.rejected);
+        target.rejectedCodes.addAll(source.rejectedCodes);
     }
 
     public void setExtensionEnabled(ExtensionLibrary.Entry extension, boolean enabled) {

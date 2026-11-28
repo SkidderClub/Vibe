@@ -62,8 +62,7 @@ public final class ExtensionManager {
         discovered = true;
         Map<File, ExtensionDescriptor> candidates = new java.util.LinkedHashMap<File, ExtensionDescriptor>();
         List<File> jars = new ArrayList<File>();
-        collect(new File(gameDirectory, "mods"), jars);
-        collect(new File(gameDirectory, "mods/1.8.9"), jars);
+        collect(new File(gameDirectory, "vibe/extensions-jar"), jars);
         jars.sort(Comparator.comparing(File::getAbsolutePath, String.CASE_INSENSITIVE_ORDER));
         Map<String, Integer> ids = new HashMap<String, Integer>(), entrypoints = new HashMap<String, Integer>();
         for (File jar : jars) {

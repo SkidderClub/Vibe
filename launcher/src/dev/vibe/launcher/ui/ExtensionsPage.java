@@ -11,7 +11,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JPanel;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-/** Extension switches use the same mods folder and persist across client updates. */
+/** Extension switches use their own {@code vibe/extensions-jar} folder and persist across client updates. */
 final class ExtensionsPage extends JPanel {
     private static final long serialVersionUID = 1L;
     private final LauncherController controller;
@@ -25,7 +25,7 @@ final class ExtensionsPage extends JPanel {
         Stack.Panel body = Pages.body(18);
         FlatButton add = new FlatButton(I18n.t("Add JAR"), Icons.PLUS, FlatButton.Kind.PRIMARY, this::chooseFiles);
         FlatButton folder = new FlatButton(I18n.t("Open folder"), Icons.FOLDER, FlatButton.Kind.SECONDARY,
-                () -> controller.openPath(controller.modsFolder()));
+                () -> controller.openPath(controller.extensionsFolder()));
         body.add(Pages.header(I18n.t("Extensions"), I18n.t("Choose what Vibe includes. Changes take effect on the next launch."), folder, add));
         Card drop = Card.column(8, 22);
         drop.add(dropHint);

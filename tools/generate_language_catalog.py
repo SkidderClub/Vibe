@@ -31,6 +31,7 @@ BASE = LANG_DIR / "interface.tsv"
 EN_LANG = LANG_DIR / "en.lang"
 COMPLETE = LANG_DIR / "complete.tsv"
 OLD_ZH = LANG_DIR / "zh.lang"
+GLOSSARY = ROOT / "tools/language_glossary.tsv"
 
 # (selector name, Google Translate code, language file code)
 LANGUAGES = [
@@ -402,9 +403,71 @@ def sanitize(value: str) -> str:
     return value.replace("\t", " ").replace("\r", " ").replace("\n", " ")
 
 
+def load_glossary() -> dict[tuple[str, str], str]:
+    """Curated corrections keyed by (English source, language name)."""
+    result: dict[tuple[str, str], str] = {}
+    if not GLOSSARY.is_file():
+        return result
+    with GLOSSARY.open("r", encoding="utf-8", newline="") as stream:
+        rows = csv.reader(stream, delimiter="\t")
+        header = next(rows, None)
+        if not header or header[:3] != ["source", "language", "value"]:
+            raise SystemExit("tools/language_glossary.tsv must start with source, language, value")
+        for row in rows:
+            if len(row) < 3 or not row[0] or row[0].startswith("#"):
+                continue
+            value = sanitize(row[2].strip())
+            if value:
+                result[(row[0], row[1])] = value
+    return result
+
+
+def polish() -> None:
+    """Rewrite the checked-in catalogs from the glossary without touching en.lang."""
+    english = {key[len(PREFIX):]: value for key, value in read_lang(EN_LANG).items()
+               if key.startswith(PREFIX)}
+    if not english:
+        raise SystemExit("en.lang is missing or empty; run the generator normally first")
+    glossary = load_glossary()
+    changed = 0
+    trimmed = 0
+    for language, _, code in LANGUAGES:
+        if language == "English":
+            continue
+        path = LANG_DIR / (code + ".lang")
+        if not path.is_file():
+            continue
+        lines = path.read_text(encoding="utf-8").splitlines()
+        output: list[str] = []
+        for line in lines:
+            if not line or line.startswith("#") or not line.startswith(PREFIX) or "=" not in line:
+                output.append(line)
+                continue
+            equals = line.find("=")
+            key_id = line[len(PREFIX):equals]
+            value = line[equals + 1:]
+            replacement = glossary.get((english.get(key_id, ""), language))
+            if replacement is not None:
+                if value != replacement:
+                    changed += 1
+                value = replacement
+            else:
+                stripped = value.strip()
+                if stripped != value:
+                    trimmed += 1
+                value = stripped
+            if value:
+                output.append("%s%s=%s" % (PREFIX, key_id, value))
+        with path.open("w", encoding="utf-8", newline="\n") as stream:
+            stream.write("\n".join(output) + "\n")
+    print("Polished %d glossary entries and %d untrimmed values across %d language files"
+          % (changed, trimmed, len(LANGUAGES) - 1))
+
+
 def write_catalog(keys: list[str], values: dict[str, dict[str, str]], ids: dict[str, str]) -> None:
     LANG_DIR.mkdir(parents=True, exist_ok=True)
     ordered = sorted(keys, key=lambda key: ids[key])
+    glossary = load_glossary()
 
     def write(path: pathlib.Path, header: str, language: str) -> None:
         with path.open("w", encoding="utf-8", newline="\n") as stream:
@@ -412,8 +475,12 @@ def write_catalog(keys: list[str], values: dict[str, dict[str, str]], ids: dict[
             for key in ordered:
                 # A missing translation falls back to the English source so the
                 # runtime never loses a key and every file keeps the same ids.
-                value = key if language == "English" else values[key].get(language) or key
-                stream.write("%s%s=%s\n" % (PREFIX, ids[key], sanitize(value)))
+                if language == "English":
+                    value = key
+                else:
+                    value = sanitize(glossary.get((key, language))
+                                     or values[key].get(language) or key).strip()
+                stream.write("%s%s=%s\n" % (PREFIX, ids[key], value))
 
     write(EN_LANG, "# English source strings. This file is the key list: every id maps to its English UI text.\n", "English")
     for language, _, code in LANGUAGES:
@@ -425,6 +492,9 @@ def write_catalog(keys: list[str], values: dict[str, dict[str, str]], ids: dict[
 
 
 def main() -> None:
+    if "--polish" in sys.argv[1:]:
+        polish()
+        return
     migrating = "--migrate" in sys.argv[1:] or not EN_LANG.is_file()
     keys, curated = collect_keys(migrating)
     existing = existing_values()
