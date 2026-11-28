@@ -103,6 +103,14 @@ public class InventoryManagerPlanTest {
         assertNull("Explicit layout assignments take priority over the generic food cap",plan("dropExcess",layout));
         assertEquals(Items.diamond_sword,inventory.items.getStackInSlot(36).getItem());
     }
+    @Test public void goldenApplesAreNeverDiscardedByAutomaticCleanup() throws Exception {
+        InventoryLayout layout=new InventoryLayout();layout.set(9,Type.BARRIER);
+        inventory.items.setInventorySlotContents(9,new ItemStack(Items.golden_apple));
+        assertNull("Keep Free must not throw a golden apple",plan("arrangeOne",layout));
+        ((dev.vibe.setting.NumberSetting)field(InventoryManagerModule.class,"maxFoodSlots").get(module)).setValue(0D);
+        for(int slot=10;slot<=18;slot++)inventory.items.setInventorySlotContents(slot,new ItemStack(Items.golden_apple));
+        assertNull("Food overflow must ignore golden apples",plan("dropExcess",layout));
+    }
     private Object plan(String name, InventoryLayout layout) throws Exception {
         Method method=InventoryManagerModule.class.getDeclaredMethod(name,Container.class,InventoryLayout.class); method.setAccessible(true);
         return method.invoke(module,inventory,layout);

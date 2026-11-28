@@ -1,6 +1,6 @@
 # Vibe extensions
 
-Extensions are optional Java 8 JARs for Forge 1.8.9. Put core Vibe and whichever extensions you want in the same game directory's `mods/` folder, then restart Minecraft. Vibe also checks `mods/1.8.9/`. Extensions need Vibe; they are not standalone Forge mods.
+Extensions are optional Java 8 JARs for Forge 1.8.9. Put core Vibe in the game directory's `mods/` folder and extension JARs in `vibe/extensions-jar/`, then restart Minecraft. Vibe also checks `mods/1.8.9/` for core itself. Extensions need Vibe; they are not standalone Forge mods.
 
 | JAR | Contents |
 | --- | --- |
@@ -11,7 +11,7 @@ Extensions are optional Java 8 JARs for Forge 1.8.9. Put core Vibe and whichever
 
 Install any combination of extensions. Remove the LEGO JAR to remove all three LEGO modules. LEGO progress remains in `vibe/lego/progress.json`; model caches remain in `vibe/lego/models`. Cosmetica presets remain in `config/vibe/cosmetics.json`, friend assignments in `config/vibe/friends.json`, and its caches under `vibe/cosmetica`. Removing Cosmetica hides its editor, modules and friend preset controls; CustomCosmetics and NameProtect still work in core. Extension settings and keybinds use normal Vibe profiles. Saving a profile while an extension is absent preserves its previous entries for reinstallation. No extension files are downloaded automatically.
 
-Use `.extensions` to see loaded extensions and errors; full diagnostics are also in the client log. Keep one copy of each extension, including across both mods folders. Duplicate IDs/entrypoints, incompatible API/client versions, missing entry classes and conflicting module IDs are rejected. Failed initialization removes its modules, listeners, model providers and resource pack, then loading continues. Managed tick callbacks that throw are disabled; direct Forge listeners follow Forge's exception handling.
+Use `.extensions` to see loaded extensions and errors; full diagnostics are also in the client log. Keep one copy of each extension in `vibe/extensions-jar`. Duplicate IDs/entrypoints, incompatible API/client versions, missing entry classes and conflicting module IDs are rejected. Failed initialization removes its modules, listeners, model providers and resource pack, then loading continues. Managed tick callbacks that throw are disabled; direct Forge listeners follow Forge's exception handling.
 
 Extensions run Java code with the client's permissions. Install JARs from authors you trust. Add/remove JARs while Minecraft is closed; extensions load once per launch. Launcher switches can be changed while Minecraft runs; the choice is saved and the JAR is enabled or disabled before the next launch.
 

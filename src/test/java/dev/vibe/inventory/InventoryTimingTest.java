@@ -102,7 +102,7 @@ public class InventoryTimingTest {
             clicks.add(new int[]{slot,button,mode});return super.windowClick(window,slot,button,mode,player);
         }
     }
-    @Test public void fullInventoryThrowsTheCarriedStackInsteadOfSwapping() throws Exception {
+    @Test public void fullInventoryKeepsTheCarriedStackInsteadOfThrowingIt() throws Exception {
         try(AutomationFixture f=new AutomationFixture()){
             RecordingController controller=new RecordingController(f);f.mc.playerController=controller;
             InventoryManagerModule module=new InventoryManagerModule();f.base.modules.registerDynamic(module);
@@ -111,11 +111,9 @@ public class InventoryTimingTest {
             for(int slot=0;slot<36;slot++)f.player.inventory.setInventorySlotContents(slot,new ItemStack(Blocks.cobblestone,64));
             f.player.inventory.setItemStack(new ItemStack(Items.diamond_sword));
             module.setEnabled(true);module.tick();
-            assertEquals(1,controller.clicks.size());
-            assertArrayEquals(new int[]{-999,0,0},controller.clicks.get(0));
-            assertNull(f.player.inventory.getItemStack());
-            assertEquals(Items.diamond_sword,f.player.droppedStacks.get(0).getItem());
-            assertEquals(Item.getItemFromBlock(Blocks.cobblestone),f.player.inventory.getStackInSlot(9).getItem());
+            assertTrue(controller.clicks.isEmpty());
+            assertEquals(Items.diamond_sword,f.player.inventory.getItemStack().getItem());
+            assertTrue(f.player.droppedStacks.isEmpty());
             f.player.inventory.setInventorySlotContents(9,new ItemStack(Blocks.cobblestone,32));
             f.player.inventory.setItemStack(new ItemStack(Blocks.cobblestone,10));
             controller.clicks.clear();f.player.droppedStacks.clear();f.player.ticksExisted++;module.tick();

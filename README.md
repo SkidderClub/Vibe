@@ -23,7 +23,7 @@ is included in core Vibe**. See [Launcher details](#launcher-details) and
 
 1. Install **Java 8** and **Forge 1.8.9-11.15.1.2318**.
 2. Download `Vibe-1.8.9-<version>.jar` from [Releases](https://github.com/SkidderClub/Vibe/releases), or build it from source, and place it in your game directory's `mods/` folder.
-3. Launch the Forge profile. Optional extension JARs go in the same `mods/` folder.
+3. Launch the Forge profile. Optional extension JARs go in `vibe/extensions-jar/` in the same game directory.
 
 Use modules only where permitted by the server's rules. Vibe is client-only.
 

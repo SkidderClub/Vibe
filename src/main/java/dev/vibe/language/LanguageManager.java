@@ -21,6 +21,58 @@ public final class LanguageManager {
     private static final Map<String, Map<String, String>> CATALOG = new HashMap<String, Map<String, String>>();
     /** Maps an encoded custom-script value back to its ASCII source for a real script font. */
     private static final Map<String, Map<String, String>> SCRIPT_FONT_SOURCES = new HashMap<String, Map<String, String>>();
+    /** Short key id to English source text. en.lang is also the checked-in key list. */
+    private static final Map<String, String> SOURCE_BY_ID = new HashMap<String, String>();
+    /** Selector value to packaged language file; every language has its own file. */
+    private static final Map<String, String> LANGUAGE_FILES;
+    static {
+        Map<String, String> files = new HashMap<String, String>();
+        files.put("English", "en.lang");
+        files.put("Chinese", "zh.lang");
+        files.put("Russian", "ru.lang");
+        files.put("Japanese", "ja.lang");
+        files.put("Bavarian", "bar.lang");
+        files.put("Finnish", "fi.lang");
+        files.put("Swedish", "sv.lang");
+        files.put("Greek", "el.lang");
+        files.put("Spanish", "es.lang");
+        files.put("German", "de.lang");
+        files.put("French", "fr.lang");
+        files.put("Enchantment Table", "galactic.lang");
+        files.put("Portuguese", "pt.lang");
+        files.put("Ukrainian", "uk.lang");
+        files.put("Hindi", "hi.lang");
+        files.put("Standard Arabic", "ar.lang");
+        files.put("Bengali", "bn.lang");
+        files.put("Indonesian", "id.lang");
+        files.put("Urdu", "ur.lang");
+        files.put("Nigerian Pidgin", "pcm.lang");
+        files.put("Egyptian Arabic", "arz.lang");
+        files.put("Marathi", "mr.lang");
+        files.put("Vietnamese", "vi.lang");
+        files.put("Telugu", "te.lang");
+        files.put("Swahili", "sw.lang");
+        files.put("Hausa", "ha.lang");
+        files.put("Turkish", "tr.lang");
+        files.put("Western Punjabi", "pa.lang");
+        files.put("Tagalog", "tl.lang");
+        files.put("Tamil", "ta.lang");
+        files.put("Iranian Persian", "fa.lang");
+        files.put("Korean", "ko.lang");
+        files.put("Amharic", "am.lang");
+        files.put("Thai", "th.lang");
+        files.put("Javanese", "jv.lang");
+        files.put("Italian", "it.lang");
+        files.put("Gujarati", "gu.lang");
+        files.put("Dutch", "nl.lang");
+        files.put("Nepali", "ne.lang");
+        files.put("Czech", "cs.lang");
+        files.put("Polish", "pl.lang");
+        files.put("Zulu", "zu.lang");
+        files.put("Romanian", "ro.lang");
+        files.put("Aurebesh", "aurebesh.lang");
+        LANGUAGE_FILES = Collections.unmodifiableMap(files);
+    }
     private static final Pattern WORD = Pattern.compile("[A-Za-z][A-Za-z0-9+.-]*");
     private static final List<String> LANGUAGES = Collections.unmodifiableList(Arrays.asList(
             "English", "Chinese", "Russian", "Japanese", "Bavarian",
@@ -88,11 +140,15 @@ public final class LanguageManager {
         extend("Bavarian", pairs(
                 "Meme", "Mem", "Scripts", "Skripts", "Killaura", "Kill-Aura", "ItemESP", "Item-ESP", "HUD", "Anzeige", "Vibe", "Vibe", "Skeet", "Skeet", "Watermark", "Wossazeichn", "Coordinates", "Koordinatn", "Clock", "Uhr", "Session Info", "Sitzungsinfo", "Motion Graph", "Bewegungsgraph", "Armor", "Rüstung", "Inventory", "Inventar", "CPS Graph", "Klick-Graph",
                 "GTA7", "GTA7", "Girlfriend", "Freindin", "NES Emulator", "NES-Emulator", "Test", "Test", "Color", "Farb", "Line Width", "Linienbreitn", "Smart", "Gscheid", "Basic", "Grund", "Speed", "Gschwindigkeit", "FinishFaster", "Schnölla fertig", "Break Circle", "Abbau-Kreis", "Attacks Per Second", "Angriff pro Sekund"));
-        loadInterfaceCatalog();
         registerExpandedLanguages();
         registerModernModuleLabels();
-        loadCompleteCatalog();
-        loadLangCatalog("Chinese", "zh.lang");
+        loadSourceKeys();
+        for (final String language : LANGUAGES) {
+            if ("English".equals(language)) continue;
+            final String file = catalogFile(language);
+            if (file != null) loadLangCatalog(language, file);
+        }
+        loadInterfaceCatalog();
 
         final boolean[] glyphs = new boolean[Character.MAX_VALUE + 1];
         for (final Map<String, String> language : CATALOG.values())
@@ -388,48 +444,25 @@ public final class LanguageManager {
     }
 
     /**
-     * Generated from every built-in module/setting/UI key.  It is deliberately
-     * a packaged resource rather than a web service so changing language never
-     * sends any local text or requires an internet connection in the client.
+     * en.lang is the checked-in key list: every visible key is stored as
+     * {@code vibe.<short id>=<English text>}.  Loading it first lets each
+     * translated file refer to the same stable ids without a separate manifest.
      */
-    private static void loadCompleteCatalog() {
-        java.io.InputStream stream = LanguageManager.class.getResourceAsStream("/assets/vibe/lang/complete.tsv");
+    private static void loadSourceKeys() {
+        java.io.InputStream stream = LanguageManager.class.getResourceAsStream("/assets/vibe/lang/en.lang");
         if (stream == null) return;
-        Map<String, Map<String, String>> expanded = new HashMap<String, Map<String, String>>();
-        for (String language : LANGUAGES) if (!"English".equals(language)) {
-            Map<String, String> existing = CATALOG.get(language);
-            expanded.put(language, existing == null ? new HashMap<String, String>() : new HashMap<String, String>(existing));
-        }
         try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8))) {
-            String header = reader.readLine();
-            if (header == null) return;
-            String[] columns = header.split("\\t", -1);
-            if (columns.length < 2 || !"key".equals(columns[0])) throw new java.io.IOException("Invalid complete translation header");
             String line;
             while ((line = reader.readLine()) != null) {
-                if (line.isEmpty()) continue;
-                String[] row = line.split("\\t", -1);
-                if (row.length == 0 || row[0].isEmpty()) continue;
-                for (int index = 1; index < columns.length && index < row.length; index++) {
-                    Map<String, String> target = expanded.get(columns[index]);
-                    if (target != null && !row[index].isEmpty()) {
-                        target.put(row[0].toLowerCase(Locale.ROOT), row[index]);
-                        if (usesScriptFont(columns[index])) {
-                            Map<String, String> sources = SCRIPT_FONT_SOURCES.get(columns[index]);
-                            if (sources == null) {
-                                sources = new HashMap<String, String>();
-                                SCRIPT_FONT_SOURCES.put(columns[index], sources);
-                            }
-                            sources.put(row[index], row[0]);
-                        }
-                    }
-                }
+                if (line.isEmpty() || line.charAt(0) == '#') continue;
+                int equals = line.indexOf('=');
+                if (equals <= 5 || !line.startsWith("vibe.")) continue;
+                String id = line.substring(5, equals);
+                String source = line.substring(equals + 1);
+                if (!id.isEmpty() && !source.isEmpty()) SOURCE_BY_ID.put(id, source);
             }
-            for (Map.Entry<String, Map<String, String>> entry : expanded.entrySet()) {
-                CATALOG.put(entry.getKey(), Collections.unmodifiableMap(entry.getValue()));
-            }
-        } catch (java.io.IOException e) {
-            System.err.println("[Vibe] Could not read complete interface translations: " + e.getMessage());
+        } catch (java.io.IOException error) {
+            System.err.println("[Vibe] Could not read en.lang: " + error.getMessage());
         }
     }
 
@@ -437,28 +470,40 @@ public final class LanguageManager {
         CATALOG.put(language, Collections.unmodifiableMap(values));
     }
 
-    /** Reads UTF-8 English key=value entries. Escape literal equals signs and backslashes in keys. */
+    /** Packaged catalog file for a selector value, including en.lang for English. */
+    public static String catalogFile(String language) {
+        return LANGUAGE_FILES.get(normalizeLanguage(language));
+    }
+
+    /** Reads UTF-8 {@code vibe.<id>=<value>} entries; en.lang supplies the id-to-source map. */
     private static void loadLangCatalog(String language, String file) {
         java.io.InputStream stream = LanguageManager.class.getResourceAsStream("/assets/vibe/lang/" + file);
         if (stream == null) return;
-        Map<String, String> values = new HashMap<>();
+        Map<String, String> values = new HashMap<String, String>();
+        boolean warned = false;
         try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (line.isEmpty() || line.charAt(0) == '#') continue;
-                StringBuilder key = new StringBuilder();
-                int index = 0;
-                for (; index < line.length(); index++) {
-                    char character = line.charAt(index);
-                    if (character == '=') break;
-                    if (character == '\\' && index + 1 < line.length()
-                            && (line.charAt(index + 1) == '=' || line.charAt(index + 1) == '\\')) {
-                        character = line.charAt(++index);
+                int equals = line.indexOf('=');
+                if (equals <= 5 || !line.startsWith("vibe.")) continue;
+                String source = SOURCE_BY_ID.get(line.substring(5, equals));
+                String value = line.substring(equals + 1);
+                if (source == null || value.isEmpty()) {
+                    if (!warned) {
+                        System.err.println("[Vibe] Ignoring unknown entry in " + file);
+                        warned = true;
                     }
-                    key.append(character);
+                    continue;
                 }
-                if (key.length() > 0 && index + 1 < line.length()) {
-                    values.put(key.toString().toLowerCase(Locale.ROOT), line.substring(index + 1));
+                values.put(source.toLowerCase(Locale.ROOT), value);
+                if (usesScriptFont(language)) {
+                    Map<String, String> sources = SCRIPT_FONT_SOURCES.get(language);
+                    if (sources == null) {
+                        sources = new HashMap<String, String>();
+                        SCRIPT_FONT_SOURCES.put(language, sources);
+                    }
+                    sources.put(value, source);
                 }
             }
             extend(language, values);

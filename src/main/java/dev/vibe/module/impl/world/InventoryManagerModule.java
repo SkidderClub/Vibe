@@ -95,9 +95,16 @@ public final class InventoryManagerModule extends Module {
         ItemStack carried = minecraft.thePlayer.inventory.getItemStack();
         if (carried != null && !placing(pendingAction)) {
             int place = findSafePlace(container, layout, carried, -1);
-            // A full inventory has no empty or matching slot. Throwing the
-            // carried stack is the click that clears the hand without swapping.
-            pendingAction = place < 0 ? PendingAction.dropHeld() : PendingAction.placeHeld(place);
+            // A full inventory has no empty or matching slot. Never throw the
+            // carried stack: it may be the player's only golden apple or
+            // another important item, so wait for a slot instead.
+            if (place < 0) {
+                pendingAction = null;
+                session.close();
+                nextAction = now + pick(delay);
+                return;
+            }
+            pendingAction = PendingAction.placeHeld(place);
         } else if (pendingAction == null) {
             pendingAction = arrangeOne(container, layout);
             if (pendingAction == null) pendingAction = dropOneBinItem(container, layout);
@@ -152,7 +159,7 @@ public final class InventoryManagerModule extends Module {
             Type type = assignment.getValue();
             ItemStack existing = container.getSlot(target).getStack();
             if (type == Type.BARRIER) {
-                if (existing != null) return dev.vibe.inventory.DropConfirmation.protects(existing)?null:PendingAction.drop(target, existing);
+                if (existing != null) return protectedFromDrop(existing) ? null : PendingAction.drop(target, existing);
                 continue;
             }
             int source = findBest(container, layout, type, target);
@@ -203,7 +210,7 @@ public final class InventoryManagerModule extends Module {
         for (int slot : playerSlots()) {
             if (layout.isIgnoredContainerSlot(slot)) continue;
             ItemStack stack = container.getSlot(slot).getStack();
-            if(dev.vibe.inventory.DropConfirmation.protects(stack))continue;
+            if (protectedFromDrop(stack)) continue;
             Type type = classify(stack);
             if (type != null && layout.isDropType(type)) return PendingAction.drop(slot, stack);
         }
@@ -214,7 +221,7 @@ public final class InventoryManagerModule extends Module {
         for (int slot : playerSlots()) {
             if (layout.isIgnoredContainerSlot(slot)) continue;
             ItemStack stack = container.getSlot(slot).getStack();
-            if(dev.vibe.inventory.DropConfirmation.protects(stack))continue;
+            if (protectedFromDrop(stack)) continue;
             Type type = classify(stack);
             if (type == null || !isUnique(type)) continue;
             int preferred = slot;
@@ -244,7 +251,7 @@ public final class InventoryManagerModule extends Module {
         for (int slot : playerSlots()) {
             if (layout.isIgnoredContainerSlot(slot)) continue;
             ItemStack stack = container.getSlot(slot).getStack();
-            if(dev.vibe.inventory.DropConfirmation.protects(stack))continue;
+            if (protectedFromDrop(stack)) continue;
             if (stack == null) continue;
             if (stack.getItem() instanceof ItemFood && stack.getItem() != Items.golden_apple) food.add(slot);
             if (stack.getItem() instanceof ItemBlock) blocks.add(slot);
@@ -268,18 +275,17 @@ public final class InventoryManagerModule extends Module {
 
     private boolean executePending(Container container, PendingAction action, long now) {
         if (action == null || container != minecraft.thePlayer.openContainer
-                || (action.kind != ActionKind.DROP_HELD && (action.slot < 0 || action.slot >= container.inventorySlots.size()))) {
+                || action.slot < 0 || action.slot >= container.inventorySlots.size()) {
             pendingAction = null;
             return false;
         }
         long interval = pick(delay);lastInterval=interval;
-        if (action.kind == ActionKind.DROP_HELD) return dropCarried(container, interval, now);
         if (action.kind == ActionKind.DROP) {
             ItemStack stack = container.getSlot(action.slot).getStack();
             // Drops keep the exact original manager decision (including
             // Barrier and stair/slab slots) but refuse a stale action when
             // that slot now contains another item.
-            if (dev.vibe.inventory.DropConfirmation.protects(stack) || stack == null || stack.getItem() != action.expectedItem || stack.getItemDamage() != action.expectedDamage) {
+            if (protectedFromDrop(stack) || stack == null || stack.getItem() != action.expectedItem || stack.getItemDamage() != action.expectedDamage) {
                 pendingAction = null;
                 return false;
             }
@@ -343,7 +349,9 @@ public final class InventoryManagerModule extends Module {
             int place = action.phase == 1 && action.target >= 0 && action.target < container.inventorySlots.size()
                     && dev.vibe.inventory.CursorClicks.canPlace(container.getSlot(action.target), held) ? action.target : -1;
             if (place < 0) place = findSafePlace(container, layout(), held, action.slot);
-            if (place < 0) return dropCarried(container, interval, now);
+            // Keep the stack in hand rather than destroying it when no safe
+            // slot exists; the next tick places it as soon as one appears.
+            if (place < 0) { pendingAction = null; return false; }
             Item expected = held.getItem();
             int damage = held.getItemDamage();
             int before = held.stackSize;
@@ -355,21 +363,6 @@ public final class InventoryManagerModule extends Module {
             if (after == null) pendingAction = null;
             else action.phase = 2;
         }
-        cursorUntil = now + 450L;
-        return true;
-    }
-
-    /** Vanilla click outside the GUI. Nothing in a slot is picked up. */
-    private boolean dropCarried(Container container, long interval, long now) {
-        if (minecraft.thePlayer.inventory.getItemStack() == null) {
-            pendingAction = null;
-            return false;
-        }
-        if (!clicks.click(container, -999, 0, 0, interval)) return false;
-        if (minecraft.thePlayer.inventory.getItemStack() != null) return fail(now);
-        pendingAction = null;
-        strikes = 0;
-        cursorSlot = -1;
         cursorUntil = now + 450L;
         return true;
     }
@@ -430,6 +423,15 @@ public final class InventoryManagerModule extends Module {
     }
     public boolean hasPendingInteraction() { return pendingAction != null; }
     public boolean ownsDispatcher(ContainerClickDispatcher dispatcher){return clicks==dispatcher;}
+    /**
+     * Golden apples are PvP supplies, including renamed healing heads, so the
+     * automatic cleanup paths never discard them even when Drop confirm is
+     * off. Other items keep following the configured drop bin and QoL guard.
+     */
+    private static boolean protectedFromDrop(ItemStack stack) {
+        return stack != null && (stack.getItem() == Items.golden_apple
+                || dev.vibe.inventory.DropConfirmation.protects(stack));
+    }
     public static boolean isReserved(InventoryLayout layout, int containerSlot, ItemStack stack) {
         for (Map.Entry<Integer,Type> entry : layout.assignments().entrySet())
             if (entry.getKey() < 40 && InventoryLayout.toContainerSlot(entry.getKey()) == containerSlot
@@ -530,7 +532,7 @@ public final class InventoryManagerModule extends Module {
         return result - stack.getItemDamage() * 0.0001D;
     }
 
-    private enum ActionKind { DROP, HOTBAR_SWAP, PICKUP, EQUIP, DROP_HELD }
+    private enum ActionKind { DROP, HOTBAR_SWAP, PICKUP, EQUIP }
 
     private static final class PendingAction {
         private final ActionKind kind;
@@ -568,10 +570,6 @@ public final class InventoryManagerModule extends Module {
             PendingAction action = new PendingAction(ActionKind.PICKUP, slot, slot, -1, null, null, 0);
             action.phase = 1;
             return action;
-        }
-
-        private static PendingAction dropHeld() {
-            return new PendingAction(ActionKind.DROP_HELD, -1, -1, -1, null, null, 0);
         }
     }
 }

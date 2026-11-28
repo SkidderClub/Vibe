@@ -73,7 +73,7 @@ public final class CommandManager {
             models(parts);
         } else if (".extensions".equals(command)) {
             dev.vibe.extension.ExtensionManager extensions = Vibe.getInstance().getExtensions();
-            if (extensions == null || extensions.getStatus().isEmpty()) say("No Vibe extensions loaded. Put extension JARs in mods and restart.");
+            if (extensions == null || extensions.getStatus().isEmpty()) say("No Vibe extensions loaded. Put extension JARs in vibe/extensions-jar and restart.");
             else for (String status : extensions.getStatus()) say(status);
         } else if (".source".equals(command)) {
             say("Vibe: GPLv3. Schizoid Fog, Torus and media HUD: AGPLv3. Open Licenses & credits in the main or pause menu.");

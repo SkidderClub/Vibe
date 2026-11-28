@@ -1,0 +1,1787 @@
+source	language	value
+ClickGUI	Chinese	点击界面
+Killaura	Chinese	杀戮光环
+ItemESP	Chinese	物品透视
+MoveFix	Chinese	移动修正
+AutoTool	Chinese	自动工具
+FastBreak	Chinese	快速挖掘
+CustomCrosshair	Chinese	自定义准星
+BlockOverlay	Chinese	方块覆盖
+Outline	Chinese	轮廓
+Fill	Chinese	填充
+Static	Chinese	静态
+Fade	Chinese	渐变
+Rainbow	Chinese	彩虹
+Raycast	Chinese	射线检测
+Rotate Back Speed	Chinese	回转速度
+Return To Origin Speed	Chinese	回正速度
+Attacks Per Second	Chinese	每秒攻击数
+Language	Chinese	语言
+Settings	Chinese	设置
+Save	Chinese	保存
+Load	Chinese	加载
+DELETE	Chinese	删除
+Search	Chinese	搜索
+Enabled	Chinese	启用
+Disabled	Chinese	禁用
+Back	Chinese	返回
+Continue	Chinese	继续
+WATERMARK	Chinese	水印
+Coordinates	Chinese	坐标
+Armor	Chinese	护甲
+INVENTORY	Chinese	物品栏
+Session Info	Chinese	会话信息
+Extended History	Chinese	扩展聊天记录
+Strict	Chinese	严格
+Vibe Shader	Chinese	Vibe 着色器
+Mode	Chinese	模式
+Color	Chinese	颜色
+Line width	Chinese	线宽
+Speed	Chinese	速度
+Smart	Chinese	智能
+Basic	Chinese	基础
+ClickGUI	Russian	КликGUI
+Killaura	Russian	Киллаура
+ItemESP	Russian	Предметы ESP
+MoveFix	Russian	Коррекция движения
+AutoTool	Russian	Автоинструмент
+FastBreak	Russian	Быстрая добыча
+CustomCrosshair	Russian	Свой прицел
+BlockOverlay	Russian	Оверлей блоков
+Outline	Russian	Контур
+Fill	Russian	Заливка
+Static	Russian	Статично
+Fade	Russian	Переход
+Rainbow	Russian	Радуга
+Raycast	Russian	Рейкаст
+Rotate Back Speed	Russian	Скорость возврата
+Return To Origin Speed	Russian	Скорость возврата
+Attacks Per Second	Russian	Атак в секунду
+Language	Russian	Язык
+Settings	Russian	Настройки
+Save	Russian	Сохранить
+Load	Russian	Загрузить
+DELETE	Russian	Удалить
+Search	Russian	Поиск
+Enabled	Russian	Вкл
+Disabled	Russian	Выкл
+Back	Russian	Назад
+Continue	Russian	Продолжить
+WATERMARK	Russian	Водяной знак
+Coordinates	Russian	Координаты
+Armor	Russian	Броня
+INVENTORY	Russian	Инвентарь
+Session Info	Russian	Информация о сеансе
+Extended History	Russian	Расширенная история
+Strict	Russian	Строгий
+Vibe Shader	Russian	Шейдер Vibe
+Mode	Russian	Режим
+Color	Russian	Цвет
+Line width	Russian	Толщина линии
+Speed	Russian	Скорость
+Smart	Russian	Умный
+Basic	Russian	Базовый
+ClickGUI	Japanese	クリックGUI
+Killaura	Japanese	キルオーラ
+ItemESP	Japanese	アイテムESP
+MoveFix	Japanese	移動補正
+AutoTool	Japanese	自動ツール
+FastBreak	Japanese	高速採掘
+CustomCrosshair	Japanese	カスタム照準
+BlockOverlay	Japanese	ブロックオーバーレイ
+Outline	Japanese	輪郭
+Fill	Japanese	塗りつぶし
+Static	Japanese	固定
+Fade	Japanese	フェード
+Rainbow	Japanese	虹
+Raycast	Japanese	レイキャスト
+Rotate Back Speed	Japanese	復帰速度
+Return To Origin Speed	Japanese	復帰速度
+Attacks Per Second	Japanese	毎秒攻撃数
+Language	Japanese	言語
+Settings	Japanese	設定
+Save	Japanese	保存
+Load	Japanese	読み込む
+DELETE	Japanese	削除
+Search	Japanese	検索
+Enabled	Japanese	有効
+Disabled	Japanese	無効
+Back	Japanese	戻る
+Continue	Japanese	続ける
+WATERMARK	Japanese	透かし
+Coordinates	Japanese	座標
+Armor	Japanese	防具
+INVENTORY	Japanese	インベントリ
+Session Info	Japanese	セッション情報
+Extended History	Japanese	拡張履歴
+Strict	Japanese	厳密
+Vibe Shader	Japanese	Vibe シェーダー
+Mode	Japanese	モード
+Color	Japanese	色
+Line width	Japanese	線幅
+Speed	Japanese	速度
+Smart	Japanese	スマート
+Basic	Japanese	基本
+ClickGUI	Korean	클릭 GUI
+Killaura	Korean	킬오라
+ItemESP	Korean	아이템 ESP
+MoveFix	Korean	이동 보정
+AutoTool	Korean	자동 도구
+FastBreak	Korean	빠른 채굴
+CustomCrosshair	Korean	사용자 지정 조준선
+BlockOverlay	Korean	블록 오버레이
+Outline	Korean	윤곽선
+Fill	Korean	채우기
+Static	Korean	고정
+Fade	Korean	페이드
+Rainbow	Korean	무지개
+Raycast	Korean	레이캐스트
+Rotate Back Speed	Korean	회전 복귀 속도
+Return To Origin Speed	Korean	원위치 복귀 속도
+Attacks Per Second	Korean	초당 공격 수
+Language	Korean	언어
+Settings	Korean	설정
+Save	Korean	저장
+Load	Korean	불러오기
+DELETE	Korean	삭제
+Search	Korean	검색
+Enabled	Korean	사용
+Disabled	Korean	사용 안 함
+Back	Korean	뒤로
+Continue	Korean	계속
+WATERMARK	Korean	워터마크
+Coordinates	Korean	좌표
+Armor	Korean	방어구
+INVENTORY	Korean	인벤토리
+Session Info	Korean	세션 정보
+Extended History	Korean	확장 기록
+Strict	Korean	엄격
+Vibe Shader	Korean	Vibe 셰이더
+Mode	Korean	모드
+Color	Korean	색상
+Line width	Korean	선 두께
+Speed	Korean	속도
+Smart	Korean	스마트
+Basic	Korean	기본
+ClickGUI	German	Klick-GUI
+Killaura	German	Killaura
+ItemESP	German	Item-ESP
+MoveFix	German	Bewegungsfix
+AutoTool	German	Auto-Werkzeug
+FastBreak	German	Schnellabbau
+CustomCrosshair	German	Eigenes Fadenkreuz
+BlockOverlay	German	Block-Overlay
+Outline	German	Umriss
+Fill	German	Füllung
+Static	German	Statisch
+Fade	German	Übergang
+Rainbow	German	Regenbogen
+Raycast	German	Strahlenprüfung
+Rotate Back Speed	German	Rückdrehgeschwindigkeit
+Return To Origin Speed	German	Rückkehrgeschwindigkeit
+Attacks Per Second	German	Angriffe pro Sekunde
+Language	German	Sprache
+Settings	German	Einstellungen
+Save	German	Speichern
+Load	German	Laden
+DELETE	German	Löschen
+Search	German	Suche
+Enabled	German	Aktiviert
+Disabled	German	Deaktiviert
+Back	German	Zurück
+Continue	German	Weiter
+WATERMARK	German	Wasserzeichen
+Coordinates	German	Koordinaten
+Armor	German	Rüstung
+INVENTORY	German	Inventar
+Session Info	German	Sitzungsinfo
+Extended History	German	Erweiterter Verlauf
+Strict	German	Streng
+Vibe Shader	German	Vibe-Shader
+Mode	German	Modus
+Color	German	Farbe
+Line width	German	Linienbreite
+Speed	German	Geschwindigkeit
+Smart	German	Intelligent
+Basic	German	Einfach
+ClickGUI	French	Interface de clic
+Killaura	French	Killaura
+ItemESP	French	ESP des objets
+MoveFix	French	Correction de mouvement
+AutoTool	French	Outil automatique
+FastBreak	French	Minage rapide
+CustomCrosshair	French	Réticule personnalisé
+BlockOverlay	French	Superposition de blocs
+Outline	French	Contour
+Fill	French	Remplissage
+Static	French	Statique
+Fade	French	Fondu
+Rainbow	French	Arc-en-ciel
+Raycast	French	Lancer de rayon
+Rotate Back Speed	French	Vitesse de retour
+Return To Origin Speed	French	Vitesse de retour à l'origine
+Attacks Per Second	French	Attaques par seconde
+Language	French	Langue
+Settings	French	Paramètres
+Save	French	Enregistrer
+Load	French	Charger
+DELETE	French	Supprimer
+Search	French	Rechercher
+Enabled	French	Activé
+Disabled	French	Désactivé
+Back	French	Retour
+Continue	French	Continuer
+WATERMARK	French	Filigrane
+Coordinates	French	Coordonnées
+Armor	French	Armure
+INVENTORY	French	Inventaire
+Session Info	French	Infos de session
+Extended History	French	Historique étendu
+Strict	French	Rigoureux
+Vibe Shader	French	Shader Vibe
+Mode	French	Mode
+Color	French	Couleur
+Line width	French	Épaisseur du trait
+Speed	French	Vitesse
+Smart	French	Intelligent
+Basic	French	Basique
+ClickGUI	Spanish	GUI de clic
+Killaura	Spanish	Killaura
+ItemESP	Spanish	ESP de objetos
+MoveFix	Spanish	Corrección de movimiento
+AutoTool	Spanish	Herramienta automática
+FastBreak	Spanish	Minado rápido
+CustomCrosshair	Spanish	Mira personalizada
+BlockOverlay	Spanish	Superposición de bloques
+Outline	Spanish	Contorno
+Fill	Spanish	Relleno
+Static	Spanish	Estático
+Fade	Spanish	Desvanecido
+Rainbow	Spanish	Arcoíris
+Raycast	Spanish	Trazado de rayos
+Rotate Back Speed	Spanish	Velocidad de retorno
+Return To Origin Speed	Spanish	Velocidad de regreso al origen
+Attacks Per Second	Spanish	Ataques por segundo
+Language	Spanish	Idioma
+Settings	Spanish	Ajustes
+Save	Spanish	Guardar
+Load	Spanish	Cargar
+DELETE	Spanish	Eliminar
+Search	Spanish	Buscar
+Enabled	Spanish	Activado
+Disabled	Spanish	Desactivado
+Back	Spanish	Atrás
+Continue	Spanish	Continuar
+WATERMARK	Spanish	Marca de agua
+Coordinates	Spanish	Coordenadas
+Armor	Spanish	Armadura
+INVENTORY	Spanish	Inventario
+Session Info	Spanish	Info de sesión
+Extended History	Spanish	Historial extendido
+Strict	Spanish	Estricto
+Vibe Shader	Spanish	Shader de Vibe
+Mode	Spanish	Modo
+Color	Spanish	Color
+Line width	Spanish	Grosor de línea
+Speed	Spanish	Velocidad
+Smart	Spanish	Inteligente
+Basic	Spanish	Básico
+ClickGUI	Portuguese	GUI de clique
+Killaura	Portuguese	Killaura
+ItemESP	Portuguese	ESP de itens
+MoveFix	Portuguese	Correção de movimento
+AutoTool	Portuguese	Ferramenta automática
+FastBreak	Portuguese	Mineração rápida
+CustomCrosshair	Portuguese	Mira personalizada
+BlockOverlay	Portuguese	Sobreposição de blocos
+Outline	Portuguese	Contorno
+Fill	Portuguese	Preenchimento
+Static	Portuguese	Estático
+Fade	Portuguese	Esmaecimento
+Rainbow	Portuguese	Arco-íris
+Raycast	Portuguese	Traçado de raios
+Rotate Back Speed	Portuguese	Velocidade de retorno
+Return To Origin Speed	Portuguese	Velocidade de retorno à origem
+Attacks Per Second	Portuguese	Ataques por segundo
+Language	Portuguese	Idioma
+Settings	Portuguese	Configurações
+Save	Portuguese	Salvar
+Load	Portuguese	Carregar
+DELETE	Portuguese	Excluir
+Search	Portuguese	Pesquisar
+Enabled	Portuguese	Ativado
+Disabled	Portuguese	Desativado
+Back	Portuguese	Voltar
+Continue	Portuguese	Continuar
+WATERMARK	Portuguese	Marca d'água
+Coordinates	Portuguese	Coordenadas
+Armor	Portuguese	Armadura
+INVENTORY	Portuguese	Inventário
+Session Info	Portuguese	Info da sessão
+Extended History	Portuguese	Histórico estendido
+Strict	Portuguese	Estrito
+Vibe Shader	Portuguese	Shader do Vibe
+Mode	Portuguese	Modo
+Color	Portuguese	Cor
+Line width	Portuguese	Espessura da linha
+Speed	Portuguese	Velocidade
+Smart	Portuguese	Inteligente
+Basic	Portuguese	Básico
+ClickGUI	Italian	GUI a clic
+Killaura	Italian	Killaura
+ItemESP	Italian	ESP oggetti
+MoveFix	Italian	Correzione movimento
+AutoTool	Italian	Strumento automatico
+FastBreak	Italian	Scavo rapido
+CustomCrosshair	Italian	Mirino personalizzato
+BlockOverlay	Italian	Sovrapposizione blocchi
+Outline	Italian	Contorno
+Fill	Italian	Riempimento
+Static	Italian	Statico
+Fade	Italian	Dissolvenza
+Rainbow	Italian	Arcobaleno
+Raycast	Italian	Tracciamento raggi
+Rotate Back Speed	Italian	Velocità di ritorno
+Return To Origin Speed	Italian	Velocità di ritorno all'origine
+Attacks Per Second	Italian	Attacchi al secondo
+Language	Italian	Lingua
+Settings	Italian	Impostazioni
+Save	Italian	Salva
+Load	Italian	Carica
+DELETE	Italian	Elimina
+Search	Italian	Cerca
+Enabled	Italian	Attivo
+Disabled	Italian	Disattivato
+Back	Italian	Indietro
+Continue	Italian	Continua
+WATERMARK	Italian	Filigrana
+Coordinates	Italian	Coordinate
+Armor	Italian	Armatura
+INVENTORY	Italian	Inventario
+Session Info	Italian	Info sessione
+Extended History	Italian	Cronologia estesa
+Strict	Italian	Rigoroso
+Vibe Shader	Italian	Shader di Vibe
+Mode	Italian	Modalità
+Color	Italian	Colore
+Line width	Italian	Spessore linea
+Speed	Italian	Velocità
+Smart	Italian	Intelligente
+Basic	Italian	Base
+ClickGUI	Dutch	Klik-GUI
+Killaura	Dutch	Killaura
+ItemESP	Dutch	Item-ESP
+MoveFix	Dutch	Bewegingscorrectie
+AutoTool	Dutch	Automatisch gereedschap
+FastBreak	Dutch	Snel graven
+CustomCrosshair	Dutch	Aangepast richtkruis
+BlockOverlay	Dutch	Blokoverlay
+Outline	Dutch	Omtrek
+Fill	Dutch	Vulling
+Static	Dutch	Statisch
+Fade	Dutch	Vervaging
+Rainbow	Dutch	Regenboog
+Raycast	Dutch	Stralencontrole
+Rotate Back Speed	Dutch	Terugdraaisnelheid
+Return To Origin Speed	Dutch	Terugkeersnelheid
+Attacks Per Second	Dutch	Aanvallen per seconde
+Language	Dutch	Taal
+Settings	Dutch	Instellingen
+Save	Dutch	Opslaan
+Load	Dutch	Laden
+DELETE	Dutch	Verwijderen
+Search	Dutch	Zoeken
+Enabled	Dutch	Ingeschakeld
+Disabled	Dutch	Uitgeschakeld
+Back	Dutch	Terug
+Continue	Dutch	Doorgaan
+WATERMARK	Dutch	Watermerk
+Coordinates	Dutch	Coördinaten
+Armor	Dutch	Harnas
+INVENTORY	Dutch	Inventaris
+Session Info	Dutch	Sessie-info
+Extended History	Dutch	Uitgebreide geschiedenis
+Strict	Dutch	Strikt
+Vibe Shader	Dutch	Vibe-shader
+Mode	Dutch	Modus
+Color	Dutch	Kleur
+Line width	Dutch	Lijndikte
+Speed	Dutch	Snelheid
+Smart	Dutch	Slim
+Basic	Dutch	Basis
+ClickGUI	Polish	Interfejs kliknięć
+Killaura	Polish	Killaura
+ItemESP	Polish	ESP przedmiotów
+MoveFix	Polish	Korekcja ruchu
+AutoTool	Polish	Automatyczne narzędzie
+FastBreak	Polish	Szybkie kopanie
+CustomCrosshair	Polish	Własny celownik
+BlockOverlay	Polish	Nakładka bloków
+Outline	Polish	Kontur
+Fill	Polish	Wypełnienie
+Static	Polish	Statyczny
+Fade	Polish	Zanikanie
+Rainbow	Polish	Tęcza
+Raycast	Polish	Promieniowanie
+Rotate Back Speed	Polish	Szybkość powrotu
+Return To Origin Speed	Polish	Szybkość powrotu do początku
+Attacks Per Second	Polish	Ataki na sekundę
+Language	Polish	Język
+Settings	Polish	Ustawienia
+Save	Polish	Zapisz
+Load	Polish	Wczytaj
+DELETE	Polish	Usuń
+Search	Polish	Szukaj
+Enabled	Polish	Włączone
+Disabled	Polish	Wyłączone
+Back	Polish	Wstecz
+Continue	Polish	Kontynuuj
+WATERMARK	Polish	Znak wodny
+Coordinates	Polish	Współrzędne
+Armor	Polish	Zbroja
+INVENTORY	Polish	Ekwipunek
+Session Info	Polish	Informacje o sesji
+Extended History	Polish	Rozszerzona historia
+Strict	Polish	Ścisły
+Vibe Shader	Polish	Shader Vibe
+Mode	Polish	Tryb
+Color	Polish	Kolor
+Line width	Polish	Grubość linii
+Speed	Polish	Prędkość
+Smart	Polish	Inteligentny
+Basic	Polish	Podstawowy
+ClickGUI	Czech	Klikací GUI
+Killaura	Czech	Killaura
+ItemESP	Czech	ESP předmětů
+MoveFix	Czech	Korekce pohybu
+AutoTool	Czech	Automatický nástroj
+FastBreak	Czech	Rychlé kopání
+CustomCrosshair	Czech	Vlastní zaměřovač
+BlockOverlay	Czech	Překrytí bloků
+Outline	Czech	Obrys
+Fill	Czech	Výplň
+Static	Czech	Statický
+Fade	Czech	Postupné mizení
+Rainbow	Czech	Duha
+Raycast	Czech	Paprskové zkoumání
+Rotate Back Speed	Czech	Rychlost návratu
+Return To Origin Speed	Czech	Rychlost návratu na začátek
+Attacks Per Second	Czech	Útoky za sekundu
+Language	Czech	Jazyk
+Settings	Czech	Nastavení
+Save	Czech	Uložit
+Load	Czech	Načíst
+DELETE	Czech	Smazat
+Search	Czech	Hledat
+Enabled	Czech	Zapnuto
+Disabled	Czech	Vypnuto
+Back	Czech	Zpět
+Continue	Czech	Pokračovat
+WATERMARK	Czech	Vodoznak
+Coordinates	Czech	Souřadnice
+Armor	Czech	Brnění
+INVENTORY	Czech	Inventář
+Session Info	Czech	Informace o relaci
+Extended History	Czech	Rozšířená historie
+Strict	Czech	Přísný
+Vibe Shader	Czech	Shader Vibe
+Mode	Czech	Režim
+Color	Czech	Barva
+Line width	Czech	Tloušťka čáry
+Speed	Czech	Rychlost
+Smart	Czech	Chytrý
+Basic	Czech	Základní
+ClickGUI	Ukrainian	КлікGUI
+Killaura	Ukrainian	Кілаура
+ItemESP	Ukrainian	ESP предметів
+MoveFix	Ukrainian	Корекція руху
+AutoTool	Ukrainian	Автоінструмент
+FastBreak	Ukrainian	Швидке копання
+CustomCrosshair	Ukrainian	Власний приціл
+BlockOverlay	Ukrainian	Накладення блоків
+Outline	Ukrainian	Контур
+Fill	Ukrainian	Заливка
+Static	Ukrainian	Статично
+Fade	Ukrainian	Перехід
+Rainbow	Ukrainian	Веселка
+Raycast	Ukrainian	Рейкаст
+Rotate Back Speed	Ukrainian	Швидкість повернення
+Return To Origin Speed	Ukrainian	Швидкість повернення до початку
+Attacks Per Second	Ukrainian	Атак за секунду
+Language	Ukrainian	Мова
+Settings	Ukrainian	Налаштування
+Save	Ukrainian	Зберегти
+Load	Ukrainian	Завантажити
+DELETE	Ukrainian	Видалити
+Search	Ukrainian	Пошук
+Enabled	Ukrainian	Увімкнено
+Disabled	Ukrainian	Вимкнено
+Back	Ukrainian	Назад
+Continue	Ukrainian	Продовжити
+WATERMARK	Ukrainian	Водяний знак
+Coordinates	Ukrainian	Координати
+Armor	Ukrainian	Броня
+INVENTORY	Ukrainian	Інвентар
+Session Info	Ukrainian	Інформація про сеанс
+Extended History	Ukrainian	Розширена історія
+Strict	Ukrainian	Суворий
+Vibe Shader	Ukrainian	Шейдер Vibe
+Mode	Ukrainian	Режим
+Color	Ukrainian	Колір
+Line width	Ukrainian	Товщина лінії
+Speed	Ukrainian	Швидкість
+Smart	Ukrainian	Розумний
+Basic	Ukrainian	Базовий
+ClickGUI	Romanian	Interfață de clic
+Killaura	Romanian	Killaura
+ItemESP	Romanian	ESP obiecte
+MoveFix	Romanian	Corecție mișcare
+AutoTool	Romanian	Unealtă automată
+FastBreak	Romanian	Minerit rapid
+CustomCrosshair	Romanian	Țintă personalizată
+BlockOverlay	Romanian	Suprapunere blocuri
+Outline	Romanian	Contur
+Fill	Romanian	Umplere
+Static	Romanian	Static
+Fade	Romanian	Estompare
+Rainbow	Romanian	Curcubeu
+Raycast	Romanian	Trasare raze
+Rotate Back Speed	Romanian	Viteza de revenire
+Return To Origin Speed	Romanian	Viteza de revenire la origine
+Attacks Per Second	Romanian	Atacuri pe secundă
+Language	Romanian	Limbă
+Settings	Romanian	Setări
+Save	Romanian	Salvează
+Load	Romanian	Încarcă
+DELETE	Romanian	Șterge
+Search	Romanian	Caută
+Enabled	Romanian	Activat
+Disabled	Romanian	Dezactivat
+Back	Romanian	Înapoi
+Continue	Romanian	Continuă
+WATERMARK	Romanian	Filigran
+Coordinates	Romanian	Coordonate
+Armor	Romanian	Armură
+INVENTORY	Romanian	Inventar
+Session Info	Romanian	Informații sesiune
+Extended History	Romanian	Istoric extins
+Strict	Romanian	Riguros
+Vibe Shader	Romanian	Shader Vibe
+Mode	Romanian	Mod
+Color	Romanian	Culoare
+Line width	Romanian	Grosimea liniei
+Speed	Romanian	Viteză
+Smart	Romanian	Inteligent
+Basic	Romanian	De bază
+ClickGUI	Greek	GUI κλικ
+Killaura	Greek	Killaura
+ItemESP	Greek	ESP αντικειμένων
+MoveFix	Greek	Διόρθωση κίνησης
+AutoTool	Greek	Αυτόματο εργαλείο
+FastBreak	Greek	Γρήγορη εξόρυξη
+CustomCrosshair	Greek	Προσαρμοσμένο σημάδι
+BlockOverlay	Greek	Επικάλυψη μπλοκ
+Outline	Greek	Περίγραμμα
+Fill	Greek	Γέμισμα
+Static	Greek	Στατικό
+Fade	Greek	Ξεθώριασμα
+Rainbow	Greek	Ουράνιο τόξο
+Raycast	Greek	Ακτινοβολία
+Rotate Back Speed	Greek	Ταχύτητα επιστροφής
+Return To Origin Speed	Greek	Ταχύτητα επιστροφής στην αρχή
+Attacks Per Second	Greek	Επιθέσεις ανά δευτερόλεπτο
+Language	Greek	Γλώσσα
+Settings	Greek	Ρυθμίσεις
+Save	Greek	Αποθήκευση
+Load	Greek	Φόρτωση
+DELETE	Greek	Διαγραφή
+Search	Greek	Αναζήτηση
+Enabled	Greek	Ενεργό
+Disabled	Greek	Ανενεργό
+Back	Greek	Πίσω
+Continue	Greek	Συνέχεια
+WATERMARK	Greek	Υδατογράφημα
+Coordinates	Greek	Συντεταγμένες
+Armor	Greek	Πανοπλία
+INVENTORY	Greek	Αποσκευές
+Session Info	Greek	Πληροφορίες συνεδρίας
+Extended History	Greek	Εκτεταμένο ιστορικό
+Strict	Greek	Αυστηρό
+Vibe Shader	Greek	Shader Vibe
+Mode	Greek	Λειτουργία
+Color	Greek	Χρώμα
+Line width	Greek	Πάχος γραμμής
+Speed	Greek	Ταχύτητα
+Smart	Greek	Έξυπνο
+Basic	Greek	Βασικό
+ClickGUI	Swedish	Klick-GUI
+Killaura	Swedish	Killaura
+ItemESP	Swedish	Föremåls-ESP
+MoveFix	Swedish	Rörelsekorrigering
+AutoTool	Swedish	Automatiskt verktyg
+FastBreak	Swedish	Snabb brytning
+CustomCrosshair	Swedish	Anpassat riktmedel
+BlockOverlay	Swedish	Blocköverlägg
+Outline	Swedish	Kontur
+Fill	Swedish	Fyllning
+Static	Swedish	Statisk
+Fade	Swedish	Toning
+Rainbow	Swedish	Regnbåge
+Raycast	Swedish	Strålkastning
+Rotate Back Speed	Swedish	Återgångshastighet
+Return To Origin Speed	Swedish	Återgångshastighet till start
+Attacks Per Second	Swedish	Attacker per sekund
+Language	Swedish	Språk
+Settings	Swedish	Inställningar
+Save	Swedish	Spara
+Load	Swedish	Läs in
+DELETE	Swedish	Radera
+Search	Swedish	Sök
+Enabled	Swedish	Aktiverad
+Disabled	Swedish	Inaktiverad
+Back	Swedish	Tillbaka
+Continue	Swedish	Fortsätt
+WATERMARK	Swedish	Vattenstämpel
+Coordinates	Swedish	Koordinater
+Armor	Swedish	Rustning
+INVENTORY	Swedish	Inventering
+Session Info	Swedish	Sessionsinfo
+Extended History	Swedish	Utökad historik
+Strict	Swedish	Strikt
+Vibe Shader	Swedish	Vibe-shader
+Mode	Swedish	Läge
+Color	Swedish	Färg
+Line width	Swedish	Linjebredd
+Speed	Swedish	Hastighet
+Smart	Swedish	Smart
+Basic	Swedish	Grundläggande
+ClickGUI	Finnish	Napsautus-GUI
+Killaura	Finnish	Killaura
+ItemESP	Finnish	Esine-ESP
+MoveFix	Finnish	Liikkeen korjaus
+AutoTool	Finnish	Automaattinen työkalu
+FastBreak	Finnish	Nopea louhinta
+CustomCrosshair	Finnish	Mukautettu tähtäin
+BlockOverlay	Finnish	Lohkon peittokerros
+Outline	Finnish	Ääriviiva
+Fill	Finnish	Täyttö
+Static	Finnish	Staattinen
+Fade	Finnish	Häivytys
+Rainbow	Finnish	Sateenkaari
+Raycast	Finnish	Säteenseuranta
+Rotate Back Speed	Finnish	Paluunopeus
+Return To Origin Speed	Finnish	Paluunopeus alkuun
+Attacks Per Second	Finnish	Iskuja sekunnissa
+Language	Finnish	Kieli
+Settings	Finnish	Asetukset
+Save	Finnish	Tallenna
+Load	Finnish	Lataa
+DELETE	Finnish	Poista
+Search	Finnish	Haku
+Enabled	Finnish	Käytössä
+Disabled	Finnish	Pois käytöstä
+Back	Finnish	Takaisin
+Continue	Finnish	Jatka
+WATERMARK	Finnish	Vesileima
+Coordinates	Finnish	Koordinaatit
+Armor	Finnish	Panssari
+INVENTORY	Finnish	Varasto
+Session Info	Finnish	Istunnon tiedot
+Extended History	Finnish	Laajennettu historia
+Strict	Finnish	Tiukka
+Vibe Shader	Finnish	Vibe-varjostin
+Mode	Finnish	Tila
+Color	Finnish	Väri
+Line width	Finnish	Viivan paksuus
+Speed	Finnish	Nopeus
+Smart	Finnish	Älykäs
+Basic	Finnish	Perus
+ClickGUI	Turkish	Tıklama arayüzü
+Killaura	Turkish	Killaura
+ItemESP	Turkish	Eşya ESP
+MoveFix	Turkish	Hareket düzeltmesi
+AutoTool	Turkish	Otomatik araç
+FastBreak	Turkish	Hızlı kazma
+CustomCrosshair	Turkish	Özel nişangah
+BlockOverlay	Turkish	Blok kaplaması
+Outline	Turkish	Dış çizgi
+Fill	Turkish	Dolgu
+Static	Turkish	Statik
+Fade	Turkish	Solma
+Rainbow	Turkish	Gökkuşağı
+Raycast	Turkish	Işın izleme
+Rotate Back Speed	Turkish	Geri dönme hızı
+Return To Origin Speed	Turkish	Başlangıca dönme hızı
+Attacks Per Second	Turkish	Saniyedeki saldırı
+Language	Turkish	Dil
+Settings	Turkish	Ayarlar
+Save	Turkish	Kaydet
+Load	Turkish	Yükle
+DELETE	Turkish	Sil
+Search	Turkish	Ara
+Enabled	Turkish	Etkin
+Disabled	Turkish	Devre dışı
+Back	Turkish	Geri
+Continue	Turkish	Devam
+WATERMARK	Turkish	Filigran
+Coordinates	Turkish	Koordinatlar
+Armor	Turkish	Zırh
+INVENTORY	Turkish	Envanter
+Session Info	Turkish	Oturum bilgisi
+Extended History	Turkish	Genişletilmiş geçmiş
+Strict	Turkish	Katı
+Vibe Shader	Turkish	Vibe gölgelendirici
+Mode	Turkish	Mod
+Color	Turkish	Renk
+Line width	Turkish	Çizgi kalınlığı
+Speed	Turkish	Hız
+Smart	Turkish	Akıllı
+Basic	Turkish	Temel
+ClickGUI	Vietnamese	Giao diện nhấp
+Killaura	Vietnamese	Killaura
+ItemESP	Vietnamese	ESP vật phẩm
+MoveFix	Vietnamese	Sửa chuyển động
+AutoTool	Vietnamese	Công cụ tự động
+FastBreak	Vietnamese	Đào nhanh
+CustomCrosshair	Vietnamese	Tâm ngắm tùy chỉnh
+BlockOverlay	Vietnamese	Lớp phủ khối
+Outline	Vietnamese	Đường viền
+Fill	Vietnamese	Tô đầy
+Static	Vietnamese	Tĩnh
+Fade	Vietnamese	Mờ dần
+Rainbow	Vietnamese	Cầu vồng
+Raycast	Vietnamese	Dò tia
+Rotate Back Speed	Vietnamese	Tốc độ quay lại
+Return To Origin Speed	Vietnamese	Tốc độ về vị trí gốc
+Attacks Per Second	Vietnamese	Số đòn mỗi giây
+Language	Vietnamese	Ngôn ngữ
+Settings	Vietnamese	Cài đặt
+Save	Vietnamese	Lưu
+Load	Vietnamese	Tải
+DELETE	Vietnamese	Xóa
+Search	Vietnamese	Tìm kiếm
+Enabled	Vietnamese	Bật
+Disabled	Vietnamese	Tắt
+Back	Vietnamese	Quay lại
+Continue	Vietnamese	Tiếp tục
+WATERMARK	Vietnamese	Hình mờ
+Coordinates	Vietnamese	Tọa độ
+Armor	Vietnamese	Giáp
+INVENTORY	Vietnamese	Kho đồ
+Session Info	Vietnamese	Thông tin phiên
+Extended History	Vietnamese	Lịch sử mở rộng
+Strict	Vietnamese	Nghiêm ngặt
+Vibe Shader	Vietnamese	Bộ tạo bóng Vibe
+Mode	Vietnamese	Chế độ
+Color	Vietnamese	Màu sắc
+Line width	Vietnamese	Độ dày đường
+Speed	Vietnamese	Tốc độ
+Smart	Vietnamese	Thông minh
+Basic	Vietnamese	Cơ bản
+ClickGUI	Indonesian	GUI klik
+Killaura	Indonesian	Killaura
+ItemESP	Indonesian	ESP item
+MoveFix	Indonesian	Koreksi gerakan
+AutoTool	Indonesian	Alat otomatis
+FastBreak	Indonesian	Penggalian cepat
+CustomCrosshair	Indonesian	Crosshair khusus
+BlockOverlay	Indonesian	Lapisan blok
+Outline	Indonesian	Garis luar
+Fill	Indonesian	Isi
+Static	Indonesian	Statis
+Fade	Indonesian	Pudar
+Rainbow	Indonesian	Pelangi
+Raycast	Indonesian	Pelacakan sinar
+Rotate Back Speed	Indonesian	Kecepatan kembali
+Return To Origin Speed	Indonesian	Kecepatan kembali ke awal
+Attacks Per Second	Indonesian	Serangan per detik
+Language	Indonesian	Bahasa
+Settings	Indonesian	Pengaturan
+Save	Indonesian	Simpan
+Load	Indonesian	Muat
+DELETE	Indonesian	Hapus
+Search	Indonesian	Cari
+Enabled	Indonesian	Aktif
+Disabled	Indonesian	Nonaktif
+Back	Indonesian	Kembali
+Continue	Indonesian	Lanjut
+WATERMARK	Indonesian	Tanda air
+Coordinates	Indonesian	Koordinat
+Armor	Indonesian	Armor
+INVENTORY	Indonesian	Inventaris
+Session Info	Indonesian	Info sesi
+Extended History	Indonesian	Riwayat diperluas
+Strict	Indonesian	Ketat
+Vibe Shader	Indonesian	Shader Vibe
+Mode	Indonesian	Mode
+Color	Indonesian	Warna
+Line width	Indonesian	Ketebalan garis
+Speed	Indonesian	Kecepatan
+Smart	Indonesian	Cerdas
+Basic	Indonesian	Dasar
+ClickGUI	Tagalog	GUI ng pag-click
+Killaura	Tagalog	Killaura
+ItemESP	Tagalog	ESP ng mga item
+MoveFix	Tagalog	Pagwawasto ng galaw
+AutoTool	Tagalog	Awtomatikong kasangkapan
+FastBreak	Tagalog	Mabilis na paghukay
+CustomCrosshair	Tagalog	Pasadyang crosshair
+BlockOverlay	Tagalog	Patong sa bloke
+Outline	Tagalog	Balangkas
+Fill	Tagalog	Pagpuno
+Static	Tagalog	Statiko
+Fade	Tagalog	Pagkawala
+Rainbow	Tagalog	Bahaghari
+Raycast	Tagalog	Pagsubaybay ng sinag
+Rotate Back Speed	Tagalog	Bilis ng pagbalik
+Return To Origin Speed	Tagalog	Bilis ng pagbalik sa pinagmulan
+Attacks Per Second	Tagalog	Pag-atake bawat segundo
+Language	Tagalog	Wika
+Settings	Tagalog	Mga setting
+Save	Tagalog	I-save
+Load	Tagalog	I-load
+DELETE	Tagalog	Burahin
+Search	Tagalog	Hanapin
+Enabled	Tagalog	Naka-enable
+Disabled	Tagalog	Naka-disable
+Back	Tagalog	Bumalik
+Continue	Tagalog	Magpatuloy
+WATERMARK	Tagalog	Watermark
+Coordinates	Tagalog	Mga coordinate
+Armor	Tagalog	Baluti
+INVENTORY	Tagalog	Imbentaryo
+Session Info	Tagalog	Impormasyon ng sesyon
+Extended History	Tagalog	Pinalawak na kasaysayan
+Strict	Tagalog	Mahigpit
+Vibe Shader	Tagalog	Shader ng Vibe
+Mode	Tagalog	Mode
+Color	Tagalog	Kulay
+Line width	Tagalog	Kapal ng linya
+Speed	Tagalog	Bilis
+Smart	Tagalog	Matalino
+Basic	Tagalog	Batayan
+ClickGUI	Thai	GUI คลิก
+Killaura	Thai	Killaura
+ItemESP	Thai	ESP ไอเทม
+MoveFix	Thai	แก้ไขการเคลื่อนที่
+AutoTool	Thai	เครื่องมืออัตโนมัติ
+FastBreak	Thai	ขุดเร็ว
+CustomCrosshair	Thai	เป้าศูนย์กลางกำหนดเอง
+BlockOverlay	Thai	ซ้อนทับบล็อก
+Outline	Thai	เส้นขอบ
+Fill	Thai	เติมสี
+Static	Thai	คงที่
+Fade	Thai	จางหาย
+Rainbow	Thai	สายรุ้ง
+Raycast	Thai	ยิงรังสี
+Rotate Back Speed	Thai	ความเร็วหมุนกลับ
+Return To Origin Speed	Thai	ความเร็วกลับจุดเริ่มต้น
+Attacks Per Second	Thai	จำนวนโจมตีต่อวินาที
+Language	Thai	ภาษา
+Settings	Thai	การตั้งค่า
+Save	Thai	บันทึก
+Load	Thai	โหลด
+DELETE	Thai	ลบ
+Search	Thai	ค้นหา
+Enabled	Thai	เปิดใช้
+Disabled	Thai	ปิดใช้
+Back	Thai	ย้อนกลับ
+Continue	Thai	ดำเนินการต่อ
+WATERMARK	Thai	ลายน้ำ
+Coordinates	Thai	พิกัด
+Armor	Thai	เกราะ
+INVENTORY	Thai	คลังไอเทม
+Session Info	Thai	ข้อมูลเซสชัน
+Extended History	Thai	ประวัติเพิ่มเติม
+Strict	Thai	เข้มงวด
+Vibe Shader	Thai	เชเดอร์ Vibe
+Mode	Thai	โหมด
+Color	Thai	สี
+Line width	Thai	ความหนาเส้น
+Speed	Thai	ความเร็ว
+Smart	Thai	อัจฉริยะ
+Basic	Thai	พื้นฐาน
+ClickGUI	Javanese	GUI klik
+Killaura	Javanese	Killaura
+ItemESP	Javanese	ESP item
+MoveFix	Javanese	Koreksi obahe
+AutoTool	Javanese	Piranti otomatis
+FastBreak	Javanese	Ndhudhuk cepet
+CustomCrosshair	Javanese	Crosshair khusus
+BlockOverlay	Javanese	Lapisan blok
+Outline	Javanese	Garis njaba
+Fill	Javanese	Isi
+Static	Javanese	Statis
+Fade	Javanese	Memudar
+Rainbow	Javanese	Pelangi
+Raycast	Javanese	Nelusuri sinar
+Rotate Back Speed	Javanese	Kacepetan bali
+Return To Origin Speed	Javanese	Kacepetan bali menyang wiwitan
+Attacks Per Second	Javanese	Serangan saben detik
+Language	Javanese	Basa
+Settings	Javanese	Setelan
+Save	Javanese	Simpen
+Load	Javanese	Muat
+DELETE	Javanese	Busak
+Search	Javanese	Golek
+Enabled	Javanese	Aktif
+Disabled	Javanese	Ora aktif
+Back	Javanese	Bali
+Continue	Javanese	Terusake
+WATERMARK	Javanese	Tandha banyu
+Coordinates	Javanese	Koordinat
+Armor	Javanese	Waja
+INVENTORY	Javanese	Inventaris
+Session Info	Javanese	Info sesi
+Extended History	Javanese	Riwayat ditambahi
+Strict	Javanese	Ketat
+Vibe Shader	Javanese	Shader Vibe
+Mode	Javanese	Mode
+Color	Javanese	Warna
+Line width	Javanese	Kekandelan garis
+Speed	Javanese	Kacepetan
+Smart	Javanese	Pinter
+Basic	Javanese	Dasar
+ClickGUI	Bavarian	Klick-GUI
+Killaura	Bavarian	Killaura
+ItemESP	Bavarian	Item-ESP
+MoveFix	Bavarian	Bewegungs-Fix
+AutoTool	Bavarian	Automatisch Werkzeig
+FastBreak	Bavarian	Schnöi obbaun
+CustomCrosshair	Bavarian	Eigns Fadenkreiz
+BlockOverlay	Bavarian	Block-Overlay
+Outline	Bavarian	Umriss
+Fill	Bavarian	Füllung
+Static	Bavarian	Statisch
+Fade	Bavarian	Übergang
+Rainbow	Bavarian	Regenbong
+Raycast	Bavarian	Stroinprüfung
+Rotate Back Speed	Bavarian	Zruckdraah-Gschwindigkait
+Return To Origin Speed	Bavarian	Zruckkehr-Gschwindigkait
+Attacks Per Second	Bavarian	Angriff pro Sekund
+Language	Bavarian	Sproch
+Settings	Bavarian	Eistellung
+Save	Bavarian	Speichern
+Load	Bavarian	Ladn
+DELETE	Bavarian	Löschn
+Search	Bavarian	Suachn
+Enabled	Bavarian	O
+Disabled	Bavarian	Aus
+Back	Bavarian	Zruck
+Continue	Bavarian	Weida
+WATERMARK	Bavarian	Wossazeichn
+Coordinates	Bavarian	Koordinatn
+Armor	Bavarian	Rüstung
+INVENTORY	Bavarian	Inventar
+Session Info	Bavarian	Sitzungsinfo
+Extended History	Bavarian	Erweitade Gschicht
+Strict	Bavarian	Stramm
+Vibe Shader	Bavarian	Vibe-Shader
+Mode	Bavarian	Art
+Color	Bavarian	Farb
+Line width	Bavarian	Linienbreitn
+Speed	Bavarian	Gschwindigkeit
+Smart	Bavarian	Gscheid
+Basic	Bavarian	Grund
+ClickGUI	Nigerian Pidgin	Klik GUI
+Killaura	Nigerian Pidgin	Killaura
+ItemESP	Nigerian Pidgin	Item ESP
+MoveFix	Nigerian Pidgin	Fix movement
+AutoTool	Nigerian Pidgin	Tool wey dey work alone
+FastBreak	Nigerian Pidgin	Dig fast
+CustomCrosshair	Nigerian Pidgin	Crosshair wey you set
+BlockOverlay	Nigerian Pidgin	Block cover
+Outline	Nigerian Pidgin	Line around
+Fill	Nigerian Pidgin	Fill am
+Static	Nigerian Pidgin	No dey move
+Fade	Nigerian Pidgin	Fade comot
+Rainbow	Nigerian Pidgin	Rainbow
+Raycast	Nigerian Pidgin	Check ray
+Rotate Back Speed	Nigerian Pidgin	Speed to turn back
+Return To Origin Speed	Nigerian Pidgin	Speed to go back start
+Attacks Per Second	Nigerian Pidgin	Attacks every second
+Language	Nigerian Pidgin	Language
+Settings	Nigerian Pidgin	Settings
+Save	Nigerian Pidgin	Save am
+Load	Nigerian Pidgin	Load am
+DELETE	Nigerian Pidgin	Delete am
+Search	Nigerian Pidgin	Find am
+Enabled	Nigerian Pidgin	On
+Disabled	Nigerian Pidgin	Off
+Back	Nigerian Pidgin	Go back
+Continue	Nigerian Pidgin	Continue
+WATERMARK	Nigerian Pidgin	Watermark
+Coordinates	Nigerian Pidgin	Coordinates
+Armor	Nigerian Pidgin	Armor
+INVENTORY	Nigerian Pidgin	Inventory
+Session Info	Nigerian Pidgin	Session info
+Extended History	Nigerian Pidgin	History wey long
+Strict	Nigerian Pidgin	Strict well
+Vibe Shader	Nigerian Pidgin	Vibe shader
+Mode	Nigerian Pidgin	Mode
+Color	Nigerian Pidgin	Color
+Line width	Nigerian Pidgin	Line thickness
+Speed	Nigerian Pidgin	Speed
+Smart	Nigerian Pidgin	Smart
+Basic	Nigerian Pidgin	Basic
+ClickGUI	Hindi	क्लिक GUI
+Killaura	Hindi	किलऑरा
+ItemESP	Hindi	आइटम ESP
+MoveFix	Hindi	मूवमेंट सुधार
+AutoTool	Hindi	स्वचालित उपकरण
+FastBreak	Hindi	तेज़ खुदाई
+CustomCrosshair	Hindi	कस्टम क्रॉसहेयर
+BlockOverlay	Hindi	ब्लॉक ओवरले
+Outline	Hindi	रूपरेखा
+Fill	Hindi	भरण
+Static	Hindi	स्थिर
+Fade	Hindi	धुंधलापन
+Rainbow	Hindi	इंद्रधनुष
+Raycast	Hindi	किरण जाँच
+Rotate Back Speed	Hindi	वापस घूमने की गति
+Return To Origin Speed	Hindi	मूल स्थान पर लौटने की गति
+Attacks Per Second	Hindi	प्रति सेकंड हमले
+Language	Hindi	भाषा
+Settings	Hindi	सेटिंग्स
+Save	Hindi	सहेजें
+Load	Hindi	लोड करें
+DELETE	Hindi	हटाएँ
+Search	Hindi	खोजें
+Enabled	Hindi	सक्षम
+Disabled	Hindi	अक्षम
+Back	Hindi	वापस
+Continue	Hindi	जारी रखें
+WATERMARK	Hindi	वॉटरमार्क
+Coordinates	Hindi	निर्देशांक
+Armor	Hindi	कवच
+INVENTORY	Hindi	इन्वेंटरी
+Session Info	Hindi	सत्र जानकारी
+Extended History	Hindi	विस्तृत इतिहास
+Strict	Hindi	सख्त
+Vibe Shader	Hindi	Vibe शेडर
+Mode	Hindi	मोड
+Color	Hindi	रंग
+Line width	Hindi	रेखा की मोटाई
+Speed	Hindi	गति
+Smart	Hindi	स्मार्ट
+Basic	Hindi	बुनियादी
+ClickGUI	Marathi	क्लिक GUI
+Killaura	Marathi	किलऑरा
+ItemESP	Marathi	आयटम ESP
+MoveFix	Marathi	हालचाल सुधार
+AutoTool	Marathi	स्वयंचलित साधन
+FastBreak	Marathi	जलद खोदणे
+CustomCrosshair	Marathi	सानुकूल क्रॉसहेअर
+BlockOverlay	Marathi	ब्लॉक ओव्हरले
+Outline	Marathi	बाह्यरेखा
+Fill	Marathi	भरण
+Static	Marathi	स्थिर
+Fade	Marathi	हळूहळू नाहीसा होणे
+Rainbow	Marathi	इंद्रधनुष्य
+Raycast	Marathi	किरण तपासणी
+Rotate Back Speed	Marathi	परत फिरण्याचा वेग
+Return To Origin Speed	Marathi	मूळ जागी परतण्याचा वेग
+Attacks Per Second	Marathi	प्रति सेकंद हल्ले
+Language	Marathi	भाषा
+Settings	Marathi	सेटिंग्ज
+Save	Marathi	जतन करा
+Load	Marathi	लोड करा
+DELETE	Marathi	हटवा
+Search	Marathi	शोधा
+Enabled	Marathi	सक्षम
+Disabled	Marathi	अक्षम
+Back	Marathi	मागे
+Continue	Marathi	सुरू ठेवा
+WATERMARK	Marathi	वॉटरमार्क
+Coordinates	Marathi	निर्देशांक
+Armor	Marathi	चिलखत
+INVENTORY	Marathi	इन्व्हेंटरी
+Session Info	Marathi	सत्र माहिती
+Extended History	Marathi	विस्तारित इतिहास
+Strict	Marathi	कडक
+Vibe Shader	Marathi	Vibe शेडर
+Mode	Marathi	मोड
+Color	Marathi	रंग
+Line width	Marathi	रेषेची जाडी
+Speed	Marathi	वेग
+Smart	Marathi	हुशार
+Basic	Marathi	मूलभूत
+ClickGUI	Bengali	ক্লিক GUI
+Killaura	Bengali	কিলঅরা
+ItemESP	Bengali	আইটেম ESP
+MoveFix	Bengali	চলাচল সংশোধন
+AutoTool	Bengali	স্বয়ংক্রিয় হাতিয়ার
+FastBreak	Bengali	দ্রুত খনন
+CustomCrosshair	Bengali	কাস্টম ক্রসহেয়ার
+BlockOverlay	Bengali	ব্লক ওভারলে
+Outline	Bengali	রূপরেখা
+Fill	Bengali	ভরাট
+Static	Bengali	স্থির
+Fade	Bengali	বিবর্ণতা
+Rainbow	Bengali	রংধনু
+Raycast	Bengali	রশ্মি পরীক্ষা
+Rotate Back Speed	Bengali	ফিরে ঘোরার গতি
+Return To Origin Speed	Bengali	মূল স্থানে ফেরার গতি
+Attacks Per Second	Bengali	প্রতি সেকেন্ডে আক্রমণ
+Language	Bengali	ভাষা
+Settings	Bengali	সেটিংস
+Save	Bengali	সংরক্ষণ
+Load	Bengali	লোড
+DELETE	Bengali	মুছুন
+Search	Bengali	অনুসন্ধান
+Enabled	Bengali	সক্রিয়
+Disabled	Bengali	নিষ্ক্রিয়
+Back	Bengali	ফিরে যান
+Continue	Bengali	চালিয়ে যান
+WATERMARK	Bengali	ওয়াটারমার্ক
+Coordinates	Bengali	স্থানাঙ্ক
+Armor	Bengali	বর্ম
+INVENTORY	Bengali	ইনভেন্টরি
+Session Info	Bengali	সেশন তথ্য
+Extended History	Bengali	বর্ধিত ইতিহাস
+Strict	Bengali	কঠোর
+Vibe Shader	Bengali	Vibe শেডার
+Mode	Bengali	মোড
+Color	Bengali	রঙ
+Line width	Bengali	রেখার পুরুত্ব
+Speed	Bengali	গতি
+Smart	Bengali	স্মার্ট
+Basic	Bengali	মৌলিক
+ClickGUI	Gujarati	ક્લિક GUI
+Killaura	Gujarati	કિલઓરા
+ItemESP	Gujarati	આઇટમ ESP
+MoveFix	Gujarati	હિલચાલ સુધારો
+AutoTool	Gujarati	સ્વચાલિત સાધન
+FastBreak	Gujarati	ઝડપી ખોદકામ
+CustomCrosshair	Gujarati	કસ્ટમ ક્રોસહેર
+BlockOverlay	Gujarati	બ્લોક ઓવરલે
+Outline	Gujarati	રૂપરેખા
+Fill	Gujarati	ભરણ
+Static	Gujarati	સ્થિર
+Fade	Gujarati	ઝાંખું થવું
+Rainbow	Gujarati	મેઘધનુષ
+Raycast	Gujarati	કિરણ તપાસ
+Rotate Back Speed	Gujarati	પાછા ફરવાની ઝડપ
+Return To Origin Speed	Gujarati	મૂળ સ્થાને પાછા ફરવાની ઝડપ
+Attacks Per Second	Gujarati	પ્રતિ સેકન્ડ હુમલા
+Language	Gujarati	ભાષા
+Settings	Gujarati	સેટિંગ્સ
+Save	Gujarati	સાચવો
+Load	Gujarati	લોડ કરો
+DELETE	Gujarati	કાઢી નાખો
+Search	Gujarati	શોધો
+Enabled	Gujarati	સક્ષમ
+Disabled	Gujarati	નિષ્ક્રિય
+Back	Gujarati	પાછળ
+Continue	Gujarati	ચાલુ રાખો
+WATERMARK	Gujarati	વોટરમાર્ક
+Coordinates	Gujarati	કોઓર્ડિનેટ્સ
+Armor	Gujarati	બખ્તર
+INVENTORY	Gujarati	ઇન્વેન્ટરી
+Session Info	Gujarati	સત્ર માહિતી
+Extended History	Gujarati	વિસ્તૃત ઇતિહાસ
+Strict	Gujarati	કડક
+Vibe Shader	Gujarati	Vibe શેડર
+Mode	Gujarati	મોડ
+Color	Gujarati	રંગ
+Line width	Gujarati	રેખાની જાડાઈ
+Speed	Gujarati	ઝડપ
+Smart	Gujarati	સ્માર્ટ
+Basic	Gujarati	પ્રાથમિક
+ClickGUI	Nepali	क्लिक GUI
+Killaura	Nepali	किलऔरा
+ItemESP	Nepali	आइटम ESP
+MoveFix	Nepali	चाल सुधार
+AutoTool	Nepali	स्वचालित उपकरण
+FastBreak	Nepali	छिटो खन्ने
+CustomCrosshair	Nepali	अनुकूलन क्रसहेयर
+BlockOverlay	Nepali	ब्लक ओभरले
+Outline	Nepali	रूपरेखा
+Fill	Nepali	भरण
+Static	Nepali	स्थिर
+Fade	Nepali	हराउँदै जाने
+Rainbow	Nepali	इन्द्रेणी
+Raycast	Nepali	किरण जाँच
+Rotate Back Speed	Nepali	फर्कने गति
+Return To Origin Speed	Nepali	मूल स्थानमा फर्कने गति
+Attacks Per Second	Nepali	प्रति सेकेन्ड आक्रमण
+Language	Nepali	भाषा
+Settings	Nepali	सेटिङ
+Save	Nepali	सुरक्षित गर्नुहोस्
+Load	Nepali	लोड गर्नुहोस्
+DELETE	Nepali	मेट्नुहोस्
+Search	Nepali	खोज्नुहोस्
+Enabled	Nepali	सक्षम
+Disabled	Nepali	अक्षम
+Back	Nepali	पछाडि
+Continue	Nepali	जारी राख्नुहोस्
+WATERMARK	Nepali	वाटरमार्क
+Coordinates	Nepali	निर्देशांक
+Armor	Nepali	कवच
+INVENTORY	Nepali	इन्भेन्टरी
+Session Info	Nepali	सत्र जानकारी
+Extended History	Nepali	विस्तारित इतिहास
+Strict	Nepali	कडा
+Vibe Shader	Nepali	Vibe शेडर
+Mode	Nepali	मोड
+Color	Nepali	रङ
+Line width	Nepali	रेखाको मोटाई
+Speed	Nepali	गति
+Smart	Nepali	स्मार्ट
+Basic	Nepali	आधारभूत
+ClickGUI	Western Punjabi	کلک GUI
+Killaura	Western Punjabi	کلاورا
+ItemESP	Western Punjabi	آئٹم ESP
+MoveFix	Western Punjabi	حرکت درستی
+AutoTool	Western Punjabi	خودکار اوزار
+FastBreak	Western Punjabi	تیز کھدائی
+CustomCrosshair	Western Punjabi	اپنی مرضی دا کراس ہیئر
+BlockOverlay	Western Punjabi	بلاک اوورلے
+Outline	Western Punjabi	باہرلا خاکہ
+Fill	Western Punjabi	بھرنا
+Static	Western Punjabi	جامد
+Fade	Western Punjabi	ہولی ہولی غائب ہونا
+Rainbow	Western Punjabi	سلکھڑی
+Raycast	Western Punjabi	کرن جانچ
+Rotate Back Speed	Western Punjabi	واپس مڑن دی رفتار
+Return To Origin Speed	Western Punjabi	اصل تھاں تے واپسی دی رفتار
+Attacks Per Second	Western Punjabi	فی سیکنڈ حملے
+Language	Western Punjabi	بولی
+Settings	Western Punjabi	ترتیباں
+Save	Western Punjabi	محفوظ کرو
+Load	Western Punjabi	لوڈ کرو
+DELETE	Western Punjabi	مٹاؤ
+Search	Western Punjabi	کھوجو
+Enabled	Western Punjabi	چالو
+Disabled	Western Punjabi	بند
+Back	Western Punjabi	واپس
+Continue	Western Punjabi	جاری رکھو
+WATERMARK	Western Punjabi	واٹر مارک
+Coordinates	Western Punjabi	کوآرڈینیٹ
+Armor	Western Punjabi	بکتر
+INVENTORY	Western Punjabi	انوینٹری
+Session Info	Western Punjabi	سیشن معلومات
+Extended History	Western Punjabi	ودھیا تریخ
+Strict	Western Punjabi	سخت
+Vibe Shader	Western Punjabi	Vibe شیڈر
+Mode	Western Punjabi	موڈ
+Color	Western Punjabi	رنگ
+Line width	Western Punjabi	لائن دی موٹائی
+Speed	Western Punjabi	رفتار
+Smart	Western Punjabi	ہوشیار
+Basic	Western Punjabi	بنیادی
+ClickGUI	Tamil	கிளிக் GUI
+Killaura	Tamil	கில்லாரா
+ItemESP	Tamil	பொருள் ESP
+MoveFix	Tamil	இயக்க திருத்தம்
+AutoTool	Tamil	தானியங்கி கருவி
+FastBreak	Tamil	விரைவான தோண்டுதல்
+CustomCrosshair	Tamil	தனிப்பயன் குறுக்குக்கோடு
+BlockOverlay	Tamil	தொகுதி மேலடுக்கு
+Outline	Tamil	வெளிக்கோடு
+Fill	Tamil	நிரப்பு
+Static	Tamil	நிலையானது
+Fade	Tamil	மங்குதல்
+Rainbow	Tamil	வானவில்
+Raycast	Tamil	கதிர் சோதனை
+Rotate Back Speed	Tamil	திரும்பும் வேகம்
+Return To Origin Speed	Tamil	மூல இடத்திற்குத் திரும்பும் வேகம்
+Attacks Per Second	Tamil	வினாடிக்கு தாக்குதல்கள்
+Language	Tamil	மொழி
+Settings	Tamil	அமைப்புகள்
+Save	Tamil	சேமி
+Load	Tamil	ஏற்று
+DELETE	Tamil	நீக்கு
+Search	Tamil	தேடு
+Enabled	Tamil	இயக்கப்பட்டது
+Disabled	Tamil	முடக்கப்பட்டது
+Back	Tamil	பின்
+Continue	Tamil	தொடர்
+WATERMARK	Tamil	நீர்அடையாளம்
+Coordinates	Tamil	ஆயத்தொலைவுகள்
+Armor	Tamil	கவசம்
+INVENTORY	Tamil	சரக்கறை
+Session Info	Tamil	அமர்வு தகவல்
+Extended History	Tamil	நீட்டிக்கப்பட்ட வரலாறு
+Strict	Tamil	கடுமையானது
+Vibe Shader	Tamil	Vibe ஷேடர்
+Mode	Tamil	பயன்முறை
+Color	Tamil	நிறம்
+Line width	Tamil	கோட்டு தடிமன்
+Speed	Tamil	வேகம்
+Smart	Tamil	நுண்ணறிவு
+Basic	Tamil	அடிப்படை
+ClickGUI	Telugu	క్లిక్ GUI
+Killaura	Telugu	కిల్ఆరా
+ItemESP	Telugu	ఐటమ్ ESP
+MoveFix	Telugu	కదలిక సవరణ
+AutoTool	Telugu	స్వయంచాలక సాధనం
+FastBreak	Telugu	వేగవంతమైన తవ్వకం
+CustomCrosshair	Telugu	అనుకూల క్రాస్‌హెయిర్
+BlockOverlay	Telugu	బ్లాక్ ఓవర్లే
+Outline	Telugu	బాహ్యరేఖ
+Fill	Telugu	నింపడం
+Static	Telugu	స్థిరం
+Fade	Telugu	మసకబారడం
+Rainbow	Telugu	ఇంద్రధనుస్సు
+Raycast	Telugu	కిరణ పరీక్ష
+Rotate Back Speed	Telugu	తిరిగి వచ్చే వేగం
+Return To Origin Speed	Telugu	అసలు స్థానానికి తిరిగి వచ్చే వేగం
+Attacks Per Second	Telugu	సెకనుకు దాడులు
+Language	Telugu	భాష
+Settings	Telugu	సెట్టింగ్‌లు
+Save	Telugu	సేవ్ చేయి
+Load	Telugu	లోడ్ చేయి
+DELETE	Telugu	తొలగించు
+Search	Telugu	వెతుకు
+Enabled	Telugu	ప్రారంభించబడింది
+Disabled	Telugu	నిలిపివేయబడింది
+Back	Telugu	వెనుకకు
+Continue	Telugu	కొనసాగించు
+WATERMARK	Telugu	వాటర్‌మార్క్
+Coordinates	Telugu	నిర్దేశాంకాలు
+Armor	Telugu	కవచం
+INVENTORY	Telugu	ఇన్వెంటరీ
+Session Info	Telugu	సెషన్ సమాచారం
+Extended History	Telugu	విస్తరించిన చరిత్ర
+Strict	Telugu	కఠినం
+Vibe Shader	Telugu	Vibe షేడర్
+Mode	Telugu	మోడ్
+Color	Telugu	రంగు
+Line width	Telugu	లైన్ మందం
+Speed	Telugu	వేగం
+Smart	Telugu	స్మార్ట్
+Basic	Telugu	ప్రాథమిక
+ClickGUI	Urdu	کلک GUI
+Killaura	Urdu	کل اورا
+ItemESP	Urdu	آئٹم ESP
+MoveFix	Urdu	حرکت کی درستی
+AutoTool	Urdu	خودکار اوزار
+FastBreak	Urdu	تیز کھدائی
+CustomCrosshair	Urdu	اپنی مرضی کا کراس ہیئر
+BlockOverlay	Urdu	بلاک اوورلے
+Outline	Urdu	خاکہ
+Fill	Urdu	بھرائی
+Static	Urdu	جامد
+Fade	Urdu	دھندلاہٹ
+Rainbow	Urdu	قوس قزح
+Raycast	Urdu	شعاع جانچ
+Rotate Back Speed	Urdu	واپس مڑنے کی رفتار
+Return To Origin Speed	Urdu	اصل مقام پر واپسی کی رفتار
+Attacks Per Second	Urdu	فی سیکنڈ حملے
+Language	Urdu	زبان
+Settings	Urdu	ترتیبات
+Save	Urdu	محفوظ کریں
+Load	Urdu	لوڈ کریں
+DELETE	Urdu	حذف کریں
+Search	Urdu	تلاش کریں
+Enabled	Urdu	فعال
+Disabled	Urdu	غیر فعال
+Back	Urdu	واپس
+Continue	Urdu	جاری رکھیں
+WATERMARK	Urdu	واٹر مارک
+Coordinates	Urdu	نقاط
+Armor	Urdu	زرہ
+INVENTORY	Urdu	انوینٹری
+Session Info	Urdu	سیشن کی معلومات
+Extended History	Urdu	توسیع شدہ تاریخ
+Strict	Urdu	سخت
+Vibe Shader	Urdu	Vibe شیڈر
+Mode	Urdu	موڈ
+Color	Urdu	رنگ
+Line width	Urdu	لکیر کی موٹائی
+Speed	Urdu	رفتار
+Smart	Urdu	ہوشیار
+Basic	Urdu	بنیادی
+ClickGUI	Iranian Persian	رابط کلیک
+Killaura	Iranian Persian	کیل‌آورا
+ItemESP	Iranian Persian	ESP آیتم
+MoveFix	Iranian Persian	اصلاح حرکت
+AutoTool	Iranian Persian	ابزار خودکار
+FastBreak	Iranian Persian	حفاری سریع
+CustomCrosshair	Iranian Persian	نشانه‌گذاری سفارشی
+BlockOverlay	Iranian Persian	پوشش بلوک
+Outline	Iranian Persian	خط دور
+Fill	Iranian Persian	پرکردن
+Static	Iranian Persian	ثابت
+Fade	Iranian Persian	محو شدن
+Rainbow	Iranian Persian	رنگین‌کمان
+Raycast	Iranian Persian	بررسی پرتو
+Rotate Back Speed	Iranian Persian	سرعت بازگشت
+Return To Origin Speed	Iranian Persian	سرعت بازگشت به مبدأ
+Attacks Per Second	Iranian Persian	حملات در ثانیه
+Language	Iranian Persian	زبان
+Settings	Iranian Persian	تنظیمات
+Save	Iranian Persian	ذخیره
+Load	Iranian Persian	بارگذاری
+DELETE	Iranian Persian	حذف
+Search	Iranian Persian	جستجو
+Enabled	Iranian Persian	فعال
+Disabled	Iranian Persian	غیرفعال
+Back	Iranian Persian	بازگشت
+Continue	Iranian Persian	ادامه
+WATERMARK	Iranian Persian	واترمارک
+Coordinates	Iranian Persian	مختصات
+Armor	Iranian Persian	زره
+INVENTORY	Iranian Persian	موجودی
+Session Info	Iranian Persian	اطلاعات نشست
+Extended History	Iranian Persian	تاریخچه گسترده
+Strict	Iranian Persian	سخت‌گیرانه
+Vibe Shader	Iranian Persian	شیدر Vibe
+Mode	Iranian Persian	حالت
+Color	Iranian Persian	رنگ
+Line width	Iranian Persian	ضخامت خط
+Speed	Iranian Persian	سرعت
+Smart	Iranian Persian	هوشمند
+Basic	Iranian Persian	پایه
+ClickGUI	Standard Arabic	واجهة النقر
+Killaura	Standard Arabic	كيلأورا
+ItemESP	Standard Arabic	إي إس بي العناصر
+MoveFix	Standard Arabic	تصحيح الحركة
+AutoTool	Standard Arabic	أداة تلقائية
+FastBreak	Standard Arabic	حفر سريع
+CustomCrosshair	Standard Arabic	مؤشر مخصص
+BlockOverlay	Standard Arabic	تراكب الكتل
+Outline	Standard Arabic	المخطط الخارجي
+Fill	Standard Arabic	التعبئة
+Static	Standard Arabic	ثابت
+Fade	Standard Arabic	التلاشي
+Rainbow	Standard Arabic	قوس قزح
+Raycast	Standard Arabic	فحص الأشعة
+Rotate Back Speed	Standard Arabic	سرعة العودة
+Return To Origin Speed	Standard Arabic	سرعة العودة إلى الأصل
+Attacks Per Second	Standard Arabic	الهجمات في الثانية
+Language	Standard Arabic	اللغة
+Settings	Standard Arabic	الإعدادات
+Save	Standard Arabic	حفظ
+Load	Standard Arabic	تحميل
+DELETE	Standard Arabic	حذف
+Search	Standard Arabic	بحث
+Enabled	Standard Arabic	مفعّل
+Disabled	Standard Arabic	معطّل
+Back	Standard Arabic	رجوع
+Continue	Standard Arabic	متابعة
+WATERMARK	Standard Arabic	علامة مائية
+Coordinates	Standard Arabic	الإحداثيات
+Armor	Standard Arabic	الدرع
+INVENTORY	Standard Arabic	المخزون
+Session Info	Standard Arabic	معلومات الجلسة
+Extended History	Standard Arabic	السجل الموسّع
+Strict	Standard Arabic	صارم
+Vibe Shader	Standard Arabic	تظليل Vibe
+Mode	Standard Arabic	الوضع
+Color	Standard Arabic	اللون
+Line width	Standard Arabic	سماكة الخط
+Speed	Standard Arabic	السرعة
+Smart	Standard Arabic	ذكي
+Basic	Standard Arabic	أساسي
+ClickGUI	Egyptian Arabic	واجهة الكليك
+Killaura	Egyptian Arabic	كيلاورا
+ItemESP	Egyptian Arabic	ESP العناصر
+MoveFix	Egyptian Arabic	تصليح الحركة
+AutoTool	Egyptian Arabic	أداة أوتوماتيك
+FastBreak	Egyptian Arabic	حفر سريع
+CustomCrosshair	Egyptian Arabic	كروس هير مخصص
+BlockOverlay	Egyptian Arabic	طبقة البلوك
+Outline	Egyptian Arabic	الخط الخارجي
+Fill	Egyptian Arabic	تعبئة
+Static	Egyptian Arabic	ثابت
+Fade	Egyptian Arabic	تلاشي
+Rainbow	Egyptian Arabic	قوس قزح
+Raycast	Egyptian Arabic	فحص الأشعة
+Rotate Back Speed	Egyptian Arabic	سرعة الرجوع
+Return To Origin Speed	Egyptian Arabic	سرعة الرجوع للأصل
+Attacks Per Second	Egyptian Arabic	هجمات في الثانية
+Language	Egyptian Arabic	اللغة
+Settings	Egyptian Arabic	الإعدادات
+Save	Egyptian Arabic	حفظ
+Load	Egyptian Arabic	تحميل
+DELETE	Egyptian Arabic	امسح
+Search	Egyptian Arabic	دور
+Enabled	Egyptian Arabic	شغال
+Disabled	Egyptian Arabic	متوقف
+Back	Egyptian Arabic	رجوع
+Continue	Egyptian Arabic	كمل
+WATERMARK	Egyptian Arabic	علامة مائية
+Coordinates	Egyptian Arabic	الإحداثيات
+Armor	Egyptian Arabic	درع
+INVENTORY	Egyptian Arabic	الشنطة
+Session Info	Egyptian Arabic	معلومات الجلسة
+Extended History	Egyptian Arabic	السجل الموسع
+Strict	Egyptian Arabic	صارم
+Vibe Shader	Egyptian Arabic	شيدر Vibe
+Mode	Egyptian Arabic	الوضع
+Color	Egyptian Arabic	اللون
+Line width	Egyptian Arabic	تخن الخط
+Speed	Egyptian Arabic	السرعة
+Smart	Egyptian Arabic	ذكي
+Basic	Egyptian Arabic	أساسي
+ClickGUI	Amharic	የጠቅታ GUI
+Killaura	Amharic	ኪላውራ
+ItemESP	Amharic	የዕቃ ESP
+MoveFix	Amharic	የእንቅስቃሴ ማስተካከያ
+AutoTool	Amharic	ራስ-ሰር መሣሪያ
+FastBreak	Amharic	ፈጣን ቁፋሮ
+CustomCrosshair	Amharic	ብጁ መስቀል
+BlockOverlay	Amharic	የብሎክ ሽፋን
+Outline	Amharic	ውጫዊ መስመር
+Fill	Amharic	መሙላት
+Static	Amharic	ቋሚ
+Fade	Amharic	መደብዘዝ
+Rainbow	Amharic	ቀስተ ደመና
+Raycast	Amharic	የጨረር ፍተሻ
+Rotate Back Speed	Amharic	የመመለስ ፍጥነት
+Return To Origin Speed	Amharic	ወደ መነሻ የመመለስ ፍጥነት
+Attacks Per Second	Amharic	በሰከንድ ጥቃቶች
+Language	Amharic	ቋንቋ
+Settings	Amharic	ቅንብሮች
+Save	Amharic	አስቀምጥ
+Load	Amharic	ጫን
+DELETE	Amharic	አጥፋ
+Search	Amharic	ፈልግ
+Enabled	Amharic	ነቅቷል
+Disabled	Amharic	ተሰናክሏል
+Back	Amharic	ተመለስ
+Continue	Amharic	ቀጥል
+WATERMARK	Amharic	የውሃ ምልክት
+Coordinates	Amharic	መጋጠሚያዎች
+Armor	Amharic	ጋሻ
+INVENTORY	Amharic	እቃ መያዣ
+Session Info	Amharic	የክፍለ ጊዜ መረጃ
+Extended History	Amharic	የተራዘመ ታሪክ
+Strict	Amharic	ጥብቅ
+Vibe Shader	Amharic	Vibe ጥላ
+Mode	Amharic	ሁነታ
+Color	Amharic	ቀለም
+Line width	Amharic	የመስመር ውፍረት
+Speed	Amharic	ፍጥነት
+Smart	Amharic	ብልህ
+Basic	Amharic	መሠረታዊ
+ClickGUI	Swahili	GUI ya kubofya
+Killaura	Swahili	Killaura
+ItemESP	Swahili	ESP ya vitu
+MoveFix	Swahili	Marekebisho ya mwendo
+AutoTool	Swahili	Kifaa kiotomatiki
+FastBreak	Swahili	Uchimbaji wa haraka
+CustomCrosshair	Swahili	Kionyeshi maalum
+BlockOverlay	Swahili	Mfuniko wa vitalu
+Outline	Swahili	Mstari wa nje
+Fill	Swahili	Ujazaji
+Static	Swahili	Tuli
+Fade	Swahili	Kufifia
+Rainbow	Swahili	Upinde wa mvua
+Raycast	Swahili	Uchunguzi wa miale
+Rotate Back Speed	Swahili	Kasi ya kurudi
+Return To Origin Speed	Swahili	Kasi ya kurudi mwanzo
+Attacks Per Second	Swahili	Mashambulizi kwa sekunde
+Language	Swahili	Lugha
+Settings	Swahili	Mipangilio
+Save	Swahili	Hifadhi
+Load	Swahili	Pakia
+DELETE	Swahili	Futa
+Search	Swahili	Tafuta
+Enabled	Swahili	Imewezeshwa
+Disabled	Swahili	Imezimwa
+Back	Swahili	Rudi
+Continue	Swahili	Endelea
+WATERMARK	Swahili	Alama ya maji
+Coordinates	Swahili	Kuratibu
+Armor	Swahili	Silaha
+INVENTORY	Swahili	Ghala
+Session Info	Swahili	Taarifa za kipindi
+Extended History	Swahili	Historia iliyopanuliwa
+Strict	Swahili	Kali
+Vibe Shader	Swahili	Kivuli cha Vibe
+Mode	Swahili	Hali
+Color	Swahili	Rangi
+Line width	Swahili	Unene wa mstari
+Speed	Swahili	Kasi
+Smart	Swahili	Smart
+Basic	Swahili	Msingi
+ClickGUI	Hausa	GUI na danna
+Killaura	Hausa	Killaura
+ItemESP	Hausa	ESP na abubuwa
+MoveFix	Hausa	Gyaran motsi
+AutoTool	Hausa	Kayan aiki ta atomatik
+FastBreak	Hausa	Saurin tono
+CustomCrosshair	Hausa	Alamar giciye ta musamman
+BlockOverlay	Hausa	Murfin toshe
+Outline	Hausa	Layin waje
+Fill	Hausa	Cikawa
+Static	Hausa	A tsaye
+Fade	Hausa	Dusewa
+Rainbow	Hausa	Bakan gizo
+Raycast	Hausa	Binciken haske
+Rotate Back Speed	Hausa	Saurin juyawa baya
+Return To Origin Speed	Hausa	Saurin komawa asali
+Attacks Per Second	Hausa	Hare-hare a cikin dakika
+Language	Hausa	Harshe
+Settings	Hausa	Saituna
+Save	Hausa	Ajiye
+Load	Hausa	Loda
+DELETE	Hausa	Goge
+Search	Hausa	Nema
+Enabled	Hausa	An kunna
+Disabled	Hausa	An kashe
+Back	Hausa	Baya
+Continue	Hausa	Ci gaba
+WATERMARK	Hausa	Alamar ruwa
+Coordinates	Hausa	Daidaitawa
+Armor	Hausa	Sulke
+INVENTORY	Hausa	Ajiya
+Session Info	Hausa	Bayanin zama
+Extended History	Hausa	Tsawaitaccen tarihi
+Strict	Hausa	Tsauri
+Vibe Shader	Hausa	Shader na Vibe
+Mode	Hausa	Yanayi
+Color	Hausa	Launi
+Line width	Hausa	Kaurin layi
+Speed	Hausa	Gudu
+Smart	Hausa	Mai hankali
+Basic	Hausa	Asali
+ClickGUI	Zulu	i-GUI yokuchofoza
+Killaura	Zulu	i-Killaura
+ItemESP	Zulu	i-ESP yezinto
+MoveFix	Zulu	ukulungisa ukunyakaza
+AutoTool	Zulu	ithuluzi elizenzakalelayo
+FastBreak	Zulu	ukumba okusheshayo
+CustomCrosshair	Zulu	isiphambano esingokwezifiso
+BlockOverlay	Zulu	ukumboza kwamabhuloki
+Outline	Zulu	umugqa wangaphandle
+Fill	Zulu	ukugcwalisa
+Static	Zulu	kumile
+Fade	Zulu	ukufiphala
+Rainbow	Zulu	uthingo
+Raycast	Zulu	ukuhlola imisebe
+Rotate Back Speed	Zulu	isivinini sokubuyela emuva
+Return To Origin Speed	Zulu	isivinini sokubuyela ekuqaleni
+Attacks Per Second	Zulu	ukuhlasela ngomzuzwana
+Language	Zulu	ulimi
+Settings	Zulu	izilungiselelo
+Save	Zulu	gcina
+Load	Zulu	layisha
+DELETE	Zulu	susa
+Search	Zulu	sesha
+Enabled	Zulu	kunikwe amandla
+Disabled	Zulu	kucishiwe amandla
+Back	Zulu	emuva
+Continue	Zulu	qhubeka
+WATERMARK	Zulu	uphawu lwamanzi
+Coordinates	Zulu	izixhumanisi
+Armor	Zulu	isivikelo
+INVENTORY	Zulu	isitolo
+Session Info	Zulu	ulwazi lwesikhathi
+Extended History	Zulu	umlando owandisiwe
+Strict	Zulu	okuqinile
+Vibe Shader	Zulu	isithunzi se-Vibe
+Mode	Zulu	imodi
+Color	Zulu	umbala
+Line width	Zulu	ukujiya komugqa
+Speed	Zulu	isivinini
+Smart	Zulu	okuhlakaniphile
+Basic	Zulu	okuyisisekelo
+Minecraft	Russian	Minecraft
+Minecraft	Japanese	Minecraft
+Vibe	Bavarian	Vibe
+Skeet	Greek	Skeet
+Vibe	Spanish	Vibe
+Skeet	Spanish	Skeet
+Minecraft	Spanish	Minecraft
+Vibe	German	Vibe
+Vibe	French	Vibe
+HUD	French	HUD
+Vibe	Portuguese	Vibe
+Skeet	Portuguese	Skeet
+ESP	Portuguese	ESP
+Vibe	Ukrainian	Vibe
+Skeet	Ukrainian	Skeet
+Vibe	Hindi	Vibe
+Skeet	Hindi	Skeet
+CPS	Hindi	CPS
+ESP	Hindi	ESP
+Vibe	Standard Arabic	Vibe
+Skeet	Standard Arabic	Skeet
+GTA7	Standard Arabic	GTA7
+HUD	Standard Arabic	HUD
+ESP	Standard Arabic	ESP
+Minecraft	Standard Arabic	Minecraft
+Vibe	Bengali	Vibe
+Skeet	Bengali	Skeet
+CPS	Bengali	CPS
+ESP	Bengali	ESP
+Minecraft	Bengali	Minecraft
+Vibe	Indonesian	Vibe
+Skeet	Indonesian	Skeet
+ESP	Indonesian	ESP
+Vibe	Urdu	Vibe
+Skeet	Urdu	Skeet
+GTA7	Urdu	GTA7
+CPS	Urdu	CPS
+ESP	Urdu	ESP
+Minecraft	Urdu	Minecraft
+Vibe	Egyptian Arabic	Vibe
+Skeet	Egyptian Arabic	Skeet
+GTA7	Egyptian Arabic	GTA7
+HUD	Egyptian Arabic	HUD
+ESP	Egyptian Arabic	ESP
+Minecraft	Egyptian Arabic	Minecraft
+Skeet	Marathi	Skeet
+Vibe	Vietnamese	Vibe
+Skeet	Vietnamese	Skeet
+Vibe	Telugu	Vibe
+Skeet	Telugu	Skeet
+Vibe	Turkish	Vibe
+Minecraft	Turkish	Minecraft
+Skeet	Western Punjabi	Skeet
+HUD	Western Punjabi	HUD
+CPS	Western Punjabi	CPS
+ESP	Western Punjabi	ESP
+Minecraft	Western Punjabi	Minecraft
+Vibe	Tamil	Vibe
+Skeet	Tamil	Skeet
+Vibe	Iranian Persian	Vibe
+Skeet	Iranian Persian	Skeet
+Minecraft	Iranian Persian	Minecraft
+Vibe	Korean	Vibe
+Skeet	Korean	Skeet
+Minecraft	Korean	Minecraft
+Vibe	Amharic	Vibe
+CPS	Amharic	CPS
+ESP	Amharic	ESP
+Vibe	Thai	Vibe
+Skeet	Thai	Skeet
+HUD	Thai	HUD
+CPS	Thai	CPS
+ESP	Thai	ESP
+Minecraft	Thai	Minecraft
+Vibe	Javanese	Vibe
+Vibe	Italian	Vibe
+Vibe	Gujarati	Vibe
+Skeet	Gujarati	Skeet
+HUD	Gujarati	HUD
+CPS	Gujarati	CPS
+Vibe	Dutch	Vibe
+Vibe	Nepali	Vibe
+Skeet	Nepali	Skeet
+Vibe	Polish	Vibe
+Minecraft	Polish	Minecraft
+Vibe	Zulu	Vibe
+GTA7	Zulu	GTA7
+HUD	Zulu	HUD
+CPS	Zulu	CPS
+Minecraft	Zulu	Minecraft
+HUD	Chinese	HUD
+CPS	Chinese	CPS
+ESP	Chinese	ESP
+Minecraft	Chinese	Minecraft
+HUD	Bavarian	HUD
+CPS	Bavarian	CPS
+Vibe	Nigerian Pidgin	Vibe
+Discord	Nigerian Pidgin	Discord
+Skeet	Nigerian Pidgin	Skeet
+GTA7	Nigerian Pidgin	GTA7
+HUD	Nigerian Pidgin	HUD
+CPS	Nigerian Pidgin	CPS
+ESP	Nigerian Pidgin	ESP
+Minecraft	Nigerian Pidgin	Minecraft
+Vibe Discord	Nigerian Pidgin	Vibe Discord

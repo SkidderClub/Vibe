@@ -74,16 +74,16 @@ public class ExtensionManagerTest {
         catch (ClassNotFoundException expected) { }
     }
     @Test public void disabledJarsAreIgnoredEvenWithAnEnabledCopyOfTheSameId() throws Exception {
-        jar("mods/fixture.jar.disabled", metadata("fixture", Fixtures.Good.class), Fixtures.Good.class);
-        jar("mods/1.8.9/fixture.jar", metadata("fixture", Fixtures.Good.class), Fixtures.Good.class);
+        jar("vibe/extensions-jar/fixture.jar.disabled", metadata("fixture", Fixtures.Good.class), Fixtures.Good.class);
+        jar("vibe/extensions-jar/fixture.jar", metadata("fixture", Fixtures.Good.class), Fixtures.Good.class);
         manager.load();
-        assertEquals(1, manager.getLoaded().size()); assertEquals(1, modules.getModules().size()); assertEquals(1, mounts);
+        assertEquals(manager.getStatus().toString(), 1, manager.getLoaded().size()); assertEquals(manager.getStatus().toString(), 1, modules.getModules().size()); assertEquals(manager.getStatus().toString(), 1, mounts);
         assertEquals(1, forge.listeners.size()); assertEquals(1, fml.listeners.size());
     }
-    @Test public void discoversVersionFolderOnceAndWiresNormalModulesAndStatistics() throws Exception {
-        jar("mods/1.8.9/fixture.jar", metadata("fixture", Fixtures.Good.class), Fixtures.Good.class);
+    @Test public void discoversExtensionFolderOnceAndWiresNormalModulesAndStatistics() throws Exception {
+        jar("vibe/extensions-jar/fixture.jar", metadata("fixture", Fixtures.Good.class), Fixtures.Good.class);
         manager.load(); manager.load();
-        assertEquals(1, manager.getLoaded().size()); assertEquals(1, modules.getModules().size()); assertEquals(1, mounts);
+        assertEquals(manager.getStatus().toString(), 1, manager.getLoaded().size()); assertEquals(manager.getStatus().toString(), 1, modules.getModules().size()); assertEquals(manager.getStatus().toString(), 1, mounts);
         Module fixture = modules.getModule("fixture");
         assertEquals("Fixture service", manager.getService(CharSequence.class).toString());
         assertTrue(fixture.getClass().getClassLoader() instanceof URLClassLoader);
@@ -98,8 +98,8 @@ public class ExtensionManagerTest {
         manager.tickStart(); activity(); assertEquals(2, value(fixture, "ticks")); assertEquals(1, value(fixture, "activities"));
     }
     @Test public void failedInitializationRollsBackEverythingAndOtherExtensionsStillLoad() throws Exception {
-        jar("mods/01-bad.jar", metadata("bad", Fixtures.Bad.class), Fixtures.Bad.class);
-        jar("mods/02-good.jar", metadata("good", Fixtures.Good.class), Fixtures.Good.class);
+        jar("vibe/extensions-jar/01-bad.jar", metadata("bad", Fixtures.Bad.class), Fixtures.Bad.class);
+        jar("vibe/extensions-jar/02-good.jar", metadata("good", Fixtures.Good.class), Fixtures.Good.class);
         manager.load();
         assertNull(modules.getModule("rollback")); assertNotNull(modules.getModule("fixture"));
         assertNull(manager.getService(Runnable.class));
@@ -108,44 +108,44 @@ public class ExtensionManagerTest {
         manager.tickStart(); activity(); assertEquals(1, value(modules.getModule("fixture"), "activities"));
         assertTrue(manager.getStatus().toString().contains("Initialization failed"));
     }
-    @Test public void duplicateIdsInTwoModFoldersAreBothRejectedBeforeLoadingCode() throws Exception {
-        jar("mods/first.jar", metadata("same", Fixtures.Good.class), Fixtures.Good.class);
-        jar("mods/1.8.9/second.jar", metadata("same", Fixtures.Bad.class), Fixtures.Bad.class);
-        manager.load(); assertTrue(manager.getLoaded().isEmpty()); assertTrue(loaders.isEmpty());
+    @Test public void duplicateIdsInTheExtensionFolderAreBothRejectedBeforeLoadingCode() throws Exception {
+        jar("vibe/extensions-jar/first.jar", metadata("same", Fixtures.Good.class), Fixtures.Good.class);
+        jar("vibe/extensions-jar/second.jar", metadata("same", Fixtures.Bad.class), Fixtures.Bad.class);
+        manager.load(); assertTrue(manager.getStatus().toString(), manager.getLoaded().isEmpty()); assertTrue(manager.getStatus().toString(), loaders.isEmpty());
         assertTrue(manager.getStatus().toString().contains("Duplicate"));
     }
     @Test public void incompatibleApiVersionAndMissingEntrypointAreRejectedBeforeLoadingCode() throws Exception {
         JsonObject incompatible = metadata("future", Fixtures.Good.class); incompatible.addProperty("apiVersion", 99);
-        jar("mods/future.jar", incompatible, Fixtures.Good.class);
+        jar("vibe/extensions-jar/future.jar", incompatible, Fixtures.Good.class);
         JsonObject missing = metadata("missing", Fixtures.Bad.class); missing.addProperty("entrypoint", "missing.Entrypoint");
-        jar("mods/missing.jar", missing, Fixtures.Bad.class);
+        jar("vibe/extensions-jar/missing.jar", missing, Fixtures.Bad.class);
         manager.load(); assertTrue(loaders.isEmpty()); assertTrue(manager.getLoaded().isEmpty());
         assertTrue(manager.getStatus().toString().contains("Unsupported extension API"));
         assertTrue(manager.getStatus().toString().contains("Entrypoint class is missing"));
     }
     @Test public void moduleCollisionKeepsTheOriginalModule() throws Exception {
-        jar("mods/01-good.jar", metadata("good", Fixtures.Good.class), Fixtures.Good.class);
-        jar("mods/02-collision.jar", metadata("collision", Fixtures.Collision.class), Fixtures.Collision.class);
+        jar("vibe/extensions-jar/01-good.jar", metadata("good", Fixtures.Good.class), Fixtures.Good.class);
+        jar("vibe/extensions-jar/02-collision.jar", metadata("collision", Fixtures.Collision.class), Fixtures.Collision.class);
         manager.load(); assertEquals(1, modules.getModules().size()); assertEquals(1, manager.getLoaded().size());
         manager.tickStart(); assertEquals(1, value(modules.getModule("fixture"), "ticks"));
         assertTrue(manager.getStatus().toString().contains("Module id already registered"));
     }
     @Test public void failedDisableCannotLeaveAPartialModuleRegistered() throws Exception {
-        jar("mods/01-failure.jar", metadata("failure", Fixtures.DisableFailure.class), Fixtures.DisableFailure.class);
-        jar("mods/02-good.jar", metadata("good", Fixtures.Good.class), Fixtures.Good.class);
+        jar("vibe/extensions-jar/01-failure.jar", metadata("failure", Fixtures.DisableFailure.class), Fixtures.DisableFailure.class);
+        jar("vibe/extensions-jar/02-good.jar", metadata("good", Fixtures.Good.class), Fixtures.Good.class);
         manager.load(); assertNull(modules.getModule("brokendisable"));
         assertEquals(1, modules.getModules().size()); assertEquals(1, manager.getLoaded().size());
         manager.tickStart(); assertEquals(1, value(modules.getModule("fixture"), "ticks"));
     }
     @Test public void crashingTickCallbackStopsOnceAndDoesNotPreventOtherCallbacks() throws Exception {
-        jar("mods/01-failure.jar", metadata("failure", Fixtures.TickFailure.class), Fixtures.TickFailure.class);
-        jar("mods/02-good.jar", metadata("good", Fixtures.Good.class), Fixtures.Good.class);
+        jar("vibe/extensions-jar/01-failure.jar", metadata("failure", Fixtures.TickFailure.class), Fixtures.TickFailure.class);
+        jar("vibe/extensions-jar/02-good.jar", metadata("good", Fixtures.Good.class), Fixtures.Good.class);
         manager.load(); manager.tickStart(); manager.tickStart();
         assertEquals(1, value(modules.getModule("tickfailure"), "ticks"));
         assertEquals(2, value(modules.getModule("fixture"), "ticks"));
     }
     @Test public void temporarilyAbsentExtensionRetainsSettingsAcrossProfileSaves() throws Exception {
-        jar("mods/good.jar", metadata("good", Fixtures.Good.class), Fixtures.Good.class); manager.load();
+        jar("vibe/extensions-jar/good.jar", metadata("good", Fixtures.Good.class), Fixtures.Good.class); manager.load();
         Module fixture = modules.getModule("fixture"); fixture.setKey(42);
         ((dev.vibe.setting.NumberSetting) fixture.getSettings().get(0)).setValue(7D);
         VibeConfig config = new VibeConfig(temporary.newFolder("config")); assertTrue(config.save("extensions", modules));
