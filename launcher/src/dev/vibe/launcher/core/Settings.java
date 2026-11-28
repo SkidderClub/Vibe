@@ -68,6 +68,8 @@ public final class Settings {
     public boolean autoUpdate() { return !"false".equals(get("autoUpdate", "true")); }
     public void setAutoUpdate(boolean value) { set("autoUpdate", Boolean.toString(value)); }
 
+    public boolean followsLatestVibeVersion() { return autoUpdate() && pinnedVibeVersion().isEmpty(); }
+
     public boolean animations() { return !"false".equals(get("animations", "true")); }
     public void setAnimations(boolean value) { set("animations", Boolean.toString(value)); }
 
@@ -87,9 +89,13 @@ public final class Settings {
 
     // ---- installation state ----------------------------------------------
 
-    /** Tag of the Vibe release that should start, for example {@code v0.0.6}. */
+    /** Tag of the release currently active in the Minecraft mods directory. */
     public String selectedVibeVersion() { return get("vibeVersion", ""); }
     public void setSelectedVibeVersion(String value) { set("vibeVersion", value); }
+
+    /** Explicit selection of an older build, independent of the last installed update. */
+    public String pinnedVibeVersion() { return get("pinnedVibeVersion", ""); }
+    public void setPinnedVibeVersion(String value) { set("pinnedVibeVersion", value); }
 
     public String java8Home() { return get("java8Home", ""); }
     public void setJava8Home(String value) { set("java8Home", value); }

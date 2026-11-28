@@ -1,5 +1,7 @@
 package dev.vibe.phone;
 
+import dev.vibe.module.impl.client.LanguageModule;
+import dev.vibe.path.PathTestFixture;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import javazoom.jl.decoder.*;
@@ -8,6 +10,32 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class PhoneCallAudioTest {
+    @Test public void usesTheCurrentVibeLanguageAndDecodesTheChineseRingtone() throws Exception {
+        try (PathTestFixture fixture = new PathTestFixture()) {
+            LanguageModule language = new LanguageModule();
+            fixture.modules.registerDynamic(language);
+            assertEquals(PhoneCallAudio.RESOURCE, PhoneCallAudio.selectedRingtone());
+            language.getLanguage().setValue("Chinese");
+            assertEquals(PhoneCallAudio.CHINESE_RESOURCE, PhoneCallAudio.selectedRingtone());
+
+            Sink sink = new Sink();
+            PhoneCallAudio audio = new PhoneCallAudio(() -> sink);
+            try {
+                audio.start(1);
+                assertTrue(sink.draining.await(10, TimeUnit.SECONDS));
+                assertTrue(sink.samples > 10000);
+                sink.release.countDown();
+                await(audio);
+                assertEquals("", audio.error());
+                language.getLanguage().setValue("Japanese");
+                assertEquals(PhoneCallAudio.RESOURCE, PhoneCallAudio.selectedRingtone());
+            } finally {
+                sink.release.countDown();
+                audio.close();
+            }
+        }
+    }
+
     @Test public void decodesTheBundledClipAndWaitsForTheFinalSamplesToDrain() throws Exception {
         Sink sink = new Sink(); PhoneCallAudio audio = new PhoneCallAudio(() -> sink);
         try {

@@ -71,7 +71,6 @@ public final class Vibe {
         instance = this;
         org.apache.logging.log4j.LogManager.getLogger("Vibe")
                 .info("Runtime: {}", dev.vibe.core.PlatformSupport.describe());
-        dev.vibe.core.ChinaRegion.warmUp();
         // A timer-owned combat module can be enabled in the active profile.
         // Restore vanilla timing before config restoration and before a world
         // exists so a previous session can never start the client frozen.

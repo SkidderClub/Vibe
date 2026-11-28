@@ -198,8 +198,8 @@ public final class LauncherController {
         });
         boolean setupNeeded = versionList.isEmpty() || !runtime.isReady();
         // Never touch downloaded files while a game started earlier is still using them.
-        if (attached == null && (setupNeeded || settings.autoUpdate())) {
-            submit(setupNeeded ? I18n.t("Preparing Vibe") : I18n.t("Checking for updates"), false, false);
+        if (attached == null && (setupNeeded || settings.followsLatestVibeVersion())) {
+            submit(setupNeeded ? I18n.t("Preparing Vibe") : I18n.t("Checking for updates"), false);
         } else {
             worker.execute(this::loadReleases);
         }
@@ -305,17 +305,16 @@ public final class LauncherController {
 
     public boolean sourceInstalled() { return !versionList.isEmpty(); }
 
-    /** Whether a newer stable release exists than the selected one. */
+    /** Whether a newer release exists than the selected one. */
     public boolean updateAvailable() {
-        ReleaseCatalog.Release newest = latestStable();
+        ReleaseCatalog.Release newest = latestRelease();
         VersionStore.Installed selected = selectedVersion();
         return newest != null && selected != null && Version.isNewer(newest.version(), selected.version);
     }
 
-    /** The newest stable release, or the newest release when all are pre-releases. */
-    public ReleaseCatalog.Release latestStable() {
+    /** The newest playable release, including development builds. */
+    public ReleaseCatalog.Release latestRelease() {
         List<ReleaseCatalog.Release> list = releases;
-        for (ReleaseCatalog.Release release : list) if (!release.prerelease) return release;
         return list.isEmpty() ? null : list.get(0);
     }
 
@@ -347,7 +346,7 @@ public final class LauncherController {
     private void refreshNotes() {
         List<ChangelogSection> sections = versions.selectedNotes();
         if (sections.isEmpty()) {
-            ReleaseCatalog.Release newest = versionList.isEmpty() ? latestStable() : release(installedRevision());
+            ReleaseCatalog.Release newest = versionList.isEmpty() ? latestRelease() : release(installedRevision());
             if (newest != null) sections = ReleaseNotes.parse(newest.body);
         }
         changelog = sections;
@@ -392,7 +391,7 @@ public final class LauncherController {
                     requireSpace(Collections.singletonMap(paths.versions(), VERSION_SPACE));
                     installed = versions.install(release, progressRange(0, 0.9));
                 }
-                versions.select(installed.tag, modsDir());
+                selectManualVersion(installed);
                 refreshVersionList();
                 refreshNotes();
                 fire(Event.VERSIONS);
@@ -419,7 +418,7 @@ public final class LauncherController {
             try {
                 VersionStore.Installed installed = versions.installed(tag);
                 if (installed == null) throw new LauncherException(ErrorCode.SOURCE_DAMAGED, I18n.t("Vibe {0} is not installed.", tag));
-                versions.select(tag, modsDir());
+                selectManualVersion(installed);
                 refreshVersionList();
                 refreshNotes();
                 fire(Event.VERSIONS);
@@ -428,6 +427,13 @@ public final class LauncherController {
             }
             setState(State.IDLE, "", "", -1);
         });
+    }
+
+    private void selectManualVersion(VersionStore.Installed installed) throws IOException {
+        ReleaseCatalog.Release newest = latestRelease();
+        versions.select(installed.tag, modsDir());
+        boolean pin = newest == null || Version.isNewer(newest.version(), installed.version);
+        settings.setPinnedVibeVersion(pin ? installed.tag : "");
     }
 
     /** Deletes a downloaded version; the active one falls back to the newest remaining. */
@@ -441,6 +447,7 @@ public final class LauncherController {
             try {
                 boolean active = tag.equalsIgnoreCase(settings.selectedVibeVersion());
                 versions.remove(tag);
+                if (tag.equalsIgnoreCase(settings.pinnedVibeVersion())) settings.setPinnedVibeVersion("");
                 if (active) {
                     List<VersionStore.Installed> remaining = versions.listInstalled();
                     if (remaining.isEmpty()) {
@@ -462,7 +469,7 @@ public final class LauncherController {
         });
     }
 
-    /** Downloads the newest stable release and switches to it. */
+    /** Switches to the newest release and clears any manual pin. */
     public void updateVibeNow() {
         if (refuseWhileRunning()) return;
         if (state != State.IDLE) return;
@@ -470,16 +477,19 @@ public final class LauncherController {
         setState(State.PREPARING, I18n.t("Updating Vibe"), "", -1);
         task = worker.submit(() -> {
             try {
-                if (releases.isEmpty()) loadReleases();
-                ReleaseCatalog.Release newest = latestStable();
+                loadReleases();
+                ReleaseCatalog.Release newest = latestRelease();
                 if (newest == null) {
                     throw new LauncherException(ErrorCode.VIBE_DOWNLOAD,
                             I18n.t("No Vibe version could be found. Check your internet connection and refresh the version list."));
                 }
-                requireSpace(Collections.singletonMap(paths.versions(), VERSION_SPACE));
                 VersionStore.Installed installed = versions.installed(newest.tag);
-                if (installed == null) installed = versions.install(newest, progressRange(0, 0.9));
+                if (installed == null) {
+                    requireSpace(Collections.singletonMap(paths.versions(), VERSION_SPACE));
+                    installed = versions.install(newest, progressRange(0, 0.9));
+                }
                 versions.select(installed.tag, modsDir());
+                settings.setPinnedVibeVersion("");
                 refreshVersionList();
                 refreshNotes();
                 fire(Event.VERSIONS);
@@ -497,7 +507,9 @@ public final class LauncherController {
     public void reinstallVersion() {
         final VersionStore.Installed selected = selectedVersion();
         if (selected == null) {
-            installVersion(latestStable());
+            String pinnedTag = settings.pinnedVibeVersion();
+            if (pinnedTag.isEmpty()) updateVibeNow();
+            else installVersion(release(pinnedTag));
             return;
         }
         if (refuseWhileRunning()) return;
@@ -508,12 +520,12 @@ public final class LauncherController {
             try {
                 if (releases.isEmpty()) loadReleases();
                 ReleaseCatalog.Release release = release(selected.tag);
-                versions.remove(selected.tag);
                 if (release == null) {
                     throw new LauncherException(ErrorCode.VIBE_DOWNLOAD,
                             I18n.t("No Vibe version could be found. Check your internet connection and refresh the version list."));
                 }
                 requireSpace(Collections.singletonMap(paths.versions(), VERSION_SPACE));
+                versions.remove(selected.tag);
                 VersionStore.Installed installed = versions.install(release, progressRange(0, 0.9));
                 versions.select(installed.tag, modsDir());
                 refreshVersionList();
@@ -742,17 +754,17 @@ public final class LauncherController {
         if (state != State.IDLE) return;
         runningMode = requested;
         launchQueued = true;
-        submit(I18n.t("Preparing {0}", requested.label), true, false);
+        submit(I18n.t("Preparing {0}", requested.label), true);
     }
 
     /** Prepares versions and runtime and, if a launch is queued, starts the game afterwards. */
-    private void submit(final String title, final boolean forLaunch, final boolean upgrade) {
+    private void submit(final String title, final boolean forLaunch) {
         lastFailure = null;
         synchronized (queueLock) { queueOpen = true; }
         setState(State.PREPARING, title, "", -1);
         task = worker.submit(() -> {
             try {
-                prepare(forLaunch, upgrade);
+                prepare(forLaunch);
                 boolean start;
                 synchronized (queueLock) {
                     start = launchQueued;
@@ -786,63 +798,9 @@ public final class LauncherController {
      * With automatic updates the selected version is upgraded first; a failed
      * upgrade only warns, so an installed version still starts offline.
      */
-    private void prepare(boolean forLaunch, boolean upgrade) throws Exception {
-        Progress progress = (message, detail, fraction) -> setProgress(message, detail, fraction);
-        String tag = settings.selectedVibeVersion();
-        VersionStore.Installed installed = versions.installed(tag);
-
-        if (releases.isEmpty()) loadReleases();
-        ReleaseCatalog.Release newest = latestStable();
-
-        if ((upgrade || settings.autoUpdate()) && newest != null) {
-            boolean newer = installed == null || Version.isNewer(newest.version(), installed.version);
-            if (newer) {
-                try {
-                    requireSpace(Collections.singletonMap(paths.versions(), VERSION_SPACE));
-                    VersionStore.Installed updated = versions.installed(newest.tag);
-                    if (updated == null) updated = versions.install(newest, progressRange(0, 0.15));
-                    tag = updated.tag;
-                    installed = updated;
-                } catch (IOException error) {
-                    if (LauncherException.cancelled(error)) throw error;
-                    log.warn("Automatic Vibe update failed; keeping the installed version: " + Text.describe(error));
-                }
-            }
-        }
-
-        if (installed == null) {
-            if (tag.isEmpty()) {
-                ReleaseCatalog.Release target = newest;
-                if (target == null) {
-                    List<VersionStore.Installed> known = versions.listInstalled();
-                    if (!known.isEmpty()) installed = known.get(0);
-                    else if (!releasesError.isEmpty()) {
-                        throw new LauncherException(ErrorCode.VIBE_DOWNLOAD,
-                                I18n.t("No Vibe version is installed and GitHub is not reachable: {0}", releasesError));
-                    } else {
-                        throw new LauncherException(ErrorCode.VIBE_DOWNLOAD,
-                                I18n.t("No Vibe version is installed. Pick one on the Versions page."));
-                    }
-                } else {
-                    requireSpace(Collections.singletonMap(paths.versions(), VERSION_SPACE));
-                    installed = versions.install(target, progressRange(0, 0.15));
-                }
-            } else {
-                ReleaseCatalog.Release target = release(tag);
-                if (target != null) {
-                    requireSpace(Collections.singletonMap(paths.versions(), VERSION_SPACE));
-                    installed = versions.install(target, progressRange(0, 0.15));
-                } else {
-                    List<VersionStore.Installed> known = versions.listInstalled();
-                    if (!known.isEmpty()) installed = known.get(0);
-                    else throw new LauncherException(ErrorCode.VIBE_DOWNLOAD, I18n.t("Vibe {0} is not installed.", tag));
-                }
-            }
-        }
-
-        if (installed == null) {
-            throw new LauncherException(ErrorCode.VIBE_DOWNLOAD, I18n.t("No Vibe version is installed. Pick one on the Versions page."));
-        }
+    private void prepare(boolean forLaunch) throws Exception {
+        if (settings.followsLatestVibeVersion() || releases.isEmpty()) loadReleases();
+        VersionStore.Installed installed = resolveVibeVersion();
         versions.select(installed.tag, modsDir());
         waitForVersionFile(installed.jar);
         refreshVersionList();
@@ -860,6 +818,50 @@ public final class LauncherController {
         runtime.ensure(progressRange(0.25, 1), false);
         writeBridge(runningMode == null ? LaunchMode.VIBE : runningMode);
         if (!forLaunch) console.append("[Launcher] Vibe " + installed.displayVersion() + " is ready.");
+    }
+
+    private VersionStore.Installed resolveVibeVersion() throws IOException {
+        String pinnedTag = settings.pinnedVibeVersion();
+        String tag = pinnedTag.isEmpty() ? settings.selectedVibeVersion() : pinnedTag;
+        VersionStore.Installed installed = versions.installed(tag);
+        ReleaseCatalog.Release newest = latestRelease();
+
+        if (installed != null) {
+            if (!settings.followsLatestVibeVersion() || newest == null || !Version.isNewer(newest.version(), installed.version)) {
+                return installed;
+            }
+            try {
+                return ensureLaunchVersion(newest);
+            } catch (IOException error) {
+                if (LauncherException.cancelled(error)) throw error;
+                log.warn("Automatic Vibe update failed; keeping the installed version: " + Text.describe(error));
+                return installed;
+            }
+        }
+
+        ReleaseCatalog.Release target = tag.isEmpty() || (settings.followsLatestVibeVersion() && newest != null)
+                ? newest : release(tag);
+        if (target != null) return ensureLaunchVersion(target);
+
+        if (pinnedTag.isEmpty()) {
+            List<VersionStore.Installed> known = versions.listInstalled();
+            if (!known.isEmpty()) return known.get(0);
+        }
+        if (!tag.isEmpty()) {
+            throw new LauncherException(ErrorCode.VIBE_DOWNLOAD, I18n.t("Vibe {0} is not installed.", tag));
+        }
+        if (!releasesError.isEmpty()) {
+            throw new LauncherException(ErrorCode.VIBE_DOWNLOAD,
+                    I18n.t("No Vibe version is installed and GitHub is not reachable: {0}", releasesError));
+        }
+        throw new LauncherException(ErrorCode.VIBE_DOWNLOAD, I18n.t("No Vibe version is installed. Pick one on the Versions page."));
+    }
+
+    private VersionStore.Installed ensureLaunchVersion(ReleaseCatalog.Release release) throws IOException {
+        VersionStore.Installed installed = versions.installed(release.tag);
+        if (installed != null) return installed;
+        requireSpace(Collections.singletonMap(paths.versions(), VERSION_SPACE));
+        return versions.install(release, progressRange(0, 0.15));
     }
 
     /** The game must not start while the link into mods/ is still being written. */
@@ -1043,7 +1045,7 @@ public final class LauncherController {
     public void checkForUpdates() {
         if (state != State.IDLE) return;
         worker.execute(this::checkLauncherUpdate);
-        submit(I18n.t("Checking for updates"), false, false);
+        submit(I18n.t("Checking for updates"), false);
     }
 
     public void repairRuntimes() {

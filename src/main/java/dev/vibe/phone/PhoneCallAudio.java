@@ -1,5 +1,6 @@
 package dev.vibe.phone;
 
+import dev.vibe.language.LanguageManager;
 import java.io.*;
 import java.util.function.Supplier;
 import javazoom.jl.decoder.JavaLayerException;
@@ -8,7 +9,7 @@ import javazoom.jl.player.*;
 /** Local MP3 decoding and audio-device work never run on the game thread. */
 public final class PhoneCallAudio implements PhoneCallPlayer {
     public static final String RESOURCE = "/assets/vibe/phone/call-ringing.mp3";
-    public static final String MAINLAND_RESOURCE = "/assets/vibe/phone/call-ringing-cn.mp3";
+    static final String CHINESE_RESOURCE = "/assets/vibe/phone/call-ringing-cn.mp3";
     private final Supplier<AudioDevice> devices;
     private volatile Session current;
 
@@ -19,19 +20,22 @@ public final class PhoneCallAudio implements PhoneCallPlayer {
         volatile boolean cancelled, finished;
         volatile float volume;
         volatile Player player;
-        volatile String resource = RESOURCE;
+        final String resource;
         volatile String error = "";
+
+        Session(String resource) { this.resource = resource; }
     }
 
     @Override public void start(float volume) {
         close();
-        Session session = new Session(); session.volume = gain(volume);
-        // Mainland players get the local ringtone; the hinted answer is used
-        // immediately while the IP lookup finishes in the background.
-        session.resource = dev.vibe.core.ChinaRegion.mainlandChina() ? MAINLAND_RESOURCE : RESOURCE;
+        Session session = new Session(selectedRingtone()); session.volume = gain(volume);
         current = session;
         Thread worker = new Thread(() -> play(session), "VibeOS-Call");
         worker.setDaemon(true); worker.start();
+    }
+
+    static String selectedRingtone() {
+        return "Chinese".equals(LanguageManager.selectedLanguage()) ? CHINESE_RESOURCE : RESOURCE;
     }
     private void play(Session session) {
         try (InputStream resource = PhoneCallAudio.class.getResourceAsStream(session.resource)) {

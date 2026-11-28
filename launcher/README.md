@@ -76,9 +76,10 @@ A leftover checkout can be deleted without losing the game profile.
 **Versions.** The launcher asks the GitHub API for the releases of
 `SkidderClub/Vibe`. A release counts when it has a
 `Vibe-1.8.9-*.jar` asset; launcher releases in the same repository are skipped.
-Every commit on `main` is published as a pre-release such as `v0.0.6-dev.42`,
-which the Versions page lists with a *pre-release* label; *Update to latest*
-only picks full releases. The JAR is verified against the asset's SHA-256
+Every commit on `main` is published as a pre-release such as `v0.0.6-dev.42`.
+The launcher follows the newest build by default, including pre-releases.
+Choosing an older build on the Versions page pins it. Select *Follow latest*
+to clear the pin and switch to the newest build. The JAR is verified against the asset's SHA-256
 (`digest`, otherwise a matching `.sha256` file) and opened to check for
 `mcmod.info`, then stored under `versions/<tag>/`. Switching versions removes
 the other managed `Vibe-1.8.9-*.jar` files from `mods/` and hard-links (or

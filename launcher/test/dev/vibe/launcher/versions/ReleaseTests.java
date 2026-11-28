@@ -1,6 +1,7 @@
 package dev.vibe.launcher.versions;
 
 import dev.vibe.launcher.Check;
+import dev.vibe.launcher.app.LauncherController;
 import dev.vibe.launcher.core.AppPaths;
 import dev.vibe.launcher.core.AppLog;
 import dev.vibe.launcher.core.ErrorCode;
@@ -8,9 +9,13 @@ import dev.vibe.launcher.core.LauncherException;
 import dev.vibe.launcher.core.Settings;
 import dev.vibe.launcher.install.ChangelogSection;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
@@ -69,6 +74,49 @@ public final class ReleaseTests {
             Check.equal("Vibe-1.8.9-0.0.6-dev.42.jar", releases.get(0).asset.name);
             Check.isTrue(releases.get(0).prerelease, "commit builds are pre-releases");
             Check.equal("v0.0.6", releases.get(1).tag);
+        });
+
+        check.test("launches follow development builds until an older build is selected", () -> {
+            Path root = Files.createDirectories(temp.resolve("version-selection"));
+            System.setProperty("vibe.launcher.home", root.toString());
+            AppPaths paths;
+            try { paths = AppPaths.detect(); }
+            finally { System.clearProperty("vibe.launcher.home"); }
+            AppLog log = new AppLog(root.resolve("logs"));
+            Settings settings = new Settings(paths.settingsFile(), log);
+            VersionStore store = new VersionStore(paths, settings, log);
+
+            ReleaseCatalog.Release stable = localRelease(paths, "v0.0.7", false);
+            ReleaseCatalog.Release development = localRelease(paths, "v0.0.7-dev.45", true);
+            ReleaseCatalog.Release next = localRelease(paths, "v0.0.7-dev.46", true);
+
+            Field catalog = LauncherController.class.getDeclaredField("releases");
+            catalog.setAccessible(true);
+            Method resolve = LauncherController.class.getDeclaredMethod("resolveVibeVersion");
+            resolve.setAccessible(true);
+            Method select = LauncherController.class.getDeclaredMethod("selectManualVersion", VersionStore.Installed.class);
+            select.setAccessible(true);
+
+            LauncherController controller = new LauncherController(paths, settings, log);
+            try {
+                catalog.set(controller, Arrays.asList(development, stable));
+                Check.equal(development.tag, ((VersionStore.Installed) resolve.invoke(controller)).tag);
+                // An existing launcher has only the last active tag saved.
+                settings.setSelectedVibeVersion(stable.tag);
+                Check.equal(development.tag, ((VersionStore.Installed) resolve.invoke(controller)).tag);
+
+                select.invoke(controller, store.installed(stable.tag));
+                Check.equal(stable.tag, new Settings(paths.settingsFile(), log).pinnedVibeVersion());
+                catalog.set(controller, Arrays.asList(next, development, stable));
+                Check.equal(stable.tag, ((VersionStore.Installed) resolve.invoke(controller)).tag);
+
+                select.invoke(controller, store.installed(next.tag));
+                Check.equal("", new Settings(paths.settingsFile(), log).pinnedVibeVersion());
+                catalog.set(controller, Collections.emptyList());
+                Check.equal(next.tag, ((VersionStore.Installed) resolve.invoke(controller)).tag);
+            } finally {
+                controller.shutdown();
+            }
         });
 
         check.test("release notes become sections", () -> {
@@ -161,6 +209,12 @@ public final class ReleaseTests {
             writeJar(real);
             Check.isTrue(VersionStore.isVibeJar(real), "a mod JAR is accepted");
         });
+    }
+
+    private static ReleaseCatalog.Release localRelease(AppPaths paths, String tag, boolean prerelease) throws IOException {
+        Path directory = Files.createDirectories(paths.versions().resolve(tag));
+        writeJar(directory.resolve("Vibe-1.8.9-" + tag.substring(1) + ".jar"));
+        return new ReleaseCatalog.Release(tag, tag, "", "", 0, null, prerelease);
     }
 
     private static void writeJar(Path file) throws IOException {

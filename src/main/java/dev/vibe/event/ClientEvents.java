@@ -517,6 +517,7 @@ public final class ClientEvents {
             dev.vibe.ui.render.ChunkAnimationHooks.beginFrame();
             motionBlurRenderer.beginFrame();
             chestEspRenderer.beginFrame();
+            customCosmeticsRenderer.beginFrame();
             dev.vibe.easter.EasterEggs.INSTANCE.beginFrame();
             dev.vibe.module.impl.combat.AIAuraModule ai=Vibe.getInstance().getModuleManager().getModule(dev.vibe.module.impl.combat.AIAuraModule.class);
             if(ai!=null)ai.frameTick(event.renderTickTime);
