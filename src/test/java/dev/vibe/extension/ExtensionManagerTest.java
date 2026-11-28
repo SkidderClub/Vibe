@@ -75,15 +75,15 @@ public class ExtensionManagerTest {
     }
     @Test public void disabledJarsAreIgnoredEvenWithAnEnabledCopyOfTheSameId() throws Exception {
         jar("vibe/extensions-jar/fixture.jar.disabled", metadata("fixture", Fixtures.Good.class), Fixtures.Good.class);
-        jar("vibe/extensions-jar/1.8.9/fixture.jar", metadata("fixture", Fixtures.Good.class), Fixtures.Good.class);
+        jar("vibe/extensions-jar/fixture.jar", metadata("fixture", Fixtures.Good.class), Fixtures.Good.class);
         manager.load();
-        assertEquals(1, manager.getLoaded().size()); assertEquals(1, modules.getModules().size()); assertEquals(1, mounts);
+        assertEquals(manager.getStatus().toString(), 1, manager.getLoaded().size()); assertEquals(manager.getStatus().toString(), 1, modules.getModules().size()); assertEquals(manager.getStatus().toString(), 1, mounts);
         assertEquals(1, forge.listeners.size()); assertEquals(1, fml.listeners.size());
     }
     @Test public void discoversExtensionFolderOnceAndWiresNormalModulesAndStatistics() throws Exception {
-        jar("vibe/extensions-jar/1.8.9/fixture.jar", metadata("fixture", Fixtures.Good.class), Fixtures.Good.class);
+        jar("vibe/extensions-jar/fixture.jar", metadata("fixture", Fixtures.Good.class), Fixtures.Good.class);
         manager.load(); manager.load();
-        assertEquals(1, manager.getLoaded().size()); assertEquals(1, modules.getModules().size()); assertEquals(1, mounts);
+        assertEquals(manager.getStatus().toString(), 1, manager.getLoaded().size()); assertEquals(manager.getStatus().toString(), 1, modules.getModules().size()); assertEquals(manager.getStatus().toString(), 1, mounts);
         Module fixture = modules.getModule("fixture");
         assertEquals("Fixture service", manager.getService(CharSequence.class).toString());
         assertTrue(fixture.getClass().getClassLoader() instanceof URLClassLoader);
@@ -111,7 +111,7 @@ public class ExtensionManagerTest {
     @Test public void duplicateIdsInTheExtensionFolderAreBothRejectedBeforeLoadingCode() throws Exception {
         jar("vibe/extensions-jar/first.jar", metadata("same", Fixtures.Good.class), Fixtures.Good.class);
         jar("vibe/extensions-jar/1.8.9/second.jar", metadata("same", Fixtures.Bad.class), Fixtures.Bad.class);
-        manager.load(); assertTrue(manager.getLoaded().isEmpty()); assertTrue(loaders.isEmpty());
+        manager.load(); assertTrue(manager.getStatus().toString(), manager.getLoaded().isEmpty()); assertTrue(manager.getStatus().toString(), loaders.isEmpty());
         assertTrue(manager.getStatus().toString().contains("Duplicate"));
     }
     @Test public void incompatibleApiVersionAndMissingEntrypointAreRejectedBeforeLoadingCode() throws Exception {
